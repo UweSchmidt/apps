@@ -11,6 +11,7 @@ import qualified Data.Set as S
 
 import Text.Regex
 import Text.XML.HXT.Parser.HtmlParsec ( xhtmlEntities )
+import Text.XML.HXT.DOM.Unicode ( utf8ToUnicode )
 
 import Test.HUnit
     ( Test(..)
@@ -258,6 +259,10 @@ remExtensions es f
     extFound = fe `elem` es
 
 -- ------------------------------
+
+substXhtmlUtf8Chars	:: String -> String
+substXhtmlUtf8Chars
+    = substXhtmlChars . utf8ToUnicode
 
 substXhtmlChars	:: String -> String
 substXhtmlChars
@@ -536,7 +541,6 @@ htmlFiles
     = OrExpr [ Ext ".htm"
 	     , Ext ".html"
 	     , Ext ".style"
-	     , Ext ".css"
 	     , Name ".htaccess"
 	     , RE ".*/automata/.*[.]tab"	-- CB first and follow tables
 	     ]
@@ -550,6 +554,7 @@ progFiles
 	     , Ext ".cc"
 	     , Ext ".cgi"
 	     , Ext ".check"	-- ppl parser
+	     , Ext ".css"
 	     , Ext ".cup"	-- CUP input
 	     , Ext ".diffcode"	-- ppl ass diff
 	     , Ext ".dot"	-- dot graph input
@@ -569,6 +574,7 @@ progFiles
 	     , Ext ".sh"
 	     , Ext ".tcl"
 	     , Ext ".trc"	-- ppl trace output
+	     , Ext ".x"		-- lex input
 	     , Ext ".y"
 	     ]
 
@@ -690,6 +696,7 @@ actions
       , ("grepNoneAsciiProgs",		grepFiles isUmlaut noneAsciiProgFiles	)
 
       , ("sedHtmlLatin1",		sedFiles substXhtmlChars htmlLatin1Files	)
+      , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
       , ("sedNoneAsciiProgs",		sedFiles substUmlauts noneAsciiProgFiles	)
 
       , ("renameUppercaseImgFiles",	moveFiles uppercaseImgFiles	)
