@@ -9,3 +9,7 @@ $(prog)	: Find.hs
 install	: all
 	[ ! -f ~/bin/$(prog) ] || mv -f ~/bin/$(prog) ~/bin/$(prog)~
 	cp -f $(prog) ~/bin
+
+test	: $(prog)
+	$(prog) hunitTest
+

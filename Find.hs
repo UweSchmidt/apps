@@ -309,6 +309,25 @@ substUmlauts
 	  , ('\252', "ue")
 	  ]
 
+substLatin1Tcl	:: String -> String
+substLatin1Tcl
+    = concatMap transTclChar
+    where
+    transTclChar c
+	| isAsciiChar c = [c]
+	| otherwise	= "\\x" ++ hexDigits 2 (fromEnum c)
+
+hexDigits	:: Int -> Int -> String
+hexDigits n
+    = reverse . take n . (++ (replicate n '0')) . reverse . toHx
+    where
+    toHx	:: Int -> String
+    toHx i
+	| i < 16	= [ cv !! i ]
+	| otherwise	= toHx (i `div` 16) ++ toHx (i `mod` 16)
+	where
+	cv = "0123456789ABCDEF"
+
 -- ------------------------------
 
 -- actions on found files
@@ -552,7 +571,6 @@ progFiles
 	     , Ext ".ass"	-- ppl assembler
 	     , Ext ".c"
 	     , Ext ".cc"
-	     , Ext ".cgi"
 	     , Ext ".check"	-- ppl parser
 	     , Ext ".css"
 	     , Ext ".cup"	-- CUP input
@@ -572,10 +590,16 @@ progFiles
 	     , Ext ".ppl"	-- ppl source
 	     , Ext ".scan"	-- ppl lexer output
 	     , Ext ".sh"
-	     , Ext ".tcl"
+	     , tclFiles
 	     , Ext ".trc"	-- ppl trace output
 	     , Ext ".x"		-- lex input
 	     , Ext ".y"
+	     ]
+
+tclFiles	:: FindExpr
+tclFiles
+    = OrExpr [ Ext ".cgi"
+	     , Ext ".tcl"
 	     ]
 
 unknownFiles	:: FindExpr
@@ -627,6 +651,12 @@ asciiFiles
 noneAsciiProgFiles	:: FindExpr
 noneAsciiProgFiles
     = AndExpr [ progFiles
+	      , HasCont isUmlaut
+	      ]
+
+tclLatin1Files	:: FindExpr
+tclLatin1Files
+    = AndExpr [ tclFiles
 	      , HasCont isUmlaut
 	      ]
 
@@ -687,6 +717,7 @@ actions
       , ("findHtmlLatin1",		findFiles htmlLatin1Files	)
       , ("findHtmlUtf8",		findFiles htmlUtf8Files		)
       , ("findNoneAsciiProgs",		findFiles noneAsciiProgFiles	)
+      , ("findTclLatin1",		findFiles tclLatin1Files	)
       , ("findUnknownFiles",		findFiles unknownFiles		)
       , ("findUppercaseImgFiles",	findFiles uppercaseImgFiles	)
       , ("findUnusedAlbumFiles",	processUnusedAlbumFiles printFiles	)
@@ -694,10 +725,12 @@ actions
       , ("grepHtmlLatin1",		grepFiles isUmlaut htmlLatin1Files	)
       , ("grepHtmlUtf8",		grepFiles isUtf htmlUtf8Files		)
       , ("grepNoneAsciiProgs",		grepFiles isUmlaut noneAsciiProgFiles	)
+      , ("grepTclLatin1",		grepFiles isUmlaut tclLatin1Files	)
 
       , ("sedHtmlLatin1",		sedFiles substXhtmlChars htmlLatin1Files	)
       , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
       , ("sedNoneAsciiProgs",		sedFiles substUmlauts noneAsciiProgFiles	)
+      , ("sedTclLatin1",		sedFiles substLatin1Tcl tclLatin1Files		)
 
       , ("renameUppercaseImgFiles",	moveFiles uppercaseImgFiles	)
 
@@ -738,12 +771,13 @@ findTests
       , ( AndExpr [progFiles, NotExpr noneAsciiProgFiles],
 	  [ "Ascii.tcl" ] )
       , ( boringFiles,
-	  [ "Umlaut.bak" ]
-	)
+	  [ "Umlaut.bak" ] )
       , ( htmlLatin1Files,
 	  [ "Latin1.html", "Utf8.html" ] )
       , ( htmlUtf8Files,
 	  [ "Utf8.html" ] )
+      , ( tclLatin1Files,
+	  [ "Umlaut.tcl" ] )
       ]
     where
     findF expr expected
