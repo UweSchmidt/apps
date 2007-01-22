@@ -516,6 +516,7 @@ binaryFiles
 	     , Ext ".tgz"
 	     , Ext ".tif"
 	     , Ext ".tiff"
+	     , Ext ".war"
 	     , Ext ".xbm"
 	     , Ext ".xcf"
 	     , Ext ".zip"
@@ -759,6 +760,8 @@ usage _dir
     cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
 
 -- ------------------------------
+
+-- a few hunit tests
 
 findTests	:: Test
 findTests
