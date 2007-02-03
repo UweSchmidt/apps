@@ -265,9 +265,8 @@ longFlagOptions	:: [String] -> (String -> [(String, String)]) -> ArgParser
 longFlagOptions names f
     = oneArg $
       ( do
-	string "--"
-	name <- foldr1 (<|>) . map string $ names
-	return (f name)
+	name <- foldr1 (<|>) . map (try . string . (('-':"-") ++)) $ names
+	return (f . drop 2 $ name)
       )
 
 longFlags		:: [String] -> String -> ArgParser
@@ -284,7 +283,7 @@ longValOption	:: String -> Parser String -> ArgParser
 longValOption name parseVal
     = oneArg
       ( do
-	string name'
+	try (string name')
 	( try ( do
 		char '='
 		argVal name'' name parseVal
