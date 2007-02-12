@@ -7,6 +7,13 @@ $(prog)	: Find.hs
 
 $(prog)	: FindGrepSed.hs
 
+
+clean	:
+	rm -f *.hi *.o
+
+distclean	: clean
+	rm -f $(prog)
+
 install	: all
 	[ ! -f ~/bin/$(prog) ] || mv -f ~/bin/$(prog) ~/bin/$(prog)~
 	cp -f $(prog) ~/bin

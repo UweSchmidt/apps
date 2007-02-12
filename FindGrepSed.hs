@@ -251,8 +251,13 @@ remExtensions es f
 -- ------------------------------
 
 substXhtmlUtf8Chars	:: String -> String
-substXhtmlUtf8Chars
-    = substXhtmlChars . utf8ToUnicode
+substXhtmlUtf8Chars str
+    | null errs
+	= substXhtmlChars res
+    | otherwise			-- decoding errors, do nothing
+	= str
+    where
+    (res, errs) = utf8ToUnicode str
 
 substXhtmlChars	:: String -> String
 substXhtmlChars
