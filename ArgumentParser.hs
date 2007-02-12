@@ -44,10 +44,12 @@ parseArgs	:: ArgParser -> String -> [(String, String)] -> String -> [String] -> 
 parseArgs p progName defaults usage argv
     | flagSet "help"
 	= do
+	  hPutStrLn stdout ""
 	  hPutStrLn stdout usage
 	  exitWith ExitSuccess
     | flagSet "error"
 	= do
+	  hPutStrLn stderr ""
 	  hPutStrLn stderr (unlines errs)
 	  hPutStrLn stderr usage
 	  exitWith (ExitFailure (0-1))
