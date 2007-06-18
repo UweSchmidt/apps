@@ -1,4 +1,4 @@
-prog	= find-grep-sed
+prog	= ./find-grep-sed
 
 all	: $(prog)
 

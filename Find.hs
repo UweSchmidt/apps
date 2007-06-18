@@ -51,6 +51,7 @@ actions
       , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
       , ("sedNoneAsciiProgs",		sedFiles substUmlauts noneAsciiProgFiles	)
       , ("sedTclLatin1",		sedFiles substLatin1Tcl tclLatin1Files		)
+      , ("sedTrailingSpace",		sedFiles removeTrailingWS textFiles		)
 
       , ("renameUppercaseImgFiles",	moveFiles uppercaseImgFiles	)
 

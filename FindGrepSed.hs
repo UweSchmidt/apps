@@ -3,7 +3,7 @@ where
 
 import Control.Monad
 
-import Data.Char ( toLower )
+import Data.Char ( isSpace, toLower )
 import Data.List hiding ( find )
 import Data.Maybe
 import qualified Data.Map as M
@@ -39,7 +39,7 @@ fe2T (FPred p) f
     = p f
 
 fe2T (Ext ext) f
-    = return (('.' : ext) `isSuffixOf` f)
+    = return (isSuffixOf ext f)
 
 fe2T (Name f1) f
     = return (f1 == basename f)
@@ -322,6 +322,10 @@ hexDigits n
 	| otherwise	= toHx (i `div` 16) ++ toHx (i `mod` 16)
 	where
 	cv = "0123456789ABCDEF"
+
+removeTrailingWS	:: String -> String
+removeTrailingWS
+    = unlines . map (reverse . dropWhile isSpace . reverse) . lines
 
 -- ------------------------------
 
@@ -660,7 +664,7 @@ tclLatin1Files
 
 uppercaseImgFiles	:: FindExpr
 uppercaseImgFiles
-    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|((NEF|nef)[.](RWS|rws)))"
+    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](NEF|nef|JPG|jpg|TIF|tif|RWS|rws)"
 
 -- ------------------------------
 
@@ -675,7 +679,7 @@ processUnusedAlbumFiles action dir
       action unused
     where
     subdirs = ["org","1600x1200","1600x1200-css","160x120"]
-    fileExt = ["jpg","html","html"]
+    fileExt = [".jpg",".html",".html"]
     filterEx is = AndExpr
 		  [ RE
 		    . (++ ")/.*") . ("(" ++)
