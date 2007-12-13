@@ -10,7 +10,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 
 import Text.Regex
-import Text.XML.HXT.Parser.HtmlParsec ( xhtmlEntities )
+import Text.XML.HXT.Parser.XhtmlEntities
 import Text.XML.HXT.DOM.Unicode ( utf8ToUnicode )
 
 import System.IO
@@ -39,7 +39,7 @@ fe2T (FPred p) f
     = p f
 
 fe2T (Ext ext) f
-    = return (isSuffixOf ext f)
+    = return (('.' : ext) `isSuffixOf` f)
 
 fe2T (Name f1) f
     = return (f1 == basename f)
@@ -660,7 +660,7 @@ tclLatin1Files
 
 uppercaseImgFiles	:: FindExpr
 uppercaseImgFiles
-    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](NEF|nef|JPG|jpg|TIF|tif|RWS|rws)"
+    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](NEF|nef|JPG|jpg|TIF|tif|((NEF|nef)[.](RWS|rws)))"
 
 -- ------------------------------
 
