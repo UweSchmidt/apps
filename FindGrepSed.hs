@@ -660,7 +660,7 @@ tclLatin1Files
 
 uppercaseImgFiles	:: FindExpr
 uppercaseImgFiles
-    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](NEF|nef|JPG|jpg|TIF|tif|((NEF|nef)[.](RWS|rws)))"
+    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|((NEF|nef)[.](RWS|rws)))"
 
 -- ------------------------------
 
