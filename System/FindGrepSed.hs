@@ -1,4 +1,4 @@
-module FindGrepSed
+module System.FindGrepSed
 where
 
 import Control.Monad
@@ -10,7 +10,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 
 import Text.Regex
-import Text.XML.HXT.Parser.XhtmlEntities
+import Text.XML.HXT.Parser.HtmlParsec ( xhtmlEntities )
 import Text.XML.HXT.DOM.Unicode ( utf8ToUnicode )
 
 import System.IO

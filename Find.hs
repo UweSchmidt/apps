@@ -18,7 +18,7 @@ import System
 import System.Environment
 import System.IO
 
-import FindGrepSed
+import System.FindGrepSed
 
 -- ------------------------------
 

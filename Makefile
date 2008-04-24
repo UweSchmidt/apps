@@ -1,23 +1,27 @@
-prog	= ./find-grep-sed
+HSCOLOUR        = HsColour
 
-all	: $(prog)
+prog		= find-grep-sed
 
-$(prog)	: Find.hs
-	ghc -O2 -Wall --make -o $@ $<
+all		:
+		./Setup.hs configure && \
+		./Setup.hs build
+		cp dist/build/find-grep-sed/find-grep-sed .
 
-$(prog)	: FindGrepSed.hs
+install		: all
+		sudo ./Setup.hs install
+		$(MAKE) installbin
+doc		:
+		$(HSCOLOUR) -print-css > $(HSCOLOUR)
+		./Setup.hs haddock --hyperlink-source --hscolour-css=$(HSCOLOUR)
+		rm -f $(HSCOLOUR)
 
+clean		:
+		./Setup.hs clean
 
-clean	:
-	rm -f *.hi *.o
+installbin	:
+		[ ! -f ~/bin/$(prog) ] || mv -f ~/bin/$(prog) ~/bin/$(prog)~
+		cp -f $(prog) ~/bin
 
-distclean	: clean
-	rm -f $(prog)
-
-install	: all
-	[ ! -f ~/bin/$(prog) ] || mv -f ~/bin/$(prog) ~/bin/$(prog)~
-	cp -f $(prog) ~/bin
-
-test	: $(prog)
-	$(prog) hunitTest
+test		: $(prog)
+		$(prog) hunitTest
 
