@@ -1,13 +1,19 @@
+HSCOLOUR        = HsColour
 
-prog = arg-test
+prog		= args-parser
 
-all	: $(prog)
+all		:
+		./Setup.hs configure && \
+		./Setup.hs build
+		cp dist/build/args-parser/args-parser ./args-parser
 
-$(prog)	: Test.hs ArgumentParser.hs
-	ghc -Wall -O2 -o $(prog) --make Test.hs
+install		: all
+		sudo ./Setup.hs install
 
-distclean	: clean
-	rm -f $(prog)
+doc		:
+		$(HSCOLOUR) -print-css > $(HSCOLOUR)
+		./Setup.hs haddock --hyperlink-source --hscolour-css=$(HSCOLOUR)
+		rm -f $(HSCOLOUR)
 
-clean	:
-	rm -f *.hi *.o
+clean		:
+		./Setup.hs clean
