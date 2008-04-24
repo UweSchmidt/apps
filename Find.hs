@@ -29,6 +29,7 @@ actions
 
       , ("findAscii",			findFiles asciiFiles		)
       , ("findBadFilenames",		findFiles badNames		)
+      , ("findNonAsciiPaths",		findFiles nonAsciiFilePath	)
       , ("findBinaryFiles",		findFiles binaryFiles		)
       , ("findBoringFiles",		findFiles boringFiles		)
       , ("findCvsFiles",		findFiles cvsFiles		)
