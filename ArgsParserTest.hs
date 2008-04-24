@@ -1,7 +1,7 @@
 module Main
 where
 
-import ArgumentParser
+import System.Console.ArgumentParser
 
 import Text.ParserCombinators.Parsec
 

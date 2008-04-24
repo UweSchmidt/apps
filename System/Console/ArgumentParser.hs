@@ -1,4 +1,4 @@
-module ArgumentParser
+module System.Console.ArgumentParser
     ( ArgParser
     , parseArgs
     , manyArgs
