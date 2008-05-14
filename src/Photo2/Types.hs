@@ -1,0 +1,272 @@
+module Photo2.Types
+where
+
+import           Data.Char
+import           Data.Maybe
+import           Data.Map (Map)
+import qualified Data.Map as M
+
+import Text.XML.HXT.Arrow
+import Data.Tree.NTree.TypeDefs
+
+-- ------------------------------------------------------------
+-- config data
+
+data Config	= Config { confAttrs   :: Attrs
+			 , confLayouts :: Layouts
+			 , confDict    :: Dictionaries
+			 , confSizes   :: Sizes
+			 }
+		  deriving (Show)
+
+type Attrs	= Map Name Value
+type Name	= String
+type Value	= String
+
+type Layouts	= Map Name Layout
+data Layout	= Layout { layoutType  :: Value
+			 , layoutAttrs :: Attrs
+			 , layoutPages :: Pages
+			 }
+		  deriving (Show)
+
+type Dictionaries
+		= Map Name Dictionary
+type Dictionary	= Attrs
+
+type Pages	= Map Name Page
+type Page	= Attrs
+
+type Sizes	= [Size]
+data Size	= Size { sizeDir    :: String
+		       , sizeGeo    :: Geo
+		       , sizeAspect :: AspectRatio
+		       }
+		  deriving (Show, Eq)
+
+data AspectRatio
+		= Fix | Pad
+		  deriving (Show, Enum, Eq, Ord)
+
+data Geo	= Geo { geoWidth  :: Int
+		      , geoHeight :: Int
+		      }
+		  deriving (Show, Eq)
+
+-- ------------------------------------------------------------
+-- album data types
+
+data Archive	= Archive { archConfRef   :: Href
+			  , archRootAlbum :: Entry
+			  }
+		  deriving (Show)
+
+type Entry	= NTree Pic
+data Pic	= Pic { isAlbum   :: Bool
+		      , picId     :: String
+		      , picRef    :: Href
+		      , picOrig   :: Href
+		      , picRaw    :: Href
+		      , picXmp    :: Href
+		      , picCopies :: Copies
+		      , picAttrs  :: Attrs
+		      , picErrs   :: Errs
+		      }
+		  deriving (Show, Eq)
+
+type Copies	= Map Name Copy
+data Copy	= Copy { copyGeo  :: Geo
+		       , copyBase :: String
+		       }
+		  deriving (Show, Eq)
+
+type Href	= String
+type Errs	= [String]
+
+-- ------------------------------------------------------------
+
+xpEntry	:: PU Entry
+xpEntry
+    = xpAlt ( \ (NTree e _) -> fromEnum . isAlbum $ e )
+      [ xpElem "picture" $ xpPicture
+      , xpElem "album"   $ xpAlbum
+      ]
+
+xpPicture	:: PU Entry
+xpPicture
+    = xpWrap ( \ p -> NTree p []
+	     , \ (NTree p _) -> p
+	     ) $
+      xpWrapPic False
+
+xpAlbum	:: PU Entry
+xpAlbum
+    = xpWrap ( uncurry NTree
+	     , \ (NTree p cs) -> (p, cs)
+	     ) $
+      xpPair ( xpWrapPic True )
+             ( xpList $ xpEntry )
+
+
+xpWrapPic	:: Bool -> PU Pic
+xpWrapPic isAlb
+    = xpWrap ( \ (es,i,h,(o,r,x),cs,as)
+	       -> Pic { isAlbum   = isAlb
+		      , picId     = i
+		      , picRef    = h
+		      , picOrig   = o
+		      , picRaw    = r
+		      , picXmp    = x
+		      , picCopies = cs
+		      , picAttrs  = as
+		      , picErrs   = es
+		      }
+	     , \ p -> ( picErrs p
+		      , picId   p
+		      , picRef  p
+		      , (picOrig p, picRaw p, picXmp p)
+		      , picCopies p
+		      , picAttrs  p
+		      )
+	     ) $
+      xp6Tuple ( xpErrs )
+	       (                xpAttr "id"   $ xpText )
+	       ( xpDefault "" $ xpAttr "href" $ xpText )
+	       ( xpDefault ("", "", "") $
+		 xpElem "orig" $
+		 xpTriple (xpDefault "" $ xpAttr "href1" $ xpText )
+		          (xpDefault "" $ xpAttr "raw1"  $ xpText )
+		          (xpDefault "" $ xpAttr "xmp"   $ xpText )
+	       )
+	       ( xpMap "copy" "base" xpText xpCopy )
+	       ( xpAttrs )
+
+
+xpCopy	:: PU Copy
+xpCopy
+    = xpWrap ( uncurry Copy
+	     , \ c -> (copyGeo c, copyBase c)
+	     ) $
+      xpPair ( xpAttr "geometry" $ xpGeo )
+	     ( xpAttr "base"     $ xpText )
+
+xpErrs	:: PU Errs
+xpErrs	= xpList $
+	  xpElem "error" $
+	  xpHtmlText
+
+-- ------------------------------------------------------------
+
+instance XmlPickler Archive	where xpickle = xpArchive
+instance XmlPickler Config	where xpickle = xpConfig
+instance XmlPickler Size        where xpickle = xpSize
+instance XmlPickler Geo         where xpickle = xpGeo
+instance XmlPickler AspectRatio where xpickle = xpAspectRatio
+
+xpArchive	:: PU Archive
+xpArchive
+    = xpElem "archive" $
+      xpAddFixedAttr "xmlns" "http://muehle.welt.all/photos.dtd" $
+      xpWrap ( uncurry Archive
+	     , \ a -> (archConfRef a, archRootAlbum a)
+	     ) $
+      xpPair ( xpDefault "config/archive.xml" $ xpAttr "config" $ xpText )
+	     xpEntry
+
+xpConfig	:: PU Config
+xpConfig
+    = xpElem "config" $
+      xpWrap ( \ (x1, x2, x3, x4) -> Config x1 x2 x3 x4
+	     , \ c -> (confAttrs c, confLayouts c, confDict c, confSizes c)
+	     ) $
+      xp4Tuple xpAttrs xpLayouts xpDictionaries xpSizes
+	       
+xpAttrs		:: PU Attrs
+xpAttrs		= xpMap "attr" "name" xpText xpHtmlText
+
+xpHtmlText	:: PU String
+xpHtmlText
+    = xpWrap ( showXML, readHTML ) $ xpTrees
+    where
+    showXML  = concat . runLA ( xshow unlistA )
+    readHTML = runLA hread				-- hread ignores not wellformed attributes, e.g. unescaped &s in URLs
+
+xpLayouts	:: PU Layouts
+xpLayouts	= xpMap "layout" "id" xpText xpLayout
+
+xpLayout	:: PU Layout
+xpLayout
+    = xpWrap ( uncurry3 Layout
+	     , \ l -> (layoutType l, layoutAttrs l, layoutPages l)
+	     ) $
+      xpTriple ( xpAttr "type" $ xpText )
+	       ( xpAttrs )
+	       ( xpPages )
+
+xpDictionaries	:: PU Dictionaries
+xpDictionaries	= xpMap "dictionary" "id" xpText xpDictionary
+
+xpDictionary	:: PU Dictionary
+xpDictionary    = xpAttrs
+
+xpPages		:: PU Pages
+xpPages		= xpMap "page" "type" xpText xpAttrs
+
+xpSizes 	:: PU Sizes
+xpSizes		= xpList xpSize
+
+xpSize	:: PU Size
+xpSize
+    = xpElem "size" $
+      xpWrap ( uncurry3 Size
+	     , \ s -> (sizeDir s, sizeGeo s, sizeAspect s)
+	     ) $
+      xpTriple ( xpElemWithAttrValue "attr" "name" "dir"      $ xpText  )
+	       ( xpElemWithAttrValue "attr" "name" "geometry" $ xpickle )
+	       ( xpWrap ( fromMaybe Pad
+			, Just
+			) $
+		 xpOption $
+		 xpElemWithAttrValue "attr" "name" "aspect-ratio" $
+		 xpickle
+	       )
+
+xpAspectRatio	:: PU AspectRatio
+xpAspectRatio
+    = xpWrap ( readAspect
+	     , showAspect
+	     ) $ xpText
+
+xpGeo	:: PU Geo
+xpGeo
+    = xpWrap ( readGeo
+	     , showGeo
+	     ) $ xpText
+
+-- ----------------------------------------
+
+readAspect	:: String -> AspectRatio
+readAspect "fix" = Fix
+readAspect "pad" = Pad
+readAspect _     = Pad
+
+showAspect	:: AspectRatio -> String
+showAspect Fix	= "fix"
+showAspect Pad  = "pad"
+
+-- ----------------------------------------
+
+readGeo :: String -> Geo
+readGeo s
+    = Geo (read w) (read h)
+    where
+    s'      = filter (\ x -> isDigit x || x == 'x') s
+    (w, h') = span isDigit s'
+    h       = drop 1 h'
+
+showGeo	:: Geo -> String
+showGeo g
+    = show (geoWidth g) ++ "x" ++ show (geoHeight g)
+
+-- ------------------------------------------------------------
+
