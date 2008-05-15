@@ -1,4 +1,4 @@
-module Photo2.Types
+module Photo2.ArchiveTypes
 where
 
 import           Data.Char
@@ -82,6 +82,15 @@ data Copy	= Copy { copyGeo  :: Geo
 
 type Href	= String
 type Errs	= [String]
+
+-- ------------------------------------------------------------
+
+emptyConfig	:: Config
+emptyConfig	= Config { confAttrs = M.empty
+			 , confLayouts = M.empty
+			 , confDict = M.empty
+			 , confSizes = []
+			 }
 
 -- ------------------------------------------------------------
 

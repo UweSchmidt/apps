@@ -1,15 +1,18 @@
 module Album
 where
 
+import           Data.Map (Map)
+import qualified Data.Map as M
+import Data.Tree.NTree.TypeDefs
+
 import System.IO
 import System.FilePath
 
 import Text.XML.HXT.Arrow
-import Photo2.Types
 
-import           Data.Map (Map)
-import qualified Data.Map as M
-import Data.Tree.NTree.TypeDefs
+import Photo2.ArchiveTypes
+import Photo2.DataModell
+import Photo2.State
 
 -- ------------------------------------------------------------
 
@@ -60,3 +63,38 @@ pc1 = Pic False "pic1" "" "p1.jpg" "p1.nef" "p1.xmp" cps1  (M.fromList [("title"
 pc2 = Pic False "pic1" "" "" "" "" cps1  (M.fromList [("title","picture 1")]) ["no orig found"]
 ab2 = Pic True "mysubalbum" "sub.xml" "sub.jpg" "" "" M.empty (M.fromList [("title","external sub")]) []
 cps1 = M.fromList [("klein", Copy (Geo 10 10) "klein.jpg")]
+
+-- ----------------------------------------
+sample :: AState ()
+sample = do a <- get config
+	    io $ print a
+	    set (theOption "xxx") "yyy"
+	    os <- get options
+	    io $ print os
+	    o1 <- get (theOption "xxx")
+	    io $ print o1
+	    update (theOption "xxx") (++ "zzz")
+	    os <- get options
+	    io $ print os
+
+{-
+            update var2 (\x -> x * (fromIntegral a))
+            b <- get var2
+            io $ print b
+	    set var1 42
+	    a <- get var1
+            io $ print a
+	    c <- get sv3
+	    io $ print c
+	    set sv3 44
+	    c <- get sv3
+	    io $ print c
+	    update sv3 (+1)
+	    c <- get sv3
+	    io $ print c
+
+-}
+
+main1 = runApp sample
+
+-- ------------------------------------------------------------
