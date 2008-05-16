@@ -17,15 +17,15 @@ import Photo2.DataModell
 -- ------------------------------------------------------------
 -- the global state
 
-data Fields = Fields { albumDir' :: AlbumDir
-		     , config'   :: Config
-		     , options'  :: Options
+data Fields = Fields { albums   :: AlbumTree
+		     , config   :: Config
+		     , options  :: Options
 		     }
 
 initialFields	:: Fields
-initialFields	= Fields { albumDir' = emptyAlbumDir
-			 , config'   = emptyConfig
-			 , options'  = []
+initialFields	= Fields { albums   = emptyAlbumTree
+			 , config   = emptyConfig
+			 , options  = []
 			 }
 
 type AState a = StateT Fields IO a
@@ -46,6 +46,12 @@ sub (a, m) (g, s)
 get :: Selector a -> AState a
 get = fst
 
+getFrom :: Selector a -> (a -> b) -> AState b
+getFrom s f
+    = do
+      r <- fst s
+      return (f r)
+
 set :: Selector a -> a -> AState ()
 set = snd
 
@@ -58,20 +64,20 @@ io = liftIO
 
 -- ------------------------------------------------------------
 
-albumDir :: Selector AlbumDir
-albumDir = (gets albumDir', \x -> modify (\vs -> vs {albumDir' = x}))
+theAlbums :: Selector AlbumTree
+theAlbums = (gets albums, \x -> modify (\vs -> vs {albums = x}))
  
-config :: Selector Config
-config = (gets config', \x -> modify (\vs -> vs {config' = x}))
+theConfig :: Selector Config
+theConfig = (gets config, \x -> modify (\vs -> vs {config = x}))
  
-options :: Selector Options
-options = (gets options', \x -> modify (\vs -> vs {options' = x}))
+theOptions :: Selector Options
+theOptions = (gets options, \x -> modify (\vs -> vs {options = x}))
 
 theOption	:: Name -> Selector Value
-theOption k	= (lookup1 k, \ v os -> addEntry k v os) `sub` options
+theOption k	= (lookup1 k, \ v os -> addEntry k v os) `sub` theOptions
 
-theAlbum	:: Path -> Selector (Maybe Pic)
-theAlbum p	= (getPic p, \ v ad -> setPic p v ad) `sub` albumDir
+theAlbum	:: Path -> Selector Pic
+theAlbum p	= (getPic p, \ v ad -> setPic p v ad) `sub` theAlbums
 
 -- setPic p v ad	= undefined
 

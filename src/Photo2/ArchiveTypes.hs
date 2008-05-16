@@ -2,6 +2,7 @@ module Photo2.ArchiveTypes
 where
 
 import           Data.Char
+import		 Data.List
 import           Data.Maybe
 import           Data.Map (Map)
 import qualified Data.Map as M
@@ -57,13 +58,12 @@ data Geo	= Geo { geoWidth  :: Int
 -- album data types
 
 data Archive	= Archive { archConfRef   :: Href
-			  , archRootAlbum :: Entry
+			  , archRootAlbum :: AlbumTree
 			  }
 		  deriving (Show)
 
-type Entry	= NTree Pic
-data Pic	= Pic { isAlbum   :: Bool
-		      , picId     :: String
+type AlbumTree	= NTree Pic
+data Pic	= Pic { picId     :: Name
 		      , picRef    :: Href
 		      , picOrig   :: Href
 		      , picRaw    :: Href
@@ -92,36 +92,57 @@ emptyConfig	= Config { confAttrs = M.empty
 			 , confSizes = []
 			 }
 
+emptyPic	:: Pic
+emptyPic	= Pic { picId = emptyName
+		      , picRef = ""
+		      , picOrig = ""
+		      , picRaw = ""
+		      , picXmp = ""
+		      , picCopies = M.empty
+		      , picAttrs = M.empty
+		      , picErrs = []
+		      }
+
+emptyName	:: Name
+emptyName	= ""
+
+emptyAlbumTree	:: AlbumTree
+emptyAlbumTree	= mkLeaf emptyPic
+
 -- ------------------------------------------------------------
 
-xpEntry	:: PU Entry
-xpEntry
-    = xpAlt ( \ (NTree e _) -> fromEnum . isAlbum $ e )
+formatAlbumTree	:: AlbumTree -> String
+formatAlbumTree	= formatTree showPic
+
+-- ------------------------------------------------------------
+
+xpAlbumTree	:: PU AlbumTree
+xpAlbumTree
+    = xpAlt ( \ (NTree e cs) -> fromEnum . not . null $ cs )
       [ xpElem "picture" $ xpPicture
       , xpElem "album"   $ xpAlbum
       ]
 
-xpPicture	:: PU Entry
+xpPicture	:: PU AlbumTree
 xpPicture
     = xpWrap ( \ p -> NTree p []
 	     , \ (NTree p _) -> p
 	     ) $
-      xpWrapPic False
+      xpWrapPic
 
-xpAlbum	:: PU Entry
+xpAlbum	:: PU AlbumTree
 xpAlbum
     = xpWrap ( uncurry NTree
 	     , \ (NTree p cs) -> (p, cs)
 	     ) $
-      xpPair ( xpWrapPic True )
-             ( xpList $ xpEntry )
+      xpPair ( xpWrapPic )
+             ( xpList $ xpAlbumTree )
 
 
-xpWrapPic	:: Bool -> PU Pic
-xpWrapPic isAlb
+xpWrapPic	:: PU Pic
+xpWrapPic
     = xpWrap ( \ (es,i,h,(o,r,x),cs,as)
-	       -> Pic { isAlbum   = isAlb
-		      , picId     = i
+	       -> Pic { picId     = i
 		      , picRef    = h
 		      , picOrig   = o
 		      , picRaw    = r
@@ -139,7 +160,7 @@ xpWrapPic isAlb
 		      )
 	     ) $
       xp6Tuple ( xpErrs )
-	       (                xpAttr "id"   $ xpText )
+	       (                xpAttr "id"   $ xpName )
 	       ( xpDefault "" $ xpAttr "href" $ xpText )
 	       ( xpDefault ("", "", "") $
 		 xpElem "orig" $
@@ -147,7 +168,7 @@ xpWrapPic isAlb
 		          (xpDefault "" $ xpAttr "raw1"  $ xpText )
 		          (xpDefault "" $ xpAttr "xmp"   $ xpText )
 	       )
-	       ( xpMap "copy" "base" xpText xpCopy )
+	       ( xpMap "copy" "base" xpName xpCopy )
 	       ( xpAttrs )
 
 
@@ -163,6 +184,9 @@ xpErrs	:: PU Errs
 xpErrs	= xpList $
 	  xpElem "error" $
 	  xpHtmlText
+
+xpName	:: PU Name
+xpName	= xpText
 
 -- ------------------------------------------------------------
 
@@ -180,7 +204,7 @@ xpArchive
 	     , \ a -> (archConfRef a, archRootAlbum a)
 	     ) $
       xpPair ( xpDefault "config/archive.xml" $ xpAttr "config" $ xpText )
-	     xpEntry
+	     xpAlbumTree
 
 xpConfig	:: PU Config
 xpConfig
@@ -191,7 +215,7 @@ xpConfig
       xp4Tuple xpAttrs xpLayouts xpDictionaries xpSizes
 	       
 xpAttrs		:: PU Attrs
-xpAttrs		= xpMap "attr" "name" xpText xpHtmlText
+xpAttrs		= xpMap "attr" "name" xpName xpHtmlText
 
 xpHtmlText	:: PU String
 xpHtmlText
@@ -201,7 +225,7 @@ xpHtmlText
     readHTML = runLA hread				-- hread ignores not wellformed attributes, e.g. unescaped &s in URLs
 
 xpLayouts	:: PU Layouts
-xpLayouts	= xpMap "layout" "id" xpText xpLayout
+xpLayouts	= xpMap "layout" "id" xpName xpLayout
 
 xpLayout	:: PU Layout
 xpLayout
@@ -213,13 +237,13 @@ xpLayout
 	       ( xpPages )
 
 xpDictionaries	:: PU Dictionaries
-xpDictionaries	= xpMap "dictionary" "id" xpText xpDictionary
+xpDictionaries	= xpMap "dictionary" "id" xpName xpDictionary
 
 xpDictionary	:: PU Dictionary
 xpDictionary    = xpAttrs
 
 xpPages		:: PU Pages
-xpPages		= xpMap "page" "type" xpText xpAttrs
+xpPages		= xpMap "page" "type" xpName xpAttrs
 
 xpSizes 	:: PU Sizes
 xpSizes		= xpList xpSize
@@ -276,6 +300,24 @@ readGeo s
 showGeo	:: Geo -> String
 showGeo g
     = show (geoWidth g) ++ "x" ++ show (geoHeight g)
+
+-- ------------------------------------------------------------
+
+showPic	:: Pic -> String
+showPic p
+    = concat . intersperse "\n" . filter (not . null) $
+      [ showC "id"   picId
+      , showC "ref"  picRef
+      , showC "orig" picOrig
+      , showC "raw"  picRaw
+      , showC "xmp"  picXmp
+      ]
+    where
+    showC k f
+	| null v = ""
+	| otherwise = k ++ ":\t" ++ v
+	where
+	v = f p
 
 -- ------------------------------------------------------------
 

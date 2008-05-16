@@ -21,7 +21,7 @@ import Photo2.State
 g = Geo 20 15
 s = Size "dir" g Fix
 s2 = Size "xxx" g Pad
-l1 = Layout "html" al1 (M.fromList [("picture", pg1)])
+l1 = Layout ("html") al1 (M.fromList [("picture", pg1)])
 pg1 = M.fromList [("geometry","1600x1200"),("dir","gross")]
 al1 = M.fromList [("geometry","1600x1200"),("duration","7000")]
 c = Config M.empty (M.fromList [("16x12-css",l1)]) M.empty [s,s2]
@@ -48,7 +48,7 @@ loadDocData p doc
 
 loadArchive	= loadDocData xpArchive
 loadConfig	= loadDocData xpConfig
-loadAlbum	= loadDocData xpEntry
+loadAlbum	= loadDocData xpAlbumTree
 
 -- ----------------------------------------
 
@@ -58,23 +58,30 @@ testConfig  = testDir `combine` "config/archive.xml"
 testAlbum   = testDir `combine` "archive/Hagenbeck.xml"
 
 e1 = NTree ab1 [NTree pc1 [], NTree pc2 [], NTree ab2 []]
-ab1 = Pic True "myalbum" "" "a.jpg" "" "" M.empty (M.fromList [("title","xxx")]) []
-pc1 = Pic False "pic1" "" "p1.jpg" "p1.nef" "p1.xmp" cps1  (M.fromList [("title","picture 1")]) ["errrr"]
-pc2 = Pic False "pic1" "" "" "" "" cps1  (M.fromList [("title","picture 1")]) ["no orig found"]
-ab2 = Pic True "mysubalbum" "sub.xml" "sub.jpg" "" "" M.empty (M.fromList [("title","external sub")]) []
+ab1 = Pic ("myalbum") "" "a.jpg" "" "" M.empty (M.fromList [("title","xxx")]) []
+pc1 = Pic ("pic1") "" "p1.jpg" "p1.nef" "p1.xmp" cps1  (M.fromList [("title","picture 1")]) ["errrr"]
+pc2 = Pic ("pic2") "" "" "" "" cps1  (M.fromList [("title","picture 1")]) ["no orig found"]
+ab2 = Pic ("mysubalbum") "sub.xml" "sub.jpg" "" "" M.empty (M.fromList [("title","external sub")]) []
 cps1 = M.fromList [("klein", Copy (Geo 10 10) "klein.jpg")]
 
+e2 = head . runLA (addAlbumEntry (["myalbum","mysubalbum"], ( emptyPic {picId = "emil"}))) $ e1
+
+pt = putStrLn . formatAlbumTree
+
 -- ----------------------------------------
+
 sample :: AState ()
-sample = do a <- get config
+sample = do a <- get theConfig
 	    io $ print a
 	    set (theOption "xxx") "yyy"
-	    os <- get options
+	    os <- get theOptions
 	    io $ print os
 	    o1 <- get (theOption "xxx")
 	    io $ print o1
 	    update (theOption "xxx") (++ "zzz")
-	    os <- get options
+	    os <- get theOptions
+	    io $ print os
+	    os <- getFrom theOptions (lookup1 "xxx")
 	    io $ print os
 
 {-
