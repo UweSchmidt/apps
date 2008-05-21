@@ -26,12 +26,7 @@ type AlbumEntries
 		= IntMap AlbumEntry
 		-- = Map INode AlbumEntry
 
-type AlbumEntry	= (Path, Pic)
-
-type Path	= [Name]
 type INode	= Int
-
-type Options	= AssocList Name Value
 
 -- ------------------------------------------------------------
 

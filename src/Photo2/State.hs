@@ -16,25 +16,6 @@ import Photo2.ArchiveTypes
 import Photo2.DataModell
 
 -- ------------------------------------------------------------
---
--- the global state
-
-data Fields = Fields { albums   :: AlbumTree
-		     , config   :: Config
-		     , options  :: Options
-		     , status   :: Status
-		     }
-
-type Status = Maybe String
-
-initialFields	:: Fields
-initialFields	= Fields { albums   = emptyAlbumTree
-			 , config   = emptyConfig
-			 , options  = []
-			 , status   = Nothing
-			 }
-
--- ------------------------------------------------------------
 
 type AState a = StateT Fields IO a
 

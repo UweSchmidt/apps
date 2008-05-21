@@ -7,8 +7,40 @@ import           Data.Maybe
 import           Data.Map (Map)
 import qualified Data.Map as M
 
-import Text.XML.HXT.Arrow
-import Data.Tree.NTree.TypeDefs
+import           Text.XML.HXT.Arrow hiding ( mkLeaf )
+import           Data.Tree.NTree.TypeDefs
+
+-- ------------------------------------------------------------
+--
+-- the global state
+
+data AppState	= AppState { albums      :: AlbumTree
+			   , archiveName :: Href
+			   , config      :: Config
+			   , options     :: Options
+			   , status      :: Status
+			   , changed     :: Bool
+			   }
+		  deriving (Show)
+
+type Options	= AssocList Name Value
+type Status	= Maybe String
+
+initialAppState	:: AppState
+initialAppState	= AppState { albums       = emptyAlbumTree
+			   , archiveName  = ""
+			   , config       = emptyConfig
+			   , options      = []
+			   , status       = Nothing
+			   , changed      = False
+			   }
+
+-- ------------------------------------------------------------
+
+type AlbumEntry	= (Path, Pic)
+type Name	= String
+type Value	= String
+type Path	= [Name]
 
 -- ------------------------------------------------------------
 -- config data
@@ -21,8 +53,6 @@ data Config	= Config { confAttrs   :: Attrs
 		  deriving (Show)
 
 type Attrs	= Map Name Value
-type Name	= String
-type Value	= String
 
 type Layouts	= Map Name Layout
 data Layout	= Layout { layoutType  :: Value
