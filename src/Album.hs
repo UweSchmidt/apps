@@ -104,4 +104,11 @@ sample = do a <- get theConfig
 
 main1 = runApp sample
 
+main2 = runApp (processArchive testArchive)
+
+processArchive	:: String -> AState ()
+processArchive ar
+    = do
+      undefined
+
 -- ------------------------------------------------------------
