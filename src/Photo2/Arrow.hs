@@ -77,11 +77,17 @@ theArchiveName	= mkSelA $ selArchiveName
 setComp	:: SelArrow a b -> b -> CmdArrow a a
 setComp c v	= perform $ constA v >>> set c
 
-done		:: CmdArrow a a
-done		= setComp theStatus Clean
+changeComp	:: SelArrow a b -> (b -> b) -> CmdArrow a a
+changeComp c f	= perform $ get c >>> arr f >>> set c
 
-running		:: CmdArrow a a
-running		= setComp theStatus Running
+clear		:: CmdArrow a a
+clear		= setComp theStatus (Running 0)
+
+done		:: CmdArrow a a
+done		= changeComp theStatus stopTr
+
+start		:: CmdArrow a a
+start		= changeComp theStatus startTr
 
 failed		:: String -> CmdArrow a a
 failed msg	= setComp theStatus (Exc msg)
@@ -98,26 +104,35 @@ setArchiveName n = setComp theArchiveName n
 statusOK	:: CmdArrow a Status
 statusOK	= get theStatus >>> isA statusOk
 
+traceStatus	:: String -> CmdArrow a a
+traceStatus msg
+    = perform $
+      traceS $< get theStatus
+    where
+    traceS st	= traceMsg 0 (replicate (level st) ' ' ++ msg)
+    level (Running i)	= 2 * i
+    level _		= 0
+
 -- ------------------------------------------------------------
 
 withStatusCheck	:: String -> CmdArrow a b -> CmdArrow a b
 withStatusCheck msg action
-    = running
+    = start
       >>>
-      traceMsg 0 ("starting: " ++ msg)
+      traceStatus ("starting: " ++ msg)
       >>>
       ( ( action
 	  >>>
-	  done
+	  traceStatus ("finished: " ++ msg)
 	  >>>
-	  traceMsg 0 ("finished: " ++ msg)
+	  done
 	)
 	`orElse`
-	( failed msg
+	( traceStatus ("failed  : " ++ msg)
 	  >>>
-	  traceMsg 0 ("failed  : " ++ msg)
+	  failed msg
 	  >>>
-	  none
+	 none
 	)
       )
 
@@ -125,7 +140,7 @@ whenStatusOK	:: String -> CmdArrow a b -> CmdArrow a b
 whenStatusOK msg action
     = ( statusOK `guards` ( runAction $< get theStatus ) )
       `orElse`
-      ( traceMsg 0 ("error   : " ++ msg)
+      ( traceStatus ("error   : " ++ msg)
 	>>>
 	none
       )
@@ -154,7 +169,7 @@ loadDocData p doc
       >>>
       perform none -- ( xpickleDocument p [ (a_indent, v_1) ] "" )
       >>>
-      traceMsg 0 ("loaded  : " ++ show doc)
+      traceStatus ("loaded  : " ++ show doc)
 
 loadArchive	:: String -> CmdArrow a Archive
 loadArchive doc

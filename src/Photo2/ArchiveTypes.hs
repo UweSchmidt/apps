@@ -14,18 +14,17 @@ import           Data.Tree.NTree.TypeDefs
 --
 -- the global state
 
-data AppState	= AppState { albums      :: AlbumTree
-			   , archiveName :: Href
-			   , config      :: Config
-			   , options     :: Options
-			   , status      :: Status
-			   , changed     :: Bool
+data AppState	= AppState { albums      :: ! AlbumTree
+			   , archiveName :: ! Href
+			   , config      :: ! Config
+			   , options     :: ! Options
+			   , status      :: ! Status
+			   , changed     :: ! Bool
 			   }
 		  deriving (Show)
 
 type Options	= AssocList Name Value
-data Status	= Clean
-		| Running
+data Status	= Running Int
 		| Exc String
 		  deriving (Eq, Show)
 
@@ -34,7 +33,7 @@ initialAppState	= AppState { albums       = emptyAlbumTree
 			   , archiveName  = ""
 			   , config       = emptyConfig
 			   , options      = []
-			   , status       = Clean
+			   , status       = Running 0
 			   , changed      = False
 			   }
 
@@ -362,5 +361,13 @@ pathToString	= concat . intersperse "/"
 statusOk	:: Status -> Bool
 statusOk (Exc _)	= False
 statusOk _		= True
+
+startTr		:: Status -> Status
+startTr (Running l)	= Running (l + 1)
+startTr e		= e
+
+stopTr		:: Status -> Status
+stopTr (Running l)	= Running (l - 1)
+stopTr e		= e
 
 -- ------------------------------------------------------------
