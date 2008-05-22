@@ -11,8 +11,10 @@ import System.FilePath
 import Text.XML.HXT.Arrow
 
 import Photo2.ArchiveTypes
-import Photo2.DataModell
-import Photo2.State
+-- import Photo2.DataModell
+import Photo2.Arrow
+
+-- import Photo2.State
 
 -- ------------------------------------------------------------
 
@@ -27,7 +29,7 @@ al1 = M.fromList [("geometry","1600x1200"),("duration","7000")]
 c = Config M.empty (M.fromList [("16x12-css",l1)]) M.empty [s,s2]
 
 -- ----------------------------------------
-
+{-
 loadDocData	:: PU a -> String -> IO (Maybe a)
 loadDocData p doc
     = do
@@ -49,7 +51,7 @@ loadDocData p doc
 loadArchive	= loadDocData xpArchive
 loadConfig	= loadDocData xpConfig
 loadAlbum	= loadDocData xpAlbumTree
-
+-}
 -- ----------------------------------------
 
 testDir = "http://localhost/~si/praktika/SoftwarePraktikum/photoalbum2/Photoalbum"
@@ -64,12 +66,12 @@ pc2 = Pic ("pic2") "" "" "" "" cps1  (M.fromList [("title","picture 1")]) ["no o
 ab2 = Pic ("mysubalbum") "sub.xml" "sub.jpg" "" "" M.empty (M.fromList [("title","external sub")]) []
 cps1 = M.fromList [("klein", Copy (Geo 10 10) "klein.jpg")]
 
-e2 = head . runLA (addAlbumEntry (["myalbum","mysubalbum"], ( emptyPic {picId = "emil"}))) $ e1
+-- e2 = head . runLA (addAlbumEntry (["myalbum","mysubalbum"], ( emptyPic {picId = "emil"}))) $ e1
 
 pt = putStrLn . formatAlbumTree
 
 -- ----------------------------------------
-
+{-
 sample :: AState ()
 sample = do a <- get theConfig
 	    io $ print a
@@ -101,14 +103,39 @@ sample = do a <- get theConfig
 	    io $ print c
 
 -}
-
+{-
 main1 = runApp sample
 
 main2 = runApp (processArchive testArchive)
 
 processArchive	:: String -> AState ()
-processArchive ar
+processArchive arname
+    = undefined
+-}
+{-
     = do
-      undefined
 
+      perf "load archive"
+	       $ do
+		 r <- io $ loadArchive arname
+		 if isNothing r
+		    then return Nothing
+		    else do
+			 let ar = fromJust r
+			 set theAlbums (archRootAlbum ar)
+			 
+		 
+			    
+-}
+-}
 -- ------------------------------------------------------------
+
+m =
+    do
+    s0 <- runCmd (loadArchiveAndConfig testArchive) initialAppState
+    s1 <- runCmd (loadAlbums ["Hagenbeck"]) s0
+    -- print s1
+    s2 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr pathToString >>> arrIO print) s1
+    s3 <- runCmd (loadAllAlbums ["Hagenbeck"]) s2
+    s4 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr pathToString >>> arrIO print) s3
+    return ()

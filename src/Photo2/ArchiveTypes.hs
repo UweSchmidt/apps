@@ -24,14 +24,17 @@ data AppState	= AppState { albums      :: AlbumTree
 		  deriving (Show)
 
 type Options	= AssocList Name Value
-type Status	= Maybe String
+data Status	= Clean
+		| Running
+		| Exc String
+		  deriving (Eq, Show)
 
 initialAppState	:: AppState
 initialAppState	= AppState { albums       = emptyAlbumTree
 			   , archiveName  = ""
 			   , config       = emptyConfig
 			   , options      = []
-			   , status       = Nothing
+			   , status       = Clean
 			   , changed      = False
 			   }
 
@@ -351,3 +354,13 @@ showPic p
 
 -- ------------------------------------------------------------
 
+pathToString	:: Path -> String
+pathToString	= concat . intersperse "/"
+
+-- ------------------------------------------------------------
+
+statusOk	:: Status -> Bool
+statusOk (Exc _)	= False
+statusOk _		= True
+
+-- ------------------------------------------------------------

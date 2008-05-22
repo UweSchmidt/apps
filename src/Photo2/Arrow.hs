@@ -78,10 +78,13 @@ setComp	:: SelArrow a b -> b -> CmdArrow a a
 setComp c v	= perform $ constA v >>> set c
 
 done		:: CmdArrow a a
-done		= setComp theStatus Nothing
+done		= setComp theStatus Clean
+
+running		:: CmdArrow a a
+running		= setComp theStatus Running
 
 failed		:: String -> CmdArrow a a
-failed msg	= setComp theStatus (Just msg)
+failed msg	= setComp theStatus (Exc msg)
 
 setChanged	:: CmdArrow a a
 setChanged	= setComp theChangedFlag True
@@ -92,13 +95,16 @@ clearChanged	= setComp theChangedFlag False
 setArchiveName	:: String -> CmdArrow a a
 setArchiveName n = setComp theArchiveName n
 
+statusOK	:: CmdArrow a Status
+statusOK	= get theStatus >>> isA statusOk
+
 -- ------------------------------------------------------------
 
 withStatusCheck	:: String -> CmdArrow a b -> CmdArrow a b
 withStatusCheck msg action
-    = traceMsg 0 ("starting: " ++ msg)
+    = running
       >>>
-      failed msg
+      traceMsg 0 ("starting: " ++ msg)
       >>>
       ( ( action
 	  >>>
@@ -107,7 +113,9 @@ withStatusCheck msg action
 	  traceMsg 0 ("finished: " ++ msg)
 	)
 	`orElse`
-	( traceMsg 0 ("failed: " ++ msg)
+	( failed msg
+	  >>>
+	  traceMsg 0 ("failed  : " ++ msg)
 	  >>>
 	  none
 	)
@@ -115,44 +123,113 @@ withStatusCheck msg action
 
 whenStatusOK	:: String -> CmdArrow a b -> CmdArrow a b
 whenStatusOK msg action
-    = ( ( get theStatus >>> isA (isNothing) )
-	`guards`
-	action
-      )
+    = ( statusOK `guards` ( runAction $< get theStatus ) )
       `orElse`
-      ( traceMsg 0 ("status error, not performed: " ++ msg)
+      ( traceMsg 0 ("error   : " ++ msg)
 	>>>
 	none
       )
+    where
+    runAction oldStatus
+	= action
+	  >>>
+	  setComp theStatus oldStatus
 
-withStatusOK	:: String -> CmdArrow a b -> CmdArrow a b
-withStatusOK msg action
+runAction	:: String -> CmdArrow a b -> CmdArrow a b
+runAction msg action
     = whenStatusOK msg (withStatusCheck msg action)
 
 -- ------------------------------------------------------------
 
 loadDocData	:: PU b -> String -> CmdArrow a b
 loadDocData p doc
-    = xunpickleDocument p [ (a_remove_whitespace, v_1)
-			  , (a_validate, v_0)
-			  , (a_tagsoup, v_1)
-			  ] doc
+    = readDocument [ (a_remove_whitespace, v_1)
+		   , (a_validate, v_0)
+		   , (a_tagsoup, v_1)
+		   ] doc
       >>>
-      perform ( xpickleDocument p [ (a_indent, v_1)
-				  ] ""
-	      )
+      documentStatusOk
       >>>
-      traceMsg 0 ("document loaded and unpickled: " ++ show doc)
+      runAction ("unpickle document: " ++ doc) (xunpickleVal p)
+      >>>
+      perform none -- ( xpickleDocument p [ (a_indent, v_1) ] "" )
+      >>>
+      traceMsg 0 ("loaded  : " ++ show doc)
 
 loadArchive	:: String -> CmdArrow a Archive
 loadArchive doc
-    = withStatusOK ("loading archive: " ++ show doc)
-      $
-      loadDocData xpArchive doc
+    = runAction ("loading and unpickling archive: " ++ show doc)
+      ( loadDocData xpArchive doc
+	>>>
+	perform ( arr archRootAlbum >>> set theAlbums )
+	>>>
+	setArchiveName doc
+	>>>
+	setChanged
+      )
+
+loadConfig	:: String -> CmdArrow a Config
+loadConfig doc
+    = runAction ("loading and unpickling config: " ++ show doc)
+      ( runInLocalURIContext (loadDocData xpConfig doc)
+	>>>
+	set theConfig
+      )
+
+loadArchiveAndConfig	:: String -> CmdArrow a (AlbumTree, Config)
+loadArchiveAndConfig doc
+    = loadArchive doc
       >>>
-      setArchiveName doc
+      ( arr archRootAlbum
+	&&&
+	( loadConfig $< arr archConfRef )
+      )
+
+loadAlbum	:: String -> String -> CmdArrow a AlbumTree
+loadAlbum base doc
+    = runAction ("loading and unpickling album: " ++ show doc ++ " (base = " ++ show base ++ ")")
+      ( runInLocalURIContext ( constA base >>> setBaseURI
+			       >>>
+			       loadDocData xpAlbumTree doc
+			     )
+      )
+
+loadAlbums	:: Path -> CmdArrow a AlbumTree
+loadAlbums p
+    = get theAlbums
       >>>
-      setChanged
+      processAllNodesOnPath checkAlbum p
+      >>>
+      set theAlbums
+
+loadAllAlbums	:: Path -> CmdArrow a AlbumTree
+loadAllAlbums p
+    = get theAlbums
+      >>>
+      processAllNodesOnPath    checkAlbum p
+      >>>
+      processAllSubTreesByPath checkAlbum p
+      >>>
+      set theAlbums
+
+checkAlbum	:: Path -> CmdArrow AlbumTree AlbumTree
+checkAlbum p
+    = ( getNode
+	>>>
+	arr picRef
+	>>>
+	isA (not . null)
+	>>>
+	loadAlbum $<< (get theArchiveName &&& this)
+      )
+      `orElse` this
+    where
+    ps = pathToString p
+
+checkPath	:: Path -> CmdArrow AlbumTree AlbumTree
+checkPath p
+    = runAction ("checking path: " ++ show (pathToString p)) $
+      getTreeByPath p
 
 -- ------------------------------------------------------------
 
@@ -173,20 +250,60 @@ getDescByPath p
     (n' : p') = p
     nodeMatch = hasPicName n'
 
-processTreeByPath	:: Path -> CmdArrow AlbumTree AlbumTree ->  CmdArrow AlbumTree AlbumTree
-processTreeByPath p pa
+processTreeByPath	:: CmdArrow AlbumTree AlbumTree -> Path -> CmdArrow AlbumTree AlbumTree
+processTreeByPath pa p
     | null p	= this
     | null p'	= pa `when` hasPicName n'
-    | otherwise	= processChildren (processTreeByPath p' pa)
+    | otherwise	= processChildren (processTreeByPath pa p')
     where
     (n' : p') = p
 
-hasPicName	:: Name -> CmdArrow AlbumTree AlbumTree
-hasPicName n
-    = (getNode >>> arr picId >>> isA (==n)) `guards` this
+processAllNodesOnPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllNodesOnPath pa p
+    | null p	= this
+    | null p'	= pa p `when` hasPicName n'
+    | otherwise	= ( pa p >>> processChildren (processAllNodesOnPath pa p') ) `when` hasPicName n'
+    where
+    (n' : p') = p
 
-mkPic	:: Pic -> CmdArrow AlbumTree AlbumTree
-mkPic	= mkLeaf
+-- ----------------------------------------
+--
+-- | process all nodes of a tree
+
+processAllByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllByPath pa p
+    = pa p
+      >>>
+      ( (\ n -> processChildren $ processAllByPath pa (p ++ [n])) $< (getNode >>^ picId) )
+
+-- ----------------------------------------
+--
+-- | process all nodes of a tree addressed by a path
+--   with an arrow getting the full path as parameter
+
+processAllSubTreesByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllSubTreesByPath pa p0
+    = processSub p0
+    where
+    processSub p
+	| null p	= this
+	| null p'	= processAllByPath pa p0         `when` hasPicName n'
+	| otherwise	= processChildren (processSub p) `when` hasPicName n'
+	where
+	(n' : p') = p
+
+-- ----------------------------------------
+
+hasPicName	:: Name -> CmdArrow AlbumTree AlbumTree
+hasPicName n    = (getPicId >>> isA (==n)) `guards` this
+
+getPicId	:: CmdArrow AlbumTree Name
+getPicId	= getNode >>^ picId
+
+mkPic		:: Pic -> CmdArrow AlbumTree AlbumTree
+mkPic		= mkLeaf
+
+-- ----------------------------------------
 
 getAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumEntry
 getAlbumEntry p
@@ -241,7 +358,7 @@ addAlbumEntry (p, pic)
 
 removeAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumTree
 removeAlbumEntry p
-    = processTreeByPath p none
+    = processTreeByPath none p
 
 -- ------------------------------------------------------------
 
