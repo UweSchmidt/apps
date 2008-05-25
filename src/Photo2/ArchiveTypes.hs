@@ -17,6 +17,7 @@ import           Data.Tree.NTree.TypeDefs
 data AppState	= AppState { albums      :: ! AlbumTree
 			   , archiveName :: ! Href
 			   , config      :: ! Config
+			   , configName  :: ! Href
 			   , options     :: ! Options
 			   , status      :: ! Status
 			   , changed     :: ! Bool
@@ -32,6 +33,7 @@ initialAppState	:: AppState
 initialAppState	= AppState { albums       = emptyAlbumTree
 			   , archiveName  = ""
 			   , config       = emptyConfig
+			   , configName   = ""
 			   , options      = []
 			   , status       = Running 0
 			   , changed      = False

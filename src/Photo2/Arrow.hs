@@ -32,7 +32,7 @@ setField sf	= perform ( ( this &&& getUserState )
 			  )
 
 getField	:: Getter AppState b -> CmdArrow a b
-getField gf	= getUserState >>> arr gf
+getField gf	= getUserState >>^ gf
 
 sub	:: Selector b c -> Selector a b -> Selector a c
 sub (g2, s2) (g1, s1)
@@ -59,6 +59,7 @@ mkSelA (g, s) = SA { get = getField g
 selAlbums	= (albums, \ x s -> s {albums = x})
 selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
 selConfig	= (config, \ x s -> s {config = x})
+selConfigName	= (configName, \ x s -> s {configName = x})
 selOptions	= (options, \ x s -> s {options = x})
 selStatus	= (status, \ x s -> s {status = x})
 selChanged	= (changed, \ x s -> s {changed = x})
@@ -71,6 +72,7 @@ theConfig	= mkSelA $ selConfig
 theStatus	= mkSelA $ selStatus
 theChangedFlag	= mkSelA $ selChanged
 theArchiveName	= mkSelA $ selArchiveName
+theConfigName	= mkSelA $ selConfigName
 
 -- ------------------------------------------------------------
 
@@ -78,7 +80,7 @@ setComp	:: SelArrow a b -> b -> CmdArrow a a
 setComp c v	= perform $ constA v >>> set c
 
 changeComp	:: SelArrow a b -> (b -> b) -> CmdArrow a a
-changeComp c f	= perform $ get c >>> arr f >>> set c
+changeComp c f	= perform $ get c >>> f ^>> set c
 
 clear		:: CmdArrow a a
 clear		= setComp theStatus (Running 0)
@@ -123,7 +125,7 @@ withStatusCheck msg action
       >>>
       ( ( action
 	  >>>
-	  traceStatus ("finished: " ++ msg)
+	  traceStatus ("done    : " ++ msg)
 	  >>>
 	  done
 	)
@@ -176,11 +178,11 @@ loadArchive doc
     = runAction ("loading and unpickling archive: " ++ show doc)
       ( loadDocData xpArchive doc
 	>>>
-	perform ( arr archRootAlbum >>> set theAlbums )
+	perform ( archRootAlbum ^>> set theAlbums )
+	>>>
+	perform ( archConfRef ^>> set theConfigName )
 	>>>
 	setArchiveName doc
-	>>>
-	setChanged
       )
 
 loadConfig	:: String -> CmdArrow a Config
@@ -231,11 +233,11 @@ checkAlbum	:: Path -> CmdArrow AlbumTree AlbumTree
 checkAlbum p
     = ( getNode
 	>>>
-	arr picRef
-	>>>
+	picRef
+	^>>
 	isA (not . null)
 	>>>
-	loadAlbum $<< (get theArchiveName &&& this)
+	( loadAlbum $<< get theArchiveName &&& this )
       )
       `orElse` this
     where
@@ -328,8 +330,8 @@ getAlbumEntry p
 		  hasPicName n'
 		  >>>
 		  getNode
-		  >>>
-		  arr (\ x -> (p, x))
+		  >>^
+		  (\ x -> (p, x))
     where
     n' = last p
     p' = init p
@@ -339,12 +341,12 @@ getAlbumPaths p
     = getDescByPath p
       >>>
       getPaths (reverse p)
-      >>>
-      arr reverse
+      >>^
+      reverse
     where
     getPaths :: Path -> CmdArrow AlbumTree Path
     getPaths p'
-	= getPaths' $< (getNode >>> arr picId)
+	= getPaths' $< (getNode >>^ picId)
 	  where
 	  getPaths' :: Name -> CmdArrow AlbumTree Path
 	  getPaths' n'
