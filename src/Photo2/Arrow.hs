@@ -62,7 +62,6 @@ selConfig	= (config, \ x s -> s {config = x})
 selConfigName	= (configName, \ x s -> s {configName = x})
 selOptions	= (options, \ x s -> s {options = x})
 selStatus	= (status, \ x s -> s {status = x})
-selChanged	= (changed, \ x s -> s {changed = x})
 selOption k	= (lookup1 k, \ v os -> addEntry k v os) `sub` selOptions
 
 theOptions	= mkSelA $ selOptions
@@ -70,7 +69,6 @@ theOption k	= mkSelA $ selOption k
 theAlbums	= mkSelA $ selAlbums
 theConfig	= mkSelA $ selConfig
 theStatus	= mkSelA $ selStatus
-theChangedFlag	= mkSelA $ selChanged
 theArchiveName	= mkSelA $ selArchiveName
 theConfigName	= mkSelA $ selConfigName
 
@@ -93,12 +91,6 @@ start		= changeComp theStatus startTr
 
 failed		:: String -> CmdArrow a a
 failed msg	= setComp theStatus (Exc msg)
-
-setChanged	:: CmdArrow a a
-setChanged	= setComp theChangedFlag True
-
-clearChanged	:: CmdArrow a a
-clearChanged	= setComp theChangedFlag False
 
 setArchiveName	:: String -> CmdArrow a a
 setArchiveName n = setComp theArchiveName n

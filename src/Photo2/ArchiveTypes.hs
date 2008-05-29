@@ -20,7 +20,6 @@ data AppState	= AppState { albums      :: ! AlbumTree
 			   , configName  :: ! Href
 			   , options     :: ! Options
 			   , status      :: ! Status
-			   , changed     :: ! Bool
 			   }
 		  deriving (Show)
 
@@ -36,7 +35,6 @@ initialAppState	= AppState { albums       = emptyAlbumTree
 			   , configName   = ""
 			   , options      = []
 			   , status       = Running 0
-			   , changed      = False
 			   }
 
 -- ------------------------------------------------------------
@@ -105,6 +103,7 @@ data Pic	= Pic { picId     :: Name
 		      , picCopies :: Copies
 		      , picAttrs  :: Attrs
 		      , picErrs   :: Errs
+		      , picEdited :: Bool
 		      }
 		  deriving (Show, Eq)
 
@@ -135,6 +134,7 @@ emptyPic	= Pic { picId = emptyName
 		      , picCopies = M.empty
 		      , picAttrs = M.empty
 		      , picErrs = []
+		      , picEdited = False
 		      }
 
 emptyName	:: Name
@@ -184,6 +184,7 @@ xpWrapPic
 		      , picCopies = cs
 		      , picAttrs  = as
 		      , picErrs   = es
+		      , picEdited = False
 		      }
 	     , \ p -> ( picErrs p
 		      , picId   p
