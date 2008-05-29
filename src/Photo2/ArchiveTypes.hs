@@ -356,11 +356,6 @@ showPic p
 
 -- ------------------------------------------------------------
 
-pathToString	:: Path -> String
-pathToString	= concat . intersperse "/"
-
--- ------------------------------------------------------------
-
 statusOk	:: Status -> Bool
 statusOk (Exc _)	= False
 statusOk _		= True

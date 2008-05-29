@@ -6,12 +6,11 @@ import qualified Data.Map as M
 import Data.Tree.NTree.TypeDefs
 
 import System.IO
-import System.FilePath
 
 import Text.XML.HXT.Arrow
 
 import Photo2.ArchiveTypes
--- import Photo2.DataModell
+import Photo2.FilePath
 import Photo2.Arrow
 
 -- import Photo2.State
@@ -55,9 +54,9 @@ loadAlbum	= loadDocData xpAlbumTree
 -- ----------------------------------------
 
 testDir = "http://localhost/~si/praktika/SoftwarePraktikum/photoalbum2/Photoalbum"
-testArchive = testDir `combine` "archive.xml"
-testConfig  = testDir `combine` "config/archive.xml"
-testAlbum   = testDir `combine` "archive/Hagenbeck.xml"
+testArchive = testDir </> "archive.xml"
+testConfig  = testDir </> "config/archive.xml"
+testAlbum   = testDir </> "archive/Hagenbeck.xml"
 
 e1 = NTree ab1 [NTree pc1 [], NTree pc2 [], NTree ab2 []]
 ab1 = Pic ("myalbum") "" "a.jpg" "" "" M.empty (M.fromList [("title","xxx")]) []
@@ -135,7 +134,7 @@ m =
     s0 <- runCmd (loadArchiveAndConfig testArchive) initialAppState
     s1 <- runCmd (loadAlbums ["Hagenbeck"]) s0
     -- print s1
-    s2 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr pathToString >>> arrIO print) s1
+    s2 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr joinPath >>> arrIO print) s1
     s3 <- runCmd (loadAllAlbums ["Hagenbeck"]) s2
-    s4 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr pathToString >>> arrIO print) s3
+    s4 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr joinPath >>> arrIO print) s3
     return ()

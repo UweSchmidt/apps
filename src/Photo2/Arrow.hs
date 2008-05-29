@@ -7,7 +7,7 @@ import Data.Maybe
 import Text.XML.HXT.Arrow
 
 import Photo2.ArchiveTypes
-
+import Photo2.FilePath
 
 -- ------------------------------------------------------------
 
@@ -233,11 +233,11 @@ checkAlbum p
       )
       `orElse` this
     where
-    ps = pathToString p
+    ps = joinPath p
 
 checkPath	:: Path -> CmdArrow AlbumTree AlbumTree
 checkPath p
-    = runAction ("checking path: " ++ show (pathToString p)) $
+    = runAction ("checking path: " ++ show (joinPath p)) $
       getTreeByPath p
 
 -- ------------------------------------------------------------
