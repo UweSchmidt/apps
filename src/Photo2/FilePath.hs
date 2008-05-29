@@ -77,10 +77,6 @@ addBaseDir base fn
     where
     isAbsP = (== slash) . take 1
 
-addExtension	:: String -> String -> String
-addExtension f e
-    | null e	= f
-    | otherwise	= f ++ dot ++ e
 
 pathFromTo	:: String -> String -> String
 pathFromTo ref1 ref2
@@ -154,5 +150,10 @@ showN n
 
 joinPath	:: [FilePath] -> FilePath
 joinPath	= FP.joinPath
+
+addExtension	:: String -> String -> String
+addExtension f e
+    | null e	= f
+    | otherwise	= FP.addExtension f e
 
 -- ------------------------------------------------------------

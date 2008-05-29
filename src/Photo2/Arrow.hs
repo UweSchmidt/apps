@@ -8,6 +8,7 @@ import Text.XML.HXT.Arrow
 
 import Photo2.ArchiveTypes
 import Photo2.FilePath
+import Photo2.Config
 
 -- ------------------------------------------------------------
 
@@ -74,7 +75,12 @@ theConfigName	= mkSelA $ selConfigName
 
 -- ------------------------------------------------------------
 
-setComp	:: SelArrow a b -> b -> CmdArrow a a
+getConfig	:: (Config -> a) -> CmdArrow b a
+getConfig cf	= get theConfig >>^ arr cf
+
+-- ------------------------------------------------------------
+
+setComp		:: SelArrow a b -> b -> CmdArrow a a
 setComp c v	= perform $ constA v >>> set c
 
 changeComp	:: SelArrow a b -> (b -> b) -> CmdArrow a a
@@ -221,6 +227,77 @@ loadAllAlbums p
       >>>
       set theAlbums
 
+-- ------------------------------------------------------------
+
+-- store the album and all subalbums adressed by a path and mark them as unloaded
+
+storeAllAlbums	:: Path -> CmdArrow a AlbumTree
+storeAllAlbums p
+    = get theAlbums
+      >>>
+      processTreeByPath storeAlbumTree p
+      >>>
+      set theAlbums
+
+storeAlbumTree	:: Path -> CmdArrow AlbumTree AlbumTree
+storeAlbumTree p
+    = runAction ("storing all albums at: " ++ show (joinPath p)) $
+      ( processChildren (storeSubAlbums $< getPicId)
+	>>>
+	( ( ( removeSubAlbums
+	      >>>
+	      ( storeAlbum $< getConfig (albumPath p) )
+	      >>>
+	      changeNode (\ n -> n {picEdited = False})
+	    )
+	    `orElse`
+	    this	-- something went wrong
+	  )
+	  `when`
+	  entryChanged
+	)
+      )
+      `when`
+      isAlbum
+    where
+    storeSubAlbums n
+	= storeAlbumTree (p ++ [n]) `when` isAlbum
+    removeSubAlbums 
+	= processChildren (setChildren [])
+
+storeAlbum	:: FilePath -> CmdArrow AlbumTree AlbumTree
+storeAlbum doc
+    = storeDocData xpAlbumTree doc
+      `guards`
+      changeNode (\ n -> n {picRef = doc})
+
+storeDocData	:: PU b -> String -> CmdArrow b XmlTree
+storeDocData p doc
+    = runAction ("pickle document: " ++ doc) (xpickleVal p)
+      >>>
+      runAction ("write document:  " ++ doc)
+		    (writeDocument [ (a_indent, v_1)
+				   , (a_output_encoding, isoLatin1)
+				   ] "tmp.xml" {-doc-})
+      >>>
+      documentStatusOk
+      >>>
+      traceStatus ("stored  : " ++ show doc)
+
+isAlbum		:: CmdArrow AlbumTree AlbumTree
+isAlbum		= getChildren
+		  `guards`
+		  this
+
+entryChanged	:: CmdArrow AlbumTree AlbumTree
+entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
+		  `guards`
+		  this
+
+-- ------------------------------------------------------------
+--
+-- check whether an album is loaded, if not yet done, load the album
+
 checkAlbum	:: Path -> CmdArrow AlbumTree AlbumTree
 checkAlbum p
     = ( getNode
@@ -234,6 +311,8 @@ checkAlbum p
       `orElse` this
     where
     ps = joinPath p
+
+-- check whether an entry addresed by a path exists
 
 checkPath	:: Path -> CmdArrow AlbumTree AlbumTree
 checkPath p
@@ -258,15 +337,15 @@ getDescByPath p
     where
     (n' : p') = p
     nodeMatch = hasPicName n'
-
-processTreeByPath	:: CmdArrow AlbumTree AlbumTree -> Path -> CmdArrow AlbumTree AlbumTree
+{-
+processTreeByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
 processTreeByPath pa p
     | null p	= this
-    | null p'	= pa `when` hasPicName n'
+    | null p'	= pa p `when` hasPicName n'
     | otherwise	= processChildren (processTreeByPath pa p')
     where
     (n' : p') = p
-
+-}
 processAllNodesOnPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
 processAllNodesOnPath pa p
     | null p	= this
@@ -283,7 +362,7 @@ processAllByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow A
 processAllByPath pa p
     = pa p
       >>>
-      ( (\ n -> processChildren $ processAllByPath pa (p ++ [n])) $< (getNode >>^ picId) )
+      ( (\ n -> processChildren $ processAllByPath pa (p ++ [n])) $< getPicId )
 
 -- ----------------------------------------
 --
@@ -296,8 +375,24 @@ processAllSubTreesByPath pa p0
     where
     processSub p
 	| null p	= this
-	| null p'	= processAllByPath pa p0         `when` hasPicName n'
-	| otherwise	= processChildren (processSub p) `when` hasPicName n'
+	| null p'	= processAllByPath pa p0          `when` hasPicName n'
+	| otherwise	= processChildren (processSub p') `when` hasPicName n'
+	where
+	(n' : p') = p
+
+-- ----------------------------------------
+--
+-- | process a tree addressed by a path
+--   with an arrow getting the full path as parameter
+
+processTreeByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processTreeByPath pa p0
+    = processSub p0
+    where
+    processSub p
+	| null p	= this
+	| null p'	= pa p0                           `when` hasPicName n'
+	| otherwise	= processChildren (processSub p') `when` hasPicName n'
 	where
 	(n' : p') = p
 
@@ -338,7 +433,7 @@ getAlbumPaths p
     where
     getPaths :: Path -> CmdArrow AlbumTree Path
     getPaths p'
-	= getPaths' $< (getNode >>^ picId)
+	= getPaths' $< getPicId
 	  where
 	  getPaths' :: Name -> CmdArrow AlbumTree Path
 	  getPaths' n'
@@ -367,7 +462,6 @@ addAlbumEntry (p, pic)
 
 removeAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumTree
 removeAlbumEntry p
-    = processTreeByPath none p
+    = processTreeByPath (const none) p
 
 -- ------------------------------------------------------------
-

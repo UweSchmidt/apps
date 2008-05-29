@@ -129,12 +129,28 @@ processArchive arname
 -}
 -- ------------------------------------------------------------
 
-m =
+m1 =
     do
     s0 <- runCmd (loadArchiveAndConfig testArchive) initialAppState
     s1 <- runCmd (loadAlbums ["Hagenbeck"]) s0
     -- print s1
     s2 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr joinPath >>> arrIO print) s1
+    return s2
+
+m2 s2 =
+    do
     s3 <- runCmd (loadAllAlbums ["Hagenbeck"]) s2
     s4 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr joinPath >>> arrIO print) s3
-    return ()
+    return s4
+
+m3 s4 =
+    do
+    s5 <- runCmd (storeAllAlbums ["Hagenbeck","Zebras"]) s4
+    return s5
+
+m =
+    do
+    s1 <- m1
+    s2 <- m2 s1
+    s3 <- m3 s2
+    return s3
