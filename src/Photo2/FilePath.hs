@@ -146,7 +146,10 @@ showN n
 -- ------------------------------------------------------------
 
 (</>)		:: String -> String -> String
-(</>)		= FP.combine
+(</>) dn fn
+    | dn == thisDir	= fn
+    | otherwise		= dn `FP.combine` fn
+
 
 joinPath	:: [FilePath] -> FilePath
 joinPath	= FP.joinPath
