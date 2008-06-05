@@ -61,13 +61,14 @@ mkSelA (g, s) = SA { get = getField g
 		   , set = setField s
 		   }
 
-selAlbums	= (albums, \ x s -> s {albums = x})
+selAlbums	= (albums,      \ x s -> s {albums = x})
 selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
-selConfig	= (config, \ x s -> s {config = x})
-selConfigName	= (configName, \ x s -> s {configName = x})
-selOptions	= (options, \ x s -> s {options = x})
-selStatus	= (status, \ x s -> s {status = x})
-selOption k	= (lookup1 k, \ v os -> addEntry k v os) `sub` selOptions
+selConfig	= (config,      \ x s -> s {config = x})
+selConfigName	= (configName,  \ x s -> s {configName = x})
+selOptions	= (options,     \ x s -> s {options = x})
+selStatus	= (status,      \ x s -> s {status = x})
+selWd		= (cwd,         \ x s -> s {cwd = x})
+selOption k	= (lookup1 k,   \ v os -> addEntry k v os) `sub` selOptions
 
 theOptions	= mkSelA $ selOptions
 theOption k	= mkSelA $ selOption k
@@ -76,6 +77,7 @@ theConfig	= mkSelA $ selConfig
 theStatus	= mkSelA $ selStatus
 theArchiveName	= mkSelA $ selArchiveName
 theConfigName	= mkSelA $ selConfigName
+theWd           = mkSelA $ selWd
 
 -- ------------------------------------------------------------
 
@@ -212,10 +214,6 @@ loadAlbum base doc
 			       loadDocData xpAlbumTree doc
 			     )
       )
-
-loadRootAlbum	:: CmdArrow a AlbumTree
-loadRootAlbum
-    = loadAlbums $< getRootPath
 
 loadAlbums	:: Path -> CmdArrow a AlbumTree
 loadAlbums p
@@ -418,6 +416,21 @@ mkPic		= mkLeaf
 getRootPath	:: CmdArrow a Path
 getRootPath	= get theAlbums >>> getPicId >>^ (:[])
 
+rootWd		:: CmdArrow a Path
+rootWd		= getRootPath >>> set theWd
+
+withCwd		:: (Path -> CmdArrow a b) -> CmdArrow a b
+withCwd		= withDir []
+
+withDir		:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
+withDir p c	= c $< (getRootPath >>> arr (++ p))
+
+withAbsDir	:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
+withAbsDir p c	= c p
+
+mkAbs		:: CmdArrow Path Path
+mkAbs		= (\ wd -> arr (wd ++)) $< get theWd
+ 
 -- ----------------------------------------
 
 getAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumEntry

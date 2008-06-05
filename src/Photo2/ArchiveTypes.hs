@@ -22,6 +22,7 @@ data AppState	= AppState { albums      :: ! AlbumTree
 			   , configName  :: ! Href
 			   , options     :: ! Options
 			   , status      :: ! Status
+			   , cwd	 :: ! Path
 			   }
 		  deriving (Show)
 
@@ -37,6 +38,7 @@ initialAppState	= AppState { albums       = emptyAlbumTree
 			   , configName   = ""
 			   , options      = []
 			   , status       = Running 0
+			   , cwd          = []
 			   }
 
 -- ------------------------------------------------------------

@@ -26,46 +26,53 @@ m1 = do
 cmdLoop	:: Cmd
 cmdLoop state
     = do
-      cmd  <- getCmd
-      if isNothing cmd
+      cmds  <- getCmd prompt
+      if null cmds
 	 then return state
 	 else do
-	      newState <- (fromJust cmd) state
+	      newState <- runCmds cmds state
 	      cmdLoop newState
+    where
+    prompt = ("photo2@" ++) . (++ "> ") . mkAbsPath . joinPath . cwd $ state
+    runCmds [] s0
+	= return s0
+    runCmds (c:cs) s0
+	= do
+	  s1 <- c s0
+	  runCmds cs s1
 
-getCmd	:: IO (Maybe Cmd)
-getCmd
+getCmd	:: String -> IO [Cmd]
+getCmd prompt
     = do
-      line <- readCmdLine
+      line <- readCmdLine prompt
       return $ uncurry parseCmd (scanLine line)
 
-prompt	:: String
-prompt	= "photo2 > "
-
-readCmdLine	:: IO String
-readCmdLine
+readCmdLine	:: String -> IO String
+readCmdLine prompt
     = do
       line <- readline prompt
       let line' = stringTrim . fromMaybe "" $ line
       CM.when (length line' > 1) (addHistory line')
       if null line'
-	 then readCmdLine
+	 then readCmdLine prompt
 	 else return line'
 
-mkCmd	= Just . runCmd
-mkCmd' io = Just . runCmd' io
+mkCmd	= return . runCmd
+mkCmd' io = return . runCmd' io
 
-liftCmd	:: IO a -> Maybe Cmd
-liftCmd c = Just $
+liftCmd	:: Monad m => IO a -> m Cmd
+liftCmd c = return $
 	    ( \ s -> do
 		     c
 		     return s )
 
-parseCmd	:: String -> [String] -> (Maybe Cmd)
+parseCmd	:: String -> [String] -> [Cmd]
 parseCmd "open" [archive]
     = mkCmd ( loadArchiveAndConfig archive
 	      >>>
-	      loadRootAlbum
+	      rootWd
+	      >>>
+	      withCwd loadAlbums
 	    )
 
 parseCmd "albums" []
@@ -98,6 +105,7 @@ parseCmd "entry" [p]
 	
 parseCmd "ls"  args	= parseLs  args
 parseCmd "cat" args	= parseCat args
+parseCmd "cd"  args	= parseCd  args
 
 parseCmd "?" []
     = liftCmd $
@@ -119,9 +127,8 @@ parseCmd "version" []
     = liftCmd $
       hPutStrLn stdout "Photo2 version 0.0 from 2008-06-05"
 
-parseCmd "exit" _	= Nothing
-
-parseCmd "q" _		= Nothing
+parseCmd "exit" _	= fail ""
+parseCmd "q" _		= fail ""
 
 parseCmd c args
     = illegalCmd c args
@@ -145,22 +152,29 @@ illegalCmd c args
 
 -- ------------------------------------------------------------
 
-parseLs []
-    = parseLs [rootPath]
-
-parseLs [n]
-    | n == rootPath
-	= mkCmd ( getRootPath >>> arrIO printPath )
-    | isAbsPath n
-	= mkCmd ( get theAlbums >>> getAlbumPaths p >>> arrIO printPath )
+parseLs ps
+    | null ps
+      ||
+      n == rootPath
+	= mkLs withCwd
+    | null ps'
+      &&
+      isAbsPath n
+	= mkLs $ withAbsDir p'
+    | null ps'
+	= mkLs $ withDir p
     | otherwise
-	= parseLs [mkAbsPath n]	-- preliminary: no current album concept
+	= illegalCmd "ls" ps
     where
-    (_ : p) = splitPath n
-    printPath s = putStrLn (mkAbsPath . joinPath $ s)
+    mkLs wd     = mkCmd ( get theAlbums
+			  >>> wd getAlbumPaths
+			  >>> arrIO printPath
+			)
 
-parseLs args
-    = illegalCmd "ls" args
+
+    (n : ps')   = ps
+    p@(_:p')    = splitPath n
+    printPath s = putStrLn (mkAbsPath . joinPath $ s)
 
 -- ------------------------------------------------------------
 
@@ -188,5 +202,10 @@ parseCat [n]
 
 parseCat args
     = illegalCmd "cat" args
+
+-- ------------------------------------------------------------
+
+parseCd []
+    = mkCmd ( rootWd )
 
 -- ------------------------------------------------------------
