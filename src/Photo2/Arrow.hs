@@ -17,8 +17,12 @@ type CmdArrow a b = IOStateArrow AppState a b
 runCmd	:: CmdArrow a b -> AppState -> IO AppState
 runCmd cmd s0
     = do
-      (s1, _res) <- runIOSLA cmd (initialState s0) undefined
+      (s1, _res) <- runIOSLA (setTraceLevel 0 >>> cmd) (initialState s0) undefined
       return (xio_userState s1)
+
+runCmd'	:: CmdArrow a b -> ([b] -> IO ()) -> AppState -> IO AppState
+runCmd' cmd out
+    = runCmd (listA cmd >>> arrIO out)
 
 -- ------------------------------------------------------------
 
@@ -203,11 +207,15 @@ loadArchiveAndConfig doc
 loadAlbum	:: String -> String -> CmdArrow a AlbumTree
 loadAlbum base doc
     = runAction ("loading and unpickling album: " ++ show doc ++ " (base = " ++ show base ++ ")")
-      ( runInLocalURIContext ( constA base >>> setBaseURI
+      ( runInLocalURIContext ( constA base >>> changeBaseURI
 			       >>>
 			       loadDocData xpAlbumTree doc
 			     )
       )
+
+loadRootAlbum	:: CmdArrow a AlbumTree
+loadRootAlbum
+    = loadAlbums $< getRootPath
 
 loadAlbums	:: Path -> CmdArrow a AlbumTree
 loadAlbums p
@@ -285,9 +293,9 @@ storeDocData p doc
       traceStatus ("stored  : " ++ show doc)
 
 isAlbum		:: CmdArrow AlbumTree AlbumTree
-isAlbum		= getChildren
-		  `guards`
-		  this
+isAlbum		=  ( getChildren `guards` this )
+		   <+>
+		   ( (getNode >>> arr picRef >>> isA (not . null)) `guards` this )
 
 entryChanged	:: CmdArrow AlbumTree AlbumTree
 entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
@@ -406,6 +414,9 @@ getPicId	= getNode >>^ picId
 
 mkPic		:: Pic -> CmdArrow AlbumTree AlbumTree
 mkPic		= mkLeaf
+
+getRootPath	:: CmdArrow a Path
+getRootPath	= get theAlbums >>> getPicId >>^ (:[])
 
 -- ----------------------------------------
 

@@ -1,7 +1,7 @@
 module Photo2.FilePath
 where
 
-import           Photo2.ArchiveTypes (Path)
+-- import           Photo2.ArchiveTypes (Path)
 
 import qualified System.FilePath as FP
 
@@ -99,14 +99,6 @@ upDirs ref1 ref2
     where
     td1 = topDirName ref1
 
-splitPath	:: String -> [String]
-splitPath s
-    | null s = []
-    | null r = [b]
-    | otherwise = b : splitPath (tail r)
-    where
-    (b, r) = break (== head slash) s
-
 normPath	:: String -> String
 normPath
     = listToPath . normPs [] . splitPath
@@ -133,12 +125,13 @@ listToPath	:: [String] -> String
 listToPath []	= thisDir
 listToPath l	= foldr1 (\ x y -> x ++ slash ++ y) $ l
 
--- listToPath . pathToList == id
 
+-- listToPath . pathToList == id
+{-
 isAbsPath		:: [String] -> Bool
 isAbsPath ("" : _)	= True
 isAbsPath _		= False
-
+-}
 showN	:: Int -> Int -> String
 showN n
     = reverse . take n . reverse . ((replicate n '0') ++ ) . show
@@ -158,5 +151,24 @@ addExtension	:: String -> String -> String
 addExtension f e
     | null e	= f
     | otherwise	= FP.addExtension f e
+
+splitPath	:: FilePath -> [FilePath]
+splitPath	= FP.splitDirectories
+
+isAbsPath	:: FilePath -> Bool
+isAbsPath	= FP.isAbsolute
+
+mkAbsPath	:: FilePath -> FilePath
+mkAbsPath p
+    | isAbsPath	p = p
+    | otherwise	  = rootPath </> p
+
+mkRelPath	:: FilePath -> FilePath
+mkRelPath p
+    | isAbsPath p = tail p
+    | otherwise   = p
+
+rootPath	:: FilePath
+rootPath	= [FP.pathSeparator]
 
 -- ------------------------------------------------------------

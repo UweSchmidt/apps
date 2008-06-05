@@ -10,6 +10,8 @@ import qualified Data.Map as M
 import           Text.XML.HXT.Arrow hiding ( mkLeaf )
 import           Data.Tree.NTree.TypeDefs
 
+import           Photo2.FilePath
+
 -- ------------------------------------------------------------
 --
 -- the global state
@@ -222,6 +224,15 @@ xpErrs	= xpList $
 
 xpName	:: PU Name
 xpName	= xpText
+
+xpAlbumEntry	:: PU AlbumEntry
+xpAlbumEntry
+    = xpElem "entry" $
+      xpPair ( xpAttr "path" $
+	       xpWrap ( splitPath . mkRelPath, mkAbsPath . joinPath ) $
+	       xpText
+	     )
+	     ( xpWrapPic )
 
 -- ------------------------------------------------------------
 
