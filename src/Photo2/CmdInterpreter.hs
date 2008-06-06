@@ -19,10 +19,6 @@ import Text.XML.HXT.Arrow
 
 type Cmd = AppState -> IO AppState
 
-m1 = do
-     s1 <- cmdLoop initialAppState
-     return ()
-
 cmdLoop	:: Cmd
 cmdLoop state
     = do
