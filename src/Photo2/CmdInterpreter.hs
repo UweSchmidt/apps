@@ -63,6 +63,9 @@ liftCmd c = return $
 		     return s )
 
 parseCmd	:: String -> [String] -> [Cmd]
+parseCmd "open" []
+    = parseCmd "open" ["archive.xml"]
+
 parseCmd "open" [archive]
     = mkCmd ( loadArchiveAndConfig archive
 	      >>>
@@ -99,9 +102,10 @@ parseCmd "entry" [p]
 	arrIO print
       )
 	
-parseCmd "ls"  args	= parseLs  args
-parseCmd "cat" args	= parseCat args
-parseCmd "cd"  args	= parseCd  args
+parseCmd "ls"   args	= parseLs  args
+parseCmd "ls-r" args	= parseLsr args
+parseCmd "cat"  args	= parseCat args
+parseCmd "cd"   args	= parseCd  args
 
 parseCmd "?" []
     = liftCmd $
@@ -113,7 +117,8 @@ parseCmd "?" []
 	    , "\t?\t\thelp (this text)"
 	    , "\topen <archive>\tload a photo archive, configuration and root album"
 	    , "\tdump\t\tXML output of root album"
-	    , "\tls\t[path]\tlist album and picture names, default is the root"
+	    , "\tls\t[path]\tlist album and picture names, default is the current working album"
+	    , "\tls-r\t[path]\tlist album and picture names recursively, default is the current working album"
 	    , "\tcat\t[path]\tlist the contents of an entry, default is the root"
 	    , "\tversion\t\tprint photo2 version"
 	    , "\texit,q\t\texit photo2"
@@ -147,57 +152,65 @@ illegalCmd c args
 		       )
 
 -- ------------------------------------------------------------
+--
+-- execute a comand with one argument, a path for addressing one node
+-- if the path is empty, the currend working dir is taken,
+-- if it's a relative path, it's adressed via current working dir
 
-parseLs ps
+parseWdCmd :: (Path -> CmdArrow a b)
+              -> String
+              -> [String]
+              -> [Cmd]
+
+parseWdCmd action name ps
     | null ps
       ||
       n == rootPath
 	= mkLs withCwd
-    | null ps'
-      &&
-      isAbsPath n
+    | not . null . tail $ ps
+	= illegalCmd name ps
+    | isAbsPath n
 	= mkLs $ withAbsDir p'
-    | null ps'
-	= mkLs $ withDir p
     | otherwise
-	= illegalCmd "ls" ps
+	= mkLs $ withDir p
     where
-    mkLs wd     = mkCmd ( get theAlbums
-			  >>> wd getAlbumPaths
-			  >>> arrIO printPath
-			)
-
-
+    mkLs wd     = mkCmd $ wd action
     (n : ps')   = ps
     p@(_:p')    = splitPath n
-    printPath s = putStrLn (mkAbsPath . joinPath $ s)
+
 
 -- ------------------------------------------------------------
 
-parseCat []
-    = parseCat [rootPath]
+parseLs :: [String] -> [Cmd]
+parseLs
+    = parseWdCmd (getLsPaths getAlbumPaths) "ls"
 
-parseCat [n]
-    | isAbsPath n
-	= mkCmd ( get theAlbums
-		  >>>
-		  getEntry
-		  >>>
-		  xpickleDocument xpAlbumEntry [ (a_indent, v_1)
-					       , (a_no_xml_pi, v_1)
-					       ] ""
-		)
-    | otherwise
-	=  parseCat [mkAbsPath n]
+parseLsr :: [String] -> [Cmd]
+parseLsr
+    = parseWdCmd (getLsPaths getAllAlbumPaths) "ls-r"
+
+getLsPaths	:: (Path -> CmdArrow AlbumTree Path) -> Path -> CmdArrow a ()
+getLsPaths gt p
+    = loadAlbums p
+      >>>
+      gt p
+      >>>
+      arrIO ( putStrLn . mkAbsPath . joinPath )
+
+-- ------------------------------------------------------------
+
+parseCat :: [String] -> [Cmd]
+parseCat
+    = parseWdCmd getEntry "cat"
     where
-    getEntry
-	| n == rootPath
-	    = getAlbumEntry $< getRootPath
-	| otherwise
-	    =  getAlbumEntry (tail $ splitPath n)
-
-parseCat args
-    = illegalCmd "cat" args
+    getEntry p
+	= loadAlbums p
+	  >>>
+	  getAlbumEntry p
+	  >>>
+	  xpickleDocument xpAlbumEntry [ (a_indent, v_1)
+			               , (a_no_xml_pi, v_1)
+			               ] ""
 
 -- ------------------------------------------------------------
 

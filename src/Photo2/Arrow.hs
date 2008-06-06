@@ -447,25 +447,34 @@ getAlbumEntry p
     n' = last p
     p' = init p
 
-getAlbumPaths	:: Path -> CmdArrow AlbumTree Path
-getAlbumPaths p
-    = getDescByPath p
-      >>>
-      getPaths (reverse p)
-      >>^
-      reverse
+getAllAlbumPaths	:: Path -> CmdArrow AlbumTree Path
+getAllAlbumPaths
+    = getPaths gp
     where
-    getPaths :: Path -> CmdArrow AlbumTree Path
-    getPaths p'
-	= getPaths' $< getPicId
+    gp :: Path -> CmdArrow AlbumTree Path
+    gp p'
+	= gp' $< getPicId
 	  where
-	  getPaths' :: Name -> CmdArrow AlbumTree Path
-	  getPaths' n'
+	  gp' :: Name -> CmdArrow AlbumTree Path
+	  gp' n'
 	      = constA p''
 		<+>
-		( getChildren >>> getPaths p'' )
+		( getChildren >>> gp p'' )
 		where
 		p'' = n' : p'
+
+getAlbumPaths	:: Path -> CmdArrow AlbumTree Path
+getAlbumPaths
+    = getPaths (\ p' -> getPicId >>> arr (:p') )
+
+getPaths	:: (Path -> CmdArrow AlbumTree Path) -> Path -> CmdArrow AlbumTree Path
+getPaths gp p
+    = getDescByPath p
+      >>>
+      gp (reverse p)
+      >>^
+      reverse
+
 
 addAlbumEntry	:: AlbumEntry -> CmdArrow AlbumTree AlbumTree
 addAlbumEntry (p, pic)
