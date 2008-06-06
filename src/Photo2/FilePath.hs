@@ -101,7 +101,10 @@ upDirs ref1 ref2
 
 normPath	:: String -> String
 normPath
-    = listToPath . normPs [] . splitPath
+    = listToPath . normalPath . splitPath
+
+normalPath
+    = normPs []
     where
     normPs rl []
 	= reverse rl

@@ -217,7 +217,8 @@ loadAlbum base doc
 
 loadAlbums	:: Path -> CmdArrow a AlbumTree
 loadAlbums p
-    = get theAlbums
+    = runAction ("check loaded albums for " ++ show (joinPath p)) $
+      get theAlbums
       >>>
       processAllNodesOnPath checkAlbum p
       >>>
@@ -419,14 +420,17 @@ getRootPath	= get theAlbums >>> getPicId >>^ (:[])
 rootWd		:: CmdArrow a Path
 rootWd		= getRootPath >>> set theWd
 
-withCwd		:: (Path -> CmdArrow a b) -> CmdArrow a b
-withCwd		= withDir []
-
 withDir		:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
-withDir p c	= c $< (getRootPath >>> arr (++ p))
+withDir p c	= (\ p' -> withAbsDir p' c) $< (get theWd >>> arr (++ p))
 
 withAbsDir	:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
 withAbsDir p c	= c p
+
+withCwd		:: (Path -> CmdArrow a b) -> CmdArrow a b
+withCwd		= withDir []
+
+withRootDir	:: (Path -> CmdArrow a b) -> CmdArrow a b
+withRootDir c	= (\ p' -> withAbsDir p' c) $< getRootPath
 
 mkAbs		:: CmdArrow Path Path
 mkAbs		= (\ wd -> arr (wd ++)) $< get theWd

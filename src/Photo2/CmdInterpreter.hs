@@ -53,14 +53,17 @@ readCmdLine prompt
 	 then readCmdLine prompt
 	 else return line'
 
-mkCmd	= return . runCmd
-mkCmd' io = return . runCmd' io
+mkCmd		:: CmdArrow a b -> [Cmd]
+mkCmd		= return . runCmd
 
-liftCmd	:: Monad m => IO a -> m Cmd
-liftCmd c = return $
-	    ( \ s -> do
-		     c
-		     return s )
+mkCmd'		:: (Monad m) => CmdArrow a b -> ([b] -> IO ()) -> m Cmd
+mkCmd' io	= return . runCmd' io
+
+liftCmd		:: Monad m => IO a -> m Cmd
+liftCmd c	= return $
+		  ( \ s -> do
+		           c
+		           return s )
 
 parseCmd	:: String -> [String] -> [Cmd]
 parseCmd "open" []
@@ -90,6 +93,12 @@ parseCmd "config" []
 				       ] ""
 	    )
 
+parseCmd "pwd" []
+    = mkCmd ( get theWd
+	      >>>
+	      arrIO (putStrLn . (rootPath </>) . joinPath)
+	    )
+
 parseCmd "entry" []
     = parseCmd "entry" [rootPath]
 
@@ -116,10 +125,12 @@ parseCmd "?" []
 	    , ""
 	    , "\t?\t\thelp (this text)"
 	    , "\topen <archive>\tload a photo archive, configuration and root album"
-	    , "\tdump\t\tXML output of root album"
+	    , "\talbums\t\tXML output of root album"
+	    , "\tconfig\t\tXML output of config data"
 	    , "\tls\t[path]\tlist album and picture names, default is the current working album"
 	    , "\tls-r\t[path]\tlist album and picture names recursively, default is the current working album"
 	    , "\tcat\t[path]\tlist the contents of an entry, default is the root"
+	    , "\tpwd\t\tprint working album (dir)"
 	    , "\tversion\t\tprint photo2 version"
 	    , "\texit,q\t\texit photo2"
 	    ]
@@ -145,6 +156,7 @@ scanLine s
 
 -- ------------------------------------------------------------
 
+illegalCmd	:: (Monad m) => String -> [String] -> m Cmd
 illegalCmd c args
     = liftCmd $
       hPutStrLn stderr ( "unknown command or wrong arguments: " ++ unwords (c : args) ++ "\n" ++
@@ -164,17 +176,20 @@ parseWdCmd :: (Path -> CmdArrow a b)
 
 parseWdCmd action name ps
     | null ps
-      ||
-      n == rootPath
-	= mkLs withCwd
-    | not . null . tail $ ps
+	= mkWdCmd withCwd
+    | not . null $ ps'
 	= illegalCmd name ps
+    | n == rootPath
+	= mkWdCmd $ withRootDir
     | isAbsPath n
-	= mkLs $ withAbsDir p'
+	= mkWdCmd $ withAbsDir p'
     | otherwise
-	= mkLs $ withDir p
+	= mkWdCmd $ withDir p
     where
-    mkLs wd     = mkCmd $ wd action
+    mkWdCmd wd  = mkCmd $ wd (\ x -> action x `orElse` cFailed)
+    cFailed	= perform (arrIO0 $ hPutStrLn stderr ("command failed: " ++ unwords (name : ps)))
+		  >>>
+		  none
     (n : ps')   = ps
     p@(_:p')    = splitPath n
 
@@ -214,7 +229,23 @@ parseCat
 
 -- ------------------------------------------------------------
 
+parseCd :: [String] -> [Cmd]
 parseCd []
-    = mkCmd ( rootWd )
+    = parseCd [rootPath]
+
+parseCd ps
+    = parseWdCmd changeDir "cd" ps
+    where
+    changeDir p0
+	| null p	-- above the top of the roof
+	    = none
+	| otherwise
+	    = loadAlbums p
+	      >>>
+	      checkPath p
+              >>>
+	      ( constA p >>> set theWd )
+	where
+	p = normalPath p0
 
 -- ------------------------------------------------------------
