@@ -77,14 +77,6 @@ parseCmd "open" [archive]
 	      withCwd loadAlbums
 	    )
 
-parseCmd "albums" []
-    = mkCmd ( get theAlbums
-	      >>>
-	      xpickleDocument xpAlbumTree [ (a_indent, v_1)
-					  , (a_no_xml_pi, v_1)
-					  ] ""
-	    )
-
 parseCmd "config" []
     = mkCmd ( get theConfig
 	      >>>
@@ -93,28 +85,35 @@ parseCmd "config" []
 				       ] ""
 	    )
 
+parseCmd "options" []
+    = mkCmd ( get theOptions
+	      >>>
+	      arrIO dumpOptions
+	    )
+    where
+    dumpOptions
+	= putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v)
+
+parseCmd "set" [n]
+    = parseCmd "set" [n,v_1]
+
+parseCmd "set" [n,v]
+    = mkCmd ( changeComp theOptions (addEntry n v) )
+
+parseCmd "unset" [n]
+    = mkCmd ( changeComp theOptions (delEntry n) )
+
 parseCmd "pwd" []
     = mkCmd ( get theWd
 	      >>>
 	      arrIO (putStrLn . (rootPath </>) . joinPath)
 	    )
 
-parseCmd "entry" []
-    = parseCmd "entry" [rootPath]
-
-parseCmd "entry" [p]
-    = mkCmd
-      ( get theAlbums
-	>>>
-	getAlbumEntry (tail $ splitPath p)
-	>>>
-	arrIO print
-      )
-	
-parseCmd "ls"   args	= parseLs  args
-parseCmd "ls-r" args	= parseLsr args
-parseCmd "cat"  args	= parseCat args
-parseCmd "cd"   args	= parseCd  args
+parseCmd "ls"   args	= parseLs   args
+parseCmd "ls-r" args	= parseLsr  args
+parseCmd "cat"  args	= parseCat  args
+parseCmd "dump" args	= parseDump args
+parseCmd "cd"   args	= parseCd   args
 
 parseCmd "?" []
     = liftCmd $
@@ -123,16 +122,20 @@ parseCmd "?" []
     usage = unlines $
 	    [ "commands available from the promt:"
 	    , ""
-	    , "\t?\t\thelp (this text)"
-	    , "\topen <archive>\tload a photo archive, configuration and root album"
-	    , "\talbums\t\tXML output of root album"
-	    , "\tconfig\t\tXML output of config data"
-	    , "\tls\t[path]\tlist album and picture names, default is the current working album"
-	    , "\tls-r\t[path]\tlist album and picture names recursively, default is the current working album"
-	    , "\tcat\t[path]\tlist the contents of an entry, default is the root"
-	    , "\tpwd\t\tprint working album (dir)"
-	    , "\tversion\t\tprint photo2 version"
-	    , "\texit,q\t\texit photo2"
+	    , "  ?                  help (this text)"
+	    , "  open <archive>     load a photo archive, configuration and root album"
+	    , "  config             list config data"
+	    , "  options            list options"
+	    , "  set <opt> [val]    set or overwrite an option, default value is \"1\""
+	    , "      debug 1        debug output"
+	    , "  unset <opt>        unset an option"
+	    , "  ls [path]          list album and picture names, default is the current working album"
+	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
+	    , "  cat [path]         list the contents of an entry, default is current working album"
+	    , "  dump [path]        list the contents of a whole album, default is current working album"
+	    , "  pwd                print working album (dir)"
+	    , "  version            print photo2 version"
+	    , "  exit,q             exit photo2"
 	    ]
 
 parseCmd "version" []
@@ -226,6 +229,19 @@ parseCat
 	  xpickleDocument xpAlbumEntry [ (a_indent, v_1)
 			               , (a_no_xml_pi, v_1)
 			               ] ""
+
+parseDump	:: [String] -> [Cmd]
+parseDump
+    = parseWdCmd dumpEntry "dump"
+    where
+    dumpEntry p
+	= loadAlbums p
+	  >>>
+	  getTreeByPath p
+	  >>>
+	  xpickleDocument xpAlbumTree [ (a_indent, v_1)
+				      , (a_no_xml_pi, v_1)
+				      ] ""
 
 -- ------------------------------------------------------------
 

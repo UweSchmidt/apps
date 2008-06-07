@@ -1,8 +1,7 @@
 module Photo2.Arrow
 where
 
-import Data.Maybe
--- import Data.Tree.Class(mkLeaf)
+import Data.Maybe ()
 
 import Text.XML.HXT.Arrow
 
@@ -70,13 +69,28 @@ selStatus	= (status,      \ x s -> s {status = x})
 selWd		= (cwd,         \ x s -> s {cwd = x})
 selOption k	= (lookup1 k,   \ v os -> addEntry k v os) `sub` selOptions
 
+theOptions      :: SelArrow a Options
 theOptions	= mkSelA $ selOptions
+
+theOption       :: Name -> SelArrow a String
 theOption k	= mkSelA $ selOption k
+
+theAlbums       :: SelArrow a AlbumTree
 theAlbums	= mkSelA $ selAlbums
+
+theConfig       :: SelArrow a Config
 theConfig	= mkSelA $ selConfig
+
+theStatus       :: SelArrow a Status
 theStatus	= mkSelA $ selStatus
+
+theArchiveName  :: SelArrow a Href
 theArchiveName	= mkSelA $ selArchiveName
+
+theConfigName   :: SelArrow a Href
 theConfigName	= mkSelA $ selConfigName
+
+theWd 		:: SelArrow a Path
 theWd           = mkSelA $ selWd
 
 -- ------------------------------------------------------------
@@ -113,9 +127,11 @@ statusOK	= get theStatus >>> isA statusOk
 traceStatus	:: String -> CmdArrow a a
 traceStatus msg
     = perform $
-      traceS $< get theStatus
+      traceS $<< (get theStatus &&& get (theOption "debug"))
     where
-    traceS st	= traceMsg 0 (replicate (level st) ' ' ++ msg)
+    traceS st "1" = traceMsg 0 (replicate (level st) ' ' ++ msg)
+    traceS _  _   = this
+
     level (Running i)	= 2 * i
     level _		= 0
 
@@ -144,14 +160,14 @@ withStatusCheck msg action
 
 whenStatusOK	:: String -> CmdArrow a b -> CmdArrow a b
 whenStatusOK msg action
-    = ( statusOK `guards` ( runAction $< get theStatus ) )
+    = ( statusOK `guards` ( runAction' $< get theStatus ) )
       `orElse`
       ( traceStatus ("error   : " ++ msg)
 	>>>
 	none
       )
     where
-    runAction oldStatus
+    runAction' oldStatus
 	= action
 	  >>>
 	  setComp theStatus oldStatus
@@ -306,7 +322,7 @@ entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
 -- check whether an album is loaded, if not yet done, load the album
 
 checkAlbum	:: Path -> CmdArrow AlbumTree AlbumTree
-checkAlbum p
+checkAlbum _p
     = ( getNode
 	>>>
 	picRef
@@ -316,8 +332,6 @@ checkAlbum p
 	( loadAlbum $<< get theArchiveName &&& this )
       )
       `orElse` this
-    where
-    ps = joinPath p
 
 -- check whether an entry addresed by a path exists
 
@@ -481,8 +495,8 @@ getPaths gp p
 
 
 addAlbumEntry	:: AlbumEntry -> CmdArrow AlbumTree AlbumTree
-addAlbumEntry (p, pic)
-    = insert p
+addAlbumEntry (p0, pic)
+    = insert p0
     where
     n = picId pic
     insert	:: Path -> CmdArrow AlbumTree AlbumTree
