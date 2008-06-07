@@ -78,18 +78,6 @@ addBaseDir base fn
     isAbsP = (== slash) . take 1
 
 
-pathFromTo	:: String -> String -> String
-pathFromTo ref1 ref2
-    | td1 == thisDir
-	= ref2
-    | td1 == td2
-	= pathFromTo (removeTopDirName ref1) (removeTopDirName ref2)
-    | otherwise
-	= upDirs ref1 ref2
-    where
-    td1 = topDirName ref1
-    td2 = topDirName ref2
-
 upDirs		:: String -> String -> String
 upDirs ref1 ref2
     | td1 == thisDir
@@ -103,30 +91,6 @@ normPath	:: String -> String
 normPath
     = listToPath . normalPath . splitPath
 
-normalPath
-    = normPs []
-    where
-    normPs rl []
-	= reverse rl
-    normPs rl (r2:rs)
-	| r2 == thisDir			-- simplify ./xxx
-	    = normPs rl rs
-    normPs (r1:rl) (r2:rs)
-	| r2 == superDir
-	  &&
-	  r1 /= superDir
-          &&
-	  not (null r1)
-	      = normPs rl rs		-- simplify  xxx/..
-    normPs rl (r2:rs)
-	= normPs (r2:rl) rs
-
-pathToList	:: String -> [String]
-pathToList	= dropWhile (== thisDir) . splitPath . normPath 
-
-listToPath	:: [String] -> String
-listToPath []	= thisDir
-listToPath l	= foldr1 (\ x y -> x ++ slash ++ y) $ l
 
 
 -- listToPath . pathToList == id
@@ -140,6 +104,7 @@ showN n
     = reverse . take n . reverse . ((replicate n '0') ++ ) . show
 
 -- ------------------------------------------------------------
+-- new functions
 
 (</>)		:: String -> String -> String
 (</>) dn fn
@@ -173,5 +138,42 @@ mkRelPath p
 
 rootPath	:: FilePath
 rootPath	= [FP.pathSeparator]
+
+pathFromTo	:: String -> String -> String
+pathFromTo ref1 ref2
+    | td1 == thisDir
+	= ref2
+    | td1 == td2
+	= pathFromTo (removeTopDirName ref1) (removeTopDirName ref2)
+    | otherwise
+	= upDirs ref1 ref2
+    where
+    td1 = topDirName ref1
+    td2 = topDirName ref2
+
+normalPath
+    = normPs []
+    where
+    normPs rl []
+	= reverse rl
+    normPs rl (r2:rs)
+	| r2 == thisDir			-- simplify ./xxx
+	    = normPs rl rs
+    normPs (r1:rl) (r2:rs)
+	| r2 == superDir
+	  &&
+	  r1 /= superDir
+          &&
+	  not (null r1)
+	      = normPs rl rs		-- simplify  xxx/..
+    normPs rl (r2:rs)
+	= normPs (r2:rl) rs
+
+pathToList	:: String -> [String]
+pathToList	= dropWhile (== thisDir) . splitPath . normPath 
+
+listToPath	:: [String] -> String
+listToPath []	= thisDir
+listToPath l	= foldr1 (\ x y -> x ++ slash ++ y) $ l
 
 -- ------------------------------------------------------------

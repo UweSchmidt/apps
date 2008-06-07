@@ -109,11 +109,12 @@ parseCmd "pwd" []
 	      arrIO (putStrLn . (rootPath </>) . joinPath)
 	    )
 
-parseCmd "ls"   args	= parseLs   args
-parseCmd "ls-r" args	= parseLsr  args
-parseCmd "cat"  args	= parseCat  args
-parseCmd "dump" args	= parseDump args
-parseCmd "cd"   args	= parseCd   args
+parseCmd "ls"    args	= parseLs    args
+parseCmd "ls-r"  args	= parseLsr   args
+parseCmd "cat"   args	= parseCat   args
+parseCmd "dump"  args	= parseDump  args
+parseCmd "store" args	= parseStore args
+parseCmd "cd"    args	= parseCd    args
 
 parseCmd "?" []
     = liftCmd $
@@ -219,9 +220,9 @@ getLsPaths gt p
 
 parseCat :: [String] -> [Cmd]
 parseCat
-    = parseWdCmd getEntry "cat"
+    = parseWdCmd cat "cat"
     where
-    getEntry p
+    cat p
 	= loadAlbums p
 	  >>>
 	  getAlbumEntry p
@@ -232,9 +233,9 @@ parseCat
 
 parseDump	:: [String] -> [Cmd]
 parseDump
-    = parseWdCmd dumpEntry "dump"
+    = parseWdCmd dump "dump"
     where
-    dumpEntry p
+    dump p
 	= loadAlbums p
 	  >>>
 	  getTreeByPath p
@@ -242,6 +243,17 @@ parseDump
 	  xpickleDocument xpAlbumTree [ (a_indent, v_1)
 				      , (a_no_xml_pi, v_1)
 				      ] ""
+
+parseStore	:: [String] -> [Cmd]
+parseStore
+    = parseWdCmd store "store"
+    where
+    store p
+	= loadAlbums p
+	  >>>
+	  processTreeByPath storeAlbumTree p
+	  >>>
+	  set theAlbums
 
 -- ------------------------------------------------------------
 

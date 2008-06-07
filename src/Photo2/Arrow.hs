@@ -284,7 +284,9 @@ storeAlbumTree p
       isAlbum
     where
     storeSubAlbums n
-	= storeAlbumTree (p ++ [n]) `when` isAlbum
+	= storeAlbumTree (p ++ [n])
+	  `when`
+	  getChildren
     removeSubAlbums 
 	= processChildren (setChildren [])
 
@@ -296,12 +298,16 @@ storeAlbum doc
 
 storeDocData	:: PU b -> String -> CmdArrow b XmlTree
 storeDocData p doc
-    = runAction ("pickle document: " ++ doc) (xpickleVal p)
+    = runAction ("pickle document: " ++ doc)
+                ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
-		    (writeDocument [ (a_indent, v_1)
-				   , (a_output_encoding, isoLatin1)
-				   ] "tmp.xml" {-doc-})
+		( addDoctypeDecl "album" "Photo" (pathFromTo doc "config/archive.dtd")
+		  >>>
+		  writeDocument [ (a_indent, v_1)
+				, (a_output_encoding, isoLatin1)
+				] "" -- doc
+		)
       >>>
       documentStatusOk
       >>>

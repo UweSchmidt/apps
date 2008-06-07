@@ -156,7 +156,11 @@ formatAlbumTree	= formatTree showPic
 
 xpAlbumTree	:: PU AlbumTree
 xpAlbumTree
-    = xpAlt ( \ (NTree e cs) -> fromEnum . not . null $ cs )
+    = xpAlt ( \ (NTree e cs) -> fromEnum ( ( not . null $ cs )
+					   ||
+					   ( not . null . picRef $ e )
+					 )
+	    )
       [ xpElem "picture" $ xpPicture
       , xpElem "album"   $ xpAlbum
       ]
