@@ -113,7 +113,6 @@ data Pic	= Pic { picId     :: Name
 
 type Copies	= Map Name Copy
 data Copy	= Copy { copyGeo  :: Geo
-		       , copyBase :: String
 		       }
 		  deriving (Show, Eq)
 
@@ -217,11 +216,11 @@ xpWrapPic
 
 xpCopy	:: PU Copy
 xpCopy
-    = xpWrap ( uncurry Copy
-	     , \ c -> (copyGeo c, copyBase c)
+    = xpWrap ( Copy
+	     , copyGeo
 	     ) $
-      xpPair ( xpAttr "geometry" $ xpGeo )
-	     ( xpAttr "base"     $ xpText )
+      xpAttr "geometry" $ xpGeo
+
 
 xpErrs	:: PU Errs
 xpErrs	= xpList $

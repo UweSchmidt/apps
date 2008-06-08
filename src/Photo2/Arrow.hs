@@ -269,7 +269,7 @@ storeAlbumTree p
 	>>>
 	( ( ( removeSubAlbums
 	      >>>
-	      ( storeAlbum $< getConfig (albumPath p) )
+	      ( storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName ) )
 	      >>>
 	      changeNode (\ n -> n {picEdited = False})
 	    )
@@ -290,23 +290,23 @@ storeAlbumTree p
     removeSubAlbums 
 	= processChildren (setChildren [])
 
-storeAlbum	:: FilePath -> CmdArrow AlbumTree AlbumTree
-storeAlbum doc
-    = storeDocData xpAlbumTree doc
+storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
+storeAlbum doc dtdbase
+    = storeDocData xpAlbumTree "album" doc dtdbase
       `guards`
       changeNode (\ n -> n {picRef = doc})
 
-storeDocData	:: PU b -> String -> CmdArrow b XmlTree
-storeDocData p doc
+storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
+storeDocData p root doc dtdbase
     = runAction ("pickle document: " ++ doc)
                 ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
-		( addDoctypeDecl "album" "Photo" (pathFromTo doc "config/archive.dtd")
+		( addDoctypeDecl root "" (pathFromTo doc (dirName dtdbase </> "archive.dtd"))
 		  >>>
 		  writeDocument [ (a_indent, v_1)
 				, (a_output_encoding, isoLatin1)
-				] "" -- doc
+				] ( doc ++ ".new" )
 		)
       >>>
       documentStatusOk
