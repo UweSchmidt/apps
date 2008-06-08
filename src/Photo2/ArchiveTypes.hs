@@ -254,8 +254,8 @@ xpArchive
       xpWrap ( uncurry Archive
 	     , \ a -> (archConfRef a, archRootAlbum a)
 	     ) $
-      xpPair ( xpDefault "config/archive.xml" $ xpAttr "config" $ xpText )
-	     xpAlbumTree
+      xpPair ( xpAttr "config" $ xpText )
+	     ( xpAlbumTree )
 
 xpConfig	:: PU Config
 xpConfig

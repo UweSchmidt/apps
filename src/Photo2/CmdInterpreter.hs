@@ -77,6 +77,14 @@ parseCmd "open" [archive]
 	      withCwd loadAlbums
 	    )
 
+parseCmd "close" []
+    = mkCmd ( withRootDir storeAllAlbums
+	      >>>
+	      storeConfig
+	      >>>
+	      storeArchive
+	    )
+
 parseCmd "config" []
     = mkCmd ( get theConfig
 	      >>>
@@ -126,6 +134,7 @@ parseCmd "?" []
 	    , ""
 	    , "  ?                  help (this text)"
 	    , "  open <archive>     load a photo archive, configuration and root album"
+	    , "  close              write the whole data, albums, config and archive"
 	    , "  config             list config data"
 	    , "  options            list options"
 	    , "  set <opt> [val]    set or overwrite an option, default value is \"1\""
@@ -135,6 +144,8 @@ parseCmd "?" []
 	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
+	    , "  store [path]       write all albums addressed by path and unload subalbums"
+	    , "  store-config       write the config data"
 	    , "  pwd                print working album (dir)"
 	    , "  version            print photo2 version"
 	    , "  exit,q             exit photo2"
@@ -243,14 +254,7 @@ parseDump
 
 parseStore	:: [String] -> [Cmd]
 parseStore
-    = parseWdCmd store "store"
-    where
-    store p
-	= loadAlbums p
-	  >>>
-	  processTreeByPath storeAlbumTree p
-	  >>>
-	  set theAlbums
+    = parseWdCmd storeAllAlbums "store"
 
 parseUpdate	:: [String] -> [Cmd]
 parseUpdate

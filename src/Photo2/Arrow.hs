@@ -293,18 +293,18 @@ storeAlbumTree p
 	= processChildren (setChildren [])
 
 storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
-storeAlbum doc dtdbase
-    = storeDocData xpAlbumTree "album" doc dtdbase
+storeAlbum doc config
+    = storeDocData xpAlbumTree "album" doc config
       `guards`
       changeNode (\ n -> n {picRef = doc})
 
 storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
-storeDocData p root doc dtdbase
+storeDocData p root doc config
     = runAction ("pickle document: " ++ doc)
                 ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
-		( addDoctypeDecl root "" (pathFromTo doc (dirName dtdbase </> "archive.dtd"))
+		( addDoctypeDecl root "" (pathFromTo doc (dirName config </> "archive.dtd"))
 		  >>>
 		  writeDocument [ (a_indent, v_1)
 				, (a_output_encoding, isoLatin1)
@@ -324,6 +324,36 @@ entryChanged	:: CmdArrow AlbumTree AlbumTree
 entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
 		  `guards`
 		  this
+
+storeConfig	:: CmdArrow b XmlTree
+storeConfig
+    = store $< get theConfigName
+    where
+    store doc
+	= runAction ("storing configuration: " ++ doc)
+	            ( get theConfig
+		      >>>
+		      storeDocData xpConfig "config" doc doc
+		    )
+
+storeArchive	:: CmdArrow b XmlTree
+storeArchive
+    = store $<< (get theArchiveName &&& get theConfigName)
+    where
+    store doc configName
+	= runAction ("storing the archive: " ++ doc)
+	            ( get theAlbums
+		      >>>
+		      withRootDir cut
+		      >>>
+		      arr (Archive configName)
+		      >>>
+		      storeDocData xpArchive "archive" doc configName
+		    )
+    cut p
+	= setChildren []
+	  >>>
+	  ( (\ doc -> (changeNode (\ n -> n {picRef = doc}))) $< getConfig (albumPath p))
 
 -- ------------------------------------------------------------
 --
