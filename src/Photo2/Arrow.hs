@@ -1,7 +1,8 @@
 module Photo2.Arrow
 where
 
-import Data.Maybe ()
+import           Data.Maybe
+import qualified Data.Map as M
 
 import Text.XML.HXT.Arrow
 
@@ -66,22 +67,26 @@ selAlbums	= (albums,      \ x s -> s {albums = x})
 selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
 selConfig	= (config,      \ x s -> s {config = x})
 selConfigName	= (configName,  \ x s -> s {configName = x})
-selOptions	= (options,     \ x s -> s {options = x})
+-- selOptions	= (options,     \ x s -> s {options = x})
 selStatus	= (status,      \ x s -> s {status = x})
 selWd		= (cwd,         \ x s -> s {cwd = x})
-selOption k	= (lookup1 k,   \ v os -> addEntry k v os) `sub` selOptions
+-- selOption k	= (lookup1 k,   \ v os -> addEntry k v os)  `sub` selOptions
 
-theOptions      :: SelArrow a Options
-theOptions	= mkSelA $ selOptions
-
-theOption       :: Name -> SelArrow a String
-theOption k	= mkSelA $ selOption k
+selConfigAttrs	= (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
+selConfigAttr k	= (fromMaybe "" . M.lookup k,
+                                \ v as -> M.insert k v as)  `sub` selConfigAttrs
 
 theAlbums       :: SelArrow a AlbumTree
 theAlbums	= mkSelA $ selAlbums
 
 theConfig       :: SelArrow a Config
 theConfig	= mkSelA $ selConfig
+
+theConfigAttrs  :: SelArrow a Attrs
+theConfigAttrs	= mkSelA $ selConfigAttrs
+
+theConfigAttr  :: Name -> SelArrow a Value
+theConfigAttr k	= mkSelA $ selConfigAttr k
 
 theStatus       :: SelArrow a Status
 theStatus	= mkSelA $ selStatus
@@ -129,7 +134,7 @@ statusOK	= get theStatus >>> isA statusOk
 traceStatus	:: String -> CmdArrow a a
 traceStatus msg
     = perform $
-      traceS $<< (get theStatus &&& get (theOption "debug"))
+      traceS $<< (get theStatus &&& get (theConfigAttr "debug"))
     where
     traceS st "1" = traceMsg 0 (replicate (level st) ' ' ++ msg)
     traceS _  _   = this

@@ -7,7 +7,8 @@ import Photo2.FilePath
 
 import qualified Control.Monad as CM
 
-import Data.Maybe
+import           Data.Maybe
+import qualified Data.Map as M
 
 import System.IO
 import System.Console.Readline
@@ -94,22 +95,22 @@ parseCmd "config" []
 	    )
 
 parseCmd "options" []
-    = mkCmd ( get theOptions
+    = mkCmd ( get theConfigAttrs
 	      >>>
 	      arrIO dumpOptions
 	    )
     where
     dumpOptions
-	= putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v)
+	= putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v) . M.toList
 
 parseCmd "set" [n]
     = parseCmd "set" [n,v_1]
 
 parseCmd "set" [n,v]
-    = mkCmd ( changeComp theOptions (addEntry n v) )
+    = mkCmd ( changeComp theConfigAttrs (M.insert n v) )
 
 parseCmd "unset" [n]
-    = mkCmd ( changeComp theOptions (delEntry n) )
+    = mkCmd ( changeComp theConfigAttrs (M.delete n) )
 
 parseCmd "pwd" []
     = mkCmd ( get theWd
