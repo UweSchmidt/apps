@@ -11,7 +11,9 @@ import Photo2.Config
 
 -- ------------------------------------------------------------
 
-type CmdArrow a b = IOStateArrow AppState a b
+type CmdArrow    a b =           IOStateArrow AppState a b
+type PathArrow   a b = Path   -> CmdArrow  a b
+type ConfigArrow a b = Config -> PathArrow a b
 
 runCmd	:: CmdArrow a b -> AppState -> IO AppState
 runCmd cmd s0
@@ -231,7 +233,7 @@ loadAlbum base doc
 			     )
       )
 
-loadAlbums	:: Path -> CmdArrow a AlbumTree
+loadAlbums	:: PathArrow a AlbumTree
 loadAlbums p
     = runAction ("check loaded albums for " ++ show (joinPath p)) $
       get theAlbums
@@ -240,7 +242,7 @@ loadAlbums p
       >>>
       set theAlbums
 
-loadAllAlbums	:: Path -> CmdArrow a AlbumTree
+loadAllAlbums	:: PathArrow a AlbumTree
 loadAllAlbums p
     = get theAlbums
       >>>
@@ -254,7 +256,7 @@ loadAllAlbums p
 
 -- store the album and all subalbums adressed by a path and mark them as unloaded
 
-storeAllAlbums	:: Path -> CmdArrow a AlbumTree
+storeAllAlbums	:: PathArrow a AlbumTree
 storeAllAlbums p
     = get theAlbums
       >>>
@@ -262,7 +264,7 @@ storeAllAlbums p
       >>>
       set theAlbums
 
-storeAlbumTree	:: Path -> CmdArrow AlbumTree AlbumTree
+storeAlbumTree	:: PathArrow AlbumTree AlbumTree
 storeAlbumTree p
     = runAction ("storing all albums at: " ++ show (joinPath p)) $
       ( processChildren (storeSubAlbums $< getPicId)
@@ -327,7 +329,7 @@ entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
 --
 -- check whether an album is loaded, if not yet done, load the album
 
-checkAlbum	:: Path -> CmdArrow AlbumTree AlbumTree
+checkAlbum	:: PathArrow AlbumTree AlbumTree
 checkAlbum _p
     = ( getNode
 	>>>
@@ -341,14 +343,14 @@ checkAlbum _p
 
 -- check whether an entry addresed by a path exists
 
-checkPath	:: Path -> CmdArrow AlbumTree AlbumTree
+checkPath	:: PathArrow AlbumTree AlbumTree
 checkPath p
     = runAction ("checking path: " ++ show (joinPath p)) $
       getTreeByPath p
 
 -- ------------------------------------------------------------
 
-getTreeByPath	:: Path -> CmdArrow AlbumTree AlbumTree
+getTreeByPath	:: PathArrow AlbumTree AlbumTree
 getTreeByPath p
     | null p	= none
     | null p'	= nodeMatch `guards` this
@@ -357,7 +359,7 @@ getTreeByPath p
     (n' : p') = p
     nodeMatch = hasPicName n'
 
-getDescByPath	:: Path -> CmdArrow AlbumTree AlbumTree
+getDescByPath	:: PathArrow AlbumTree AlbumTree
 getDescByPath p
     | null p	= this
     | otherwise = nodeMatch `guards` (getChildren >>> getDescByPath p')
@@ -365,7 +367,7 @@ getDescByPath p
     (n' : p') = p
     nodeMatch = hasPicName n'
 {-
-processTreeByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processTreeByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeByPath pa p
     | null p	= this
     | null p'	= pa p `when` hasPicName n'
@@ -373,7 +375,7 @@ processTreeByPath pa p
     where
     (n' : p') = p
 -}
-processAllNodesOnPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllNodesOnPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processAllNodesOnPath pa p
     | null p	= this
     | null p'	= pa p `when` hasPicName n'
@@ -385,18 +387,18 @@ processAllNodesOnPath pa p
 --
 -- | process all nodes of a tree
 
-processAllByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processAllByPath pa p
     = pa p
       >>>
-      ( (\ n -> processChildren $ processAllByPath pa (p ++ [n])) $< getPicId )
+      processChildren ( (\ n -> processAllByPath pa (p ++ [n])) $< getPicId )
 
 -- ----------------------------------------
 --
 -- | process all nodes of a tree addressed by a path
 --   with an arrow getting the full path as parameter
 
-processAllSubTreesByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processAllSubTreesByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processAllSubTreesByPath pa p0
     = processSub p0
     where
@@ -412,7 +414,7 @@ processAllSubTreesByPath pa p0
 -- | process a tree addressed by a path
 --   with an arrow getting the full path as parameter
 
-processTreeByPath	:: (Path -> CmdArrow AlbumTree AlbumTree) -> Path -> CmdArrow AlbumTree AlbumTree
+processTreeByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeByPath pa p0
     = processSub p0
     where
@@ -440,24 +442,27 @@ getRootPath	= get theAlbums >>> getPicId >>^ (:[])
 rootWd		:: CmdArrow a Path
 rootWd		= getRootPath >>> set theWd
 
-withDir		:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
+withDir		:: Path -> PathArrow a b -> CmdArrow a b
 withDir p c	= (\ p' -> withAbsDir p' c) $< (get theWd >>> arr (++ p))
 
-withAbsDir	:: Path -> (Path -> CmdArrow a b) -> CmdArrow a b
+withAbsDir	:: Path -> PathArrow a b -> CmdArrow a b
 withAbsDir p c	= c p
 
-withCwd		:: (Path -> CmdArrow a b) -> CmdArrow a b
+withCwd		:: PathArrow a b -> CmdArrow a b
 withCwd		= withDir []
 
-withRootDir	:: (Path -> CmdArrow a b) -> CmdArrow a b
+withRootDir	:: PathArrow a b -> CmdArrow a b
 withRootDir c	= (\ p' -> withAbsDir p' c) $< getRootPath
 
 mkAbs		:: CmdArrow Path Path
 mkAbs		= (\ wd -> arr (wd ++)) $< get theWd
- 
+
+withConfig	:: ConfigArrow a b -> PathArrow a b
+withConfig c p	= ( \ config -> c config p ) $< get theConfig
+
 -- ----------------------------------------
 
-getAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumEntry
+getAlbumEntry	:: PathArrow AlbumTree AlbumEntry
 getAlbumEntry p
     | null p	= none
     | otherwise	= getDescByPath p'
@@ -471,11 +476,11 @@ getAlbumEntry p
     n' = last p
     p' = init p
 
-getAllAlbumPaths	:: Path -> CmdArrow AlbumTree Path
+getAllAlbumPaths	:: PathArrow AlbumTree Path
 getAllAlbumPaths
     = getPaths gp
     where
-    gp :: Path -> CmdArrow AlbumTree Path
+    gp :: PathArrow AlbumTree Path
     gp p'
 	= gp' $< getPicId
 	  where
@@ -487,11 +492,11 @@ getAllAlbumPaths
 		where
 		p'' = n' : p'
 
-getAlbumPaths	:: Path -> CmdArrow AlbumTree Path
+getAlbumPaths	:: PathArrow AlbumTree Path
 getAlbumPaths
     = getPaths (\ p' -> getPicId >>> arr (:p') )
 
-getPaths	:: (Path -> CmdArrow AlbumTree Path) -> Path -> CmdArrow AlbumTree Path
+getPaths	:: PathArrow AlbumTree Path -> PathArrow AlbumTree Path
 getPaths gp p
     = getDescByPath p
       >>>
@@ -505,7 +510,7 @@ addAlbumEntry (p0, pic)
     = insert p0
     where
     n = picId pic
-    insert	:: Path -> CmdArrow AlbumTree AlbumTree
+    insert	:: PathArrow AlbumTree AlbumTree
     insert p
 	| null p	= setNode pic `when` hasPicName n		-- entry already in tree
 	| null p'	= replaceChildren (getChildren <+> mkPic pic)	-- append a new leave to the children
@@ -517,8 +522,22 @@ addAlbumEntry (p0, pic)
 	where
 	(n'  : p' ) = p
 
-removeAlbumEntry	:: Path -> CmdArrow AlbumTree AlbumTree
+removeAlbumEntry	:: PathArrow AlbumTree AlbumTree
 removeAlbumEntry p
     = processTreeByPath (const none) p
+
+-- ------------------------------------------------------------
+--
+-- update image data for a single node, the arrow input
+
+updatePic	:: ConfigArrow AlbumTree AlbumTree
+updatePic config p
+    = runAction ("updating " ++ show (joinPath p)) $
+      this
+
+-- update all entries addresed by a path
+
+updateAllPics	:: PathArrow AlbumTree AlbumTree
+updateAllPics	= processTreeByPath (processAllByPath (withConfig updatePic))
 
 -- ------------------------------------------------------------

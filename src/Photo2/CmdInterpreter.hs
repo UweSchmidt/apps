@@ -109,12 +109,13 @@ parseCmd "pwd" []
 	      arrIO (putStrLn . (rootPath </>) . joinPath)
 	    )
 
-parseCmd "ls"    args	= parseLs    args
-parseCmd "ls-r"  args	= parseLsr   args
-parseCmd "cat"   args	= parseCat   args
-parseCmd "dump"  args	= parseDump  args
-parseCmd "store" args	= parseStore args
-parseCmd "cd"    args	= parseCd    args
+parseCmd "ls"     args	= parseLs     args
+parseCmd "ls-r"   args	= parseLsr    args
+parseCmd "cat"    args	= parseCat    args
+parseCmd "dump"   args	= parseDump   args
+parseCmd "store"  args	= parseStore  args
+parseCmd "update" args	= parseUpdate args
+parseCmd "cd"     args	= parseCd     args
 
 parseCmd "?" []
     = liftCmd $
@@ -173,11 +174,7 @@ illegalCmd c args
 -- if the path is empty, the currend working dir is taken,
 -- if it's a relative path, it's adressed via current working dir
 
-parseWdCmd :: (Path -> CmdArrow a b)
-              -> String
-              -> [String]
-              -> [Cmd]
-
+parseWdCmd	:: PathArrow a b -> String -> [String] -> [Cmd]
 parseWdCmd action name ps
     | null ps
 	= mkWdCmd withCwd
@@ -208,7 +205,7 @@ parseLsr :: [String] -> [Cmd]
 parseLsr
     = parseWdCmd (getLsPaths getAllAlbumPaths) "ls-r"
 
-getLsPaths	:: (Path -> CmdArrow AlbumTree Path) -> Path -> CmdArrow a ()
+getLsPaths	:: PathArrow AlbumTree Path -> PathArrow a ()
 getLsPaths gt p
     = loadAlbums p
       >>>
@@ -252,6 +249,17 @@ parseStore
 	= loadAlbums p
 	  >>>
 	  processTreeByPath storeAlbumTree p
+	  >>>
+	  set theAlbums
+
+parseUpdate	:: [String] -> [Cmd]
+parseUpdate
+    = parseWdCmd update "update"
+    where
+    update p
+	= loadAlbums p
+	  >>>
+	  updateAllPics p
 	  >>>
 	  set theAlbums
 
