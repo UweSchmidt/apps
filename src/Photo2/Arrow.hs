@@ -67,10 +67,8 @@ selAlbums	= (albums,      \ x s -> s {albums = x})
 selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
 selConfig	= (config,      \ x s -> s {config = x})
 selConfigName	= (configName,  \ x s -> s {configName = x})
--- selOptions	= (options,     \ x s -> s {options = x})
 selStatus	= (status,      \ x s -> s {status = x})
 selWd		= (cwd,         \ x s -> s {cwd = x})
--- selOption k	= (lookup1 k,   \ v os -> addEntry k v os)  `sub` selOptions
 
 selConfigAttrs	= (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
 selConfigAttr k	= (fromMaybe "" . M.lookup k,
@@ -321,9 +319,18 @@ storeDocData p root doc config
       traceStatus ("stored  : " ++ show doc)
 
 isAlbum		:: CmdArrow AlbumTree AlbumTree
-isAlbum		=  ( getChildren `guards` this )
-		   <+>
-		   ( (getNode >>> arr picRef >>> isA (not . null)) `guards` this )
+isAlbum		= ( getNode
+		    >>>
+		    isA isAl 
+		  )
+		  `guards` this
+
+getExtAlbumRef	:: CmdArrow AlbumTree String
+getExtAlbumRef	= getNode
+		  >>>
+		  picRef
+		  ^>>
+		  isA (not . null)
 
 entryChanged	:: CmdArrow AlbumTree AlbumTree
 entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
@@ -366,11 +373,7 @@ storeArchive
 
 checkAlbum	:: PathArrow AlbumTree AlbumTree
 checkAlbum _p
-    = ( getNode
-	>>>
-	picRef
-	^>>
-	isA (not . null)
+    = ( getExtAlbumRef
 	>>>
 	( loadAlbum $<< get theArchiveName &&& this )
       )
@@ -481,7 +484,7 @@ withDir		:: Path -> PathArrow a b -> CmdArrow a b
 withDir p c	= (\ p' -> withAbsDir p' c) $< (get theWd >>> arr (++ p))
 
 withAbsDir	:: Path -> PathArrow a b -> CmdArrow a b
-withAbsDir p c	= c p
+withAbsDir p c	= c (normalPath p)
 
 withCwd		:: PathArrow a b -> CmdArrow a b
 withCwd		= withDir []
@@ -496,6 +499,37 @@ withConfig	:: ConfigArrow a b -> PathArrow a b
 withConfig c p	= ( \ config -> c config p ) $< get theConfig
 
 -- ----------------------------------------
+
+getRelatives	:: PathArrow AlbumTree (Path, Path, Path)
+getRelatives p
+    = runAction ("get relatives: " ++ joinPath p) $
+      getPN ( if null p then emptyPath else init p )
+    where
+    n = last p
+    getPN pp
+	= ( listA ( getTreeByPath pp
+		    >>>
+		    getChildren
+		    >>>
+		    getNode
+		    >>^
+		    picId
+		  )
+	    >>>
+	    ( ( arrL getp `orElse` constA emptyPath )
+	      &&&
+	      ( arrL getn `orElse` constA emptyPath )
+	    )
+            >>^ (\ (p', n') -> (pp, p',n'))
+	  )
+          `orElse`
+	  constA (pp, emptyPath, emptyPath)
+	where
+	getn :: [Name] -> [Path]
+	getn l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip l . drop 1 $ l
+
+	getp :: [Name] -> [Path]
+	getp l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip (drop 1 l) $ l
 
 getAlbumEntry	:: PathArrow AlbumTree AlbumEntry
 getAlbumEntry p
@@ -568,11 +602,13 @@ removeAlbumEntry p
 updatePic	:: ConfigArrow AlbumTree AlbumTree
 updatePic config p
     = runAction ("updating " ++ show (joinPath p)) $
-      this
+      checkAlbum p
+      >>>
+      this	-- todo
 
 -- update all entries addresed by a path
 
 updateAllPics	:: PathArrow AlbumTree AlbumTree
-updateAllPics	= processTreeByPath (processAllByPath (withConfig updatePic))
+updateAllPics	= processTreeByPath ( processAllByPath (withConfig updatePic) )
 
 -- ------------------------------------------------------------

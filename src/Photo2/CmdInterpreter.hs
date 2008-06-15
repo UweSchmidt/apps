@@ -118,13 +118,14 @@ parseCmd "pwd" []
 	      arrIO (putStrLn . (rootPath </>) . joinPath)
 	    )
 
-parseCmd "ls"     args	= parseLs     args
-parseCmd "ls-r"   args	= parseLsr    args
-parseCmd "cat"    args	= parseCat    args
-parseCmd "dump"   args	= parseDump   args
-parseCmd "store"  args	= parseStore  args
-parseCmd "update" args	= parseUpdate args
-parseCmd "cd"     args	= parseCd     args
+parseCmd "ls"        args	= parseLs        args
+parseCmd "ls-r"      args	= parseLsr       args
+parseCmd "cat"       args	= parseCat       args
+parseCmd "dump"      args	= parseDump      args
+parseCmd "relatives" args	= parseRelatives args
+parseCmd "store"     args	= parseStore     args
+parseCmd "update"    args	= parseUpdate    args
+parseCmd "cd"        args	= parseCd        args
 
 parseCmd "?" []
     = liftCmd $
@@ -145,6 +146,7 @@ parseCmd "?" []
 	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
+	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  store-config       write the config data"
 	    , "  pwd                print working album (dir)"
@@ -252,6 +254,25 @@ parseDump
 	  xpickleDocument xpAlbumTree [ (a_indent, v_1)
 				      , (a_no_xml_pi, v_1)
 				      ] ""
+
+parseRelatives	:: [String] -> [Cmd]
+parseRelatives
+    = parseWdCmd relatives "relatives"
+    where
+    relatives p
+	= loadAlbums p
+	  >>>
+	  getRelatives p
+	  >>>
+	  arrIO ( \ (parent, prev, next)
+		  -> putStrLn ( "this     = " ++ fp p      ++ "\n" ++
+				"parent   = " ++ fp parent ++ "\n" ++
+				"previous = " ++ fp prev   ++ "\n" ++
+				"next     = " ++ fp next
+			      )
+		)
+    fp []	= ""
+    fp p	= mkAbsPath . joinPath $ p
 
 parseStore	:: [String] -> [Cmd]
 parseStore

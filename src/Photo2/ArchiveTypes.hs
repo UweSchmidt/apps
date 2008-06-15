@@ -98,6 +98,7 @@ data Archive	= Archive { archConfRef   :: Href
 
 type AlbumTree	= NTree Pic
 data Pic	= Pic { picId     :: Name
+		      , isAl      :: Bool
 		      , picRef    :: Href
 		      , picOrig   :: Href
 		      , picRaw    :: Href
@@ -127,19 +128,23 @@ emptyConfig	= Config { confAttrs = M.empty
 			 }
 
 emptyPic	:: Pic
-emptyPic	= Pic { picId = emptyName
-		      , picRef = ""
-		      , picOrig = ""
-		      , picRaw = ""
-		      , picXmp = ""
+emptyPic	= Pic { picId     = emptyName
+		      , isAl      = False
+		      , picRef    = ""
+		      , picOrig   = ""
+		      , picRaw    = ""
+		      , picXmp    = ""
 		      , picCopies = M.empty
-		      , picAttrs = M.empty
-		      , picErrs = []
+		      , picAttrs  = M.empty
+		      , picErrs   = []
 		      , picEdited = False
 		      }
 
 emptyName	:: Name
 emptyName	= ""
+
+emptyPath	:: Path
+emptyPath	= []
 
 emptyAlbumTree	:: AlbumTree
 emptyAlbumTree	= mkLeaf emptyPic
@@ -153,11 +158,7 @@ formatAlbumTree	= formatTree showPic
 
 xpAlbumTree	:: PU AlbumTree
 xpAlbumTree
-    = xpAlt ( \ (NTree e cs) -> fromEnum ( ( not . null $ cs )
-					   ||
-					   ( not . null . picRef $ e )
-					 )
-	    )
+    = xpAlt ( \ (NTree e _) -> fromEnum (isAl e) )
       [ xpElem "picture" $ xpPicture
       , xpElem "album"   $ xpAlbum
       ]
@@ -167,21 +168,22 @@ xpPicture
     = xpWrap ( \ p -> NTree p []
 	     , \ (NTree p _) -> p
 	     ) $
-      xpWrapPic
+      xpWrapPic False
 
 xpAlbum	:: PU AlbumTree
 xpAlbum
     = xpWrap ( uncurry NTree
 	     , \ (NTree p cs) -> (p, cs)
 	     ) $
-      xpPair ( xpWrapPic )
+      xpPair ( xpWrapPic True )
              ( xpList $ xpAlbumTree )
 
 
-xpWrapPic	:: PU Pic
-xpWrapPic
+xpWrapPic	:: Bool -> PU Pic
+xpWrapPic isa
     = xpWrap ( \ (es,i,h,(o,r,x),cs,as)
 	       -> Pic { picId     = i
+		      , isAl      = isa
 		      , picRef    = h
 		      , picOrig   = o
 		      , picRaw    = r
@@ -235,7 +237,11 @@ xpAlbumEntry
 	       xpWrap ( splitPath . mkRelPath, mkAbsPath . joinPath ) $
 	       xpText
 	     )
-	     ( xpWrapPic )
+	     ( xpWrap ( \ (NTree e _) -> e
+		      , mkLeaf
+		      ) $
+	       xpAlbumTree
+	     )
 
 -- ------------------------------------------------------------
 
