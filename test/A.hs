@@ -8,6 +8,6 @@ import Photo2.Config
 
 m
     = do
-      s1 <- cmdLoop initialAppState
+      s1 <- cmdLoop emptyAppState
       return ()
 

@@ -88,8 +88,7 @@ upDirs ref1 ref2
     td1 = topDirName ref1
 
 normPath	:: String -> String
-normPath
-    = listToPath . normalPath . splitPath
+normPath	= listToPath . normalPath . splitPath
 
 
 

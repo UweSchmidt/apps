@@ -1,14 +1,18 @@
 module Photo2.Arrow
 where
 
+import           Control.Monad.Error ( runErrorT )
 import           Data.Maybe
 import qualified Data.Map as M
 
-import Text.XML.HXT.Arrow
+import           System.IO
 
-import Photo2.ArchiveTypes
-import Photo2.FilePath
-import Photo2.Config
+import           Text.XML.HXT.Arrow
+
+import           Photo2.ArchiveTypes
+import           Photo2.Config
+import           Photo2.FilePath
+import           Photo2.ImageOperations
 
 -- ------------------------------------------------------------
 
@@ -19,18 +23,23 @@ type ConfigArrow a b = Config -> PathArrow a b
 runCmd	:: CmdArrow a b -> AppState -> IO AppState
 runCmd cmd s0
     = do
-      (s1, _res) <- runIOSLA (setTraceLevel 0 >>> cmd) (initialState s0) undefined
+      (s1, _res) <- runIOSLA (setTraceLevel 0 >>> clear >>> cmd) (initialState s0) undefined
       return (xio_userState s1)
 
 runCmd'	:: CmdArrow a b -> ([b] -> IO ()) -> AppState -> IO AppState
 runCmd' cmd out
     = runCmd (listA cmd >>> arrIO out)
 
+arrIOE	:: (a -> IOE b) -> CmdArrow a b
+arrIOE io
+    = arrIO (runErrorT . io)
+      >>>
+      ( ( arrIO (\ s -> hPutStrLn stderr s) >>> none )
+	|||
+	this
+      )
+	
 -- ------------------------------------------------------------
-
-type Getter s a	= s -> a
-type Setter s a	= a -> s -> s
-type Selector s a = (Getter s a, Setter s a)
 
 setField	:: Setter AppState b -> CmdArrow b b
 setField sf	= perform ( ( this &&& getUserState )
@@ -40,19 +49,6 @@ setField sf	= perform ( ( this &&& getUserState )
 
 getField	:: Getter AppState b -> CmdArrow a b
 getField gf	= getUserState >>^ gf
-
-sub	:: Selector b c -> Selector a b -> Selector a c
-sub (g2, s2) (g1, s1)
-    = ( g2 . g1
-      , s1s2
-      )
-    where
-    s1s2 x s
-	= s'
-	where
-	x1  = g1 s
-	x1' = s2 x x1
-	s'  = s1 x1' s
 
 data SelArrow a b = SA { get :: CmdArrow a b
 		       , set :: CmdArrow b b
@@ -354,14 +350,14 @@ storeArchive
     where
     store doc configName
 	= runAction ("storing the archive: " ++ doc)
-	            ( get theAlbums
-		      >>>
-		      withRootDir cut
-		      >>>
-		      arr (Archive configName)
-		      >>>
-		      storeDocData xpArchive "archive" doc configName
-		    )
+	  ( get theAlbums
+	    >>>
+	    withRootDir cut
+	    >>>
+	    arr (Archive configName)
+	    >>>
+	    storeDocData xpArchive "archive" doc configName
+	  )
     cut p
 	= setChildren []
 	  >>>
@@ -595,16 +591,21 @@ removeAlbumEntry	:: PathArrow AlbumTree AlbumTree
 removeAlbumEntry p
     = processTreeByPath (const none) p
 
+
 -- ------------------------------------------------------------
 --
 -- update image data for a single node, the arrow input
 
 updatePic	:: ConfigArrow AlbumTree AlbumTree
-updatePic config p
+updatePic c p
     = runAction ("updating " ++ show (joinPath p)) $
-      checkAlbum p
-      >>>
-      this	-- todo
+      ( checkAlbum p
+	>>>
+	( setNode $< (getNode >>> update) )
+      )
+    where
+    update
+	= arrIOE (importOrig c p)
 
 -- update all entries addresed by a path
 

@@ -30,15 +30,6 @@ data Status	= Running Int
 		| Exc String
 		  deriving (Eq, Show)
 
-initialAppState	:: AppState
-initialAppState	= AppState { albums       = emptyAlbumTree
-			   , archiveName  = ""
-			   , config       = emptyConfig
-			   , configName   = ""
-			   , status       = Running 0
-			   , cwd          = []
-			   }
-
 -- ------------------------------------------------------------
 
 type AlbumEntry	= (Path, Pic)
@@ -119,6 +110,37 @@ type Href	= String
 type Errs	= [String]
 
 -- ------------------------------------------------------------
+
+type Getter s a	= s -> a
+type Setter s a	= a -> s -> s
+type Selector s a = (Getter s a, Setter s a)
+
+sub	:: Selector b c -> Selector a b -> Selector a c
+sub (g2, s2) (g1, s1)
+    = ( g2 . g1
+      , s1s2
+      )
+    where
+    s1s2 x s
+	= s'
+	where
+	x1  = g1 s
+	x1' = s2 x x1
+	s'  = s1 x1' s
+
+change			:: Selector s a -> (a -> a) -> (s -> s)
+change (g, s) f	x	= s (f (g x)) x
+
+-- ------------------------------------------------------------
+
+emptyAppState	:: AppState
+emptyAppState	= AppState { albums       = emptyAlbumTree
+			   , archiveName  = ""
+			   , config       = emptyConfig
+			   , configName   = ""
+			   , status       = Running 0
+			   , cwd          = []
+			   }
 
 emptyConfig	:: Config
 emptyConfig	= Config { confAttrs = M.empty
@@ -387,5 +409,17 @@ startTr e		= e
 stopTr		:: Status -> Status
 stopTr (Running l)	= Running (l - 1)
 stopTr e		= e
+
+-- ------------------------------------------------------------
+
+getOpt		:: String -> Config -> String
+getOpt o	= fromMaybe "" . M.lookup o . confAttrs
+
+hasOpt		:: String -> Config -> Bool
+hasOpt o	= (`elem` ["1","yes","true"]) . map toLower . getOpt o
+
+optDebug	= "debug"
+optDryRun	= "dry-run"
+optForceOrig	= "copy-org"
 
 -- ------------------------------------------------------------
