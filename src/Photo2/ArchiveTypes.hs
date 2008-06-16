@@ -413,7 +413,10 @@ stopTr e		= e
 -- ------------------------------------------------------------
 
 getOpt		:: String -> Config -> String
-getOpt o	= fromMaybe "" . M.lookup o . confAttrs
+getOpt		= getDefOpt ""
+
+getDefOpt		:: String -> String -> Config -> String
+getDefOpt d o	= fromMaybe d . M.lookup o . confAttrs
 
 hasOpt		:: String -> Config -> Bool
 hasOpt o	= (`elem` ["1","yes","true"]) . map toLower . getOpt o

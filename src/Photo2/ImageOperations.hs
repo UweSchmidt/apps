@@ -21,6 +21,8 @@ import           System.Time	( ClockTime
 				)
 import           System.Locale	( defaultTimeLocale )
 
+import           Text.Regex
+
 -- ------------------------------------------------------------
 
 type IOE a	= ErrorT String IO a
@@ -47,6 +49,10 @@ mapError	:: IOE a -> (String -> String) -> IOE a
 mapError a f
     = a `catchError` (throwError . f)
 
+dryCmd	:: Bool -> String -> IOE () -> IOE ()
+dryCmd True   msg  _cmd	= liftIO $ hPutStrLn stderr ("dry run: " ++ msg)
+dryCmd False _msg   cmd	= cmd
+
 -- ------------------------------------------------------------
 
 theCopies	= ( picCopies, \ c x -> x { picCopies = c} )
@@ -59,41 +65,65 @@ importOrig	:: Config -> Path -> Pic -> IOE Pic
 importOrig c p pic
     = do
       ex <- existsSrc
-      when (not ex) (throwError $ "importOrig: original file " ++ show src ++ " does not exist")
-      when (not dry) (mkDirectoryPath dst)
+      when (not ex)
+           ( throwError $ "importOrig: original file " ++ show src ++ " does not exist" )
+      mkDirectoryPath dst
       up <- upToDate
       if not up
 	 then do
 	      copy
-	      geo <- getGeo src
+	      geo <- getImageSize src
 	      return $
 		     change theEdited (const True) $
-		     change theCopies (M.insert "org" (Copy geo)) pic
+		     change theCopies (M.insert dir (Copy geo)) pic
 	 else return pic
     where
-    existsSrc	= liftIO $  doesFileExist src
-    copy	= do
-		  execFct debug dry shellcmd
-		  return ()
-    getGeo _	= return (Geo 0 0)
+    existsSrc	= liftIO $ doesFileExist src
+
+    copy
+	| extension src == extension dst	-- simple copy
+	    = liftIO $ copyFile src dst
+	| otherwise				-- conversion with convert command
+	    = do
+	      execFct debug shellcmd
+	      return ()
+
     upToDate
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanFile src dst
 
     src		= base </> picOrig pic
-    dst		= "org" </> joinPath p `addExtension` "jpg"
+    dst		= dir  </> joinPath p `addExtension` imgtype
 
-    base	= getOpt "base"       c
+    base	= getDefOpt "../Diakaesten" "base"    c
+    dir         = getDefOpt "org"           "dir"     c
+    imgtype	= getDefOpt "jpg"           "imgtype" c
+
     debug	= hasOpt optDebug     c
-    dry		= hasOpt optDryRun    c
     force	= hasOpt optForceOrig c
 
     shellcmd
-	| extension src == extension dst
-	    = [ "cp", src, dst, "&&", "chmod", "644", dst ]
+	-- | extension src == extension dst
+	--    = [ "cp", src, dst, "&&", "chmod", "644", dst ]
 	| otherwise
 	    = [ "convert", "-quality", "85", src, dst ]
 
+-- ------------------------------------------------------------
+
+getImageSize	:: String -> IOE Geo
+getImageSize f
+    = do
+      res <- execFct False ["identify", "-ping", f]
+	     `catchError`
+	     const (return "")
+      return ( maybe (Geo 0 0) (readGeo . head) (matchRegex geometryRE res) )
+
+geometryRE	:: Regex
+geometryRE
+    = mkRegex ( "(" ++ digit1 ++ digit0 ++ "*x" ++ digit1 ++ digit0 ++ "*)" )
+    where
+    digit0 = "[0-9]"
+    digit1 = "[1-9]"
 
 -- ------------------------------------------------------------
 
@@ -203,34 +233,30 @@ exec cmd
 
 -- ------------------------------------------------------------
 
-execFct		:: Bool -> Bool -> [String] -> IOE String
+execFct		:: Bool -> [String] -> IOE String
 
-execFct _ _ []
+execFct _ []
     = return ""
 
-execFct debug dry (cmd : args)
+execFct debug (cmd : args)
     = do
       pid <- liftIO $ getProcessID
       let tmpName = "/tmp/album-" ++ show pid
       let errDev  = "/dev/null"
       let ioReDir = [">", tmpName, "2>", errDev]
       let command = cmd ++ concatMap addArg args
-      if dry
-	 then do liftIO $ hPutStrLn stderr ("dry run: " ++ command)
-		 return ""
-	 else do
-	      when debug
-                   ( liftIO $ hPutStrLn stderr ("executed: " ++ command) )
-	      let command' = command ++ concatMap addArg ioReDir
-	      exec command'
-	      res <- catchError
-		     ( do
-		       rh  <- liftIO $ openFile tmpName ReadMode
-		       res <- liftIO $ hGetContents rh
-		       rmFile tmpName
-		       return res
-		     ) ( \ _ -> return "" )
-	      return res
+      when debug
+           ( liftIO $ hPutStrLn stderr ("executed: " ++ command) )
+      let command' = command ++ concatMap addArg ioReDir
+      exec command'
+      res <- catchError
+	     ( do
+	       rh  <- liftIO $ openFile tmpName ReadMode
+	       res <- liftIO $ hGetContents rh
+	       rmFile tmpName
+	       return res
+	     ) ( \ _ -> return "" )
+      return res
 
 -- ------------------------------------------------------------
 
@@ -250,7 +276,7 @@ mkDirectoryPath f
 rmFile		:: String -> IOE ()
 rmFile f
     = ( do
-	ex <- return True -- liftIO $ doesFileExist f
+	ex <- liftIO $ doesFileExist f
 	when ex (liftIO $ removeFile f)
       )
       `mapError` (("remove " ++ show f ++ " failed: ") ++)
