@@ -72,7 +72,7 @@ importOrig c p pic
       if not up
 	 then do
 	      copy
-	      geo <- getImageSize src
+	      geo <- getImageSize dst
 	      return $
 		     change theEdited (const True) $
 		     change theCopies (M.insert dir (Copy geo)) pic
@@ -110,6 +110,122 @@ importOrig c p pic
 
 -- ------------------------------------------------------------
 
+createCopy	:: Config -> Path -> Size -> Pic -> IOE Pic
+createCopy c p s pic
+    = do
+      ex <- existsSrc
+      when (not ex)
+           ( throwError $ "createCopy: original file " ++ show src ++ " does not exist" )
+      mkDirectoryPath dst
+      up <- upToDate
+      if not up
+	 then do
+	      resize
+	      geo <- getImageSize dst
+	      return $
+		     change theEdited (const True) $
+		     change theCopies (M.insert (sizeDir s) (Copy geo)) pic
+	 else return pic
+    where
+    existsSrc	= liftIO $ doesFileExist src
+
+    resize
+	= resizeImage debug src dst (crGeo aspect) (rGeo aspect)
+	  where
+	  rGeo Fix = cGeo
+	  rGeo _   = resizeGeo sGeo cGeo
+
+	  crGeo Fix	= cropGeo sGeo cGeo
+	  crGeo Pad	= (sGeo, Geo (-1) (-1))
+	  crGeo Crop	= (sGeo, emptyGeo)
+
+	  sGeo   = maybe emptyGeo copyGeo . M.lookup dir . picCopies $ pic
+	  cGeo   = sizeGeo    s
+	  aspect = sizeAspect s
+
+    upToDate
+	| force		= return False
+	| otherwise	= liftIO $ fileNewerThanFile src dst
+
+    dir         = getDefOpt "org"           "dir"     c
+    imgtype	= getDefOpt "jpg"           "imgtype" c
+
+    debug	= hasOpt optDebug     c
+    force	= hasOpt optForceCopy c
+
+    img         = joinPath p `addExtension` imgtype
+    src		= dir       </> img
+    dst		= sizeDir s </> img
+
+-- ------------------------------------------------------------
+--
+-- | image resize
+--
+-- croping may be given by @(cropWidth, cropHeight, xOffset, yOffset)@ for
+-- generating an image with a specific aspect ration
+
+resizeImage	:: Bool -> String -> String -> (Geo, Geo) -> Geo -> IOE ()
+resizeImage debug src dst (Geo cw ch, Geo xoff yoff) (Geo w h)
+    = do
+      execFct debug shellCmd
+      return ()
+    where
+    unsharp	= [] -- ["-unsharp", "0.7x0.7+1.0+0.05"] -- sharpen option removed
+    resize	= ["-thumbnail", show w ++ "x" ++ show h ++ "!"]
+    resize1	= ["-geometry", show w ++ "x" ++ show h, "-thumbnail", show w ++ "x" ++ show h]
+    quality	= ["-quality", "85"]
+    interlace	= [ "-interlace", "Plane" ]
+    isPad	= (xoff == (-1) && yoff == (-1))
+    isCrop	= (xoff > 0     || yoff > 0)
+    cmdName
+	| isPad		= [ "montage" ]
+	| otherwise	= [ "convert" ]
+    cmdArgs
+	| isPad		= resize1
+			  ++ [ "-background", "#333333" ]
+			  -- ++ [ "-size", show (2*w) ++ "x" ++ show (2*h) ] -- this gives too low quality
+			  ++ [ src, dst ]
+	| isCrop	= [ "-crop", show cw ++ "x" ++ show ch ++ "+" ++ show xoff ++ "+" ++ show yoff
+			  , src, "miff:-"
+			  , "|"
+			  , "convert"
+			  ]
+			  ++ resize ++ unsharp ++ quality
+			  ++ ["miff:-", dst ]
+	| otherwise	= resize ++ unsharp
+			  ++ [ src, dst ]
+    shellCmd	= cmdName
+		  ++ interlace
+		  ++ quality
+		  ++ cmdArgs
+
+resizeGeo	:: Geo -> Geo -> Geo
+resizeGeo sGeo@(Geo sw sh) (Geo dw dh)
+    | sw <= dw && sh <= dh		-- source fits into display
+	= sGeo				-- no downsizing, no magnification
+
+    | sw * dh >= dw * sh		-- source wider than display
+	= Geo dw (dw * sh `div` sw)	-- maximum width, height scaled down
+
+    | otherwise				-- source higher than display
+	= Geo (dh * sw `div` sh) dh	-- maximum height, width scaled down
+
+
+cropGeo		:: Geo -> Geo -> (Geo, Geo)
+cropGeo (Geo sw sh) (Geo dw dh)
+    | sw *dh >= dw * sh			-- source wider than reqired
+	= (Geo sw' sh, Geo xoff 0)
+    | otherwise				-- sorce highter than required
+	= (Geo sw sh', Geo 0 yoff)
+    where
+    sw'  = dw * sh `div` dh
+    xoff = (sw - sw') `div` 2		-- cut off left and right parts
+    sh'  = dh * sw `div` dw
+    yoff = (sh - sh') `div` 3		-- cut off 1/3 from top and 2/3 from bottom
+					-- else important parts like heads are cut off (Ouch!!)
+
+-- ------------------------------------------------------------
+
 getImageSize	:: String -> IOE Geo
 getImageSize f
     = do
@@ -117,92 +233,13 @@ getImageSize f
 	     `catchError`
 	     const (return "")
       return ( maybe (Geo 0 0) (readGeo . head) (matchRegex geometryRE res) )
-
-geometryRE	:: Regex
-geometryRE
-    = mkRegex ( "(" ++ digit1 ++ digit0 ++ "*x" ++ digit1 ++ digit0 ++ "*)" )
     where
-    digit0 = "[0-9]"
-    digit1 = "[1-9]"
-
--- ------------------------------------------------------------
-
-formatDateTime	:: IO ClockTime -> IO String
-formatDateTime timeStamp
-    = catch
-      ( do
-	ctime <- timeStamp
-	time  <- toCalendarTime ctime
-	return $ formatCalendarTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" time
-      )
-      ( \_ -> return "" )
-
-getTimeStamp	:: IO String
-getTimeStamp	= formatDateTime getClockTime
-
--- | read the last modified time stamp of a file
-
-fileLastModified	:: String -> IO String
-fileLastModified f	= formatDateTime (getModificationTime f)
-
--- | compare 2 file stamps
---
--- @fileNewerThanFile reference file@
--- if reference does not exist, return False,
--- else if file does not exist, return False
--- else compare time stamps
-
-fileNewerThanFile	:: String -> String -> IO Bool
-fileNewerThanFile ref f
-    = do
-      mf   <- fileLastModified f
-      mref <- fileLastModified ref
-      let n = ( not (null mf)
-	       &&
-	       not (null mref)
-	       &&
-	       mref < mf
-	     )
-      -- putStrLn ("file newer file=" ++ show f ++ "," ++ show mf ++ " ref=" ++ show ref ++ "," ++ show mref ++ " status=" ++ show n)
-      return n
-
-fileNewerThanFiles	:: [String] -> String -> IO Bool
-fileNewerThanFiles [] _f
-    = return True
-fileNewerThanFiles (r:refs) f
-    = do
-      newer <- fileNewerThanFile r f
-      if newer
-	 then fileNewerThanFiles refs f
-	 else return False
-
--- | compare a file stamp with a time stamp
---
--- @fileNewerThanDate dateRef file@
--- if dateRef is empty, return False,
--- else if file does not exist, return True
--- else compare time stamps
-
-fileNewerThanDate	:: String -> String -> IO Bool
-fileNewerThanDate dref f
-    = if null dref
-      then return False
-      else do
-	   mf   <- fileLastModified f
-	   return ( not (null dref)
-		    &&
-		    dref < mf
-		  )
-
-fileNewerThanDates	:: [String] -> String -> IO Bool
-fileNewerThanDates [] _f
-    = return True
-fileNewerThanDates (r:refs) f
-    = do
-      newer <- fileNewerThanDate r f
-      if newer
-	 then fileNewerThanDates refs f
-	 else return False
+    geometryRE	:: Regex
+    geometryRE
+	= mkRegex ( "(" ++ digit1 ++ digit0 ++ "*x" ++ digit1 ++ digit0 ++ "*)" )
+	  where
+	  digit0 = "[0-9]"
+	  digit1 = "[1-9]"
 
 -- ------------------------------------------------------------
 --
@@ -280,5 +317,86 @@ rmFile f
 	when ex (liftIO $ removeFile f)
       )
       `mapError` (("remove " ++ show f ++ " failed: ") ++)
+
+-- ------------------------------------------------------------
+--
+-- simple IO actions for time stamps and date and time functions
+
+formatDateTime	:: IO ClockTime -> IO String
+formatDateTime timeStamp
+    = catch
+      ( do
+	ctime <- timeStamp
+	time  <- toCalendarTime ctime
+	return $ formatCalendarTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" time
+      )
+      ( \_ -> return "" )
+
+getTimeStamp	:: IO String
+getTimeStamp	= formatDateTime getClockTime
+
+-- | read the last modified time stamp of a file
+
+fileLastModified	:: String -> IO String
+fileLastModified f	= formatDateTime (getModificationTime f)
+
+-- | compare 2 file stamps
+--
+-- @fileNewerThanFile reference file@
+-- if reference does not exist, return False,
+-- else if file does not exist, return False
+-- else compare time stamps
+
+fileNewerThanFile	:: String -> String -> IO Bool
+fileNewerThanFile ref f
+    = do
+      mf   <- fileLastModified f
+      mref <- fileLastModified ref
+      let n = ( not (null mf)
+	       &&
+	       not (null mref)
+	       &&
+	       mref < mf
+	     )
+      -- putStrLn ("file newer file=" ++ show f ++ "," ++ show mf ++ " ref=" ++ show ref ++ "," ++ show mref ++ " status=" ++ show n)
+      return n
+
+fileNewerThanFiles	:: [String] -> String -> IO Bool
+fileNewerThanFiles [] _f
+    = return True
+fileNewerThanFiles (r:refs) f
+    = do
+      newer <- fileNewerThanFile r f
+      if newer
+	 then fileNewerThanFiles refs f
+	 else return False
+
+-- | compare a file stamp with a time stamp
+--
+-- @fileNewerThanDate dateRef file@
+-- if dateRef is empty, return False,
+-- else if file does not exist, return True
+-- else compare time stamps
+
+fileNewerThanDate	:: String -> String -> IO Bool
+fileNewerThanDate dref f
+    = if null dref
+      then return False
+      else do
+	   mf   <- fileLastModified f
+	   return ( not (null dref)
+		    &&
+		    dref < mf
+		  )
+
+fileNewerThanDates	:: [String] -> String -> IO Bool
+fileNewerThanDates [] _f
+    = return True
+fileNewerThanDates (r:refs) f
+    = do
+      newer <- fileNewerThanDate r f
+      if newer
+	 then fileNewerThanDates refs f
+	 else return False
 
 -- ------------------------------------------------------------

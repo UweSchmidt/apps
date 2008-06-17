@@ -71,7 +71,7 @@ data Size	= Size { sizeDir    :: String
 		  deriving (Show, Eq)
 
 data AspectRatio
-		= Fix | Pad
+		= Fix | Pad | Crop
 		  deriving (Show, Enum, Eq, Ord)
 
 data Geo	= Geo { geoWidth  :: Int
@@ -170,6 +170,9 @@ emptyPath	= []
 
 emptyAlbumTree	:: AlbumTree
 emptyAlbumTree	= mkLeaf emptyPic
+
+emptyGeo	:: Geo
+emptyGeo	= Geo 0 0
 
 -- ------------------------------------------------------------
 
@@ -356,13 +359,15 @@ xpGeo
 -- ----------------------------------------
 
 readAspect	:: String -> AspectRatio
-readAspect "fix" = Fix
-readAspect "pad" = Pad
-readAspect _     = Pad
+readAspect "fix"  = Fix
+readAspect "pad"  = Pad
+readAspect "crop" = Crop
+readAspect _      = Crop
 
 showAspect	:: AspectRatio -> String
 showAspect Fix	= "fix"
 showAspect Pad  = "pad"
+showAspect Crop = "crop"
 
 -- ----------------------------------------
 
@@ -424,5 +429,6 @@ hasOpt o	= (`elem` ["1","yes","true"]) . map toLower . getOpt o
 optDebug	= "debug"
 optDryRun	= "dry-run"
 optForceOrig	= "copy-org"
+optForceCopy	= "create-copy"
 
 -- ------------------------------------------------------------

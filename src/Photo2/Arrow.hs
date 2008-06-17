@@ -598,14 +598,22 @@ removeAlbumEntry p
 
 updatePic	:: ConfigArrow AlbumTree AlbumTree
 updatePic c p
-    = runAction ("updating " ++ show (joinPath p)) $
+    = runAction ("updating " ++ p')
       ( checkAlbum p
 	>>>
 	( setNode $< (getNode >>> update) )
       )
     where
+    p' = show . joinPath $ p
+    sl = confSizes c
     update
-	= arrIOE (importOrig c p)
+	= runAction ("import original for " ++ p')
+	  ( arrIOE (importOrig c p) )
+	  >>>
+	  seqA (map copy sl)
+    copy s
+	= runAction ("create copy for " ++ show s ++ " for " ++ p')
+	  ( arrIOE (createCopy c p s) )
 
 -- update all entries addresed by a path
 
