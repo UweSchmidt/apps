@@ -50,6 +50,7 @@ actions
 
       , ("sedHtmlLatin1",		sedFiles substXhtmlChars htmlLatin1Files	)
       , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
+      , ("sedHaskellLatin1",		sedFiles substLatin1Haskell noneAsciiHaskellFiles	)
       , ("sedNoneAsciiProgs",		sedFiles substUmlauts noneAsciiProgFiles	)
       , ("sedTclLatin1",		sedFiles substLatin1Tcl tclLatin1Files		)
       , ("sedTrailingSpace",		sedFiles removeTrailingWS textFiles		)

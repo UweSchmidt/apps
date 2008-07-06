@@ -304,6 +304,14 @@ substUmlauts
 	  , ('\252', "ue")
 	  ]
 
+substLatin1Haskell	:: String -> String
+substLatin1Haskell
+    = concatMap transHaskellChar
+    where
+    transHaskellChar c
+	| isAsciiChar c = [c]
+	| otherwise	= init. tail . show $ c
+
 substLatin1Tcl	:: String -> String
 substLatin1Tcl
     = concatMap transTclChar
@@ -596,6 +604,10 @@ progFiles
 	     , Ext ".y"
 	     ]
 
+haskellFiles	:: FindExpr
+haskellFiles
+    = Ext ".hs"
+
 tclFiles	:: FindExpr
 tclFiles
     = OrExpr [ Ext ".cgi"
@@ -651,6 +663,12 @@ asciiFiles
 noneAsciiProgFiles	:: FindExpr
 noneAsciiProgFiles
     = AndExpr [ progFiles
+	      , HasCont isUmlaut
+	      ]
+
+noneAsciiHaskellFiles	:: FindExpr
+noneAsciiHaskellFiles
+    = AndExpr [ haskellFiles
 	      , HasCont isUmlaut
 	      ]
 
