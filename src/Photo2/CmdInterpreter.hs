@@ -125,6 +125,8 @@ parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "store"     args	= parseStore     args
 parseCmd "update"    args	= parseUpdate    args
+parseCmd "attr"      args
+    | length args >=2		= parseAttr	 args
 parseCmd "cd"        args	= parseCd        args
 
 parseCmd "?" []
@@ -147,7 +149,9 @@ parseCmd "?" []
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
 	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
+	    , "  update [path]      import image and update copies, if original has changed"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
+	    , "  attr path n vl     set attribute value for picture/album selected by path"
 	    , "  store-config       write the config data"
 	    , "  pwd                print working album (dir)"
 	    , "  version            print photo2 version"
@@ -286,6 +290,18 @@ parseUpdate
 	= loadAlbums p
 	  >>>
 	  updateAllPics p
+	  >>>
+	  set theAlbums
+
+parseAttr	:: [String] -> [Cmd]
+parseAttr al
+    = parseWdCmd attr "attr" (take 1 al)
+    where
+    (an : avl) = tail al
+    attr p
+	= loadAlbums p
+	  >>>
+	  updateAttr an (unwords avl) p
 	  >>>
 	  set theAlbums
 

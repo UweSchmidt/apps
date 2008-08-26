@@ -106,7 +106,7 @@ importOrig c p pic
 	-- | extension src == extension dst
 	--    = [ "cp", src, dst, "&&", "chmod", "644", dst ]
 	| otherwise
-	    = [ "convert", "-quality", "85", src, dst ]
+	    = [ "convert", "-quality", "90", src, dst ]
 
 -- ------------------------------------------------------------
 

@@ -131,7 +131,7 @@ processArchive arname
 
 m1 =
     do
-    s0 <- runCmd (loadArchiveAndConfig testArchive) initialAppState
+    s0 <- runCmd (loadArchiveAndConfig testArchive) emptyAppState
     s1 <- runCmd (loadAlbums ["Hagenbeck"]) s0
     -- print s1
     s2 <- runCmd (get theAlbums >>> getAlbumPaths [] >>> arr joinPath >>> arrIO print) s1

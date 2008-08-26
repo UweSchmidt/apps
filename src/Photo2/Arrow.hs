@@ -101,6 +101,12 @@ getConfig cf	= get theConfig >>^ arr cf
 
 -- ------------------------------------------------------------
 
+updateNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
+updateNode update
+    = setNode $< (getNode >>> update)
+
+-- ------------------------------------------------------------
+
 setComp		:: SelArrow a b -> b -> CmdArrow a a
 setComp c v	= perform $ constA v >>> set c
 
@@ -591,6 +597,23 @@ removeAlbumEntry	:: PathArrow AlbumTree AlbumTree
 removeAlbumEntry p
     = processTreeByPath (const none) p
 
+-- ------------------------------------------------------------
+-- update an attribute for an album or picture
+
+updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
+updateAttr an av p
+    = runAction ("updating " ++ p' ++ " attr " ++ show an ++ " with value " ++ show av)
+      ( checkAlbum p
+	>>>
+	updateNode (arr addAttr)
+      )
+    where
+    p' = show . joinPath $ p
+    addAttr pic
+	| null av
+	    = pic { picAttrs = M.delete an (picAttrs pic) }
+	| otherwise
+	    = pic { picAttrs = M.insert an av (picAttrs pic) }
 
 -- ------------------------------------------------------------
 --
@@ -601,7 +624,7 @@ updatePic c p
     = runAction ("updating " ++ p')
       ( checkAlbum p
 	>>>
-	( setNode $< (getNode >>> update) )
+	updateNode update
       )
     where
     p' = show . joinPath $ p
