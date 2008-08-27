@@ -4,7 +4,10 @@ where
 import           Control.Monad	( when )
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
+
+import           Data.Char
 import qualified Data.Map as M
+import           Data.Maybe
 
 import           Photo2.ArchiveTypes
 import           Photo2.FilePath
@@ -61,16 +64,61 @@ theEdited	= ( picEdited, \ e x -> x { picEdited = e} )
 
 -- ------------------------------------------------------------
 
+importExifAttrs	:: Config -> Path -> Pic -> IOE Attrs
+importExifAttrs c p pic
+    = do
+      ex <- liftIO $ doesFileExist orig
+      when (not ex)
+           ( throwError $ "importExifAttrs: original image " ++ show orig ++ " not found" )
+      up <- upToDate
+      if up
+	 then return M.empty
+	 else do
+	      exifData <- imgAttrs orig
+	      liftIO $ putStrLn exifData
+	      return M.empty
+    where
+    orig	= base </-> picOrig pic
+    raw		= base </-> picRaw  pic
+    xmp		= base </-> picXmp  pic
+    modified	= fromMaybe "" . M.lookup "modified" . picAttrs $ pic
+
+    dst		= dir  </> joinPath p `addExtension` imgtype
+
+    imgtype	= getDefOpt "jpg"           "imgtype" c
+    base	= getDefOpt "../Diakaesten" "base"    c
+    dir         = getDefOpt "org"           "dir"     c
+
+    debug	= hasOpt optDebug     c
+    force	= hasOpt optForceExif c
+
+    upToDate
+	| force		= return False
+	| otherwise	= liftIO $ fileNewerThanDate modified orig
+
+    imgAttrs f
+	| map toLower (extension f) `elem` ["jpg", "nef", "png", "tif"]
+	    = imgExifTool f
+	| otherwise
+	    = imgIdentify f
+	where
+	imgIdentify f
+	    = execFct debug ["identify", "-verbose", f]
+	imgExifTool f
+	    = execFct debug  ["exiftool", "-s", f]
+
+-- ------------------------------------------------------------
+
 importOrig	:: Config -> Path -> Pic -> IOE Pic
 importOrig c p pic
     = do
       ex <- existsSrc
       when (not ex)
            ( throwError $ "importOrig: original file " ++ show src ++ " does not exist" )
-      mkDirectoryPath dst
       up <- upToDate
       if not up
 	 then do
+	      mkDirectoryPath dst
 	      copy
 	      geo <- getImageSize dst
 	      return $
@@ -92,7 +140,7 @@ importOrig c p pic
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanFile src dst
 
-    src		= base </> picOrig pic
+    src		= base </-> picOrig pic
     dst		= dir  </> joinPath p `addExtension` imgtype
 
     base	= getDefOpt "../Diakaesten" "base"    c

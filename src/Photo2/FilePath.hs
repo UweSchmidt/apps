@@ -34,9 +34,6 @@ isSlash		= (== head slash)
 isDot		:: Char -> Bool
 isDot		= (== head dot)
 
-extension	:: String -> String
-extension	= reverse . (\ (f', s') -> if null s' then s' else f') . break isDot . takeWhile (not . isSlash) . reverse
-
 dirName		:: String -> String
 dirName		= reverse . (\ t -> if null t then thisDir else t) . drop 1 . dropWhile (not . isSlash) . reverse
 
@@ -110,14 +107,25 @@ showN n
     | dn == thisDir	= fn
     | otherwise		= dn `FP.combine` fn
 
+(</->)		:: String -> String -> String
+(</->) dn fn
+    | null fn		= fn
+    | otherwise		= dn </> fn
 
 joinPath	:: [FilePath] -> FilePath
 joinPath	= FP.joinPath
+
+showPath	:: [FilePath] -> String
+showPath	= show . FP.joinPath
 
 addExtension	:: String -> String -> String
 addExtension f e
     | null e	= f
     | otherwise	= FP.addExtension f e
+
+extension	:: FilePath -> String
+extension
+    = drop 1 . FP.takeExtension
 
 splitPath	:: FilePath -> [FilePath]
 splitPath	= FP.splitDirectories

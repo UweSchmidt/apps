@@ -240,7 +240,7 @@ loadAlbum base doc
 
 loadAlbums	:: PathArrow a AlbumTree
 loadAlbums p
-    = runAction ("check loaded albums for " ++ show (joinPath p)) $
+    = runAction ("check loaded albums for " ++ showPath p) $
       get theAlbums
       >>>
       processAllNodesOnPath checkAlbum p
@@ -271,7 +271,7 @@ storeAllAlbums p
 
 storeAlbumTree	:: PathArrow AlbumTree AlbumTree
 storeAlbumTree p
-    = runAction ("storing all albums at: " ++ show (joinPath p)) $
+    = runAction ("storing all albums at: " ++ showPath p) $
       ( processChildren (storeSubAlbums $< getPicId)
 	>>>
 	( ( ( removeSubAlbums
@@ -385,7 +385,7 @@ checkAlbum _p
 
 checkPath	:: PathArrow AlbumTree AlbumTree
 checkPath p
-    = runAction ("checking path: " ++ show (joinPath p)) $
+    = runAction ("checking path: " ++ showPath p) $
       getTreeByPath p
 
 -- ------------------------------------------------------------
@@ -504,7 +504,7 @@ withConfig c p	= ( \ config -> c config p ) $< get theConfig
 
 getRelatives	:: PathArrow AlbumTree (Path, Path, Path)
 getRelatives p
-    = runAction ("get relatives: " ++ joinPath p) $
+    = runAction ("get relatives: " ++ showPath p) $
       getPN ( if null p then emptyPath else init p )
     where
     n = last p
@@ -602,18 +602,41 @@ removeAlbumEntry p
 
 updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
 updateAttr an av p
-    = runAction ("updating " ++ p' ++ " attr " ++ show an ++ " with value " ++ show av)
+    = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av)
       ( checkAlbum p
 	>>>
-	updateNode (arr addAttr)
+	updateNode (arr $ changeAttr an av)
       )
-    where
-    p' = show . joinPath $ p
-    addAttr pic
-	| null av
-	    = pic { picAttrs = M.delete an (picAttrs pic) }
-	| otherwise
-	    = pic { picAttrs = M.insert an av (picAttrs pic) }
+
+updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
+updateAttrs am p
+    = runAction ("updating " ++ showPath p ++ " attributes " ++ show am)
+      ( checkAlbum p
+	>>>
+	updateNode (arr $ changeAttrs am)
+      )
+
+updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
+updateExifAttrs c p
+    = runAction ("updating " ++ showPath p ++ " exif attributes")
+      ( checkAlbum p
+	>>>
+	updateNode ( (\ am -> arr $ changeAttrs am)
+		     $<
+		     (arrIOE (importExifAttrs c p) `withDefault` M.empty)
+		   )
+      )
+
+changeAttrs	:: Attrs -> Pic -> Pic
+changeAttrs am pic
+    = M.foldWithKey changeAttr pic am
+
+changeAttr	:: Name -> Value -> Pic -> Pic
+changeAttr an av pic
+    | null av
+	= pic { picAttrs = M.delete an (picAttrs pic) }
+    | otherwise
+	= pic { picAttrs = M.insert an av (picAttrs pic) }
 
 -- ------------------------------------------------------------
 --
@@ -627,7 +650,7 @@ updatePic c p
 	updateNode update
       )
     where
-    p' = show . joinPath $ p
+    p' = showPath p
     sl = confSizes c
     update
 	= runAction ("import original for " ++ p')
@@ -635,12 +658,19 @@ updatePic c p
 	  >>>
 	  seqA (map copy sl)
     copy s
-	= runAction ("create copy for " ++ show s ++ " for " ++ p')
+	= runAction ("create copy for " ++ show (sizeDir s) ++ " for " ++ p')
 	  ( arrIOE (createCopy c p s) )
 
 -- update all entries addresed by a path
 
 updateAllPics	:: PathArrow AlbumTree AlbumTree
-updateAllPics	= processTreeByPath ( processAllByPath (withConfig updatePic) )
+updateAllPics	= processTreeByPath
+		  ( processAllByPath
+		    ( \ p -> ( withConfig updatePic p
+			       >>>
+			       withConfig updateExifAttrs p
+			     )
+		    )
+		  )
 
 -- ------------------------------------------------------------

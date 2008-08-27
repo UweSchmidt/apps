@@ -430,5 +430,6 @@ optDebug	= "debug"
 optDryRun	= "dry-run"
 optForceOrig	= "copy-org"
 optForceCopy	= "create-copy"
+optForceExif	= "copy-exif"
 
 -- ------------------------------------------------------------
