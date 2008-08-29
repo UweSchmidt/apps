@@ -120,11 +120,13 @@ parseCmd "pwd" []
 
 parseCmd "ls"        args	= parseLs        args
 parseCmd "ls-r"      args	= parseLsr       args
+parseCmd "ls-ra"     args	= parseLsra      args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "store"     args	= parseStore     args
 parseCmd "update"    args	= parseUpdate    args
+parseCmd "new-attrkeys" args	= parseNewAttrKeys args
 parseCmd "attr"      args
     | length args >=2		= parseAttr	 args
 parseCmd "cd"        args	= parseCd        args
@@ -149,10 +151,12 @@ parseCmd "?" []
 	    , "  unset <opt>        unset an option"
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
+	    , "  ls-ra [path]       load and list album and picture names recursively, default is the current working album"
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
 	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
 	    , "  update [path]      import image and update copies, if original has changed"
+	    , "  new-attrkeys       change attribute keys to new format"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  attr path n vl     set attribute value for picture/album selected by path"
 	    , "  store-config       write the config data"
@@ -220,15 +224,19 @@ parseWdCmd action name ps
 
 parseLs :: [String] -> [Cmd]
 parseLs
-    = parseWdCmd (getLsPaths getAlbumPaths) "ls"
+    = parseWdCmd (getLsPaths loadAlbums getAlbumPaths) "ls"
 
 parseLsr :: [String] -> [Cmd]
 parseLsr
-    = parseWdCmd (getLsPaths getAllAlbumPaths) "ls-r"
+    = parseWdCmd (getLsPaths loadAlbums getAllAlbumPaths) "ls-r"
 
-getLsPaths	:: PathArrow AlbumTree Path -> PathArrow a ()
-getLsPaths gt p
-    = loadAlbums p
+parseLsra :: [String] -> [Cmd]
+parseLsra
+    = parseWdCmd (getLsPaths loadAllAlbums getAllAlbumPaths) "ls-ra"
+
+getLsPaths	:: PathArrow a AlbumTree -> PathArrow AlbumTree Path -> PathArrow a ()
+getLsPaths ld gt p
+    = ld p
       >>>
       gt p
       >>>
@@ -293,6 +301,17 @@ parseUpdate
 	= loadAlbums p
 	  >>>
 	  updateAllPics p
+	  >>>
+	  set theAlbums
+
+parseNewAttrKeys	:: [String] -> [Cmd]
+parseNewAttrKeys
+    = parseWdCmd update "new-attrkeys"
+    where
+    update p
+	= loadAlbums p
+	  >>>
+	  updateAllAttrKeys p
 	  >>>
 	  set theAlbums
 

@@ -11,6 +11,7 @@ import           Text.XML.HXT.Arrow
 
 import           Photo2.ArchiveTypes
 import           Photo2.Config
+import           Photo2.ExifData
 import           Photo2.FilePath
 import           Photo2.ImageOperations
 
@@ -311,9 +312,11 @@ storeDocData p root doc config
       runAction ("write document:  " ++ doc)
 		( addDoctypeDecl root "" (pathFromTo doc (dirName config </> "archive.dtd"))
 		  >>>
+		  perform (constA doc >>> arrIOE (mkBackupFile ".bak"))
+		  >>>
 		  writeDocument [ (a_indent, v_1)
 				, (a_output_encoding, isoLatin1)
-				] ( doc ++ ".new" )
+				] doc
 		)
       >>>
       documentStatusOk
@@ -600,6 +603,14 @@ removeAlbumEntry p
 -- ------------------------------------------------------------
 -- update an attribute for an album or picture
 
+updateAttrKeys	:: PathArrow AlbumTree AlbumTree
+updateAttrKeys p
+    = runAction ("updating attribute keys for " ++ showPath p)
+      ( checkAlbum p
+	>>>
+	updateNode (arr $ \ pic -> pic { picAttrs = normAttrs (picAttrs pic) })
+      )
+
 updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
 updateAttr an av p
     = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av)
@@ -653,24 +664,34 @@ updatePic c p
     p' = showPath p
     sl = confSizes c
     update
-	= runAction ("import original for " ++ p')
-	  ( arrIOE (importOrig c p) )
-	  >>>
-	  seqA (map copy sl)
+	= ( runAction ("import original for " ++ p')
+	    ( arrIOE (importOrig c p) )
+	    >>>
+	    seqA (map copy sl)
+	  )
+          `orElse` this
     copy s
 	= runAction ("create copy for " ++ show (sizeDir s) ++ " for " ++ p')
-	  ( arrIOE (createCopy c p s) )
+	  ( arrIOE (createCopy c p s)
+	  )
+          `orElse` this
 
 -- update all entries addresed by a path
 
 updateAllPics	:: PathArrow AlbumTree AlbumTree
-updateAllPics	= processTreeByPath
-		  ( processAllByPath
-		    ( \ p -> ( withConfig updatePic p
-			       >>>
-			       withConfig updateExifAttrs p
-			     )
-		    )
-		  )
+updateAllPics
+    = processTreeByPath
+      ( processAllByPath
+	( \ p -> ( withConfig updatePic p
+		   >>>
+		   withConfig updateExifAttrs p
+		 )
+	)
+      )
+
+updateAllAttrKeys	:: PathArrow AlbumTree AlbumTree
+updateAllAttrKeys
+    = processTreeByPath
+      ( processAllByPath updateAttrKeys )
 
 -- ------------------------------------------------------------

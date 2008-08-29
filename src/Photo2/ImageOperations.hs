@@ -1,6 +1,7 @@
 module Photo2.ImageOperations
 where
 
+import qualified Control.Exception as CE
 import           Control.Monad	( when )
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
@@ -10,6 +11,7 @@ import qualified Data.Map as M
 import           Data.Maybe
 
 import           Photo2.ArchiveTypes
+import           Photo2.ExifData
 import           Photo2.FilePath
 
 import           System	( system )
@@ -38,7 +40,7 @@ liftIO	:: IO a -> IOE a
 liftIO a
     = do
       r <- ME.liftIO $
-           catch ( do
+           CE.catch ( do
 		   r1 <- a
 		   return (Right r1)
 		 )
@@ -74,14 +76,16 @@ importExifAttrs c p pic
       if up
 	 then return M.empty
 	 else do
-	      exifData <- imgAttrs orig
-	      liftIO $ putStrLn exifData
-	      return M.empty
+	      exifDataOrig <- imgAttrs orig
+	      exifDataRaw  <- imgAttrs raw
+	      xmpData      <- imgAttrsXmp xmp
+	      -- liftIO $ putStrLn (show exifData)
+	      return (((exifDataOrig `M.union` exifDataRaw) `M.union` xmpData) `M.union` fileData)
     where
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
     xmp		= base </-> picXmp  pic
-    modified	= fromMaybe "" . M.lookup "modified" . picAttrs $ pic
+    modified	= fromMaybe "" . M.lookup "File-Modification-Date-Time" . picAttrs $ pic
 
     dst		= dir  </> joinPath p `addExtension` imgtype
 
@@ -89,23 +93,30 @@ importExifAttrs c p pic
     base	= getDefOpt "../Diakaesten" "base"    c
     dir         = getDefOpt "org"           "dir"     c
 
-    debug	= hasOpt optDebug     c
-    force	= hasOpt optForceExif c
+    debug	= optON  optDebug     c
+    force	= optON  optForceExif c
+    dry		= optOFF optForceExif c
 
     upToDate
+	| dry		= return True
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanDate modified orig
 
     imgAttrs f
-	| map toLower (extension f) `elem` ["jpg", "nef", "png", "tif"]
-	    = imgExifTool f
-	| otherwise
-	    = imgIdentify f
-	where
-	imgIdentify f
-	    = execFct debug ["identify", "-verbose", f]
-	imgExifTool f
-	    = execFct debug  ["exiftool", "-s", f]
+	= do
+	  t <- execFct debug  ["exiftool", f] -- don't use "-s" option
+	  return $ parseExif t
+
+    imgAttrsXmp f
+	= do
+	  return $ emptyAttrs	-- parseXmp t
+
+    fileData
+	= parseExif . unlines $
+	  [ "Ref-Orig : " ++ orig
+	  , "Ref-Raw : "  ++ raw
+	  , "Ref-Xmp : "  ++ xmp
+	  ]
 
 -- ------------------------------------------------------------
 
@@ -137,6 +148,7 @@ importOrig c p pic
 	      return ()
 
     upToDate
+	| dry		= return True
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanFile src dst
 
@@ -147,8 +159,9 @@ importOrig c p pic
     dir         = getDefOpt "org"           "dir"     c
     imgtype	= getDefOpt "jpg"           "imgtype" c
 
-    debug	= hasOpt optDebug     c
-    force	= hasOpt optForceOrig c
+    debug	= optON  optDebug     c
+    force	= optON  optForceOrig c
+    dry		= optOFF optForceOrig c
 
     shellcmd
 	-- | extension src == extension dst
@@ -162,7 +175,7 @@ createCopy	:: Config -> Path -> Size -> Pic -> IOE Pic
 createCopy c p s pic
     = do
       ex <- existsSrc
-      when (not ex)
+      when (not ex && not dry)
            ( throwError $ "createCopy: original file " ++ show src ++ " does not exist" )
       mkDirectoryPath dst
       up <- upToDate
@@ -192,14 +205,16 @@ createCopy c p s pic
 	  aspect = sizeAspect s
 
     upToDate
+	| dry		= return True
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanFile src dst
 
     dir         = getDefOpt "org"           "dir"     c
     imgtype	= getDefOpt "jpg"           "imgtype" c
 
-    debug	= hasOpt optDebug     c
-    force	= hasOpt optForceCopy c
+    debug	= optON  optDebug     c
+    force	= optON  optForceCopy c
+    dry		= optOFF optForceCopy c
 
     img         = joinPath p `addExtension` imgtype
     src		= dir       </> img
@@ -351,7 +366,8 @@ mkDirectoryPath f
       ex <- liftIO $ doesDirectoryExist dir
       when (not ex)
            ( ( liftIO $ createDirectoryIfMissing True dir )
-	     `mapError` (("createDirectory " ++ dir ++ " failed: ") ++)
+	     `mapError`
+	     (("createDirectory " ++ dir ++ " failed: ") ++)
 	   )
     where
     dir = dirName f
@@ -365,6 +381,15 @@ rmFile f
 	when ex (liftIO $ removeFile f)
       )
       `mapError` (("remove " ++ show f ++ " failed: ") ++)
+
+-- ------------------------------------------------------------
+
+mkBackupFile	:: String -> String -> IOE ()
+mkBackupFile bak f
+    = do
+      ex <- liftIO $ doesFileExist f
+      when ex
+	   ( liftIO $ copyFile f (f ++ bak) )
 
 -- ------------------------------------------------------------
 --
@@ -404,7 +429,7 @@ fileNewerThanFile ref f
 	       &&
 	       not (null mref)
 	       &&
-	       mref < mf
+	       mref <= mf
 	     )
       -- putStrLn ("file newer file=" ++ show f ++ "," ++ show mf ++ " ref=" ++ show ref ++ "," ++ show mref ++ " status=" ++ show n)
       return n
@@ -434,7 +459,7 @@ fileNewerThanDate dref f
 	   mf   <- fileLastModified f
 	   return ( not (null dref)
 		    &&
-		    dref < mf
+		    dref <= mf
 		  )
 
 fileNewerThanDates	:: [String] -> String -> IO Bool

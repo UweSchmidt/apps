@@ -174,6 +174,9 @@ emptyAlbumTree	= mkLeaf emptyPic
 emptyGeo	:: Geo
 emptyGeo	= Geo 0 0
 
+emptyAttrs	:: Attrs
+emptyAttrs	= M.empty
+
 -- ------------------------------------------------------------
 
 formatAlbumTree	:: AlbumTree -> String
@@ -423,8 +426,11 @@ getOpt		= getDefOpt ""
 getDefOpt		:: String -> String -> Config -> String
 getDefOpt d o	= fromMaybe d . M.lookup o . confAttrs
 
-hasOpt		:: String -> Config -> Bool
-hasOpt o	= (`elem` ["1","yes","true"]) . map toLower . getOpt o
+optON		:: String -> Config -> Bool
+optON o		= (`elem` ["1","yes","true"]) . map toLower . getOpt o
+
+optOFF		:: String -> Config -> Bool
+optOFF o	= (`elem` ["0","no","false"]) . map toLower . getOpt o
 
 optDebug	= "debug"
 optDryRun	= "dry-run"
