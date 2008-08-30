@@ -60,17 +60,6 @@ mkSelA (g, s) = SA { get = getField g
 		   , set = setField s
 		   }
 
-selAlbums	= (albums,      \ x s -> s {albums = x})
-selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
-selConfig	= (config,      \ x s -> s {config = x})
-selConfigName	= (configName,  \ x s -> s {configName = x})
-selStatus	= (status,      \ x s -> s {status = x})
-selWd		= (cwd,         \ x s -> s {cwd = x})
-
-selConfigAttrs	= (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
-selConfigAttr k	= (fromMaybe "" . M.lookup k,
-                                \ v as -> M.insert k v as)  `sub` selConfigAttrs
-
 theAlbums       :: SelArrow a AlbumTree
 theAlbums	= mkSelA $ selAlbums
 
@@ -102,9 +91,21 @@ getConfig cf	= get theConfig >>^ arr cf
 
 -- ------------------------------------------------------------
 
+updateNode'	:: ArrowTree a => (Pic -> Pic) -> a Pic Pic -> a AlbumTree AlbumTree
+updateNode' setEdit update
+    = ( ( setNode $< (getNode >>> update >>> arr setEdit) )
+      )
+      `orElse`
+      this
+
 updateNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
-updateNode update
-    = setNode $< (getNode >>> update)
+updateNode	= updateNode' id
+
+editNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
+editNode	= updateNode' (change theEdited (const True))
+
+clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
+clearEdited	= updateNode' (change theEdited (const False)) this
 
 -- ------------------------------------------------------------
 
@@ -279,13 +280,13 @@ storeAlbumTree p
 	      >>>
 	      ( storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName ) )
 	      >>>
-	      changeNode (\ n -> n {picEdited = False})
+	      clearEdited
 	    )
 	    `orElse`
 	    this	-- something went wrong
 	  )
 	  `when`
-	  entryChanged
+	  entryEdited
 	)
       )
       `when`
@@ -302,7 +303,7 @@ storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
 storeAlbum doc config
     = storeDocData xpAlbumTree "album" doc config
       `guards`
-      changeNode (\ n -> n {picRef = doc})
+      updateNode ( arr $ change theRef (const doc) )
 
 storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
 storeDocData p root doc config
@@ -337,8 +338,8 @@ getExtAlbumRef	= getNode
 		  ^>>
 		  isA (not . null)
 
-entryChanged	:: CmdArrow AlbumTree AlbumTree
-entryChanged 	= this -- (getNode >>> arr picEdited >>> isA (==True))
+entryEdited	:: CmdArrow AlbumTree AlbumTree
+entryEdited 	= ( getNode >>> isA picEdited )
 		  `guards`
 		  this
 
@@ -370,7 +371,7 @@ storeArchive
     cut p
 	= setChildren []
 	  >>>
-	  ( (\ doc -> (changeNode (\ n -> n {picRef = doc}))) $< getConfig (albumPath p))
+	  ( (\ doc -> updateNode (arr $ change theRef (const doc))) $< getConfig (albumPath p) )
 
 -- ------------------------------------------------------------
 --
@@ -394,13 +395,42 @@ checkPath p
 -- ------------------------------------------------------------
 
 getTreeByPath	:: PathArrow AlbumTree AlbumTree
-getTreeByPath p
-    | null p	= none
-    | null p'	= nodeMatch `guards` this
-    | otherwise = nodeMatch `guards` (getChildren >>> getTreeByPath p')
+getTreeByPath	= getTreeByPathAndProcess (const this)
+
+getTreeByPathAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeByPathAndProcess pa
+    = getTreeByPathAndProcess' []
     where
-    (n' : p') = p
-    nodeMatch = hasPicName n'
+    getTreeByPathAndProcess' rp p
+	| null p	= none
+	| null p'	= nodeMatch `guards` pa (reverse rp')
+	| otherwise = nodeMatch `guards` (getChildren >>> getTreeByPathAndProcess' rp' p')
+	where
+	(n' : p') = p
+	rp' = n' : rp
+	nodeMatch = hasPicName n'
+
+getTreeByPathAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeByPathAndProcessChildren = getTreeByPathAndProcess . getChildrenAndProcess
+
+getTreeByPathAndProcessDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeByPathAndProcessDesc	 = getTreeByPathAndProcess . getDescAndProcess
+
+getChildrenAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getChildrenAndProcess pa p
+    = getChildren
+      >>>
+      ( pa $< (getPicId >>^ (reverse . (:rp))) )
+    where
+    rp = reverse p	-- make p ++ [n] a bit more efficient
+
+getDescAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getDescAndProcess pa p
+    = getD (reverse p)	-- make p ++ [n] a bit more efficient
+    where
+    getD rp = getChildren
+	      >>>
+	      ( (\ rp' -> pa (reverse rp') <+> getD rp') $< (getPicId >>^ (:rp)) )
 
 getDescByPath	:: PathArrow AlbumTree AlbumTree
 getDescByPath p
@@ -486,7 +516,7 @@ rootWd		:: CmdArrow a Path
 rootWd		= getRootPath >>> set theWd
 
 withDir		:: Path -> PathArrow a b -> CmdArrow a b
-withDir p c	= (\ p' -> withAbsDir p' c) $< (get theWd >>> arr (++ p))
+withDir p c	= (\ p' -> withAbsDir p' c) $< (get theWd >>^ (++ p))
 
 withAbsDir	:: Path -> PathArrow a b -> CmdArrow a b
 withAbsDir p c	= c (normalPath p)
@@ -550,34 +580,17 @@ getAlbumEntry p
     n' = last p
     p' = init p
 
+getAlbumPaths		:: PathArrow AlbumTree Path
+getAlbumPaths		= getTreeByPathAndProcessChildren constA
+
 getAllAlbumPaths	:: PathArrow AlbumTree Path
-getAllAlbumPaths
-    = getPaths gp
-    where
-    gp :: PathArrow AlbumTree Path
-    gp p'
-	= gp' $< getPicId
-	  where
-	  gp' :: Name -> CmdArrow AlbumTree Path
-	  gp' n'
-	      = constA p''
-		<+>
-		( getChildren >>> gp p'' )
-		where
-		p'' = n' : p'
+getAllAlbumPaths	= getTreeByPathAndProcessDesc constA
 
-getAlbumPaths	:: PathArrow AlbumTree Path
-getAlbumPaths
-    = getPaths (\ p' -> getPicId >>> arr (:p') )
+getAllEditedPaths	:: PathArrow AlbumTree Path
+getAllEditedPaths	= getTreeByPathAndProcessDesc $
+			  \ p -> entryEdited `guards` constA p
 
-getPaths	:: PathArrow AlbumTree Path -> PathArrow AlbumTree Path
-getPaths gp p
-    = getDescByPath p
-      >>>
-      gp (reverse p)
-      >>^
-      reverse
-
+-- ------------------------------------------------------------
 
 addAlbumEntry	:: AlbumEntry -> CmdArrow AlbumTree AlbumTree
 addAlbumEntry (p0, pic)
@@ -608,7 +621,7 @@ updateAttrKeys p
     = runAction ("updating attribute keys for " ++ showPath p)
       ( checkAlbum p
 	>>>
-	updateNode (arr $ \ pic -> pic { picAttrs = normAttrs (picAttrs pic) })
+	editNode (arr $ change theAttrs normAttrs)
       )
 
 updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
@@ -616,7 +629,7 @@ updateAttr an av p
     = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av)
       ( checkAlbum p
 	>>>
-	updateNode (arr $ changeAttr an av)
+	editNode (arr $ change theAttrs (mergeAttr an av))
       )
 
 updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
@@ -624,7 +637,7 @@ updateAttrs am p
     = runAction ("updating " ++ showPath p ++ " attributes " ++ show am)
       ( checkAlbum p
 	>>>
-	updateNode (arr $ changeAttrs am)
+	editNode (arr $ change theAttrs (mergeAttrs am))
       )
 
 updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
@@ -632,22 +645,8 @@ updateExifAttrs c p
     = runAction ("updating " ++ showPath p ++ " exif attributes")
       ( checkAlbum p
 	>>>
-	updateNode ( (\ am -> arr $ changeAttrs am)
-		     $<
-		     (arrIOE (importExifAttrs c p) `withDefault` M.empty)
-		   )
+	editNode (arrIOE (importExifAttrs c p))
       )
-
-changeAttrs	:: Attrs -> Pic -> Pic
-changeAttrs am pic
-    = M.foldWithKey changeAttr pic am
-
-changeAttr	:: Name -> Value -> Pic -> Pic
-changeAttr an av pic
-    | null av
-	= pic { picAttrs = M.delete an (picAttrs pic) }
-    | otherwise
-	= pic { picAttrs = M.insert an av (picAttrs pic) }
 
 -- ------------------------------------------------------------
 --
@@ -658,23 +657,19 @@ updatePic c p
     = runAction ("updating " ++ p')
       ( checkAlbum p
 	>>>
-	updateNode update
+	editNode update
       )
     where
     p' = showPath p
     sl = confSizes c
     update
-	= ( runAction ("import original for " ++ p')
-	    ( arrIOE (importOrig c p) )
-	    >>>
-	    seqA (map copy sl)
-	  )
-          `orElse` this
+	= runAction ("import original for " ++ p')
+	  ( arrIOE (importOrig c p) )
+	  >>>
+	  seqA (map copy sl)
     copy s
 	= runAction ("create copy for " ++ show (sizeDir s) ++ " for " ++ p')
-	  ( arrIOE (createCopy c p s)
-	  )
-          `orElse` this
+	  ( arrIOE (createCopy c p s) )
 
 -- update all entries addresed by a path
 

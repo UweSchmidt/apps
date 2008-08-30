@@ -60,13 +60,17 @@ dryCmd False _msg   cmd	= cmd
 
 -- ------------------------------------------------------------
 
-theCopies	= ( picCopies, \ c x -> x { picCopies = c} )
-theOrig		= ( picOrig,   \ o x -> x { picOrig   = o} )
-theEdited	= ( picEdited, \ e x -> x { picEdited = e} )
+mergeAttrs	:: Attrs -> Attrs -> Attrs
+mergeAttrs n o	= M.foldWithKey mergeAttr o n
+
+mergeAttr	:: Name -> Value -> Attrs -> Attrs
+mergeAttr k v
+    | null v	= M.delete k
+    | otherwise	= M.insert k v
 
 -- ------------------------------------------------------------
 
-importExifAttrs	:: Config -> Path -> Pic -> IOE Attrs
+importExifAttrs	:: Config -> Path -> Pic -> IOE Pic
 importExifAttrs c p pic
     = do
       ex <- liftIO $ doesFileExist orig
@@ -74,13 +78,19 @@ importExifAttrs c p pic
            ( throwError $ "importExifAttrs: original image " ++ show orig ++ " not found" )
       up <- upToDate
       if up
-	 then return M.empty
+	 then return pic
 	 else do
 	      exifDataOrig <- imgAttrs orig
 	      exifDataRaw  <- imgAttrs raw
 	      xmpData      <- imgAttrsXmp xmp
-	      -- liftIO $ putStrLn (show exifData)
-	      return (((exifDataOrig `M.union` exifDataRaw) `M.union` xmpData) `M.union` fileData)
+	      let newData = ( ( exifDataOrig
+				`M.union` exifDataRaw
+			      )
+			      `M.union` xmpData
+			    )
+			    `M.union` fileData
+	      return $ change theAttrs (mergeAttrs newData) pic
+
     where
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
@@ -132,9 +142,7 @@ importOrig c p pic
 	      mkDirectoryPath dst
 	      copy
 	      geo <- getImageSize dst
-	      return $
-		     change theEdited (const True) $
-		     change theCopies (M.insert dir (Copy geo)) pic
+	      return $ change theCopies (M.insert dir (Copy geo)) pic
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src
@@ -183,9 +191,7 @@ createCopy c p s pic
 	 then do
 	      resize
 	      geo <- getImageSize dst
-	      return $
-		     change theEdited (const True) $
-		     change theCopies (M.insert (sizeDir s) (Copy geo)) pic
+	      return $ change theCopies (M.insert (sizeDir s) (Copy geo)) pic
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src

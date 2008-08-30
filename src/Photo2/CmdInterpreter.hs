@@ -121,6 +121,7 @@ parseCmd "pwd" []
 parseCmd "ls"        args	= parseLs        args
 parseCmd "ls-r"      args	= parseLsr       args
 parseCmd "ls-ra"     args	= parseLsra      args
+parseCmd "edited"    args	= parseEdited    args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
@@ -152,11 +153,12 @@ parseCmd "?" []
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
 	    , "  ls-ra [path]       load and list album and picture names recursively, default is the current working album"
+	    , "  edited [path]      list all edited pictures"
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
 	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
 	    , "  update [path]      import image and update copies, if original has changed"
-	    , "  new-attrkeys       change attribute keys to new format"
+	    , "  new-attrkeys [path] change attribute keys to new format"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  attr path n vl     set attribute value for picture/album selected by path"
 	    , "  store-config       write the config data"
@@ -233,6 +235,10 @@ parseLsr
 parseLsra :: [String] -> [Cmd]
 parseLsra
     = parseWdCmd (getLsPaths loadAllAlbums getAllAlbumPaths) "ls-ra"
+
+parseEdited :: [String] -> [Cmd]
+parseEdited
+    = parseWdCmd (getLsPaths loadAlbums getAllEditedPaths) "edited"
 
 getLsPaths	:: PathArrow a AlbumTree -> PathArrow AlbumTree Path -> PathArrow a ()
 getLsPaths ld gt p

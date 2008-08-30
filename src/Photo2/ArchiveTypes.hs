@@ -131,6 +131,60 @@ sub (g2, s2) (g1, s1)
 change			:: Selector s a -> (a -> a) -> (s -> s)
 change (g, s) f	x	= s (f (g x)) x
 
+load			:: Selector s a -> s -> a
+load (g, _s) x		= g x
+
+store			:: Selector s a -> a -> (s -> s)
+store s v		= change s (const v)
+
+-- ------------------------------------------------------------
+
+type AppSelector a = Selector AppState a
+
+selAlbums	:: AppSelector AlbumTree
+selAlbums	= (albums,      \ x s -> s {albums = x})
+
+selArchiveName	:: AppSelector Href
+selArchiveName	= (archiveName, \ x s -> s {archiveName = x})
+
+selConfig	:: AppSelector Config
+selConfig	= (config,      \ x s -> s {config = x})
+
+selConfigName	:: AppSelector Href
+selConfigName	= (configName,  \ x s -> s {configName = x})
+
+selStatus	:: AppSelector Status
+selStatus	= (status,      \ x s -> s {status = x})
+
+selWd		:: AppSelector Path
+selWd		= (cwd,         \ x s -> s {cwd = x})
+
+selConfigAttrs	:: AppSelector Attrs
+selConfigAttrs	= (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
+
+selConfigAttr	:: Name -> AppSelector Value
+selConfigAttr k	= (fromMaybe "" . M.lookup k,
+                                \ v as -> M.insert k v as)  `sub` selConfigAttrs
+
+-- ------------------------------------------------------------
+
+type PicSelector a = Selector Pic a
+
+theCopies	:: PicSelector Copies
+theCopies	= ( picCopies, \ c x -> x { picCopies = c } )
+
+theOrig		:: PicSelector Href
+theOrig		= ( picOrig,   \ o x -> x { picOrig   = o } )
+
+theEdited	:: PicSelector Bool
+theEdited	= ( picEdited, \ e x -> x { picEdited = e } )
+
+theAttrs	:: PicSelector Attrs
+theAttrs	= ( picAttrs,  \ a x -> x { picAttrs  = a } )
+
+theRef		:: PicSelector Href
+theRef		= ( picRef,    \ r x -> x { picRef    = r } )
+
 -- ------------------------------------------------------------
 
 emptyAppState	:: AppState
