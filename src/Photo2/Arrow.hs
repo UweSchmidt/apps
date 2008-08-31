@@ -690,6 +690,52 @@ renamePic nn c p
 	editNode (arrIOE (mvPic nn c p))
       )
 
+renameContent	:: ConfigArrow AlbumTree AlbumTree
+renameContent c p
+    = runAction ("renaming album contents for " ++ showPath p)
+      ( checkAlbum p
+	>>>
+	( rename $< listA (getChildren >>> (getNode >>^ picId)) )
+      )
+    where
+    rename	:: [Name] -> CmdArrow AlbumTree AlbumTree
+    rename ids
+	| null nameMap
+	    = this
+	| otherwise		-- rename in 2 steps
+	    = processChildren (renameChild nameMap1 $< (getNode >>^ picId))
+	      >>>
+	      processChildren (renameChild nameMap2 $< (getNode >>^ picId))
+	where
+	renameChild nm cid
+	    | isNothing nid	= this
+	    | otherwise         = renamePic (fromJust nid) c (p ++ [cid])
+				  `whenNot`
+				  isAlbum
+				  
+	    where
+	    nid = lookup cid nm
+
+	nameMap		:: [(Name, Name)]
+	nameMap		= filter isNewName (zip ids (map picnr [1..]))
+
+        nameMap1	= map (\ (o, n) -> (o, "#" ++ n)) $ nameMap
+        nameMap2	= map (\ (o, n) -> ("#" ++ n, n)) $ nameMap
+
+        isNewName	:: (Name, Name) -> Bool
+	isNewName (o, n)
+	    = n /= o
+	      &&
+	      (fromMaybe False . matchRE "pic-[0-9]+" $ o)
+
+	picnr :: Int -> String
+	picnr = show
+		>>> reverse
+		>>> (++ "0000")
+		>>> take 4
+		>>> reverse
+		>>> ("pic-" ++)
+
 -- ------------------------------------------------------------
 --
 -- update image data for a single node, the arrow input

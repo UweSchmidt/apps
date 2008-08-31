@@ -129,12 +129,23 @@ parseCmd "relatives" args	= parseRelatives args
 parseCmd "store"     args	= parseStore     args
 parseCmd "update"    args	= parseUpdate    args
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
+
 parseCmd "attr"      args
     | length args >=2		= parseAttr		args
+
 parseCmd "rename"    args
-    | length args == 2		= parseRename		args
+    | length args == 2		= parseRename
+				  "rename" (renamePic (concat . drop 1 $ args))
+				  args
+
+parseCmd "rename-cont"    args
+    | length args <= 1		= parseRename
+				  "rename-cont"  renameContent
+				  args
+
 parseCmd "find"      args
     | length args `elem` [1..3]	= parseFind		args
+
 parseCmd "cd"        args	= parseCd		args
 
 parseCmd "?" []
@@ -168,6 +179,7 @@ parseCmd "?" []
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  attr path n vl     set attribute value for picture/album selected by path"
 	    , "  rename path newid  rename picture"
+	    , "  rename-cont [path] rename all pictures in an album"
 	    , "  store-config       write the config data"
 	    , "  pwd                print working album (dir)"
 	    , "  version            print photo2 version"
@@ -338,14 +350,14 @@ parseNewAttrKeys
 	  >>>
 	  set theAlbums
 
-parseRename		:: [String] -> [Cmd]
-parseRename al
-    = parseWdCmd rename "rename" (take 1 al)
+parseRename		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
+parseRename cn ca al
+    = parseWdCmd rename cn (take 1 al)
     where
     rename p
 	= loadAlbums p
 	  >>>
-	  processTreeByPath (withConfig (renamePic (concat . drop 1 $ al))) p
+	  processTreeByPath (withConfig ca) p
 	  >>>
 	  set theAlbums
 

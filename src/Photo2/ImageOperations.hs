@@ -80,11 +80,13 @@ mvPic newName c p pic
 
     renameCopy	:: Name -> IOE ()
     renameCopy	dir
-	= mvFile src dst
-				-- = liftIO $ putStrLn ("rename " ++ show src ++ " " ++ show dst)
+	= do
+	  when (isAl pic)		-- rename album dir
+	       (mvFile src dir)
+	  mvFile (src `addExtension` imgtype) (dst `addExtension` imgtype)
 	where
-	src = dir </> joinPath p                    `addExtension` imgtype
-	dst = dir </> joinPath (init p) </> newName `addExtension` imgtype
+	src = dir </> joinPath p
+	dst = dir </> joinPath (init p) </> newName
 
 -- ------------------------------------------------------------
 
