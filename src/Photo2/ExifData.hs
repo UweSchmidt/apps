@@ -103,6 +103,7 @@ oldKeys
       , ("contrast", "Contrast")
       , ("date-and-time", "CreateDate")
       , ("date-and-time-original", "DateTimeOriginal")
+      , ("exposure-bias", "ExposureCompensation")
       , ("exposure-compensation", "ExposureCompensation")
       , ("exposure-mode", "ExposureMode")
       , ("exposure-program", "ExposureProgram")

@@ -492,7 +492,7 @@ optOFF o	= (`elem` ["0","no","false"]) . map toLower . getOpt o
 optDebug	= "debug"
 optDryRun	= "dry-run"
 optForceOrig	= "copy-org"
-optForceCopy	= "create-copy"
+optForceCopy	= "copy-copy"
 optForceExif	= "copy-exif"
 
 -- ------------------------------------------------------------

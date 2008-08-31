@@ -276,19 +276,21 @@ storeAllAlbums p
 storeAlbumTree	:: PathArrow AlbumTree AlbumTree
 storeAlbumTree p
     = runAction ("storing all albums at: " ++ showPath p) $
-      ( processChildren (storeSubAlbums $< getPicId)
+      ( ( editNode this `when` (getChildren >>> entryEdited) ) -- propagate changes to parent
 	>>>
-	( ( ( removeSubAlbums
-	      >>>
-	      ( storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName ) )
-	      >>>
-	      clearEdited
+	processChildren (storeSubAlbums $< getPicId)
+	>>>
+	( ( removeSubAlbums
+	    >>>
+	    ( ( storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName ) )
+	      `when`
+	      entryEdited
 	    )
-	    `orElse`
-	    this	-- something went wrong
+	    >>>
+	    clearEdited
 	  )
-	  `when`
-	  entryEdited
+	  `orElse`
+	  this	-- something went wrong
 	)
       )
       `when`
@@ -702,7 +704,7 @@ renameContent c p
     rename ids
 	| null nameMap
 	    = this
-	| otherwise		-- rename in 2 steps
+	| otherwise		-- rename in 2 steps, to prevent name clashes
 	    = processChildren (renameChild nameMap1 $< (getNode >>^ picId))
 	      >>>
 	      processChildren (renameChild nameMap2 $< (getNode >>^ picId))
@@ -712,7 +714,6 @@ renameContent c p
 	    | otherwise         = renamePic (fromJust nid) c (p ++ [cid])
 				  `whenNot`
 				  isAlbum
-				  
 	    where
 	    nid = lookup cid nm
 

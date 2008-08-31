@@ -156,34 +156,34 @@ parseCmd "?" []
 	    [ "commands available from the promt:"
 	    , ""
 	    , "  ?                  help (this text)"
-	    , "  open <archive>     load a photo archive, configuration and root album"
+	    , "  attr path n [vl]   set attribute value for picture/album or unset attr, if vl is missing"
+	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  close              write the whole data, albums, config and archive"
 	    , "  config             list config data"
-	    , "  options            list options"
-	    , "  set <opt> [val]    set or overwrite an option, default value is \"1\""
-	    , "      debug          debug output"
-	    , "      copy-org       force import of original images"
-	    , "      copy-exif      force import of exif info from original"
-	    , "      create-copy    force creation of all copies in all required sizes"
-	    , "  unset <opt>        unset an option"
+	    , "  dump [path]        list the contents of a whole album, default is current working album"
+	    , "  edited [path]      list all edited pictures"
+	    , "  exit,q             exit photo2"
+	    , "  find path kre vre  list all pictures with matching attribute key and value"
+	    , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
-	    , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
-	    , "  edited [path]      list all edited pictures"
-	    , "  find path kre vre  list all pictures with matching attribute key and value"
-	    , "  cat [path]         list the contents of an entry, default is current working album"
-	    , "  dump [path]        list the contents of a whole album, default is current working album"
-	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
-	    , "  update [path]      import image and update copies, if original has changed"
 	    , "  newattrs [path]    change attribute keys to new format"
-	    , "  store [path]       write all albums addressed by path and unload subalbums"
-	    , "  attr path n vl     set attribute value for picture/album selected by path"
-	    , "  rename path newid  rename picture"
-	    , "  rename-cont [path] rename all pictures in an album"
-	    , "  store-config       write the config data"
+	    , "  open <archive>     load a photo archive, configuration and root album"
+	    , "  options            list options"
 	    , "  pwd                print working album (dir)"
+	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
+	    , "  rename-cont [path] rename all pictures in an album"
+	    , "  rename path newid  rename picture"
+	    , "  set <opt> [val]    set or overwrite an option, default value is \"1\""
+	    , "      copy-copy      force creation of all copies in all required sizes"
+	    , "      copy-exif      force import of exif info from original"
+	    , "      copy-org       force import of original images"
+	    , "      debug          debug output"
+	    , "  store-config       write the config data"
+	    , "  store [path]       write all albums addressed by path and unload subalbums"
+	    , "  unset <opt>        unset an option"
+	    , "  update [path]      import image and update copies, if original has changed"
 	    , "  version            print photo2 version"
-	    , "  exit,q             exit photo2"
 	    ]
 
 parseCmd "version" []
@@ -369,7 +369,7 @@ parseAttr al
     attr p
 	= loadAlbums p
 	  >>>
-	  updateAttr an (unwords avl) p
+	  processTreeByPath (updateAttr an (unwords avl)) p
 	  >>>
 	  set theAlbums
 
