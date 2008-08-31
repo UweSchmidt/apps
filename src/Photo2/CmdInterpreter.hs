@@ -1,20 +1,21 @@
 module Photo2.CmdInterpreter
 where
 
-import Photo2.ArchiveTypes
-import Photo2.Arrow
-import Photo2.FilePath
-
 import qualified Control.Monad as CM
 
+import           Data.List
 import           Data.Maybe
 import qualified Data.Map as M
 
-import System.IO
-import System.Console.Readline
-    ( readline
-    , addHistory
-    )
+import           Photo2.ArchiveTypes
+import           Photo2.Arrow
+import           Photo2.FilePath
+
+import           System.IO
+import           System.Console.Readline
+                 ( readline
+		 , addHistory
+		 )
 
 import Text.XML.HXT.Arrow
 
@@ -119,18 +120,20 @@ parseCmd "pwd" []
 	    )
 
 parseCmd "ls"        args	= parseLs        args
-parseCmd "ls-r"      args	= parseLsr       args
-parseCmd "ls-ra"     args	= parseLsra      args
+parseCmd "lsr"       args	= parseLsr       args
+parseCmd "lsar"      args	= parseLsra      args
 parseCmd "edited"    args	= parseEdited    args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "store"     args	= parseStore     args
 parseCmd "update"    args	= parseUpdate    args
-parseCmd "new-attrkeys" args	= parseNewAttrKeys args
+parseCmd "newattrs"  args	= parseNewAttrKeys	args
 parseCmd "attr"      args
-    | length args >=2		= parseAttr	 args
-parseCmd "cd"        args	= parseCd        args
+    | length args >=2		= parseAttr		args
+parseCmd "find"  args
+    | length args `elem` [1..3]	= parseFind		args
+parseCmd "cd"        args	= parseCd		args
 
 parseCmd "?" []
     = liftCmd $
@@ -151,14 +154,15 @@ parseCmd "?" []
 	    , "      create-copy    force creation of all copies in all required sizes"
 	    , "  unset <opt>        unset an option"
 	    , "  ls [path]          list album and picture names, default is the current working album"
-	    , "  ls-r [path]        list album and picture names recursively, default is the current working album"
-	    , "  ls-ra [path]       load and list album and picture names recursively, default is the current working album"
+	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
+	    , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
 	    , "  edited [path]      list all edited pictures"
+	    , "  find path kre vre  list all pictures with matching attribute key and value"
 	    , "  cat [path]         list the contents of an entry, default is current working album"
 	    , "  dump [path]        list the contents of a whole album, default is current working album"
 	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
 	    , "  update [path]      import image and update copies, if original has changed"
-	    , "  new-attrkeys [path] change attribute keys to new format"
+	    , "  newattrs [path]    change attribute keys to new format"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  attr path n vl     set attribute value for picture/album selected by path"
 	    , "  store-config       write the config data"
@@ -226,27 +230,37 @@ parseWdCmd action name ps
 
 parseLs :: [String] -> [Cmd]
 parseLs
-    = parseWdCmd (getLsPaths loadAlbums getAlbumPaths) "ls"
+    = parseWdCmd (listEntries loadAlbums getAlbumPaths) "ls"
 
 parseLsr :: [String] -> [Cmd]
 parseLsr
-    = parseWdCmd (getLsPaths loadAlbums getAllAlbumPaths) "ls-r"
+    = parseWdCmd (listEntries loadAlbums getAllAlbumPaths) "lsr"
 
 parseLsra :: [String] -> [Cmd]
 parseLsra
-    = parseWdCmd (getLsPaths loadAllAlbums getAllAlbumPaths) "ls-ra"
+    = parseWdCmd (listEntries loadAllAlbums getAllAlbumPaths) "lsar"
 
 parseEdited :: [String] -> [Cmd]
 parseEdited
-    = parseWdCmd (getLsPaths loadAlbums getAllEditedPaths) "edited"
+    = parseWdCmd (listEntries loadAlbums getAllEditedPaths) "edited"
 
-getLsPaths	:: PathArrow a AlbumTree -> PathArrow AlbumTree Path -> PathArrow a ()
-getLsPaths ld gt p
-    = ld p
-      >>>
-      gt p
-      >>>
-      arrIO ( putStrLn . mkAbsPath . joinPath )
+listEntries	:: PathArrow a AlbumTree ->
+		   PathArrow AlbumTree Path ->
+		   PathArrow a ()
+listEntries ld gt
+		= findEntries ld gt (putStrLn . mkAbsPath . joinPath)
+
+findEntries	:: PathArrow a AlbumTree ->
+		   PathArrow AlbumTree b ->
+		   (b -> IO ()) ->
+		   PathArrow a ()
+findEntries ld gt out p
+    = ( ld p
+	>>>
+	gt p
+	>>>
+	arrIO out
+      ) `withDefault` ()
 
 -- ------------------------------------------------------------
 
@@ -312,7 +326,7 @@ parseUpdate
 
 parseNewAttrKeys	:: [String] -> [Cmd]
 parseNewAttrKeys
-    = parseWdCmd update "new-attrkeys"
+    = parseWdCmd update "newattrs"
     where
     update p
 	= loadAlbums p
@@ -332,6 +346,21 @@ parseAttr al
 	  updateAttr an (unwords avl) p
 	  >>>
 	  set theAlbums
+
+parseFind	:: [String] -> [Cmd]
+parseFind al
+    = parseWdCmd find "find" (take 1 al)
+    where
+    rek	= concat . take 1 . drop 1 $ al
+    rev = concat          . drop 2 $ al
+    find
+	= findEntries loadAlbums (getAllWithAttr rek rev) puts
+    puts (p, k, v)
+	= putStrLn ( intercalate ": "
+		     [ mkAbsPath . joinPath $ p
+		     , k , v
+		     ]
+		   )
 
 -- ------------------------------------------------------------
 

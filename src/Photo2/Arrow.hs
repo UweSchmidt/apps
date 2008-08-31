@@ -2,18 +2,20 @@ module Photo2.Arrow
 where
 
 import           Control.Monad.Error ( runErrorT )
+
 import           Data.Maybe
 import qualified Data.Map as M
-
-import           System.IO
-
-import           Text.XML.HXT.Arrow
 
 import           Photo2.ArchiveTypes
 import           Photo2.Config
 import           Photo2.ExifData
 import           Photo2.FilePath
 import           Photo2.ImageOperations
+
+import           System.IO
+
+import           Text.XML.HXT.Arrow
+import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 
 -- ------------------------------------------------------------
 
@@ -416,6 +418,9 @@ getTreeByPathAndProcessChildren = getTreeByPathAndProcess . getChildrenAndProces
 getTreeByPathAndProcessDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getTreeByPathAndProcessDesc	 = getTreeByPathAndProcess . getDescAndProcess
 
+getTreeByPathAndProcessSelfAndDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeByPathAndProcessSelfAndDesc	 = getTreeByPathAndProcess . getSelfAndDescAndProcess
+
 getChildrenAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getChildrenAndProcess pa p
     = getChildren
@@ -431,6 +436,12 @@ getDescAndProcess pa p
     getD rp = getChildren
 	      >>>
 	      ( (\ rp' -> pa (reverse rp') <+> getD rp') $< (getPicId >>^ (:rp)) )
+
+getSelfAndDescAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getSelfAndDescAndProcess pa p
+    = pa p
+      <+>
+      getDescAndProcess pa p
 
 getDescByPath	:: PathArrow AlbumTree AlbumTree
 getDescByPath p
@@ -589,6 +600,25 @@ getAllAlbumPaths	= getTreeByPathAndProcessDesc constA
 getAllEditedPaths	:: PathArrow AlbumTree Path
 getAllEditedPaths	= getTreeByPathAndProcessDesc $
 			  \ p -> entryEdited `guards` constA p
+
+getAllWithAttr		:: String -> String -> PathArrow AlbumTree (Path, String, String)
+getAllWithAttr rek rev
+    = getTreeByPathAndProcessSelfAndDesc $
+      \ p -> getNode
+	     >>>
+	     arrL (load theAttrs >>> M.toList)
+	     >>>
+	     ( if null rek
+	       then this
+	       else isA (fromMaybe False . matchRE rek . fst)
+	     )
+             >>>
+	     ( if null rev
+	       then this
+	       else isA (fromMaybe False . matchRE rev . snd)
+	     )
+	     >>>
+	     arr (\ (k, v) -> (p, k, v))
 
 -- ------------------------------------------------------------
 

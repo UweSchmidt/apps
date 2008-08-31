@@ -95,7 +95,7 @@ importExifAttrs c p pic
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
     xmp		= base </-> picXmp  pic
-    modified	= fromMaybe "" . M.lookup "File-Modification-Date-Time" . picAttrs $ pic
+    modified	= fromMaybe "" . M.lookup fileModificationDateTime . picAttrs $ pic
 
     dst		= dir  </> joinPath p `addExtension` imgtype
 
