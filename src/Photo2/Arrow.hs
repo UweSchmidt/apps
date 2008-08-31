@@ -680,6 +680,18 @@ updateExifAttrs c p
 
 -- ------------------------------------------------------------
 --
+-- rename picture
+
+renamePic	:: Name -> ConfigArrow AlbumTree AlbumTree
+renamePic nn c p
+    = runAction ("renaming " ++ showPath p ++ " to " ++ nn)
+      ( checkAlbum p
+	>>>
+	editNode (arrIOE (mvPic nn c p))
+      )
+
+-- ------------------------------------------------------------
+--
 -- update image data for a single node, the arrow input
 
 updatePic	:: ConfigArrow AlbumTree AlbumTree

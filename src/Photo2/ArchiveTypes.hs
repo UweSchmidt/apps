@@ -170,6 +170,9 @@ selConfigAttr k	= (fromMaybe "" . M.lookup k,
 
 type PicSelector a = Selector Pic a
 
+theId		:: PicSelector Name
+theId		= ( picId,     \ n x -> x { picId     = n } )
+
 theCopies	:: PicSelector Copies
 theCopies	= ( picCopies, \ c x -> x { picCopies = c } )
 

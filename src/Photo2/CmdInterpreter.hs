@@ -131,7 +131,9 @@ parseCmd "update"    args	= parseUpdate    args
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
 parseCmd "attr"      args
     | length args >=2		= parseAttr		args
-parseCmd "find"  args
+parseCmd "rename"    args
+    | length args == 2		= parseRename		args
+parseCmd "find"      args
     | length args `elem` [1..3]	= parseFind		args
 parseCmd "cd"        args	= parseCd		args
 
@@ -165,6 +167,7 @@ parseCmd "?" []
 	    , "  newattrs [path]    change attribute keys to new format"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  attr path n vl     set attribute value for picture/album selected by path"
+	    , "  rename path newid  rename picture"
 	    , "  store-config       write the config data"
 	    , "  pwd                print working album (dir)"
 	    , "  version            print photo2 version"
@@ -332,6 +335,17 @@ parseNewAttrKeys
 	= loadAlbums p
 	  >>>
 	  updateAllAttrKeys p
+	  >>>
+	  set theAlbums
+
+parseRename		:: [String] -> [Cmd]
+parseRename al
+    = parseWdCmd rename "rename" (take 1 al)
+    where
+    rename p
+	= loadAlbums p
+	  >>>
+	  processTreeByPath (withConfig (renamePic (concat . drop 1 $ al))) p
 	  >>>
 	  set theAlbums
 

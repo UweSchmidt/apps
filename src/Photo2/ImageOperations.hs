@@ -70,6 +70,24 @@ mergeAttr k v
 
 -- ------------------------------------------------------------
 
+mvPic	:: Name -> Config -> Path -> Pic -> IOE Pic
+mvPic newName c p pic
+    = do
+      mapM renameCopy $ (M.keys . load theCopies $ pic)
+      return $ store theId newName pic
+    where
+    imgtype	= getDefOpt "jpg"           "imgtype" c
+
+    renameCopy	:: Name -> IOE ()
+    renameCopy	dir
+	= mvFile src dst
+				-- = liftIO $ putStrLn ("rename " ++ show src ++ " " ++ show dst)
+	where
+	src = dir </> joinPath p                    `addExtension` imgtype
+	dst = dir </> joinPath (init p) </> newName `addExtension` imgtype
+
+-- ------------------------------------------------------------
+
 importExifAttrs	:: Config -> Path -> Pic -> IOE Pic
 importExifAttrs c p pic
     = do
@@ -377,6 +395,16 @@ mkDirectoryPath f
 	   )
     where
     dir = dirName f
+
+-- ------------------------------------------------------------
+
+mvFile		:: String -> String -> IOE ()
+mvFile src dst
+    = ( do
+	ex <- liftIO $ doesFileExist src
+	when ex (liftIO $ renameFile src dst)
+      )
+      `mapError` (("rename " ++ show src ++ " " ++ show dst ++ " failed: ") ++)
 
 -- ------------------------------------------------------------
 
