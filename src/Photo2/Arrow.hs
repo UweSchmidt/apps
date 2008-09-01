@@ -397,22 +397,23 @@ checkPath p
       getTreeByPath p
 
 -- ------------------------------------------------------------
+--
+-- traversal functions for reading the tree
 
 getTreeByPath	:: PathArrow AlbumTree AlbumTree
 getTreeByPath	= getTreeByPathAndProcess (const this)
 
 getTreeByPathAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeByPathAndProcess pa
-    = getTreeByPathAndProcess' []
+getTreeByPathAndProcess pa p0
+    = getSub p0
     where
-    getTreeByPathAndProcess' rp p
+    getSub p
 	| null p	= none
-	| null p'	= nodeMatch `guards` pa (reverse rp')
-	| otherwise = nodeMatch `guards` (getChildren >>> getTreeByPathAndProcess' rp' p')
+	| null p'	= nodeMatch `guards` pa p0
+	| otherwise     = nodeMatch `guards` (getChildren >>> getSub p')
 	where
 	(n' : p') = p
-	rp' = n' : rp
-	nodeMatch = hasPicName n'
+	nodeMatch = hasPicId n'
 
 getTreeByPathAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getTreeByPathAndProcessChildren = getTreeByPathAndProcess . getChildrenAndProcess
@@ -445,18 +446,20 @@ getSelfAndDescAndProcess pa p
       <+>
       getDescAndProcess pa p
 
+-- ------------------------------------------------------------
+{-
 getDescByPath	:: PathArrow AlbumTree AlbumTree
 getDescByPath p
     | null p	= this
     | otherwise = nodeMatch `guards` (getChildren >>> getDescByPath p')
     where
     (n' : p') = p
-    nodeMatch = hasPicName n'
-{-
+    nodeMatch = hasPicId n'
+
 processTreeByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeByPath pa p
     | null p	= this
-    | null p'	= pa p `when` hasPicName n'
+    | null p'	= pa p `when` hasPicId n'
     | otherwise	= processChildren (processTreeByPath pa p')
     where
     (n' : p') = p
@@ -464,8 +467,8 @@ processTreeByPath pa p
 processAllNodesOnPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processAllNodesOnPath pa p
     | null p	= this
-    | null p'	= pa p `when` hasPicName n'
-    | otherwise	= ( pa p >>> processChildren (processAllNodesOnPath pa p') ) `when` hasPicName n'
+    | null p'	= pa p `when` hasPicId n'
+    | otherwise	= ( pa p >>> processChildren (processAllNodesOnPath pa p') ) `when` hasPicId n'
     where
     (n' : p') = p
 
@@ -490,8 +493,8 @@ processAllSubTreesByPath pa p0
     where
     processSub p
 	| null p	= this
-	| null p'	= processAllByPath pa p0          `when` hasPicName n'
-	| otherwise	= processChildren (processSub p') `when` hasPicName n'
+	| null p'	= processAllByPath pa p0          `when` hasPicId n'
+	| otherwise	= processChildren (processSub p') `when` hasPicId n'
 	where
 	(n' : p') = p
 
@@ -506,15 +509,16 @@ processTreeByPath pa p0
     where
     processSub p
 	| null p	= this
-	| null p'	= pa p0                           `when` hasPicName n'
-	| otherwise	= processChildren (processSub p') `when` hasPicName n'
+	| null p'	= pa p0                           `when` nodeMatch
+	| otherwise	= processChildren (processSub p') `when` nodeMatch
 	where
 	(n' : p') = p
+	nodeMatch = hasPicId n'
 
 -- ----------------------------------------
 
-hasPicName	:: Name -> CmdArrow AlbumTree AlbumTree
-hasPicName n    = (getPicId >>> isA (==n)) `guards` this
+hasPicId	:: Name -> CmdArrow AlbumTree AlbumTree
+hasPicId n    = (getPicId >>> isA (==n)) `guards` this
 
 getPicId	:: CmdArrow AlbumTree Name
 getPicId	= getNode >>^ picId
@@ -580,18 +584,7 @@ getRelatives p
 	getp l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip (drop 1 l) $ l
 
 getAlbumEntry	:: PathArrow AlbumTree AlbumEntry
-getAlbumEntry p
-    | null p	= none
-    | otherwise	= getDescByPath p'
-		  >>>
-		  hasPicName n'
-		  >>>
-		  getNode
-		  >>^
-		  (\ x -> (p, x))
-    where
-    n' = last p
-    p' = init p
+getAlbumEntry	= getTreeByPathAndProcess (\ p -> constA p &&& getNode)
 
 getAlbumPaths		:: PathArrow AlbumTree Path
 getAlbumPaths		= getTreeByPathAndProcessChildren constA
@@ -631,13 +624,13 @@ addAlbumEntry (p0, pic)
     n = picId pic
     insert	:: PathArrow AlbumTree AlbumTree
     insert p
-	| null p	= setNode pic `when` hasPicName n		-- entry already in tree
+	| null p	= setNode pic `when` hasPicId n			-- entry already in tree
 	| null p'	= replaceChildren (getChildren <+> mkPic pic)	-- append a new leave to the children
 			  `when`
-			  hasPicName n'
+			  hasPicId n'
 	| otherwise	= processChildren (insert p')			-- descend into tree
 			  `when`
-			  hasPicName n'
+			  hasPicId n'
 	where
 	(n'  : p' ) = p
 
