@@ -257,7 +257,7 @@ loadAllAlbums p
       >>>
       processAllNodesOnPath    checkAlbum p
       >>>
-      processAllSubTreesByPath checkAlbum p
+      processAllSubTrees checkAlbum p
       >>>
       set theAlbums
 
@@ -269,7 +269,7 @@ storeAllAlbums	:: PathArrow a AlbumTree
 storeAllAlbums p
     = get theAlbums
       >>>
-      processTreeByPath storeAlbumTree p
+      processTree storeAlbumTree p
       >>>
       set theAlbums
 
@@ -394,17 +394,17 @@ checkAlbum _p
 checkPath	:: PathArrow AlbumTree AlbumTree
 checkPath p
     = runAction ("checking path: " ++ showPath p) $
-      getTreeByPath p
+      getTree p
 
 -- ------------------------------------------------------------
 --
 -- traversal functions for reading the tree
 
-getTreeByPath	:: PathArrow AlbumTree AlbumTree
-getTreeByPath	= getTreeByPathAndProcess (const this)
+getTree	:: PathArrow AlbumTree AlbumTree
+getTree	= getTreeAndProcess (const this)
 
-getTreeByPathAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeByPathAndProcess pa p0
+getTreeAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcess pa p0
     = getSub p0
     where
     getSub p
@@ -415,14 +415,14 @@ getTreeByPathAndProcess pa p0
 	(n' : p') = p
 	nodeMatch = hasPicId n'
 
-getTreeByPathAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeByPathAndProcessChildren = getTreeByPathAndProcess . getChildrenAndProcess
+getTreeAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessChildren = getTreeAndProcess . getChildrenAndProcess
 
-getTreeByPathAndProcessDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeByPathAndProcessDesc	 = getTreeByPathAndProcess . getDescAndProcess
+getTreeAndProcessDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessDesc	 = getTreeAndProcess . getDescAndProcess
 
-getTreeByPathAndProcessSelfAndDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeByPathAndProcessSelfAndDesc	 = getTreeByPathAndProcess . getSelfAndDescAndProcess
+getTreeAndProcessSelfAndDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessSelfAndDesc	 = getTreeAndProcess . getSelfAndDescAndProcess
 
 getChildrenAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getChildrenAndProcess pa p
@@ -448,19 +448,19 @@ getSelfAndDescAndProcess pa p
 
 -- ------------------------------------------------------------
 {-
-getDescByPath	:: PathArrow AlbumTree AlbumTree
-getDescByPath p
+getDesc	:: PathArrow AlbumTree AlbumTree
+getDesc p
     | null p	= this
-    | otherwise = nodeMatch `guards` (getChildren >>> getDescByPath p')
+    | otherwise = nodeMatch `guards` (getChildren >>> getDesc p')
     where
     (n' : p') = p
     nodeMatch = hasPicId n'
 
-processTreeByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processTreeByPath pa p
+processTree	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTree pa p
     | null p	= this
     | null p'	= pa p `when` hasPicId n'
-    | otherwise	= processChildren (processTreeByPath pa p')
+    | otherwise	= processChildren (processTree pa p')
     where
     (n' : p') = p
 -}
@@ -476,24 +476,24 @@ processAllNodesOnPath pa p
 --
 -- | process all nodes of a tree
 
-processAllByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processAllByPath pa p
+processAll	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processAll pa p
     = pa p
       >>>
-      processChildren ( (\ n -> processAllByPath pa (p ++ [n])) $< getPicId )
+      processChildren ( (\ n -> processAll pa (p ++ [n])) $< getPicId )
 
 -- ----------------------------------------
 --
 -- | process all nodes of a tree addressed by a path
 --   with an arrow getting the full path as parameter
 
-processAllSubTreesByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processAllSubTreesByPath pa p0
+processAllSubTrees	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processAllSubTrees pa p0
     = processSub p0
     where
     processSub p
 	| null p	= this
-	| null p'	= processAllByPath pa p0          `when` hasPicId n'
+	| null p'	= processAll pa p0          `when` hasPicId n'
 	| otherwise	= processChildren (processSub p') `when` hasPicId n'
 	where
 	(n' : p') = p
@@ -503,8 +503,8 @@ processAllSubTreesByPath pa p0
 -- | process a tree addressed by a path
 --   with an arrow getting the full path as parameter
 
-processTreeByPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processTreeByPath pa p0
+processTree	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTree pa p0
     = processSub p0
     where
     processSub p
@@ -559,7 +559,7 @@ getRelatives p
     where
     n = last p
     getPN pp
-	= ( listA ( getTreeByPath pp
+	= ( listA ( getTree pp
 		    >>>
 		    getChildren
 		    >>>
@@ -584,21 +584,21 @@ getRelatives p
 	getp l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip (drop 1 l) $ l
 
 getAlbumEntry	:: PathArrow AlbumTree AlbumEntry
-getAlbumEntry	= getTreeByPathAndProcess (\ p -> constA p &&& getNode)
+getAlbumEntry	= getTreeAndProcess (\ p -> constA p &&& getNode)
 
 getAlbumPaths		:: PathArrow AlbumTree Path
-getAlbumPaths		= getTreeByPathAndProcessChildren constA
+getAlbumPaths		= getTreeAndProcessChildren constA
 
 getAllAlbumPaths	:: PathArrow AlbumTree Path
-getAllAlbumPaths	= getTreeByPathAndProcessDesc constA
+getAllAlbumPaths	= getTreeAndProcessDesc constA
 
 getAllEditedPaths	:: PathArrow AlbumTree Path
-getAllEditedPaths	= getTreeByPathAndProcessDesc $
+getAllEditedPaths	= getTreeAndProcessDesc $
 			  \ p -> entryEdited `guards` constA p
 
 getAllWithAttr		:: String -> String -> PathArrow AlbumTree (Path, String, String)
 getAllWithAttr rek rev
-    = getTreeByPathAndProcessSelfAndDesc $
+    = getTreeAndProcessSelfAndDesc $
       \ p -> getNode
 	     >>>
 	     arrL (load theAttrs >>> M.toList)
@@ -636,7 +636,7 @@ addAlbumEntry (p0, pic)
 
 removeAlbumEntry	:: PathArrow AlbumTree AlbumTree
 removeAlbumEntry p
-    = processTreeByPath (const none) p
+    = processTree (const none) p
 
 -- ------------------------------------------------------------
 -- update an attribute for an album or picture
@@ -757,8 +757,8 @@ updatePic c p
 
 updateAllPics	:: PathArrow AlbumTree AlbumTree
 updateAllPics
-    = processTreeByPath
-      ( processAllByPath
+    = processTree
+      ( processAll
 	( \ p -> ( withConfig updatePic p
 		   >>>
 		   withConfig updateExifAttrs p
@@ -768,7 +768,7 @@ updateAllPics
 
 updateAllAttrKeys	:: PathArrow AlbumTree AlbumTree
 updateAllAttrKeys
-    = processTreeByPath
-      ( processAllByPath updateAttrKeys )
+    = processTree
+      ( processAll updateAttrKeys )
 
 -- ------------------------------------------------------------

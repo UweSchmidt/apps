@@ -299,7 +299,7 @@ parseDump
     dump p
 	= loadAlbums p
 	  >>>
-	  getTreeByPath p
+	  getTree p
 	  >>>
 	  xpickleDocument xpAlbumTree [ (a_indent, v_1)
 				      , (a_no_xml_pi, v_1)
@@ -357,7 +357,7 @@ parseRename cn ca al
     rename p
 	= loadAlbums p
 	  >>>
-	  processTreeByPath (withConfig ca) p
+	  processTree (withConfig ca) p
 	  >>>
 	  set theAlbums
 
@@ -369,7 +369,7 @@ parseAttr al
     attr p
 	= loadAlbums p
 	  >>>
-	  processTreeByPath (updateAttr an (unwords avl)) p
+	  processTree (updateAttr an (unwords avl)) p
 	  >>>
 	  set theAlbums
 
