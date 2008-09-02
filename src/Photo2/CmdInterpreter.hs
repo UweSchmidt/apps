@@ -121,7 +121,7 @@ parseCmd "pwd" []
 
 parseCmd "ls"        args	= parseLs        args
 parseCmd "lsr"       args	= parseLsr       args
-parseCmd "lsar"      args	= parseLsra      args
+-- parseCmd "lsar"      args	= parseLsra      args
 parseCmd "edited"    args	= parseEdited    args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
@@ -148,6 +148,8 @@ parseCmd "find"      args
 
 parseCmd "cd"        args	= parseCd		args
 
+parseCmd "xxx" args		= parseTest             args
+
 parseCmd "?" []
     = liftCmd $
       hPutStrLn stdout usage
@@ -164,7 +166,7 @@ parseCmd "?" []
 	    , "  edited [path]      list all edited pictures"
 	    , "  exit,q             exit photo2"
 	    , "  find path kre vre  list all pictures with matching attribute key and value"
-	    , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
+	    -- , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
 	    , "  newattrs [path]    change attribute keys to new format"
@@ -221,7 +223,7 @@ illegalCmd c args
 -- if it's a relative path, it's adressed via current working dir
 
 parseWdCmd	:: PathArrow a b -> String -> [String] -> [Cmd]
-parseWdCmd action name ps
+parseWdCmd pa name ps
     | null ps
 	= mkWdCmd withCwd
     | not . null $ ps'
@@ -233,7 +235,7 @@ parseWdCmd action name ps
     | otherwise
 	= mkWdCmd $ withDir p
     where
-    mkWdCmd wd  = mkCmd $ wd (\ x -> action x `orElse` cFailed)
+    mkWdCmd wd  = mkCmd $ wd (\ p'' -> pa p'' `orElse` cFailed)
     cFailed	= perform (arrIO0 $ hPutStrLn stderr ("command failed: " ++ unwords (name : ps)))
 		  >>>
 		  none
@@ -241,29 +243,17 @@ parseWdCmd action name ps
     p@(_:p')    = splitPath n
 
 
+parseWdCmd'	:: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
+parseWdCmd' pa
+		= parseWdCmd (loadAndCheckAlbum |>>> pa)
+
 -- ------------------------------------------------------------
-
-parseLs :: [String] -> [Cmd]
-parseLs
-    = parseWdCmd (listEntries loadAlbums getAlbumPaths) "ls"
-
-parseLsr :: [String] -> [Cmd]
-parseLsr
-    = parseWdCmd (listEntries loadAlbums getAllAlbumPaths) "lsr"
-
+{-
 parseLsra :: [String] -> [Cmd]
 parseLsra
     = parseWdCmd (listEntries loadAllAlbums getAllAlbumPaths) "lsar"
 
-parseEdited :: [String] -> [Cmd]
-parseEdited
-    = parseWdCmd (listEntries loadAlbums getAllEditedPaths) "edited"
-
-listEntries	:: PathArrow a AlbumTree ->
-		   PathArrow AlbumTree Path ->
-		   PathArrow a ()
-listEntries ld gt
-		= findEntries ld gt (putStrLn . mkAbsPath . joinPath)
+-}
 
 findEntries	:: PathArrow a AlbumTree ->
 		   PathArrow AlbumTree b ->
@@ -279,48 +269,60 @@ findEntries ld gt out p
 
 -- ------------------------------------------------------------
 
+parseLs		:: [String] -> [Cmd]
+parseLs		= parseLs' getAlbumPaths "ls"
+
+parseLsr	:: [String] -> [Cmd]
+parseLsr	= parseLs' getAllAlbumPaths "lsr"
+
+parseEdited	:: [String] -> [Cmd]
+parseEdited	= parseLs' getAllEditedPaths "edited"
+
+parseLs'	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
+parseLs' pa ps
+    = parseWdCmd' ls ps
+    where
+    ls	= pa
+	  |>>>
+	  const (arrIO (putStrLn . mkAbsPath . joinPath))
+
 parseCat :: [String] -> [Cmd]
 parseCat
-    = parseWdCmd cat "cat"
+    = parseWdCmd' cat "cat"
     where
-    cat p
-	= loadAlbums p
-	  >>>
-	  getAlbumEntry p
-	  >>>
-	  xpickleDocument xpAlbumEntry [ (a_indent, v_1)
-			               , (a_no_xml_pi, v_1)
-			               ] ""
+    cat	= getAlbumEntry
+	  |>>>
+	  const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
+					      , (a_no_xml_pi, v_1)
+					      ] ""
+		)
 
 parseDump	:: [String] -> [Cmd]
 parseDump
-    = parseWdCmd dump "dump"
+    = parseWdCmd' dump "dump"
     where
-    dump p
-	= loadAlbums p
-	  >>>
-	  getTree p
-	  >>>
-	  xpickleDocument xpAlbumTree [ (a_indent, v_1)
-				      , (a_no_xml_pi, v_1)
-				      ] ""
+    dump
+	= getTree
+	  |>>>
+	  const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
+					     , (a_no_xml_pi, v_1)
+					     ] ""
+		)
 
 parseRelatives	:: [String] -> [Cmd]
 parseRelatives
-    = parseWdCmd relatives "relatives"
+    = parseWdCmd' relatives "relatives"
     where
-    relatives p
-	= loadAlbums p
-	  >>>
-	  getRelatives p
-	  >>>
-	  arrIO ( \ (parent, prev, next)
-		  -> putStrLn ( "this     = " ++ fp p      ++ "\n" ++
-				"parent   = " ++ fp parent ++ "\n" ++
-				"previous = " ++ fp prev   ++ "\n" ++
-				"next     = " ++ fp next
-			      )
-		)
+    relatives
+	= getRelatives
+	  |>>>
+	  (\ p -> arrIO ( \ (parent, prev, next) -> putStrLn ( "this     = " ++ fp p      ++ "\n" ++
+							       "parent   = " ++ fp parent ++ "\n" ++
+							       "previous = " ++ fp prev   ++ "\n" ++
+							       "next     = " ++ fp next
+							     )
+			)
+	  )
     fp []	= ""
     fp p	= mkAbsPath . joinPath $ p
 
@@ -328,50 +330,30 @@ parseStore	:: [String] -> [Cmd]
 parseStore
     = parseWdCmd storeAllAlbums "store"
 
+parseTest	:: [String] -> [Cmd]
+parseTest	= parseWdCmd' test "xxx"
+    where
+    test = changeAlbums $ processTreeSelfAndDesc (const $ perform $ getNode >>> arr picId >>> arrIO print)
+
 parseUpdate	:: [String] -> [Cmd]
 parseUpdate
-    = parseWdCmd update "update"
-    where
-    update p
-	= loadAlbums p
-	  >>>
-	  updateAllPics p
-	  >>>
-	  set theAlbums
+    = parseWdCmd' (changeAlbums updateAllPics) "update"
 
 parseNewAttrKeys	:: [String] -> [Cmd]
 parseNewAttrKeys
-    = parseWdCmd update "newattrs"
-    where
-    update p
-	= loadAlbums p
-	  >>>
-	  updateAllAttrKeys p
-	  >>>
-	  set theAlbums
+    = parseWdCmd' (changeAlbums updateAllAttrKeys) "newattrs"
 
 parseRename		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
 parseRename cn ca al
-    = parseWdCmd rename cn (take 1 al)
-    where
-    rename p
-	= loadAlbums p
-	  >>>
-	  processTree (withConfig ca) p
-	  >>>
-	  set theAlbums
+    = parseWdCmd' (changeAlbums (processTree (withConfig ca))) cn (take 1 al)
 
 parseAttr	:: [String] -> [Cmd]
 parseAttr al
-    = parseWdCmd attr "attr" (take 1 al)
+    = parseWdCmd' (changeAlbums (processTree (updateAttr an (unwords avl)))) "attr" (take 1 al)
     where
     (an : avl) = tail al
-    attr p
-	= loadAlbums p
-	  >>>
-	  processTree (updateAttr an (unwords avl)) p
-	  >>>
-	  set theAlbums
+
+-- TODO refactor
 
 parseFind	:: [String] -> [Cmd]
 parseFind al
@@ -401,10 +383,8 @@ parseCd ps
 	| null p	-- above the top of the roof
 	    = none
 	| otherwise
-	    = loadAlbums p
+	    = loadAndCheckAlbum p
 	      >>>
-	      checkPath p
-              >>>
 	      ( constA p >>> set theWd )
 	where
 	p = normalPath p0

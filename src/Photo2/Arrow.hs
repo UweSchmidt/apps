@@ -41,7 +41,10 @@ arrIOE io
 	|||
 	this
       )
-	
+
+(|>>>) 		:: PathArrow b c -> PathArrow c d -> PathArrow b d
+(|>>>) f g	= \ p -> f p >>> g p
+
 -- ------------------------------------------------------------
 
 setField	:: Setter AppState b -> CmdArrow b b
@@ -244,34 +247,29 @@ loadAlbum base doc
 
 loadAlbums	:: PathArrow a AlbumTree
 loadAlbums p
-    = runAction ("check loaded albums for " ++ showPath p) $
-      get theAlbums
-      >>>
-      processAllNodesOnPath checkAlbum p
-      >>>
-      set theAlbums
+    = runAction ("check album loaded for " ++ showPath p) $
+      changeAlbums (processTree (const this)) $ p
+
+loadAndCheckAlbum	:: PathArrow a AlbumTree
+loadAndCheckAlbum p
+    = runAction ("load and check album " ++ showPath p) $
+      ( changeAlbums (processTree (const this))
+	|>>>
+	checkPath
+      )
+      $ p
 
 loadAllAlbums	:: PathArrow a AlbumTree
 loadAllAlbums p
-    = get theAlbums
-      >>>
-      processAllNodesOnPath    checkAlbum p
-      >>>
-      processAllSubTrees checkAlbum p
-      >>>
-      set theAlbums
+    = runAction ("check all albums loaded for " ++ showPath p) $
+      changeAlbums (processTreeSelfAndDesc (const this)) $ p
 
 -- ------------------------------------------------------------
 
 -- store the album and all subalbums adressed by a path and mark them as unloaded
 
 storeAllAlbums	:: PathArrow a AlbumTree
-storeAllAlbums p
-    = get theAlbums
-      >>>
-      processTree storeAlbumTree p
-      >>>
-      set theAlbums
+storeAllAlbums	= changeAlbums (processTree storeAlbumTree)
 
 storeAlbumTree	:: PathArrow AlbumTree AlbumTree
 storeAlbumTree p
@@ -389,12 +387,21 @@ checkAlbum _p
       )
       `orElse` this
 
+checkAlbumLoaded	:: CmdArrow AlbumTree AlbumTree
+checkAlbumLoaded
+    = ( getExtAlbumRef
+	>>>
+	( loadAlbum $<< get theArchiveName &&& this )
+      )
+      `orElse` this
+
 -- check whether an entry addresed by a path exists
+-- in a tree
 
 checkPath	:: PathArrow AlbumTree AlbumTree
 checkPath p
     = runAction ("checking path: " ++ showPath p) $
-      getTree p
+      getTree p `guards` this
 
 -- ------------------------------------------------------------
 --
@@ -416,15 +423,15 @@ getTreeAndProcess pa p0
 	nodeMatch = hasPicId n'
 
 getTreeAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeAndProcessChildren = getTreeAndProcess . getChildrenAndProcess
+getTreeAndProcessChildren 	= getTreeAndProcess . getChildrenAndProcess
 
-getTreeAndProcessDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeAndProcessDesc	 = getTreeAndProcess . getDescAndProcess
+getTreeAndProcessDesc		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessDesc	 	= getTreeAndProcess . getDescAndProcess
 
 getTreeAndProcessSelfAndDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getTreeAndProcessSelfAndDesc	 = getTreeAndProcess . getSelfAndDescAndProcess
 
-getChildrenAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getChildrenAndProcess		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getChildrenAndProcess pa p
     = getChildren
       >>>
@@ -432,7 +439,7 @@ getChildrenAndProcess pa p
     where
     rp = reverse p	-- make p ++ [n] a bit more efficient
 
-getDescAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getDescAndProcess		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
 getDescAndProcess pa p
     = getD (reverse p)	-- make p ++ [n] a bit more efficient
     where
@@ -509,11 +516,66 @@ processTree pa p0
     where
     processSub p
 	| null p	= this
-	| null p'	= pa p0                           `when` nodeMatch
-	| otherwise	= processChildren (processSub p') `when` nodeMatch
+	| null p'	= checkAndProcess pa p0
+                          `when`
+			  nodeMatch
+	| otherwise	= ( checkAlbumLoaded >>> processChildren (processSub p') )
+			  `when`
+			  nodeMatch
 	where
 	(n' : p') = p
 	nodeMatch = hasPicId n'
+
+processTreeChildren		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeChildren		= processTree . selChildrenAndProcess . checkAndProcess
+
+processTreeDescTD		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeDescTD		= processTree . selDescAndProcessTD . checkAndProcess
+
+processTreeDescBU		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeDescBU		= processTree . selDescAndProcessBU . checkAndProcess
+
+processTreeSelfAndDesc		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeSelfAndDesc		= processTree . selSelfAndDescAndProcessTD . checkAndProcess
+
+processTreeDescAndSelf		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeDescAndSelf		= processTree . selSelfAndDescAndProcessBU . checkAndProcess
+
+checkAndProcess			:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+checkAndProcess pa p		= checkAlbumLoaded >>> pa p
+
+selChildrenAndProcess		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selChildrenAndProcess pa p
+    = processChildren
+      ( pa $< (getPicId >>^ (reverse . (:rp))) )
+    where
+    rp = reverse p	-- make p ++ [n] a bit more efficient
+
+selDescAndProcessTD		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selDescAndProcessTD pa p
+    = processD (reverse p)	-- make p ++ [n] a bit more efficient
+    where
+    processD rp = processChildren
+		  ( (\ rp' -> pa (reverse rp') >>> processD rp') $< (getPicId >>^ (:rp)) )
+
+selDescAndProcessBU		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selDescAndProcessBU pa p
+    = processD (reverse p)	-- make p ++ [n] a bit more efficient
+    where
+    processD rp = processChildren
+		  ( (\ rp' -> processD rp' >>> pa (reverse rp')) $< (getPicId >>^ (:rp)) )
+
+selSelfAndDescAndProcessTD	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selSelfAndDescAndProcessTD pa p
+    = pa p
+      >>>
+      selDescAndProcessTD pa p
+
+selSelfAndDescAndProcessBU	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selSelfAndDescAndProcessBU pa p
+    = selDescAndProcessBU pa p
+      >>>
+      pa p
 
 -- ----------------------------------------
 
@@ -549,6 +611,11 @@ mkAbs		= (\ wd -> arr (wd ++)) $< get theWd
 
 withConfig	:: ConfigArrow a b -> PathArrow a b
 withConfig c p	= ( \ config -> c config p ) $< get theConfig
+
+changeAlbums	:: PathArrow AlbumTree AlbumTree -> PathArrow a AlbumTree
+changeAlbums change p
+    		= get theAlbums >>> change p >>> set theAlbums
+
 
 -- ----------------------------------------
 
