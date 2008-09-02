@@ -245,7 +245,7 @@ parseWdCmd pa name ps
 
 parseWdCmd'	:: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
 parseWdCmd' pa
-		= parseWdCmd (loadAndCheckAlbum |>>> pa)
+		= parseWdCmd (loadAndCheckAlbum />>>/ pa)
 
 -- ------------------------------------------------------------
 {-
@@ -282,16 +282,15 @@ parseLs'	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs' pa ps
     = parseWdCmd' ls ps
     where
-    ls	= pa
-	  |>>>
-	  const (arrIO (putStrLn . mkAbsPath . joinPath))
+    ls	= ( pa />>>/ const (arrIO (putStrLn . mkAbsPath . joinPath)) )
+          `withDefaultRes` ()
 
 parseCat :: [String] -> [Cmd]
 parseCat
     = parseWdCmd' cat "cat"
     where
     cat	= getAlbumEntry
-	  |>>>
+	  />>>/
 	  const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
 					      , (a_no_xml_pi, v_1)
 					      ] ""
@@ -303,7 +302,7 @@ parseDump
     where
     dump
 	= getTree
-	  |>>>
+	  />>>/
 	  const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
 					     , (a_no_xml_pi, v_1)
 					     ] ""
@@ -315,7 +314,7 @@ parseRelatives
     where
     relatives
 	= getRelatives
-	  |>>>
+	  />>>/
 	  (\ p -> arrIO ( \ (parent, prev, next) -> putStrLn ( "this     = " ++ fp p      ++ "\n" ++
 							       "parent   = " ++ fp parent ++ "\n" ++
 							       "previous = " ++ fp prev   ++ "\n" ++

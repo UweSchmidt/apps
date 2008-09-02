@@ -42,8 +42,17 @@ arrIOE io
 	this
       )
 
-(|>>>) 		:: PathArrow b c -> PathArrow c d -> PathArrow b d
-(|>>>) f g	= \ p -> f p >>> g p
+infixr 1 />>>/
+
+-- lift >>> to PathArrow level
+
+(/>>>/) 	:: PathArrow b c -> PathArrow c d -> PathArrow b d
+(/>>>/) f g	= \ p -> f p >>> g p
+
+
+withDefaultRes	:: PathArrow b c -> c -> PathArrow b c
+withDefaultRes f d
+		= \ p -> f p `withDefault` d
 
 -- ------------------------------------------------------------
 
@@ -254,7 +263,7 @@ loadAndCheckAlbum	:: PathArrow a AlbumTree
 loadAndCheckAlbum p
     = runAction ("load and check album " ++ showPath p) $
       ( changeAlbums (processTree (const this))
-	|>>>
+	/>>>/
 	checkPath
       )
       $ p
@@ -416,42 +425,57 @@ getTreeAndProcess pa p0
     where
     getSub p
 	| null p	= none
-	| null p'	= nodeMatch `guards` pa p0
-	| otherwise     = nodeMatch `guards` (getChildren >>> getSub p')
+	| null p'	= nodeMatch `guards` (checkAndProcess pa p0)
+	| otherwise     = nodeMatch `guards` (checkAlbumLoaded >>> getChildren >>> getSub p')
 	where
 	(n' : p') = p
 	nodeMatch = hasPicId n'
 
 getTreeAndProcessChildren	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeAndProcessChildren 	= getTreeAndProcess . getChildrenAndProcess
+getTreeAndProcessChildren 	= getTreeAndProcess . (getChildrenAndProcess getChildren)
+
+getTreeAndProcessChildrenC	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessChildrenC 	= getTreeAndProcess . (getChildrenAndProcess getChildrenAndCheck)
 
 getTreeAndProcessDesc		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeAndProcessDesc	 	= getTreeAndProcess . getDescAndProcess
+getTreeAndProcessDesc	 	= getTreeAndProcess . (getDescAndProcess getChildren)
+
+getTreeAndProcessDescC		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessDescC	 	= getTreeAndProcess . (getDescAndProcess getChildrenAndCheck)
 
 getTreeAndProcessSelfAndDesc	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getTreeAndProcessSelfAndDesc	 = getTreeAndProcess . getSelfAndDescAndProcess
+getTreeAndProcessSelfAndDesc	 = getTreeAndProcess . (getSelfAndDescAndProcess getChildren)
 
-getChildrenAndProcess		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getChildrenAndProcess pa p
-    = getChildren
+getTreeAndProcessSelfAndDescC	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
+getTreeAndProcessSelfAndDescC	 = getTreeAndProcess . (getSelfAndDescAndProcess getChildrenAndCheck)
+
+getChildrenAndProcess		:: CmdArrow AlbumTree AlbumTree ->
+				   PathArrow AlbumTree b -> PathArrow AlbumTree b
+getChildrenAndProcess children pa p
+    = children		-- optionally check album loaded
       >>>
       ( pa $< (getPicId >>^ (reverse . (:rp))) )
     where
     rp = reverse p	-- make p ++ [n] a bit more efficient
 
-getDescAndProcess		:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getDescAndProcess pa p
+getDescAndProcess		:: CmdArrow AlbumTree AlbumTree ->
+				   PathArrow AlbumTree b -> PathArrow AlbumTree b
+getDescAndProcess children pa p
     = getD (reverse p)	-- make p ++ [n] a bit more efficient
     where
-    getD rp = getChildren
+    getD rp = children
 	      >>>
 	      ( (\ rp' -> pa (reverse rp') <+> getD rp') $< (getPicId >>^ (:rp)) )
 
-getSelfAndDescAndProcess	:: PathArrow AlbumTree b -> PathArrow AlbumTree b
-getSelfAndDescAndProcess pa p
+getSelfAndDescAndProcess	:: CmdArrow AlbumTree AlbumTree ->
+				   PathArrow AlbumTree b -> PathArrow AlbumTree b
+getSelfAndDescAndProcess children pa p
     = pa p
       <+>
-      getDescAndProcess pa p
+      getDescAndProcess children pa p
+
+getChildrenAndCheck		:: CmdArrow AlbumTree AlbumTree
+getChildrenAndCheck		= getChildren >>> checkAlbumLoaded
 
 -- ------------------------------------------------------------
 {-
@@ -541,7 +565,7 @@ processTreeSelfAndDesc		= processTree . selSelfAndDescAndProcessTD . checkAndPro
 processTreeDescAndSelf		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeDescAndSelf		= processTree . selSelfAndDescAndProcessBU . checkAndProcess
 
-checkAndProcess			:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+checkAndProcess			:: PathArrow AlbumTree b         -> PathArrow AlbumTree b
 checkAndProcess pa p		= checkAlbumLoaded >>> pa p
 
 selChildrenAndProcess		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
@@ -650,14 +674,14 @@ getRelatives p
 	getp :: [Name] -> [Path]
 	getp l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip (drop 1 l) $ l
 
-getAlbumEntry	:: PathArrow AlbumTree AlbumEntry
-getAlbumEntry	= getTreeAndProcess (\ p -> constA p &&& getNode)
+getAlbumEntry		:: PathArrow AlbumTree AlbumEntry
+getAlbumEntry		= getTreeAndProcess (\ p -> constA p &&& getNode)
 
 getAlbumPaths		:: PathArrow AlbumTree Path
 getAlbumPaths		= getTreeAndProcessChildren constA
 
 getAllAlbumPaths	:: PathArrow AlbumTree Path
-getAllAlbumPaths	= getTreeAndProcessDesc constA
+getAllAlbumPaths	= getTreeAndProcessDescC constA
 
 getAllEditedPaths	:: PathArrow AlbumTree Path
 getAllEditedPaths	= getTreeAndProcessDesc $
