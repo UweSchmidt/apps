@@ -121,7 +121,7 @@ parseCmd "pwd" []
 
 parseCmd "ls"        args	= parseLs        args
 parseCmd "lsr"       args	= parseLsr       args
--- parseCmd "lsar"      args	= parseLsra      args
+parseCmd "lsra"      args	= parseLsra      args
 parseCmd "edited"    args	= parseEdited    args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
@@ -166,9 +166,9 @@ parseCmd "?" []
 	    , "  edited [path]      list all edited pictures"
 	    , "  exit,q             exit photo2"
 	    , "  find path kre vre  list all pictures with matching attribute key and value"
-	    -- , "  lsar [path]        load and list album and picture names recursively, default is the current working album"
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
+	    , "  lsra [path]        load and list album and picture names recursively, default is the current working album"
 	    , "  newattrs [path]    change attribute keys to new format"
 	    , "  open <archive>     load a photo archive, configuration and root album"
 	    , "  options            list options"
@@ -248,12 +248,6 @@ parseWdCmd' pa
 		= parseWdCmd (loadAndCheckAlbum />>>/ pa)
 
 -- ------------------------------------------------------------
-{-
-parseLsra :: [String] -> [Cmd]
-parseLsra
-    = parseWdCmd (listEntries loadAllAlbums getAllAlbumPaths) "lsar"
-
--}
 
 findEntries	:: PathArrow a AlbumTree ->
 		   PathArrow AlbumTree b ->
@@ -270,13 +264,16 @@ findEntries ld gt out p
 -- ------------------------------------------------------------
 
 parseLs		:: [String] -> [Cmd]
-parseLs		= parseLs' getAlbumPaths "ls"
+parseLs		= parseLs' (getTreeAndProcessChildren constA) "ls"
 
 parseLsr	:: [String] -> [Cmd]
-parseLsr	= parseLs' getAllAlbumPaths "lsr"
+parseLsr	= parseLs' (getTreeAndProcessDesc constA) "lsr"
+
+parseLsra	:: [String] -> [Cmd]
+parseLsra	= parseLs' (getTreeAndProcessDescC constA) "lsra"
 
 parseEdited	:: [String] -> [Cmd]
-parseEdited	= parseLs' getAllEditedPaths "edited"
+parseEdited	= parseLs' (getTreeAndProcessDesc $ \ p -> entryEdited `guards` constA p) "edited"
 
 parseLs'	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs' pa ps
@@ -289,7 +286,7 @@ parseCat :: [String] -> [Cmd]
 parseCat
     = parseWdCmd' cat "cat"
     where
-    cat	= getAlbumEntry
+    cat	= (getTreeAndProcess (\ p -> constA p &&& getNode))
 	  />>>/
 	  const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
 					      , (a_no_xml_pi, v_1)

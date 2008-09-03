@@ -477,32 +477,6 @@ getSelfAndDescAndProcess children pa p
 getChildrenAndCheck		:: CmdArrow AlbumTree AlbumTree
 getChildrenAndCheck		= getChildren >>> checkAlbumLoaded
 
--- ------------------------------------------------------------
-{-
-getDesc	:: PathArrow AlbumTree AlbumTree
-getDesc p
-    | null p	= this
-    | otherwise = nodeMatch `guards` (getChildren >>> getDesc p')
-    where
-    (n' : p') = p
-    nodeMatch = hasPicId n'
-
-processTree	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processTree pa p
-    | null p	= this
-    | null p'	= pa p `when` hasPicId n'
-    | otherwise	= processChildren (processTree pa p')
-    where
-    (n' : p') = p
--}
-processAllNodesOnPath	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processAllNodesOnPath pa p
-    | null p	= this
-    | null p'	= pa p `when` hasPicId n'
-    | otherwise	= ( pa p >>> processChildren (processAllNodesOnPath pa p') ) `when` hasPicId n'
-    where
-    (n' : p') = p
-
 -- ----------------------------------------
 --
 -- | process all nodes of a tree
@@ -512,22 +486,6 @@ processAll pa p
     = pa p
       >>>
       processChildren ( (\ n -> processAll pa (p ++ [n])) $< getPicId )
-
--- ----------------------------------------
---
--- | process all nodes of a tree addressed by a path
---   with an arrow getting the full path as parameter
-
-processAllSubTrees	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
-processAllSubTrees pa p0
-    = processSub p0
-    where
-    processSub p
-	| null p	= this
-	| null p'	= processAll pa p0          `when` hasPicId n'
-	| otherwise	= processChildren (processSub p') `when` hasPicId n'
-	where
-	(n' : p') = p
 
 -- ----------------------------------------
 --
@@ -654,9 +612,7 @@ getRelatives p
 		    >>>
 		    getChildren
 		    >>>
-		    getNode
-		    >>^
-		    picId
+		    getPicId
 		  )
 	    >>>
 	    ( ( arrL getp `orElse` constA emptyPath )
@@ -674,37 +630,26 @@ getRelatives p
 	getp :: [Name] -> [Path]
 	getp l = take 1 . map ((pp ++) . (:[]) . snd) . filter ((== n) . fst) . zip (drop 1 l) $ l
 
-getAlbumEntry		:: PathArrow AlbumTree AlbumEntry
-getAlbumEntry		= getTreeAndProcess (\ p -> constA p &&& getNode)
-
-getAlbumPaths		:: PathArrow AlbumTree Path
-getAlbumPaths		= getTreeAndProcessChildren constA
-
-getAllAlbumPaths	:: PathArrow AlbumTree Path
-getAllAlbumPaths	= getTreeAndProcessDescC constA
-
-getAllEditedPaths	:: PathArrow AlbumTree Path
-getAllEditedPaths	= getTreeAndProcessDesc $
-			  \ p -> entryEdited `guards` constA p
-
 getAllWithAttr		:: String -> String -> PathArrow AlbumTree (Path, String, String)
 getAllWithAttr rek rev
-    = getTreeAndProcessSelfAndDesc $
-      \ p -> getNode
-	     >>>
-	     arrL (load theAttrs >>> M.toList)
-	     >>>
-	     ( if null rek
-	       then this
-	       else isA (fromMaybe False . matchRE rek . fst)
-	     )
-             >>>
-	     ( if null rev
-	       then this
-	       else isA (fromMaybe False . matchRE rev . snd)
-	     )
-	     >>>
-	     arr (\ (k, v) -> (p, k, v))
+    = getTreeAndProcessSelfAndDescC $
+      ( const ( getNode
+		>>>
+		arrL (load theAttrs >>> M.toList)
+		>>>
+		( if null rek
+		  then this
+		  else isA (fromMaybe False . matchRE rek . fst)
+		)
+		>>>
+		( if null rev
+		  then this
+		  else isA (fromMaybe False . matchRE rev . snd)
+		)
+	      )
+	/>>>/
+	(\ p -> arr (\ (k, v) -> (p, k, v)))
+      )
 
 -- ------------------------------------------------------------
 
@@ -781,7 +726,7 @@ renameContent c p
     = runAction ("renaming album contents for " ++ showPath p)
       ( checkAlbum p
 	>>>
-	( rename $< listA (getChildren >>> (getNode >>^ picId)) )
+	( rename $< listA (getChildren >>> getPicId) )
       )
     where
     rename	:: [Name] -> CmdArrow AlbumTree AlbumTree
@@ -789,9 +734,9 @@ renameContent c p
 	| null nameMap
 	    = this
 	| otherwise		-- rename in 2 steps, to prevent name clashes
-	    = processChildren (renameChild nameMap1 $< (getNode >>^ picId))
+	    = processChildren (renameChild nameMap1 $< getPicId)
 	      >>>
-	      processChildren (renameChild nameMap2 $< (getNode >>^ picId))
+	      processChildren (renameChild nameMap2 $< getPicId)
 	where
 	renameChild nm cid
 	    | isNothing nid	= this
