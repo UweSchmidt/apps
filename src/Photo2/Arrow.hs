@@ -789,22 +789,4 @@ updatePic c p
 	= runAction ("create copy for " ++ show (sizeDir s) ++ " for " ++ p')
 	  ( arrIOE (createCopy c p s) )
 
--- update all entries addresed by a path
-
-updateAllPics	:: PathArrow AlbumTree AlbumTree
-updateAllPics
-    = processTree
-      ( processAll
-	( \ p -> ( withConfig updatePic p
-		   >>>
-		   withConfig updateExifAttrs p
-		 )
-	)
-      )
-
-updateAllAttrKeys	:: PathArrow AlbumTree AlbumTree
-updateAllAttrKeys
-    = processTree
-      ( processAll updateAttrKeys )
-
 -- ------------------------------------------------------------

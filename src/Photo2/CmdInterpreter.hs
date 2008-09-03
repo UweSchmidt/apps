@@ -323,31 +323,41 @@ parseRelatives
     fp p	= mkAbsPath . joinPath $ p
 
 parseStore	:: [String] -> [Cmd]
-parseStore
-    = parseWdCmd storeAllAlbums "store"
+parseStore	= parseWdCmd storeAllAlbums "store"
 
 parseTest	:: [String] -> [Cmd]
 parseTest	= parseWdCmd' test "xxx"
-    where
-    test = changeAlbums $ processTreeSelfAndDesc (const $ perform $ getNode >>> arr picId >>> arrIO print)
+                  where
+		  test = changeAlbums $
+			 processTreeSelfAndDesc ( const $ perform $
+						  getNode >>> arr picId >>> arrIO print
+						)
 
 parseUpdate	:: [String] -> [Cmd]
-parseUpdate
-    = parseWdCmd' (changeAlbums updateAllPics) "update"
+parseUpdate	= parseWdCmd' (changeAlbums update) "update"
+                  where
+		  update = processTreeSelfAndDesc
+			   ( withConfig updatePic
+			     />>>/
+			     withConfig updateExifAttrs
+			   )
 
 parseNewAttrKeys	:: [String] -> [Cmd]
-parseNewAttrKeys
-    = parseWdCmd' (changeAlbums updateAllAttrKeys) "newattrs"
+parseNewAttrKeys	= parseWdCmd' ( changeAlbums $
+				        processTreeSelfAndDesc updateAttrKeys
+				      ) "newattrs"
 
 parseRename		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
-parseRename cn ca al
-    = parseWdCmd' (changeAlbums (processTree (withConfig ca))) cn (take 1 al)
+parseRename cn ca al	= parseWdCmd' ( changeAlbums $
+				        processTree (withConfig ca)
+				      ) cn (take 1 al)
 
-parseAttr	:: [String] -> [Cmd]
-parseAttr al
-    = parseWdCmd' (changeAlbums (processTree (updateAttr an (unwords avl)))) "attr" (take 1 al)
-    where
-    (an : avl) = tail al
+parseAttr		:: [String] -> [Cmd]
+parseAttr al		= parseWdCmd' ( changeAlbums $
+					processTree (updateAttr an (unwords avl))
+				      ) "attr" (take 1 al)
+                          where
+			  (an : avl) = tail al
 
 -- TODO refactor
 
