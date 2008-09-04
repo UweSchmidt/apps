@@ -2,7 +2,7 @@ module Photo2.ImageOperations
 where
 
 import qualified Control.Exception as CE
-import           Control.Monad	( when )
+-- import           Control.Monad	( when )
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
 
@@ -91,7 +91,7 @@ mvPic newName c p pic
 -- ------------------------------------------------------------
 
 importExifAttrs	:: Config -> Path -> Pic -> IOE Pic
-importExifAttrs c p pic
+importExifAttrs c _p pic
     = do
       ex <- liftIO $ doesFileExist orig
       when (not ex)
@@ -117,11 +117,7 @@ importExifAttrs c p pic
     xmp		= base </-> picXmp  pic
     modified	= fromMaybe "" . M.lookup fileModificationDateTime . picAttrs $ pic
 
-    dst		= dir  </> joinPath p `addExtension` imgtype
-
-    imgtype	= getDefOpt "jpg"           "imgtype" c
     base	= getDefOpt "../Diakaesten" "base"    c
-    dir         = getDefOpt "org"           "dir"     c
 
     debug	= optON  optDebug     c
     force	= optON  optForceExif c
@@ -137,7 +133,7 @@ importExifAttrs c p pic
 	  t <- execFct debug  ["exiftool", f] -- don't use "-s" option
 	  return $ parseExif t
 
-    imgAttrsXmp f
+    imgAttrsXmp _f
 	= do
 	  return $ emptyAttrs	-- parseXmp t
 

@@ -1,2 +1,3 @@
 :set -i../src
+:set -Wall
 :l A

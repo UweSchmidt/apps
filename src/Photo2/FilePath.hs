@@ -158,6 +158,7 @@ pathFromTo ref1 ref2
     td1 = topDirName ref1
     td2 = topDirName ref2
 
+normalPath	:: [String] -> [String]
 normalPath
     = normPs []
     where

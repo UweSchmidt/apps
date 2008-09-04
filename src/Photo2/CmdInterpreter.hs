@@ -363,12 +363,11 @@ parseAttr al		= parseWdCmd' ( changeAlbums $
 
 parseFind	:: [String] -> [Cmd]
 parseFind al
-    = parseWdCmd find "find" (take 1 al)
+    = parseWdCmd fe "find" (take 1 al)
     where
     rek	= concat . take 1 . drop 1 $ al
     rev = concat          . drop 2 $ al
-    find
-	= findEntries loadAlbums (getAllWithAttr rek rev) puts
+    fe	= findEntries loadAlbums (getAllWithAttr rek rev) puts
     puts (p, k, v)
 	= putStrLn ( intercalate ": "
 		     [ mkAbsPath . joinPath $ p

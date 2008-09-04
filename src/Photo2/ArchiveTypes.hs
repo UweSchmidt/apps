@@ -489,10 +489,19 @@ optON o		= (`elem` ["1","yes","true"]) . map toLower . getOpt o
 optOFF		:: String -> Config -> Bool
 optOFF o	= (`elem` ["0","no","false"]) . map toLower . getOpt o
 
+optDebug	:: String
 optDebug	= "debug"
+
+optDryRun	:: String
 optDryRun	= "dry-run"
+
+optForceOrig	:: String
 optForceOrig	= "copy-org"
+
+optForceCopy	:: String
 optForceCopy	= "copy-copy"
+
+optForceExif	:: String
 optForceExif	= "copy-exif"
 
 -- ------------------------------------------------------------

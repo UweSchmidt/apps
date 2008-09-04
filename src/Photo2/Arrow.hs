@@ -311,18 +311,18 @@ storeAlbumTree p
 	= processChildren (setChildren [])
 
 storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
-storeAlbum doc config
-    = storeDocData xpAlbumTree "album" doc config
+storeAlbum doc conf
+    = storeDocData xpAlbumTree "album" doc conf
       `guards`
       updateNode ( arr $ change theRef (const doc) )
 
 storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
-storeDocData p root doc config
+storeDocData p rootName doc conf
     = runAction ("pickle document: " ++ doc)
                 ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
-		( addDoctypeDecl root "" (pathFromTo doc (dirName config </> "archive.dtd"))
+		( addDoctypeDecl rootName "" (pathFromTo doc (dirName conf </> "archive.dtd"))
 		  >>>
 		  perform (constA doc >>> arrIOE (mkBackupFile ".bak"))
 		  >>>
@@ -356,9 +356,9 @@ entryEdited 	= ( getNode >>> isA picEdited )
 
 storeConfig	:: CmdArrow b XmlTree
 storeConfig
-    = store $< get theConfigName
+    = storeC $< get theConfigName
     where
-    store doc
+    storeC doc
 	= runAction ("storing configuration: " ++ doc)
 	            ( get theConfig
 		      >>>
@@ -367,19 +367,19 @@ storeConfig
 
 storeArchive	:: CmdArrow b XmlTree
 storeArchive
-    = store $<< (get theArchiveName &&& get theConfigName)
+    = storeA $<< (get theArchiveName &&& get theConfigName)
     where
-    store doc configName
+    storeA doc confName
 	= runAction ("storing the archive: " ++ doc)
 	  ( get theAlbums
 	    >>>
-	    withRootDir cut
+	    withRootDir cutA
 	    >>>
-	    arr (Archive configName)
+	    arr (Archive confName)
 	    >>>
-	    storeDocData xpArchive "archive" doc configName
+	    storeDocData xpArchive "archive" doc confName
 	  )
-    cut p
+    cutA p
 	= setChildren []
 	  >>>
 	  ( (\ doc -> updateNode (arr $ change theRef (const doc))) $< getConfig (albumPath p) )
@@ -592,11 +592,11 @@ mkAbs		:: CmdArrow Path Path
 mkAbs		= (\ wd -> arr (wd ++)) $< get theWd
 
 withConfig	:: ConfigArrow a b -> PathArrow a b
-withConfig c p	= ( \ config -> c config p ) $< get theConfig
+withConfig c p	= ( \ conf -> c conf p ) $< get theConfig
 
 changeAlbums	:: PathArrow AlbumTree AlbumTree -> PathArrow a AlbumTree
-changeAlbums change p
-    		= get theAlbums >>> change p >>> set theAlbums
+changeAlbums pa p
+    		= get theAlbums >>> pa p >>> set theAlbums
 
 
 -- ----------------------------------------
@@ -749,8 +749,8 @@ renameContent c p
 	nameMap		:: [(Name, Name)]
 	nameMap		= filter isNewName (zip ids (map picnr [1..]))
 
-        nameMap1	= map (\ (o, n) -> (o, "#" ++ n)) $ nameMap
-        nameMap2	= map (\ (o, n) -> ("#" ++ n, n)) $ nameMap
+        nameMap1	= map (\ (o,  n) -> (o, "#" ++ n)) $ nameMap
+        nameMap2	= map (\ (_o, n) -> ("#" ++ n, n)) $ nameMap
 
         isNewName	:: (Name, Name) -> Bool
 	isNewName (o, n)
