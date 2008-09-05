@@ -257,7 +257,7 @@ loadArchiveAndConfig doc
 
 loadAlbum	:: String -> String -> CmdArrow a AlbumTree
 loadAlbum base doc
-    = runAction ("loading and unpickling album: " ++ show doc ++ " (base = " ++ show base ++ ")")
+    = runAction ("loading and unpickling entry: " ++ show doc ++ " (base = " ++ show base ++ ")")
       ( runInLocalURIContext ( constA base >>> changeBaseURI
 			       >>>
 			       loadDocData xpAlbumTree doc
@@ -285,13 +285,13 @@ loadAllAlbums p
 
 -- ------------------------------------------------------------
 
-{- not yet ready: single file for every picture
+{- not yet ready: single file for every picture -}
 
 storeAllChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeAllChangedEntries
     = changeAlbums $
       processTreeDescAndSelfUC storeChangedEntries
-
+{-
 storeChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeChangedEntries p
     = ( ( ( runAction ("storing all entries at: " ++ showPath p) $
@@ -312,32 +312,55 @@ storeChangedEntries p
     where
     storeEntryOK
 	= storeEntry $<<< ( (getNode >>^ isAl) &&& getConfig (albumPath p) &&& get theConfigName )
+-}
+
+storeChangedEntries	:: PathArrow AlbumTree AlbumTree
+storeChangedEntries p
+    {- = ( ( ( runAction ("storing all entries at: " ++ showPath p) $
+	    ( storeEntryOK			-- store the changes
+	      >>>
+	      clearEdited			-- clear edited marks
+	      >>>
+	      updateNode (arr clearPic)		-- and remove all image info 
+	    )
+	    `orElse` this			-- errors when writing the album
+	  )
+	  `when` entryEdited			-- some album entries have been changed
+	)
+	>>>
+	unloadSubEntries p
+      )
+      -}
+    = ( ( unloadSubEntries p
+	  >>>
+	  ( ( runAction ("storing all entries at: " ++ showPath p)
+	      storeEntryOK			-- store the changes
+	      >>>
+	      clearEdited			-- clear edited marks
+	    )
+	    `when` entryEdited
+	  )
+	)
+        `orElse`
+	this					-- errors when writing the album
+      )
+      `when` ( isEntryLoaded
+	       >>>
+	       neg (getChildren >>> deep entryEdited)			-- only albums already loaded are of interest
+	     )
+    where
+    storeEntryOK
+	= storeEntry $<<< ( (getNode >>^ isAl) &&& getConfig (albumPath p) &&& get theConfigName )
+
 
 unloadSubEntries		:: PathArrow AlbumTree AlbumTree
 unloadSubEntries p
-    = ( runAction ("unloading entry: " ++ showPath p) $
-	processChildren ( setChildren []
-			  >>>
-			  updateNode (arr clearPic)
-			)
-      )
-      `whenNot`
-      deep entryEdited
+    = runAction ("unloading entry: " ++ showPath p) $
+      processChildren ( setChildren []
+			>>>
+			updateNode (arr clearPic)
+		      )
 
-storeEntry	:: Bool -> FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
-storeEntry isAlb doc conf
-    = perform mkdir
-      >>>
-      ( storeDocData xpAlbumTree rootName doc conf
-	`guards`
-	updateNode ( arr $ change theRef (const doc) )
-      )
-    where
-    mkdir = constA doc >>> arrIOE mkDirectoryPath
-    rootName
-	| isAlb		= "album"
-	| otherwise	= "picture"
--}
 -- ------------------------------------------------------------
 -- store the album and all subalbums adressed by a path and mark them as unloaded
 
@@ -365,7 +388,7 @@ storeChangedAlbums p
     clearEditedChildren
 	= processChildren clearEdited
     storeAlbumOK
-	= storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName )
+	= storeEntry True $<< ( getConfig (albumPath p) &&& get theConfigName )
 
 unloadSubAlbums		:: PathArrow AlbumTree AlbumTree
 unloadSubAlbums p
@@ -375,11 +398,21 @@ unloadSubAlbums p
       `whenNot`
       (getChildren >>> deep entryEdited)
 
-storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
-storeAlbum doc conf
-    = storeDocData xpAlbumTree "album" doc conf
-      `guards`
-      updateNode ( arr $ change theRef (const doc) )
+-- ------------------------------------------------------------
+
+storeEntry	:: Bool -> FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
+storeEntry isAlb doc conf
+    = perform mkdir
+      >>>
+      ( storeDocData xpAlbumTree rootName doc conf
+	`guards`
+	updateNode ( arr $ change theRef (const doc) )
+      )
+    where
+    mkdir = constA doc >>> arrIOE mkDirectoryPath
+    rootName
+	| isAlb		= "album"
+	| otherwise	= "picture"
 
 storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
 storeDocData p rootName doc conf
@@ -436,14 +469,14 @@ storeArchive
 
 checkEntryLoaded	:: CmdArrow AlbumTree AlbumTree
 checkEntryLoaded
-    = ( getExtAlbumRef
+    = ( getExtEntryRef
 	>>>
 	( loadAlbum $<< get theArchiveName &&& this )
       )
       `orElse` this
 
 isEntryLoaded		:: CmdArrow AlbumTree AlbumTree
-isEntryLoaded		= neg getExtAlbumRef `guards` this
+isEntryLoaded		= neg getExtEntryRef `guards` this
 
 -- check whether an entry addresed by a path exists
 -- in a tree
@@ -645,8 +678,8 @@ changeAlbums pa p
 isAlbum		:: CmdArrow AlbumTree AlbumTree
 isAlbum		= ( getNode >>> isA isAl ) `guards` this
 
-getExtAlbumRef	:: CmdArrow AlbumTree String
-getExtAlbumRef	= getNode >>> picRef ^>> isA (not . null)
+getExtEntryRef	:: CmdArrow AlbumTree String
+getExtEntryRef	= getNode >>> picRef ^>> isA (not . null)
 
 -- ----------------------------------------
 

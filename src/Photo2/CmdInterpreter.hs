@@ -336,7 +336,7 @@ parseStore	:: [String] -> [Cmd]
 parseStore	= parseWdCmd' storeAllChangedAlbums "store"
 
 parseStorePics	:: [String] -> [Cmd]
-parseStorePics	= parseStore -- TODO parseWdCmd' storeAllChangedEntries "storepics"
+parseStorePics	= parseWdCmd' storeAllChangedEntries "storepics"
 
 parseTest	:: [String] -> [Cmd]
 parseTest	= parseWdCmd' test "xxx"
