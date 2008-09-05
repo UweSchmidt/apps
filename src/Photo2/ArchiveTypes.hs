@@ -219,6 +219,16 @@ emptyPic	= Pic { picId     = emptyName
 		      , picEdited = False
 		      }
 
+clearPic	:: Pic -> Pic
+clearPic p	= p { picOrig   = ""
+		    , picRaw    = ""
+		    , picXmp    = ""
+		    , picCopies = M.empty
+		    , picAttrs  = M.empty
+		    , picErrs   = []
+		    , picEdited = False
+		    }
+
 emptyName	:: Name
 emptyName	= ""
 
@@ -262,7 +272,6 @@ xpAlbum
 	     ) $
       xpPair ( xpWrapPic True )
              ( xpList $ xpAlbumTree )
-
 
 xpWrapPic	:: Bool -> PU Pic
 xpWrapPic isa

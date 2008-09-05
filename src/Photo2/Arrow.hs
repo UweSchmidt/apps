@@ -121,6 +121,16 @@ editNode	= updateNode' (change theEdited (const True))
 clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
 clearEdited	= updateNode' (change theEdited (const False)) this
 
+entryEdited	:: CmdArrow AlbumTree AlbumTree
+entryEdited 	= ( getNode >>> isA picEdited )
+		  `guards`
+		  this
+
+isEditedAlbum	:: CmdArrow AlbumTree AlbumTree
+isEditedAlbum	= ( entryEdited <+> (getChildren >>> entryEdited) )
+		  `guards`
+		  this
+
 -- ------------------------------------------------------------
 
 setComp		:: SelArrow a b -> b -> CmdArrow a a
@@ -261,7 +271,7 @@ loadAlbums p
 
 loadAndCheckAlbum	:: PathArrow a AlbumTree
 loadAndCheckAlbum p
-    = runAction ("load and check album " ++ showPath p) $
+    = runAction ("check for entry loaded " ++ showPath p) $
       ( changeAlbums (processTree (const this))
 	/>>>/
 	checkPath
@@ -270,45 +280,100 @@ loadAndCheckAlbum p
 
 loadAllAlbums	:: PathArrow a AlbumTree
 loadAllAlbums p
-    = runAction ("check all albums loaded for " ++ showPath p) $
+    = runAction ("check for all entries loaded " ++ showPath p) $
       changeAlbums (processTreeSelfAndDesc (const this)) $ p
 
 -- ------------------------------------------------------------
 
+{- not yet ready: single file for every picture
+
+storeAllChangedEntries	:: PathArrow AlbumTree AlbumTree
+storeAllChangedEntries
+    = changeAlbums $
+      processTreeDescAndSelfUC storeChangedEntries
+
+storeChangedEntries	:: PathArrow AlbumTree AlbumTree
+storeChangedEntries p
+    = ( ( ( runAction ("storing all entries at: " ++ showPath p) $
+	    ( storeEntryOK			-- store the changes
+	      >>>
+	      clearEdited			-- clear edited marks
+	      >>>
+	      updateNode (arr clearPic)		-- and remove all image info 
+	    )
+	    `orElse` this			-- errors when writing the album
+	  )
+	  `when` entryEdited			-- some album entries have been changed
+	)
+	>>>
+	unloadSubEntries p
+      )
+      `when` isEntryLoaded			-- only albums already loaded are of interest
+    where
+    storeEntryOK
+	= storeEntry $<<< ( (getNode >>^ isAl) &&& getConfig (albumPath p) &&& get theConfigName )
+
+unloadSubEntries		:: PathArrow AlbumTree AlbumTree
+unloadSubEntries p
+    = ( runAction ("unloading entry: " ++ showPath p) $
+	processChildren ( setChildren []
+			  >>>
+			  updateNode (arr clearPic)
+			)
+      )
+      `whenNot`
+      deep entryEdited
+
+storeEntry	:: Bool -> FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
+storeEntry isAlb doc conf
+    = perform mkdir
+      >>>
+      ( storeDocData xpAlbumTree rootName doc conf
+	`guards`
+	updateNode ( arr $ change theRef (const doc) )
+      )
+    where
+    mkdir = constA doc >>> arrIOE mkDirectoryPath
+    rootName
+	| isAlb		= "album"
+	| otherwise	= "picture"
+-}
+-- ------------------------------------------------------------
 -- store the album and all subalbums adressed by a path and mark them as unloaded
 
-storeAllAlbums	:: PathArrow a AlbumTree
-storeAllAlbums	= changeAlbums (processTree storeAlbumTree)
+storeAllChangedAlbums	:: PathArrow AlbumTree AlbumTree
+storeAllChangedAlbums
+    = changeAlbums $
+      processTreeDescAndSelfUC storeChangedAlbums
 
-storeAlbumTree	:: PathArrow AlbumTree AlbumTree
-storeAlbumTree p
-    = runAction ("storing all albums at: " ++ showPath p) $
-      ( ( editNode this `when` (getChildren >>> entryEdited) ) -- propagate changes to parent
-	>>>
-	processChildren (storeSubAlbums $< getPicId)
-	>>>
-	( ( removeSubAlbums
-	    >>>
-	    ( ( storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName ) )
-	      `when`
-	      entryEdited
+storeChangedAlbums	:: PathArrow AlbumTree AlbumTree
+storeChangedAlbums p
+    = ( ( ( runAction ("storing all albums at: " ++ showPath p) $
+	    ( storeAlbumOK			-- store the changes
+	      >>>
+	      clearEditedChildren		-- and clear edited marks
 	    )
-	    >>>
-	    clearEdited
+	    `orElse` this			-- errors when writing the album
 	  )
-	  `orElse`
-	  this	-- something went wrong
+	  `when` isEditedAlbum			-- some album entries have been changed
 	)
+	>>>
+	unloadSubAlbums p
       )
-      `when`
-      isAlbum
+      `when` (isAlbum >>> isEntryLoaded)	-- only albums already loaded are of interest
     where
-    storeSubAlbums n
-	= storeAlbumTree (p ++ [n])
-	  `when`
-	  getChildren
-    removeSubAlbums 
-	= processChildren (setChildren [])
+    clearEditedChildren
+	= processChildren clearEdited
+    storeAlbumOK
+	= storeAlbum $<< ( getConfig (albumPath p) &&& get theConfigName )
+
+unloadSubAlbums		:: PathArrow AlbumTree AlbumTree
+unloadSubAlbums p
+    = ( runAction ("unloading album: " ++ showPath p) $
+	processChildren (setChildren [])
+      )
+      `whenNot`
+      (getChildren >>> deep entryEdited)
 
 storeAlbum	:: FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
 storeAlbum doc conf
@@ -322,7 +387,7 @@ storeDocData p rootName doc conf
                 ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
-		( addDoctypeDecl rootName "" (pathFromTo doc (dirName conf </> "archive.dtd"))
+		( addDoctypeDecl rootName "" (pathFromTo doc (dirPath conf </> "archive.dtd"))
 		  >>>
 		  perform (constA doc >>> arrIOE (mkBackupFile ".bak"))
 		  >>>
@@ -334,25 +399,6 @@ storeDocData p rootName doc conf
       documentStatusOk
       >>>
       traceStatus ("stored  : " ++ show doc)
-
-isAlbum		:: CmdArrow AlbumTree AlbumTree
-isAlbum		= ( getNode
-		    >>>
-		    isA isAl 
-		  )
-		  `guards` this
-
-getExtAlbumRef	:: CmdArrow AlbumTree String
-getExtAlbumRef	= getNode
-		  >>>
-		  picRef
-		  ^>>
-		  isA (not . null)
-
-entryEdited	:: CmdArrow AlbumTree AlbumTree
-entryEdited 	= ( getNode >>> isA picEdited )
-		  `guards`
-		  this
 
 storeConfig	:: CmdArrow b XmlTree
 storeConfig
@@ -388,21 +434,16 @@ storeArchive
 --
 -- check whether an album is loaded, if not yet done, load the album
 
-checkAlbum	:: PathArrow AlbumTree AlbumTree
-checkAlbum _p
+checkEntryLoaded	:: CmdArrow AlbumTree AlbumTree
+checkEntryLoaded
     = ( getExtAlbumRef
 	>>>
 	( loadAlbum $<< get theArchiveName &&& this )
       )
       `orElse` this
 
-checkAlbumLoaded	:: CmdArrow AlbumTree AlbumTree
-checkAlbumLoaded
-    = ( getExtAlbumRef
-	>>>
-	( loadAlbum $<< get theArchiveName &&& this )
-      )
-      `orElse` this
+isEntryLoaded		:: CmdArrow AlbumTree AlbumTree
+isEntryLoaded		= neg getExtAlbumRef `guards` this
 
 -- check whether an entry addresed by a path exists
 -- in a tree
@@ -426,7 +467,7 @@ getTreeAndProcess pa p0
     getSub p
 	| null p	= none
 	| null p'	= nodeMatch `guards` (checkAndProcess pa p0)
-	| otherwise     = nodeMatch `guards` (checkAlbumLoaded >>> getChildren >>> getSub p')
+	| otherwise     = nodeMatch `guards` (checkEntryLoaded >>> getChildren >>> getSub p')
 	where
 	(n' : p') = p
 	nodeMatch = hasPicId n'
@@ -475,7 +516,7 @@ getSelfAndDescAndProcess children pa p
       getDescAndProcess children pa p
 
 getChildrenAndCheck		:: CmdArrow AlbumTree AlbumTree
-getChildrenAndCheck		= getChildren >>> checkAlbumLoaded
+getChildrenAndCheck		= getChildren >>> checkEntryLoaded
 
 -- ----------------------------------------
 --
@@ -501,7 +542,7 @@ processTree pa p0
 	| null p'	= checkAndProcess pa p0
                           `when`
 			  nodeMatch
-	| otherwise	= ( checkAlbumLoaded >>> processChildren (processSub p') )
+	| otherwise	= ( checkEntryLoaded >>> processChildren (processSub p') )
 			  `when`
 			  nodeMatch
 	where
@@ -520,11 +561,14 @@ processTreeDescBU		= processTree . selDescAndProcessBU . checkAndProcess
 processTreeSelfAndDesc		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeSelfAndDesc		= processTree . selSelfAndDescAndProcessTD . checkAndProcess
 
+processTreeDescAndSelfUC	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeDescAndSelfUC	= processTree . selSelfAndDescAndProcessBU	-- don't load unloaded subalbums
+
 processTreeDescAndSelf		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeDescAndSelf		= processTree . selSelfAndDescAndProcessBU . checkAndProcess
 
 checkAndProcess			:: PathArrow AlbumTree b         -> PathArrow AlbumTree b
-checkAndProcess pa p		= checkAlbumLoaded >>> pa p
+checkAndProcess pa p		= checkEntryLoaded >>> pa p
 
 selChildrenAndProcess		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 selChildrenAndProcess pa p
@@ -598,6 +642,11 @@ changeAlbums	:: PathArrow AlbumTree AlbumTree -> PathArrow a AlbumTree
 changeAlbums pa p
     		= get theAlbums >>> pa p >>> set theAlbums
 
+isAlbum		:: CmdArrow AlbumTree AlbumTree
+isAlbum		= ( getNode >>> isA isAl ) `guards` this
+
+getExtAlbumRef	:: CmdArrow AlbumTree String
+getExtAlbumRef	= getNode >>> picRef ^>> isA (not . null)
 
 -- ----------------------------------------
 
@@ -679,35 +728,23 @@ removeAlbumEntry p
 
 updateAttrKeys	:: PathArrow AlbumTree AlbumTree
 updateAttrKeys p
-    = runAction ("updating attribute keys for " ++ showPath p)
-      ( checkAlbum p
-	>>>
-	editNode (arr $ change theAttrs normAttrs)
-      )
+    = runAction ("updating attribute keys for " ++ showPath p) $
+      editNode (arr $ change theAttrs normAttrs)
 
 updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
 updateAttr an av p
-    = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av)
-      ( checkAlbum p
-	>>>
-	editNode (arr $ change theAttrs (mergeAttr an av))
-      )
+    = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av) $
+      editNode (arr $ change theAttrs (mergeAttr an av))
 
 updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
 updateAttrs am p
-    = runAction ("updating " ++ showPath p ++ " attributes " ++ show am)
-      ( checkAlbum p
-	>>>
-	editNode (arr $ change theAttrs (mergeAttrs am))
-      )
+    = runAction ("updating " ++ showPath p ++ " attributes " ++ show am) $
+      editNode (arr $ change theAttrs (mergeAttrs am))
 
 updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
 updateExifAttrs c p
-    = runAction ("updating " ++ showPath p ++ " exif attributes")
-      ( checkAlbum p
-	>>>
-	editNode (arrIOE (importExifAttrs c p))
-      )
+    = runAction ("updating " ++ showPath p ++ " exif attributes") $
+      editNode (arrIOE (importExifAttrs c p))
 
 -- ------------------------------------------------------------
 --
@@ -716,7 +753,7 @@ updateExifAttrs c p
 renamePic	:: Name -> ConfigArrow AlbumTree AlbumTree
 renamePic nn c p
     = runAction ("renaming " ++ showPath p ++ " to " ++ nn)
-      ( checkAlbum p
+      ( checkEntryLoaded
 	>>>
 	editNode (arrIOE (mvPic nn c p))
       )
@@ -724,7 +761,7 @@ renamePic nn c p
 renameContent	:: ConfigArrow AlbumTree AlbumTree
 renameContent c p
     = runAction ("renaming album contents for " ++ showPath p)
-      ( checkAlbum p
+      ( checkEntryLoaded
 	>>>
 	( rename $< listA (getChildren >>> getPicId) )
       )
@@ -773,7 +810,7 @@ renameContent c p
 updatePic	:: ConfigArrow AlbumTree AlbumTree
 updatePic c p
     = runAction ("updating " ++ p')
-      ( checkAlbum p
+      ( checkEntryLoaded
 	>>>
 	editNode update
       )

@@ -34,9 +34,6 @@ isSlash		= (== head slash)
 isDot		:: Char -> Bool
 isDot		= (== head dot)
 
-dirName		:: String -> String
-dirName		= reverse . (\ t -> if null t then thisDir else t) . drop 1 . dropWhile (not . isSlash) . reverse
-
 topDirName	:: String -> String
 topDirName	= (\ (d,r) -> if null r then thisDir else d) . span (not . isSlash)
 
@@ -59,7 +56,7 @@ substTopDirName newTop
 
 substBaseName	:: String -> String -> String
 substBaseName newName path
-    = dirName path </> newName
+    = dirPath path </> newName
 
 joinPathsAndNorm	:: String -> String -> String
 joinPathsAndNorm dn
@@ -145,6 +142,9 @@ mkRelPath p
 
 rootPath	:: FilePath
 rootPath	= [FP.pathSeparator]
+
+dirPath		:: FilePath -> FilePath
+dirPath		= FP.takeDirectory
 
 pathFromTo	:: String -> String -> String
 pathFromTo ref1 ref2

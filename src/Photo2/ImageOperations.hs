@@ -392,7 +392,7 @@ mkDirectoryPath f
 	     (("createDirectory " ++ dir ++ " failed: ") ++)
 	   )
     where
-    dir = dirName f
+    dir = dirPath f
 
 -- ------------------------------------------------------------
 

@@ -80,12 +80,14 @@ parseCmd "open" [archive]
 	    )
 
 parseCmd "close" []
-    = mkCmd ( withRootDir storeAllAlbums
+    = mkCmd ( withRootDir storeAllChangedAlbums
 	      >>>
 	      storeConfig
 	      >>>
 	      storeArchive
 	    )
+      ++
+      parseCd []
 
 parseCmd "config" []
     = mkCmd ( get theConfig
@@ -127,6 +129,7 @@ parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "store"     args	= parseStore     args
+parseCmd "storepics" args	= parseStorePics args
 parseCmd "update"    args	= parseUpdate    args
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
 
@@ -183,6 +186,7 @@ parseCmd "?" []
 	    , "      debug          debug output"
 	    , "  store-config       write the config data"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
+	    , "  storepics [path]   write all pictures and albums addressed by path and unload subalbums"
 	    , "  unset <opt>        unset an option"
 	    , "  update [path]      import image and update copies, if original has changed"
 	    , "  version            print photo2 version"
@@ -273,13 +277,18 @@ parseLsra	:: [String] -> [Cmd]
 parseLsra	= parseLs' (getTreeAndProcessDescC constA) "lsra"
 
 parseEdited	:: [String] -> [Cmd]
-parseEdited	= parseLs' (getTreeAndProcessDesc $ \ p -> entryEdited `guards` constA p) "edited"
+parseEdited	= parseLs' ( getTreeAndProcessDesc $
+			     \ p -> entryEdited `guards` constA p
+			   ) "edited"
 
 parseLs'	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs' pa ps
     = parseWdCmd' ls ps
     where
-    ls	= ( pa />>>/ const (arrIO (putStrLn . mkAbsPath . joinPath)) )
+    ls	= ( pa
+	    />>>/
+	    const (arrIO (putStrLn . mkAbsPath . joinPath))
+	  )
           `withDefaultRes` ()
 
 parseCat :: [String] -> [Cmd]
@@ -312,18 +321,22 @@ parseRelatives
     relatives
 	= getRelatives
 	  />>>/
-	  (\ p -> arrIO ( \ (parent, prev, next) -> putStrLn ( "this     = " ++ fp p      ++ "\n" ++
-							       "parent   = " ++ fp parent ++ "\n" ++
-							       "previous = " ++ fp prev   ++ "\n" ++
-							       "next     = " ++ fp next
-							     )
+	  (\ p -> arrIO ( \ (parent, prev, next) ->
+			  putStrLn ( "this     = " ++ fp p      ++ "\n" ++
+				     "parent   = " ++ fp parent ++ "\n" ++
+				     "previous = " ++ fp prev   ++ "\n" ++
+				     "next     = " ++ fp next
+				   )
 			)
 	  )
     fp []	= ""
     fp p	= mkAbsPath . joinPath $ p
 
 parseStore	:: [String] -> [Cmd]
-parseStore	= parseWdCmd storeAllAlbums "store"
+parseStore	= parseWdCmd' storeAllChangedAlbums "store"
+
+parseStorePics	:: [String] -> [Cmd]
+parseStorePics	= parseStore -- TODO parseWdCmd' storeAllChangedEntries "storepics"
 
 parseTest	:: [String] -> [Cmd]
 parseTest	= parseWdCmd' test "xxx"
