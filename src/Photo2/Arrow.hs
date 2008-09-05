@@ -285,52 +285,13 @@ loadAllAlbums p
 
 -- ------------------------------------------------------------
 
-{- not yet ready: single file for every picture -}
-
 storeAllChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeAllChangedEntries
     = changeAlbums $
       processTreeDescAndSelfUC storeChangedEntries
-{-
-storeChangedEntries	:: PathArrow AlbumTree AlbumTree
-storeChangedEntries p
-    = ( ( ( runAction ("storing all entries at: " ++ showPath p) $
-	    ( storeEntryOK			-- store the changes
-	      >>>
-	      clearEdited			-- clear edited marks
-	      >>>
-	      updateNode (arr clearPic)		-- and remove all image info 
-	    )
-	    `orElse` this			-- errors when writing the album
-	  )
-	  `when` entryEdited			-- some album entries have been changed
-	)
-	>>>
-	unloadSubEntries p
-      )
-      `when` isEntryLoaded			-- only albums already loaded are of interest
-    where
-    storeEntryOK
-	= storeEntry $<<< ( (getNode >>^ isAl) &&& getConfig (albumPath p) &&& get theConfigName )
--}
 
 storeChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeChangedEntries p
-    {- = ( ( ( runAction ("storing all entries at: " ++ showPath p) $
-	    ( storeEntryOK			-- store the changes
-	      >>>
-	      clearEdited			-- clear edited marks
-	      >>>
-	      updateNode (arr clearPic)		-- and remove all image info 
-	    )
-	    `orElse` this			-- errors when writing the album
-	  )
-	  `when` entryEdited			-- some album entries have been changed
-	)
-	>>>
-	unloadSubEntries p
-      )
-      -}
     = ( ( unloadSubEntries p
 	  >>>
 	  ( ( runAction ("storing all entries at: " ++ showPath p)
