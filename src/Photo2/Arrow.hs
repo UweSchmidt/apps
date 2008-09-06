@@ -46,57 +46,59 @@ infixr 1 />>>/
 
 -- lift >>> to PathArrow level
 
-(/>>>/) 	:: PathArrow b c -> PathArrow c d -> PathArrow b d
-(/>>>/) f g	= \ p -> f p >>> g p
+(/>>>/) 		:: PathArrow b c -> PathArrow c d -> PathArrow b d
+(/>>>/) f g		= \ p -> f p >>> g p
 
 
-withDefaultRes	:: PathArrow b c -> c -> PathArrow b c
-withDefaultRes f d
-		= \ p -> f p `withDefault` d
+withDefaultRes		:: PathArrow b c -> c -> PathArrow b c
+withDefaultRes f d	= \ p -> f p `withDefault` d
 
 -- ------------------------------------------------------------
 
-setField	:: Setter AppState b -> CmdArrow b b
-setField sf	= perform ( ( this &&& getUserState )
-			    >>> arr (uncurry sf)
-			    >>> setUserState
-			  )
+setField		:: Setter AppState b -> CmdArrow b b
+setField sf		= perform ( ( this &&& getUserState )
+				    >>> arr (uncurry sf)
+				    >>> setUserState
+				  )
 
-getField	:: Getter AppState b -> CmdArrow a b
-getField gf	= getUserState >>^ gf
+getField		:: Getter AppState b -> CmdArrow a b
+getField gf		= getUserState >>^ gf
 
-data SelArrow a b = SA { get :: CmdArrow a b
-		       , set :: CmdArrow b b
-		       }
+data SelArrow a b 	= SA { get :: CmdArrow a b
+			     , set :: CmdArrow b b
+			     }
 
-mkSelA	:: Selector AppState b -> SelArrow a b
-mkSelA (g, s) = SA { get = getField g
-		   , set = setField s
-		   }
+mkSelA			:: Selector AppState b -> SelArrow a b
+mkSelA (g, s) 		= SA { get = getField g
+			     , set = setField s
+			     }
 
-theAlbums       :: SelArrow a AlbumTree
-theAlbums	= mkSelA $ selAlbums
+theAlbums       	:: SelArrow a AlbumTree
+theAlbums		= mkSelA $ selAlbums
 
-theConfig       :: SelArrow a Config
-theConfig	= mkSelA $ selConfig
+theConfig       	:: SelArrow a Config
+theConfig		= mkSelA $ selConfig
 
-theConfigAttrs  :: SelArrow a Attrs
-theConfigAttrs	= mkSelA $ selConfigAttrs
+theConfigAttrs  	:: SelArrow a Attrs
+theConfigAttrs		= mkSelA $ selConfigAttrs
 
-theConfigAttr  :: Name -> SelArrow a Value
-theConfigAttr k	= mkSelA $ selConfigAttr k
+theConfigAttr		:: Name -> SelArrow a Value
+theConfigAttr k		= mkSelA $ selConfigAttr k
 
-theStatus       :: SelArrow a Status
-theStatus	= mkSelA $ selStatus
+theConfigPicAttrs	:: SelArrow a Attrs
+theConfigPicAttrs	= mkSelA $ selConfigPicAttrs
 
-theArchiveName  :: SelArrow a Href
-theArchiveName	= mkSelA $ selArchiveName
+theStatus       	:: SelArrow a Status
+theStatus		= mkSelA $ selStatus
 
-theConfigName   :: SelArrow a Href
-theConfigName	= mkSelA $ selConfigName
+theArchiveName  	:: SelArrow a Href
+theArchiveName		= mkSelA $ selArchiveName
 
-theWd 		:: SelArrow a Path
-theWd           = mkSelA $ selWd
+theConfigName   	:: SelArrow a Href
+theConfigName		= mkSelA $ selConfigName
+
+theWd 			:: SelArrow a Path
+theWd           	= mkSelA $ selWd
 
 -- ------------------------------------------------------------
 

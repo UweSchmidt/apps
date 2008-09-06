@@ -115,6 +115,9 @@ parseCmd "set" [n,v]
 parseCmd "unset" [n]
     = mkCmd ( changeComp theConfigAttrs (M.delete n) )
 
+parseCmd "defpicattr" [n,v]
+    = mkCmd ( changeComp theConfigPicAttrs (M.insert n v) )
+
 parseCmd "pwd" []
     = mkCmd ( get theWd
 	      >>>
@@ -184,6 +187,7 @@ parseCmd "?" []
 	    , "      copy-exif      force import of exif info from original"
 	    , "      copy-org       force import of original images"
 	    , "      debug          debug output"
+	    , "  defpicattr a val   define a picture attribute"
 	    , "  store-config       write the config data"
 	    , "  store [path]       write all albums addressed by path and unload subalbums"
 	    , "  storepics [path]   write all pictures and albums addressed by path and unload subalbums"
