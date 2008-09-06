@@ -17,7 +17,7 @@ import           System.Console.Readline
 		 , addHistory
 		 )
 
-import Text.XML.HXT.Arrow
+import           Text.XML.HXT.Arrow
 
 type Cmd = AppState -> IO AppState
 
@@ -55,21 +55,20 @@ readCmdLine prompt
 	 then readCmdLine prompt
 	 else return line'
 
-mkCmd		:: CmdArrow a b -> [Cmd]
-mkCmd		= return . runCmd
+mkCmd			:: CmdArrow a b -> [Cmd]
+mkCmd			= return . runCmd
 
-mkCmd'		:: (Monad m) => CmdArrow a b -> ([b] -> IO ()) -> m Cmd
-mkCmd' io	= return . runCmd' io
+mkCmd'			:: (Monad m) => CmdArrow a b -> ([b] -> IO ()) -> m Cmd
+mkCmd' io		= return . runCmd' io
 
-liftCmd		:: Monad m => IO a -> m Cmd
-liftCmd c	= return $
-		  ( \ s -> do
-		           c
-		           return s )
+liftCmd			:: Monad m => IO a -> m Cmd
+liftCmd c		= return $
+			  \ s -> ( do
+				   c
+				   return s )
 
-parseCmd	:: String -> [String] -> [Cmd]
-parseCmd "open" []
-    = parseCmd "open" ["archive.xml"]
+parseCmd		:: String -> [String] -> [Cmd]
+parseCmd "open" []	= parseCmd "open" ["archive.xml"]
 
 parseCmd "open" [archive]
     = mkCmd ( loadArchiveAndConfig archive
@@ -116,7 +115,7 @@ parseCmd "unset" [n]
     = mkCmd ( changeComp theConfigAttrs (M.delete n) )
 
 parseCmd "defpicattr" [n,v]
-    = mkCmd ( changeComp theConfigPicAttrs (M.insert n v) )
+    = mkCmd ( changeComp theConfigPicAttrs (addEntry v n) )
 
 parseCmd "pwd" []
     = mkCmd ( get theWd
@@ -361,7 +360,7 @@ parseUpdate	= parseWdCmd' (changeAlbums update) "update"
 
 parseNewAttrKeys	:: [String] -> [Cmd]
 parseNewAttrKeys	= parseWdCmd' ( changeAlbums $
-				        processTreeSelfAndDesc updateAttrKeys
+				        processTreeSelfAndDesc (withConfig updateAttrKeys)
 				      ) "newattrs"
 
 parseRename		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
@@ -371,7 +370,7 @@ parseRename cn ca al	= parseWdCmd' ( changeAlbums $
 
 parseAttr		:: [String] -> [Cmd]
 parseAttr al		= parseWdCmd' ( changeAlbums $
-					processTree (updateAttr an (unwords avl))
+					processTree (withConfig (updateAttr an (unwords avl)))
 				      ) "attr" (take 1 al)
                           where
 			  (an : avl) = tail al

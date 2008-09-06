@@ -123,6 +123,8 @@ importExifAttrs c _p pic
     force	= optON  optForceExif c
     dry		= optOFF optForceExif c
 
+    exifAttrs	= parseExif (confPicAttrs c)
+
     upToDate
 	| dry		= return True
 	| force		= return False
@@ -131,14 +133,14 @@ importExifAttrs c _p pic
     imgAttrs f
 	= do
 	  t <- execFct debug  ["exiftool", f] -- don't use "-s" option
-	  return $ parseExif t
+	  return $ exifAttrs t
 
     imgAttrsXmp _f
 	= do
 	  return $ emptyAttrs	-- parseXmp t
 
     fileData
-	= parseExif . unlines $
+	= exifAttrs . unlines $
 	  [ "Ref-Orig : " ++ orig
 	  , "Ref-Raw : "  ++ raw
 	  , "Ref-Xmp : "  ++ xmp

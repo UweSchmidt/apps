@@ -42,7 +42,7 @@ type Path		= [Name]
 -- config data
 
 data Config		= Config { confAttrs    :: Attrs
-				 , confPicAttrs :: Attrs
+				 , confPicAttrs :: PicAttrs
 				 , confLayouts  :: Layouts
 				 , confDict     :: Dictionaries
 				 , confSizes    :: Sizes
@@ -50,6 +50,7 @@ data Config		= Config { confAttrs    :: Attrs
 			  deriving (Show)
 
 type Attrs		= Map Name Value
+type PicAttrs		= [(Value, Name)]
 
 type Layouts		= Map Name Layout
 data Layout		= Layout { layoutType  :: Value
@@ -160,7 +161,7 @@ selWd			= (cwd,         \ x s -> s {cwd = x})
 selConfigAttrs		:: AppSelector Attrs
 selConfigAttrs		= (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
 
-selConfigPicAttrs	:: AppSelector Attrs
+selConfigPicAttrs	:: AppSelector PicAttrs
 selConfigPicAttrs	= (confPicAttrs,   \ x c -> c {confPicAttrs = x}) `sub` selConfig
 
 selConfigAttr		:: Name -> AppSelector Value
@@ -202,7 +203,7 @@ emptyAppState		= AppState { albums       = emptyAlbumTree
 
 emptyConfig		:: Config
 emptyConfig		= Config { confAttrs    = emptyAttrs
-				 , confPicAttrs = emptyAttrs
+				 , confPicAttrs = []
 				 , confLayouts  = M.empty
 				 , confDict     = M.empty
 				 , confSizes    = []
@@ -358,14 +359,8 @@ xpConfig		= xpElem "config" $
 xpAttrs			:: PU Attrs
 xpAttrs			= xpMap "attr" "name" xpName xpHtmlText
 
-xpPicAttrs		:: PU Attrs
-xpPicAttrs		= xpWrap ( \ m -> M.fold (\ v x -> M.insert v v x) m m		-- add all final attribute names to themselves
-				 , id
-				 ) $
-			  xpWrap ( M.fromList						-- convert to list
-				 , sortBy (comparing snd) . M.toList
-				 ) $
-			  xpDefault [] $
+xpPicAttrs		:: PU PicAttrs
+xpPicAttrs		= xpDefault [] $
 			  xpElem "picture-attributes" $
 			  xpList $
 			  xpElem "attr" $

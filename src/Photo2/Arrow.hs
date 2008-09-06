@@ -85,7 +85,7 @@ theConfigAttrs		= mkSelA $ selConfigAttrs
 theConfigAttr		:: Name -> SelArrow a Value
 theConfigAttr k		= mkSelA $ selConfigAttr k
 
-theConfigPicAttrs	:: SelArrow a Attrs
+theConfigPicAttrs	:: SelArrow a PicAttrs
 theConfigPicAttrs	= mkSelA $ selConfigPicAttrs
 
 theStatus       	:: SelArrow a Status
@@ -722,21 +722,21 @@ removeAlbumEntry p
 -- ------------------------------------------------------------
 -- update an attribute for an album or picture
 
-updateAttrKeys	:: PathArrow AlbumTree AlbumTree
-updateAttrKeys p
+updateAttrKeys	:: ConfigArrow AlbumTree AlbumTree
+updateAttrKeys c p
     = runAction ("updating attribute keys for " ++ showPath p) $
-      editNode (arr $ change theAttrs normAttrs)
+      editNode (arr $ change theAttrs (normAttrs (confPicAttrs c)))
 
-updateAttr	:: String -> String -> PathArrow AlbumTree AlbumTree
-updateAttr an av p
+updateAttr	:: String -> String -> ConfigArrow AlbumTree AlbumTree
+updateAttr an av c p
     = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av) $
-      editNode (arr $ change theAttrs (mergeAttr an av))
-
+      editNode (arr $ change theAttrs (mergeAttr (newAttrKey (confPicAttrs c) an) av))
+{-
 updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
 updateAttrs am p
     = runAction ("updating " ++ showPath p ++ " attributes " ++ show am) $
       editNode (arr $ change theAttrs (mergeAttrs am))
-
+-}
 updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
 updateExifAttrs c p
     = runAction ("updating " ++ showPath p ++ " exif attributes") $

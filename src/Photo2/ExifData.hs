@@ -2,7 +2,7 @@ module Photo2.ExifData
 where
 
 import           Control.Arrow
-import		 Control.Monad ( mplus )
+import		 Control.Monad ( ) -- mplus )
 
 import           Data.Char
 import           Data.List
@@ -14,18 +14,23 @@ import           Photo2.ArchiveTypes
 import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 import           Text.XML.HXT.DOM.Util ( stringTrim )
 
-parseExif	:: String -> Attrs
-parseExif
+match		:: String -> String -> Bool
+match re	= fromMaybe False . matchRE re
+
+parseExif	:: PicAttrs -> String -> Attrs
+parseExif pl
     = lines
       >>>
       map (splitKeyVal ':')
       >>>
-      map ( (words >>> concatMap capitalize >>> newAttrKey)
+      map ( (words >>> concatMap capitalize >>> newAttrKey pl)
 	    ***
 	    (words >>> unwords >>> normDateTime)
 	  )
       >>>
       filter ( not . null . snd )
+      >>>
+      filter ( ("unknown:" `isPrefixOf`) . fst )
       >>>
       M.fromList
 
@@ -37,6 +42,12 @@ splitKeyVal c
 	***
 	( drop 1 >>> stringTrim )
       )
+
+splitWith	:: Char -> String -> (String, String)
+splitWith c
+    = splitKeyVal c
+      >>>
+      ( \ (x,y) -> if null y then (y,x) else (x,y) )
 
 capitalize	:: String -> String
 capitalize (c:s1)	| isAlpha c	= toUpper c : s1
@@ -57,35 +68,40 @@ normDateTime s
 
 isDateTime	:: String -> Bool
 isDateTime
-    = fromMaybe False . matchRE r
+    = match r
     where
     r = d ++ " " ++ t ++ s
     d = "[0-9]{4}:[0-9]{2}:[0-9]{2}"
     t = "[0-9]{2}:[0-9]{2}:[0-9]{2}"
     s = "([.][0-9]{2})?"
 
-normAttrs	:: Attrs -> Attrs
-normAttrs
+normAttrs	:: PicAttrs -> Attrs -> Attrs
+normAttrs pl
     = M.foldWithKey norm emptyAttrs
     where
     norm k v m
 	| null k'	= m
 	| otherwise	= M.insert k' v m
 	where
-	k' = newAttrKey k
+	k' = newAttrKey pl k
 
-newAttrKey	:: String -> String
-newAttrKey k
-    = addPrefix $
-      fromMaybe ""
-      ( lookup k oldKeys
-	`mplus`
-	lookup k' (map ((\ x -> (x,x)) . snd) oldKeys)
-	`mplus`
-	return k
-      )
+newAttrKey	:: PicAttrs -> String -> String
+newAttrKey pl k
+    = case matchFound pl of
+      Just n	-> n
+      Nothing   -> ("unknown:" ++) . snd . splitWith ':' $ k
     where
-    k' = filter (/= '-') k
+    matchKey	:: Value -> Name -> Maybe Name
+    matchKey p n
+	| match p k = Just n
+	| otherwise = Nothing
+
+    foldMatch :: Maybe Name -> (Value, Name) -> Maybe Name
+    foldMatch r@(Just _) _ = r
+    foldMatch Nothing	 e = uncurry matchKey e
+
+    matchFound :: PicAttrs -> Maybe Name
+    matchFound = foldl foldMatch Nothing
 
 fileModificationDateTime'	:: String
 fileModificationDateTime'	= "FileModificationDateTime"
