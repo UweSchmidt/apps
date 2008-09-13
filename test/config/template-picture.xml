@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <base href="[rootPath]"/>
+    <title id="theTitle">[theHeadTitle]</title>
+    <meta name="description" content="Web Photo Album"/>
+    <meta name="author"      content="Uwe Schmidt"/>
+    <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
+    <link rel="stylesheet"   type="text/css" href="config/album-1024x768.css"/>
+    <script type="text/javascript" id="javascript">
+      <!--
+      var duration = 7000;
+      var nextp    = '[nextPage]';
+      var prevp    = '[prevPage]';
+      var parentp  = '[parentPage]';
+      var childp   = '[childPage]';
+      var nextimg  = '[nextPic]';
+      var previmg  = '[prevPic]';
+      -->
+    </script>
+    <script type="text/javascript" src="config/album.js">
+      <!-- the script content must not be empty, else firefox ignores it -->
+    </script>
+  </head>
+  <body onload="initPicture();"
+        class="picture"
+        id="thePictureBody"
+        style="background-image: url(1024x768/[image]>.jpg);">
+    <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
+      <div class="title-area-line" id="theTitleAreaLine">
+        <div class="title"         id="theTitle">[theTitle]</div>
+        <div class="subtitle"      id="theSubTitle">[theSubTitle]</div>
+      </div>
+    </div>
+    <div class="info-area" onmouseover="showInfo();" onmouseout="hideInfo();">
+      <div class="info-area-content" id="theInfoAreaContent">
+        <div class="info">
+          <div class="subtitle">Bild-Daten</div>
+          <table class="info" id="theAttrList">
+            <tr>
+              <th id="theAttrName">Datum</th>
+              <td id="theAttrValue">07-03-11 13:55:33</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <a href="javascript:parentPage()" title="Album" class="up" id="theUpButton">
+      <span id="theContainingAlbum">&nbsp;</span>
+    </a>
+    <a href="javascript:prevPage()" title="zur&uuml;ck" class="back" id="theBackButton">
+      <span id="thePreviousPic">&nbsp;</span>
+    </a>
+    <a href="javascript:nextPage()" title="weiter" class="forward" id="theForwardButton">
+      <span id="theNextPic">&nbsp;</span>
+    </a>
+  </body>
+</html>
+

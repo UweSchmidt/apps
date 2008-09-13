@@ -1,0 +1,84 @@
+<?xml encoding="ISO-8859-1"?>
+<!-- DTD for a simple web photo album -->
+
+<!-- the root tag -->
+<!ELEMENT archive	(config?, album)	>
+<!ATTLIST archive	xmlns	CDATA	#FIXED	"http://muehle.welt.all/photos.dtd"
+			base	CDATA	#IMPLIED
+			config	CDATA	#IMPLIED	>
+
+<!-- general info for various tags for a arbitrary key-value pairs -->
+<!ELEMENT attr		ANY				>
+<!ATTLIST attr		name	NMTOKEN	#REQUIRED
+			entity	CDATA  	#IMPLIED	>
+
+<!-- a collection of pictures and sub albums -->
+<!ELEMENT album		(error*, orig?, copy*, attr*, (album | picture)*)	>
+<!ATTLIST album		id	NMTOKEN	#REQUIRED
+			entity	CDATA  	#IMPLIED
+			extern	NMTOKEN	#IMPLIED
+			base	CDATA	#IMPLIED
+			baseref	CDATA	#IMPLIED
+			href	CDATA	#IMPLIED	>
+
+<!-- description of a single picture -->
+<!ELEMENT picture	(error*, orig?, copy*, attr*)	>
+<!ATTLIST picture	id	NMTOKEN	#REQUIRED
+			entity	CDATA  	#IMPLIED
+			base	CDATA	#IMPLIED
+			baseref	CDATA	#IMPLIED
+			href	CDATA	#IMPLIED	>
+
+<!-- the original source of pictures -->
+<!ELEMENT orig		EMPTY				>
+<!ATTLIST orig		href	CDATA	#IMPLIED
+			raw	CDATA	#IMPLIED
+			href1	CDATA	#IMPLIED
+			raw1	CDATA	#IMPLIED
+			rotate	CDATA	#IMPLIED
+			gamma	CDATA	#IMPLIED	>
+
+<!-- the data about a resized copy of a picture -->
+<!ELEMENT copy		EMPTY				>
+<!ATTLIST copy		href	CDATA	#IMPLIED
+			base	CDATA	#IMPLIED
+			geometry CDATA	#IMPLIED	>
+
+<!-- error messages when processing image or file -->
+<!ELEMENT error		ANY				>
+
+<!-- representation configuration data -->
+<!ELEMENT config	(attr*, picture-attributes?, layout*, size*)		>
+<!ATTLIST config	entity	CDATA  	#IMPLIED
+			config	CDATA	#IMPLIED	>
+
+<!ELEMENT picture-attributes	(attr*)			>
+
+<!-- layout information about a specific layout -->
+<!ELEMENT layout	(attr*, page*)			>
+<!ATTLIST layout	id	NMTOKEN	#REQUIRED
+			type	CDATA	#REQUIRED
+			entity	CDATA  	#IMPLIED
+			config	CDATA	#IMPLIED	>
+
+<!-- layout info about album or picture pages -->
+<!ELEMENT page		(attr*)				>
+<!ATTLIST page		type	( picture
+				| album
+				)	#REQUIRED
+			entity	CDATA  	#IMPLIED
+			config	CDATA	#IMPLIED	>
+
+<!ELEMENT a		ANY				>
+<!ATTLIST a		href	CDATA	#REQUIRED
+                        title   CDATA   #IMPLIED
+			target	CDATA  	#IMPLIED	>
+
+<!-- size info for picture copies to be generated -->
+<!ELEMENT size		(attr*)				>
+
+<!-- include ISO Latin 1 xhtml entities -->
+<!ENTITY % HTMLlat1 PUBLIC
+       "-//W3C//ENTITIES Latin 1 for XHTML//EN"
+       "xhtml-lat1.ent">
+%HTMLlat1;
