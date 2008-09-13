@@ -823,3 +823,85 @@ updatePic c p
 	  ( arrIOE (createCopy c p s) )
 
 -- ------------------------------------------------------------
+--
+-- generate HTML pages
+
+genHtml			:: String -> ConfigArrow AlbumTree ()
+genHtml format conf p0
+    = runAction ("prepare generate HTML pages in format " ++ show format ++ " for " ++ showPath p0)
+      ( checkEntryLoaded
+	>>>
+	( genPages $<<<
+	  ( constL (maybeToList . M.lookup format . confLayouts $ conf)
+	    >>>
+	    ( this
+	      &&&
+	      ( arr layoutPages
+		>>>
+		( ( (arrL $ maybeToList . M.lookup "album")
+		    >>>
+		    (arrL $ maybeToList . M.lookup "template")
+		    >>>
+		    readTemplate "album"
+		  )
+		  &&&
+		  ( (arrL $ maybeToList . M.lookup "picture")
+		    >>>
+		    (arrL $ maybeToList . M.lookup "template")
+		    >>>
+		    readTemplate "picture"
+		  )
+		)
+	      )
+	    )
+	  )
+	)
+	>>>
+	constA ()
+      )
+    where
+    readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
+			  runInLocalURIContext $
+			  ( ( readFromDocument [ (a_validate, v_0)
+					       , (a_parse_html,v_1)
+					       , (a_preserve_comment, v_1)
+					       , (a_remove_whitespace, v_1)
+					       , (a_trace,v_0)
+					       ]
+			      >>>
+			      documentStatusOk
+			    )
+			    `orElse`
+			    (clearErrStatus >>> none)
+			  )
+			  
+    genPages	:: Layout -> XmlTree -> XmlTree -> CmdArrow AlbumTree AlbumTree
+    genPages layout aTemp pTemp
+	= runAction ("HTML page generation") $
+	  genAllPages p0
+	where
+	genAllPages p
+	    = perform ( processChildren checkEntryLoaded
+			>>>
+			( runAction ("HTML Page for " ++ showPath p) $
+			  perform (genSinglePage p)
+			)
+			>>>
+			getChildrenAndProcess getChildren genAllPages p
+		      )
+	genSinglePage	:: PathArrow AlbumTree b
+	genSinglePage p
+	    = none
+
+-- ------------------------------------------------------------
+{-
+processTemplate	:: (ArrowTree a, Tree t) =>
+		   [IfThen (a (t b) c) (a (t b) (t b))] ->
+		   a (t b) (t b)
+
+processTemplate cases
+    = process
+    where
+    process = processTopDown (cases ++ [ constA undefined :-> processChildren process])
+-}
+-- ------------------------------------------------------------

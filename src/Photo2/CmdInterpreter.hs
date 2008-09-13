@@ -148,6 +148,9 @@ parseCmd "rename-cont"    args
 				  "rename-cont"  renameContent
 				  args
 
+parseCmd "gen-html"  args
+    | length args <=2		= parseGenHtml          args
+
 parseCmd "find"      args
     | length args `elem` [1..3]	= parseFind		args
 
@@ -171,6 +174,7 @@ parseCmd "?" []
 	    , "  edited [path]      list all edited pictures"
 	    , "  exit,q             exit photo2"
 	    , "  find path kre vre  list all pictures with matching attribute key and value"
+	    , "  gen-html [p] [f]   generate HTML pages, default album is current album, default format \"html-1024x768\""
 	    , "  ls [path]          list album and picture names, default is the current working album"
 	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
 	    , "  lsra [path]        load and list album and picture names recursively, default is the current working album"
@@ -251,8 +255,7 @@ parseWdCmd pa name ps
 
 
 parseWdCmd'	:: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
-parseWdCmd' pa
-		= parseWdCmd (loadAndCheckAlbum />>>/ pa)
+parseWdCmd' pa	= parseWdCmd (loadAndCheckAlbum />>>/ pa)
 
 -- ------------------------------------------------------------
 
@@ -284,79 +287,81 @@ parseEdited	= parseLs' ( getTreeAndProcessDesc $
 			     \ p -> entryEdited `guards` constA p
 			   ) "edited"
 
-parseLs'	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
-parseLs' pa ps
-    = parseWdCmd' ls ps
-    where
-    ls	= ( pa
-	    />>>/
-	    const (arrIO (putStrLn . mkAbsPath . joinPath))
-	  )
-          `withDefaultRes` ()
+parseLs'		:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
+parseLs' pa ps		= parseWdCmd' ls ps
+                          where
+			  ls	= ( pa
+				    />>>/
+				    const (arrIO (putStrLn . mkAbsPath . joinPath))
+				  )
+				  `withDefaultRes` ()
 
-parseCat :: [String] -> [Cmd]
-parseCat
-    = parseWdCmd' cat "cat"
-    where
-    cat	= (getTreeAndProcess (\ p -> constA p &&& getNode))
-	  />>>/
-	  const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
-					      , (a_no_xml_pi, v_1)
-					      ] ""
-		)
+parseCat 		:: [String] -> [Cmd]
+parseCat		= parseWdCmd' cat "cat"
+                        where
+			cat = (getTreeAndProcess (\ p -> constA p &&& getNode))
+			      />>>/
+			      const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
+								  , (a_no_xml_pi, v_1)
+								  ] ""
+				    )
 
-parseDump	:: [String] -> [Cmd]
-parseDump
-    = parseWdCmd' dump "dump"
-    where
-    dump
-	= getTree
-	  />>>/
-	  const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
-					     , (a_no_xml_pi, v_1)
-					     ] ""
-		)
+parseGenHtml		:: [String] -> [Cmd]
+parseGenHtml []		= parseGenHtml [".", "html-1024x768"]
+parseGenHtml [p]	= parseGenHtml (p : ["html-1024x768"])
+parseGenHtml (p:f:_)	= parseWdCmd' gen "gen-html" [p]
+			  where
+			  gen = getTreeAndProcess (withConfig (genHtml f))
 
-parseRelatives	:: [String] -> [Cmd]
-parseRelatives
-    = parseWdCmd' relatives "relatives"
-    where
-    relatives
-	= getRelatives
-	  />>>/
-	  (\ p -> arrIO ( \ (parent, prev, next) ->
-			  putStrLn ( "this     = " ++ fp p      ++ "\n" ++
-				     "parent   = " ++ fp parent ++ "\n" ++
-				     "previous = " ++ fp prev   ++ "\n" ++
-				     "next     = " ++ fp next
+parseDump		:: [String] -> [Cmd]
+parseDump		= parseWdCmd' dump "dump"
+                          where
+			  dump = getTree
+				 />>>/
+				 const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
+								    , (a_no_xml_pi, v_1)
+								    ] ""
+				       )
+
+parseRelatives		:: [String] -> [Cmd]
+parseRelatives		= parseWdCmd' relatives "relatives"
+                          where
+			  relatives
+			      = getRelatives
+				/>>>/
+				(\ p -> arrIO ( \ (parent, prev, next) ->
+						putStrLn ( "this     = " ++ fp p      ++ "\n" ++
+							   "parent   = " ++ fp parent ++ "\n" ++
+							   "previous = " ++ fp prev   ++ "\n" ++
+							   "next     = " ++ fp next
+							 )
+					      )
+				)
+			  fp []	= ""
+			  fp p	= mkAbsPath . joinPath $ p
+
+parseStore		:: [String] -> [Cmd]
+parseStore		= parseWdCmd' storeAllChangedAlbums "store"
+
+parseStorePics		:: [String] -> [Cmd]
+parseStorePics		= parseWdCmd' storeAllChangedEntries "storepics"
+
+parseTest		:: [String] -> [Cmd]
+parseTest		= parseWdCmd' test "xxx"
+                          where
+			  test = changeAlbums $
+				 processTreeSelfAndDesc ( const $ perform $
+							  getNode >>> arr picId >>> arrIO print
+							)
+
+parseUpdate		:: [String] -> [Cmd]
+parseUpdate		= parseWdCmd' (changeAlbums update) "update"
+                          where
+			  update = processTreeSelfAndDesc
+				   ( withConfig updatePic
+				     />>>/
+				     withConfig updateExifAttrs
 				   )
-			)
-	  )
-    fp []	= ""
-    fp p	= mkAbsPath . joinPath $ p
-
-parseStore	:: [String] -> [Cmd]
-parseStore	= parseWdCmd' storeAllChangedAlbums "store"
-
-parseStorePics	:: [String] -> [Cmd]
-parseStorePics	= parseWdCmd' storeAllChangedEntries "storepics"
-
-parseTest	:: [String] -> [Cmd]
-parseTest	= parseWdCmd' test "xxx"
-                  where
-		  test = changeAlbums $
-			 processTreeSelfAndDesc ( const $ perform $
-						  getNode >>> arr picId >>> arrIO print
-						)
-
-parseUpdate	:: [String] -> [Cmd]
-parseUpdate	= parseWdCmd' (changeAlbums update) "update"
-                  where
-		  update = processTreeSelfAndDesc
-			   ( withConfig updatePic
-			     />>>/
-			     withConfig updateExifAttrs
-			   )
 
 parseNewAttrKeys	:: [String] -> [Cmd]
 parseNewAttrKeys	= parseWdCmd' ( changeAlbums $
@@ -377,19 +382,18 @@ parseAttr al		= parseWdCmd' ( changeAlbums $
 
 -- TODO refactor
 
-parseFind	:: [String] -> [Cmd]
-parseFind al
-    = parseWdCmd fe "find" (take 1 al)
-    where
-    rek	= concat . take 1 . drop 1 $ al
-    rev = concat          . drop 2 $ al
-    fe	= findEntries loadAlbums (getAllWithAttr rek rev) puts
-    puts (p, k, v)
-	= putStrLn ( intercalate ": "
-		     [ mkAbsPath . joinPath $ p
-		     , k , v
-		     ]
-		   )
+parseFind		:: [String] -> [Cmd]
+parseFind al		= parseWdCmd fe "find" (take 1 al)
+                          where
+			  rek	= concat . take 1 . drop 1 $ al
+			  rev   = concat          . drop 2 $ al
+			  fe	= findEntries loadAlbums (getAllWithAttr rek rev) puts
+			  puts (p, k, v)
+			      = putStrLn ( intercalate ": "
+					   [ mkAbsPath . joinPath $ p
+					   , k , v
+					   ]
+					 )
 
 -- ------------------------------------------------------------
 
