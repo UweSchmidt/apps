@@ -897,27 +897,36 @@ genHtml format conf p0
 		      , this    :-> constA pTemplate
 		      ]
 	      >>>
-	      processTemplate
-	      [ hasName "base"                :-> addAttr "href" (joinPath . map (const "..") $ p)
-	      , insertText "[theTitle]"       (const theTitle)
-	      , insertText "[theSubTitle]"    (const theSubTitle)
-	      , insertText "[theResources]"   (const theResources)
-	      , insertText "[theHeadTitle]"   insertHeadTitle
-	      , hasId "thePictureBody"        :-> processAttrl
-		                                  ( changeAttrValue (sed (const p') (escRE "[image]"))
-						    `when`
-						    hasName "style"
-						  )
-	      ]
+	      processTopDownWithAttrl
+	      ( choiceA
+		[ hasName "base"                :-> addAttr "href" (joinPath . map (const "..") $ p)
+		, insertText "[theTitle]"       (const theTitle)
+		, insertText "[theSubTitle]"    (const theSubTitle)
+		, insertText "[theResources]"   (const theResources)
+		, insertText "[theHeadTitle]"   insertHeadTitle
+		, insertText "[thePath]"        (const thePath)
+{-		, hasId "thePictureBody"        :-> processAttrl
+		                                    ( changeAttrValue (sed (const thePath) (escRE "[image]"))
+						      `when`
+						      hasName "style"
+						    )
+-}
+		, ( hasName "tr"
+		    >>>
+		    hasAttrValue "class" (== "info")
+		  )                             :-> (insertInfoItem $< getAttrValue "id")
+		, this                          :-> this
+		]
+	      )
               >>>
 	      writeHtmlPage
 	    where
-            p'			= joinPath p
             pas			= picAttrs pic
 
-	    theTitle		= fromMaybe "" . M.lookup "descr:Title"    $ pas
-	    theSubTitle		= fromMaybe "" . M.lookup "descr:Subtitle" $ pas
-	    theResources	= fromMaybe "" . M.lookup "descr:Resource" $ pas
+            thePath		= joinPath p
+	    theTitle		= valOf "descr:Title"
+	    theSubTitle		= valOf "descr:Subtitle"
+	    theResources	= valOf "descr:Resource"
 	    theHeadTitle	= stringTrim . concat . runLA (xread >>> deep isText >>> getText) $ theTitle
 
             insertHeadTitle 	= const $ if null theHeadTitle then "\160" else theHeadTitle
@@ -927,8 +936,20 @@ genHtml format conf p0
 				  temp' = escRE temp
                                   grep re = match (".*" ++ re ++ ".*")
 
+            insertInfoItem item	= if null val
+				  then none
+				  else processTopDown
+					   ( choiceA [ insertText ("[" ++ item ++ "]") (const val)
+						     , this :-> this
+						     ]
+					   )
+		                  where
+				  val = valOf item
+
 	    hasId n 		= hasAttrValue "id" (==n)
-	    dst			= format </> p' `addExtension` "html"
+	    valOf n		= fromMaybe "" . M.lookup n $ pas
+
+	    dst			= format </> thePath `addExtension` "html"
 
 	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
 	    writeHtmlPage

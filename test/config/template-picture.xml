@@ -26,7 +26,7 @@
   <body onload="initPicture();"
         class="picture"
         id="thePictureBody"
-        style="background-image: url(1024x768/[image].jpg);">
+        style="background-image: url(1024x768/[thePath].jpg);">
     <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
       <div class="title-area-line">
         <div class="title"   >[theTitle]</div>
@@ -39,9 +39,45 @@
         <div class="info">
           <div class="subtitle">Bild-Daten</div>
           <table class="info" id="theAttrList">
-            <tr>
-              <th id="theAttrName">Datum</th>
-              <td id="theAttrValue">07-03-11 13:55:33</td>
+            <tr class="info" id="descr:Title">
+              <th>Titel</th>
+              <td>[descr:Title]</td>
+            </tr>
+            <tr class="info" id="descr:Subtitle">
+              <th>Untertitel</th>
+              <td>[descr:Subtitle]</td>
+            </tr>
+            <tr class="info" id="descr:Comment">
+              <th>Kommentar</th>
+              <td>[descr:Comment]</td>
+            </tr>
+            <tr class="info" id="descr:Resource">
+              <th>Quellen</th>
+              <td>[descr:Resource]</td>
+            </tr>
+            <tr class="info" id="exif:CreateDate">
+              <th>Aufnahmedatum</th>
+              <td>[exif:CreateDate]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureTime">
+              <th>Belichtungszeit</th>
+              <td>[exif:ExposureTime]</td>
+            </tr>
+            <tr class="info" id="exif:FNumber">
+              <th>Blende</th>
+              <td>[exif:FNumber]</td>
+            </tr>
+            <tr class="info" id="exif:ISO">
+              <th>ISO</th>
+              <td>[exif:ISO]</td>
+            </tr>
+            <tr class="info" id="exif:FocalLength">
+              <th>Brennweite</th>
+              <td>[exif:FocalLength]</td>
+            </tr>
+            <tr class="info" id="xxx">
+              <th>xxx</th>
+              <td>[xxx]</td>
             </tr>
           </table>
         </div>
