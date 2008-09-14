@@ -14,9 +14,6 @@ import           Photo2.ArchiveTypes
 import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 import           Text.XML.HXT.DOM.Util ( stringTrim )
 
-match		:: String -> String -> Bool
-match re	= fromMaybe False . matchRE re
-
 parseExif	:: PicAttrs -> String -> Attrs
 parseExif pl
     = lines

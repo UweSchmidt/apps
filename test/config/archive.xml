@@ -22,8 +22,8 @@
     <attr name="descr:Keywords">(.*:)?[Kk]eywords</attr>
     <attr name="descr:Resource">(.*:)?[Rr]esource</attr>
     <attr name="descr:Subject">(.*:)?[Ss]ubject</attr>
-    <attr name="descr:Subtitle">(.*:)?[Ss]ubtitle</attr>
-    <attr name="descr:Title">(.*:)?[T]itle</attr>
+    <attr name="descr:Subtitle">(.*:)?[Ss]ub[Tt]itle</attr>
+    <attr name="descr:Title">(.*:)?[Tt]itle</attr>
     <attr name="descr:UserComment">(.*:)?UserComment|user-comment</attr>
     <attr name="exif:Aperture">(.*:)?Aperture</attr>
     <attr name="exif:ColorSpaceData">(.*:)?ColorSpaceData|color-space</attr>
@@ -58,7 +58,7 @@
     <attr name="file:RefXmp">(.*:)?RefXmp|ref-xmp</attr>
     <attr name="show:Duration">(.*:)?[Dd]uration</attr>
   </picture-attributes>
-  <layout id="html-1024x768" type="html-css">
+  <layout id="html-1024x768" type="html-css2">
     <attr name="duration">7000</attr>
     <attr name="geometry">1024x768</attr>
     <page type="album">

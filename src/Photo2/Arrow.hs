@@ -684,12 +684,12 @@ getAllWithAttr rek rev
 		>>>
 		( if null rek
 		  then this
-		  else isA (fromMaybe False . matchRE rek . fst)
+		  else isA (match rek . fst)
 		)
 		>>>
 		( if null rev
 		  then this
-		  else isA (fromMaybe False . matchRE rev . snd)
+		  else isA (match rev . snd)
 		)
 	      )
 	/>>>/
@@ -789,7 +789,7 @@ renameContent c p
 	isNewName (o, n)
 	    = n /= o
 	      &&
-	      (fromMaybe False . matchRE "pic-[0-9]+" $ o)
+	      (match "pic-[0-9]+" $ o)
 
 	picnr :: Int -> String
 	picnr = show
@@ -866,7 +866,7 @@ genHtml format conf p0
 					       , (a_parse_html,v_1)
 					       , (a_preserve_comment, v_1)
 					       , (a_remove_whitespace, v_1)
-					       , (a_trace,v_0)
+					       , (a_trace, v_0)
 					       ]
 			      >>>
 			      documentStatusOk
@@ -876,7 +876,7 @@ genHtml format conf p0
 			  )
 			  
     genPages	:: Layout -> XmlTree -> XmlTree -> CmdArrow AlbumTree AlbumTree
-    genPages layout aTemp pTemp
+    genPages layout aTemplate pTemplate
 	= runAction ("HTML page generation") $
 	  genAllPages p0
 	where
@@ -884,24 +884,83 @@ genHtml format conf p0
 	    = perform ( processChildren checkEntryLoaded
 			>>>
 			( runAction ("HTML Page for " ++ showPath p) $
-			  perform (genSinglePage p)
+			  perform ( genSinglePage p $<
+				    ( getNode &&& listA getChildren )
+				  )
 			)
 			>>>
 			getChildrenAndProcess getChildren genAllPages p
 		      )
-	genSinglePage	:: PathArrow AlbumTree b
-	genSinglePage p
-	    = none
+	genSinglePage	:: Path -> (Pic, [AlbumTree]) -> CmdArrow AlbumTree XmlTree
+	genSinglePage p (pic, cs)
+	    = choiceA [ isAlbum :-> constA aTemplate
+		      , this    :-> constA pTemplate
+		      ]
+	      >>>
+	      processTemplate
+	      [ hasName "base"                :-> addAttr "href" (joinPath . map (const "..") $ p)
+	      , insertText "[theTitle]"       (const theTitle)
+	      , insertText "[theSubTitle]"    (const theSubTitle)
+	      , insertText "[theResources]"   (const theResources)
+	      , insertText "[theHeadTitle]"   insertHeadTitle
+	      , hasId "thePictureBody"        :-> processAttrl
+		                                  ( changeAttrValue (sed (const p') (escRE "[image]"))
+						    `when`
+						    hasName "style"
+						  )
+	      ]
+              >>>
+	      writeHtmlPage
+	    where
+            p'			= joinPath p
+            pas			= picAttrs pic
+
+	    theTitle		= fromMaybe "" . M.lookup "descr:Title"    $ pas
+	    theSubTitle		= fromMaybe "" . M.lookup "descr:Subtitle" $ pas
+	    theResources	= fromMaybe "" . M.lookup "descr:Resource" $ pas
+	    theHeadTitle	= stringTrim . concat . runLA (xread >>> deep isText >>> getText) $ theTitle
+
+            insertHeadTitle 	= const $ if null theHeadTitle then "\160" else theHeadTitle
+
+            insertText temp ins = hasText (grep temp') :-> ( getText >>> arr (sed ins temp') >>> xread )
+                                  where
+				  temp' = escRE temp
+                                  grep re = match (".*" ++ re ++ ".*")
+
+	    hasId n 		= hasAttrValue "id" (==n)
+	    dst			= format </> p' `addExtension` "html"
+
+	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
+	    writeHtmlPage
+		= runAction ("write HTML page to file " ++ show dst) $
+		  addDoctypeDecl "html"
+				 "-//W3C//DTD XHTML 1.0 Transitional//EN"
+				  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
+		  >>>
+		  perform (constA dst >>> arrIOE mkDirectoryPath)
+
+		  >>>
+		  writeDocument [ (a_indent, v_1)
+				, (a_output_encoding, isoLatin1)
+				] "" -- dst
 
 -- ------------------------------------------------------------
-{-
-processTemplate	:: (ArrowTree a, Tree t) =>
+
+processTemplate	:: (ArrowTree a, Tree t, ArrowIO a) =>
 		   [IfThen (a (t b) c) (a (t b) (t b))] ->
 		   a (t b) (t b)
 
 processTemplate cases
-    = process
-    where
-    process = processTopDown (cases ++ [ constA undefined :-> processChildren process])
--}
+    = ( (choiceA cases `orElse` this)
+	>>>
+	processChildren (processTemplate cases)
+      )
+
 -- ------------------------------------------------------------
+
+escRE	:: String -> String
+escRE	= concatMap esc
+    where
+    esc c
+	| c `elem` "[].*+?()\\"	= '\\' : c : []
+	| otherwise		= c : []
