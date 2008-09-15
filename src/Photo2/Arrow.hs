@@ -601,13 +601,13 @@ selSelfAndDescAndProcessBU pa p
 
 -- ----------------------------------------
 
-hasPicId	:: Name -> CmdArrow AlbumTree AlbumTree
-hasPicId n    = (getPicId >>> isA (==n)) `guards` this
+hasPicId	:: ArrowTree a => Name -> a AlbumTree AlbumTree
+hasPicId n	= (getPicId >>> isA (==n)) `guards` this
 
-getPicId	:: CmdArrow AlbumTree Name
+getPicId	:: ArrowTree a => a AlbumTree Name
 getPicId	= getNode >>^ picId
 
-mkPic		:: Pic -> CmdArrow AlbumTree AlbumTree
+mkPic		:: ArrowTree a => Pic -> a AlbumTree AlbumTree
 mkPic		= mkLeaf
 
 getRootPath	:: CmdArrow a Path
@@ -885,39 +885,51 @@ genHtml format conf p0
 			>>>
 			( runAction ("HTML Page for " ++ showPath p) $
 			  perform ( genSinglePage p $<
-				    ( getNode &&& listA getChildren )
+				    ( getNode
+				      &&&
+				      listA getChildren
+				      &&&
+				      ( get theAlbums >>> getRelatives p)
+				    )
 				  )
 			)
 			>>>
 			getChildrenAndProcess getChildren genAllPages p
 		      )
-	genSinglePage	:: Path -> (Pic, [AlbumTree]) -> CmdArrow AlbumTree XmlTree
-	genSinglePage p (pic, cs)
+	genSinglePage	:: Path -> (Pic, ([AlbumTree], (Path, Path, Path))) -> CmdArrow AlbumTree XmlTree
+	genSinglePage p (pic, (cs, (par, prv, nxt)))
 	    = choiceA [ isAlbum :-> constA aTemplate
 		      , this    :-> constA pTemplate
 		      ]
 	      >>>
 	      processTopDownWithAttrl
 	      ( choiceA
-		[ hasName "base"                :-> addAttr "href" (joinPath . map (const "..") $ p)
+		[ hasName "base"                :-> none -- addAttr "href" (joinPath . map (const "..") $ p)
 		, insertText "[theTitle]"       theTitle
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources
 		, insertText "[theHeadTitle]"   theHeadTitle
-		, insertText "[thePath]"        thePath
+		, insertText "[theUpPath]"      theUpPath
+		, hasMark "[thePath]"           :-> changeText (insertPath "[thePath]" thePath)
+
 		, ( hasName "tr"
 		    >>>
 		    hasAttrValue "class" (== "info")
 		  )                             :-> ( insertInfoItem $< getAttrValue "id" )
-		, hasMark "[theJavaScriptCode]"  :-> ( getText
+
+		, hasMark "[theJavaScriptCode]" :-> ( getText
 						      >>>
 						      arr ( replace ""          "[theJavaScriptCode]"
 							    >>>
 							    replace theDuration "[theDuration]"
 							    >>>
-							    insertPath "[theNextPath]" theNextPath
+							    insertPath "[theNextPath]"   theNextPath
 							    >>>
-							    insertPath "[thePrevPath]" thePrevPath
+							    insertPath "[thePrevPath]"   thePrevPath
+							    >>>
+							    insertPath "[theParentPath]" theParentPath
+							    >>>
+							    insertPath "[the1ChildPath]" the1ChildPath
 							  )
 						      >>>
 						      mkCmt
@@ -929,10 +941,22 @@ genHtml format conf p0
 	      writeHtmlPage
 	    where
             pas			= picAttrs pic
+	    child1p		= concat .
+				  runLA ( ( arrL (take 1)
+					    >>>
+					    getPicId
+					    >>>
+					    arr ((p ++) . (:[]))
+					  )
+					  `withDefault` []
+					) $ cs
 
             thePath		= joinPath p
-            theNextPath         = "the/next/Path" -- TODO
-            thePrevPath         = ""              -- TODO
+	    theUpPath           = joinPath . map (const "..") $ p
+            theNextPath         = joinPath nxt
+            thePrevPath         = joinPath prv
+            theParentPath       = joinPath par
+	    the1ChildPath	= joinPath child1p
 
 	    theTitle		= valOf        "descr:Title"
 	    theSubTitle		= valOf        "descr:Subtitle"
@@ -955,7 +979,7 @@ genHtml format conf p0
 				  pt'' = "\\[.*" ++ pt' ++ ".*\\]"
 				  ins
 				      | null p		= const ""
-				      | otherwise	= tail >>> init >>> replace p pt
+				      | otherwise	= tail >>> init >>> replace p pt >>> relPath
 
             insertInfoItem item	= if null val
 				  then none
@@ -978,8 +1002,20 @@ genHtml format conf p0
             valOf' d n          = fromMaybe d . M.lookup n $ pas
 
             fullPath            = (format </>)
+            relPath             = (theUpPath </>)
 
 	    dst			= fullPath $ thePath `addExtension` "html"
+
+            eeToHtml		= processBottomUp
+				  ( replaceChildren (cmt " firefox hack ")	-- insert a comment for preventing e.g. <div/>
+				    `when`
+				    ( isElem
+				      >>>
+				      hasNameWith (localPart >>> (`notElem` ["meta", "link", "hr", "br"]))
+				      >>>
+				      neg getChildren
+				    )
+				  )
 
 	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
 	    writeHtmlPage
@@ -989,11 +1025,14 @@ genHtml format conf p0
 				  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
 		  >>>
 		  perform (constA dst >>> arrIOE mkDirectoryPath)
-
 		  >>>
-		  writeDocument [ (a_indent, v_1)
+		  indentDoc
+		  >>>
+		  eeToHtml	-- this is a hack for firefox, it does not process empty xhtml elements, e.g. <div/>
+		  >>>
+		  writeDocument [ (a_indent, v_0)
 				, (a_output_encoding, isoLatin1)
-				] "" -- dst
+				] dst
 
 -- ------------------------------------------------------------
 
