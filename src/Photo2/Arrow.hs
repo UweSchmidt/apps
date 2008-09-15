@@ -900,21 +900,28 @@ genHtml format conf p0
 	      processTopDownWithAttrl
 	      ( choiceA
 		[ hasName "base"                :-> addAttr "href" (joinPath . map (const "..") $ p)
-		, insertText "[theTitle]"       (const theTitle)
-		, insertText "[theSubTitle]"    (const theSubTitle)
-		, insertText "[theResources]"   (const theResources)
-		, insertText "[theHeadTitle]"   insertHeadTitle
-		, insertText "[thePath]"        (const thePath)
-{-		, hasId "thePictureBody"        :-> processAttrl
-		                                    ( changeAttrValue (sed (const thePath) (escRE "[image]"))
-						      `when`
-						      hasName "style"
-						    )
--}
+		, insertText "[theTitle]"       theTitle
+		, insertText "[theSubTitle]"    theSubTitle
+		, insertText "[theResources]"   theResources
+		, insertText "[theHeadTitle]"   theHeadTitle
+		, insertText "[thePath]"        thePath
 		, ( hasName "tr"
 		    >>>
 		    hasAttrValue "class" (== "info")
-		  )                             :-> (insertInfoItem $< getAttrValue "id")
+		  )                             :-> ( insertInfoItem $< getAttrValue "id" )
+		, hasMark "[theJavaScriptCode]"  :-> ( getText
+						      >>>
+						      arr ( replace ""          "[theJavaScriptCode]"
+							    >>>
+							    replace theDuration "[theDuration]"
+							    >>>
+							    insertPath "[theNextPath]" theNextPath
+							    >>>
+							    insertPath "[thePrevPath]" thePrevPath
+							  )
+						      >>>
+						      mkCmt
+		                                    )
 		, this                          :-> this
 		]
 	      )
@@ -924,32 +931,55 @@ genHtml format conf p0
             pas			= picAttrs pic
 
             thePath		= joinPath p
-	    theTitle		= valOf "descr:Title"
-	    theSubTitle		= valOf "descr:Subtitle"
-	    theResources	= valOf "descr:Resource"
+            theNextPath         = "the/next/Path" -- TODO
+            thePrevPath         = ""              -- TODO
+
+	    theTitle		= valOf        "descr:Title"
+	    theSubTitle		= valOf        "descr:Subtitle"
+	    theResources	= valOf        "descr:Resource"
+	    theDuration         = valOf' "1.0" "show:Duration"
+
 	    theHeadTitle	= stringTrim . concat . runLA (xread >>> deep isText >>> getText) $ theTitle
 
-            insertHeadTitle 	= const $ if null theHeadTitle then "\160" else theHeadTitle
+	    replace n o		= sed (const n) (escRE o)
 
-            insertText temp ins = hasText (grep temp') :-> ( getText >>> arr (sed ins temp') >>> xread )
-                                  where
-				  temp' = escRE temp
-                                  grep re = match (".*" ++ re ++ ".*")
+            insertHeadTitle 	= if null theHeadTitle
+				  then "\160"
+				  else theHeadTitle
+
+            insertText temp ins = hasMark temp :-> ( (getText >>^ replace ins temp) >>> xread )
+
+            insertPath pt p	= sed ins pt''
+		                  where
+                                  pt'  = escRE pt
+				  pt'' = "\\[.*" ++ pt' ++ ".*\\]"
+				  ins
+				      | null p		= const ""
+				      | otherwise	= tail >>> init >>> replace p pt
 
             insertInfoItem item	= if null val
 				  then none
 				  else processTopDown
-					   ( choiceA [ insertText ("[" ++ item ++ "]") (const val)
-						     , this :-> this
-						     ]
-					   )
+				       ( choiceA [ insertText ("[" ++ item ++ "]") val
+						 , this :-> this
+						 ]
+				       )
 		                  where
 				  val = valOf item
 
-	    hasId n 		= hasAttrValue "id" (==n)
-	    valOf n		= fromMaybe "" . M.lookup n $ pas
+            hasMark mark        = hasText (grep . escRE $ mark)
+                                  where
+				  anyCharSeq = "(.|[\n\r])*"
+                                  grep re = match (anyCharSeq ++ re ++ anyCharSeq)
 
-	    dst			= format </> thePath `addExtension` "html"
+	    hasId n 		= hasAttrValue "id" (==n)
+
+	    valOf		= valOf' ""
+            valOf' d n          = fromMaybe d . M.lookup n $ pas
+
+            fullPath            = (format </>)
+
+	    dst			= fullPath $ thePath `addExtension` "html"
 
 	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
 	    writeHtmlPage
@@ -983,5 +1013,5 @@ escRE	:: String -> String
 escRE	= concatMap esc
     where
     esc c
-	| c `elem` "[].*+?()\\"	= '\\' : c : []
-	| otherwise		= c : []
+	| c `elem` "{}[].*+?|()\\"	= '\\' : c : []
+	| otherwise			= c : []
