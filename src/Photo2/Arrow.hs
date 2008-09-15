@@ -909,14 +909,15 @@ genHtml format conf p0
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources
 		, insertText "[theHeadTitle]"   theHeadTitle
-		, insertText "[theUpPath]"      theUpPath
-		, hasMark "[thePath]"           :-> changeText (insertPath "[thePath]" thePath)
 
 		, ( hasName "tr"
 		    >>>
 		    hasAttrValue "class" (== "info")
-		  )                             :-> ( insertInfoItem $< getAttrValue "id" )
-
+		  )                             :-> ( ( insertInfoItem $< getAttrValue "id" )
+						      >>>
+						      removeAttr "id"
+						    )
+						    -- here the order is important
 		, hasMark "[theJavaScriptCode]" :-> ( getText
 						      >>>
 						      arr ( replace ""          "[theJavaScriptCode]"
@@ -934,6 +935,20 @@ genHtml format conf p0
 						      >>>
 						      mkCmt
 		                                    )
+
+		, insertText "[theUpPath]"      theUpPath
+
+		, insertP    "[thePath]"        thePath
+		, insertP    "[theParentPath]"  theParentPath
+		, insertP    "[theNextPath]"    theNextPath
+		, insertP    "[thePrevPath]"    thePrevPath
+		, insertP    "[the1ChildPath]"  the1ChildPath
+
+		, guardNavi "theParentNav"      par
+		, guardNavi "thePrevNav"        prv
+		, guardNavi "the1ChildNav"      child1p
+		, guardNavi "theNextNav"        nxt
+
 		, this                          :-> this
 		]
 	      )
@@ -972,14 +987,15 @@ genHtml format conf p0
 				  else theHeadTitle
 
             insertText temp ins = hasMark temp :-> ( (getText >>^ replace ins temp) >>> xread )
+	    insertP    temp ins = hasMark temp :-> changeText (insertPath temp ins)
 
-            insertPath pt p	= sed ins pt''
+            insertPath pt p'	= sed ins pt''
 		                  where
                                   pt'  = escRE pt
 				  pt'' = "\\[.*" ++ pt' ++ ".*\\]"
 				  ins
-				      | null p		= const ""
-				      | otherwise	= tail >>> init >>> replace p pt >>> relPath
+				      | null p'		= const ""
+				      | otherwise	= tail >>> init >>> replace p' pt >>> relPath
 
             insertInfoItem item	= if null val
 				  then none
@@ -990,6 +1006,14 @@ genHtml format conf p0
 				       )
 		                  where
 				  val = valOf item
+
+	    guardNavi nid p'	= hasId nid :-> ( ( if null p'
+			                            then replaceChildren (txt "\160")
+						    else this
+						  )
+                                                  >>>
+						  removeAttr "id"
+						)
 
             hasMark mark        = hasText (grep . escRE $ mark)
                                   where
