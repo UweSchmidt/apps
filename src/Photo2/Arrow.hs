@@ -1059,7 +1059,10 @@ genHtml format conf p0
 				    `when`
 				    ( isElem
 				      >>>
-				      hasNameWith (localPart >>> (`notElem` ["meta", "link", "hr", "br"]))
+				      hasNameWith (localPart
+						   >>>
+						   (`notElem` ["meta", "link", "hr", "br", "img"])
+						  )
 				      >>>
 				      neg getChildren
 				    )
