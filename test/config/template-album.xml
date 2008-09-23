@@ -113,7 +113,57 @@
       <tr>
         <td class="head1"/>
         <td class="head2"/>
-        <td class="head3"/>
+        <td class="head3">
+          <table class="nav" align="right">
+            <tr>
+              <td class="icon2">&nbsp;</td>
+              <td class="icon2" id="theParentNav">
+                <a href="javascript:parentPage();"
+                   title="Album[theParentTitle]">
+                  <img src="[100x75/[theParentPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="Album[theParentTitle]"/>
+                </a>
+              </td>
+              <td class="icon2">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="icon2" id="thePrevNav">
+                <a href="javascript:prevPage();"
+                   title="zur&uuml;ck[thePrevTitle]">
+                  <img src="[100x75/[thePrevPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="zur&uuml;ck[thePrevTitle]"/>
+                </a>
+              </td>
+              <td class="icon2" id="the1ChildNav">
+                <a href="javascript:childPage(&apos;[html-1024x748/[the1ChildPath].html]&apos;);"
+                   title="1.Bild[the1ChildTitle]"
+                   id="the1ChildNav">
+                  <img src="[100x75/[the1ChildPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="1.Bild[the1ChildPath]"/>
+                </a>
+              </td>
+              <td class="icon2" id="theNextNav">
+                <a href="javascript:nextPage();"
+                   title="weiter[theNextTitle]">
+                  <img src="[100x75/[theNextPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="weiter[theNextTitle]"/>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
       </tr>
     </table>
   </body>
