@@ -880,6 +880,9 @@ genHtml format conf p0
 	= runAction ("HTML page generation") $
 	  genAllPages p0
 	where
+        getAbs		:: PathArrow AlbumTree b -> Path -> CmdArrow a b
+	getAbs pa p	= get theAlbums >>> pa p
+
 	genAllPages p
 	    = perform ( processChildren checkEntryLoaded
 			>>>
@@ -889,7 +892,7 @@ genHtml format conf p0
 				      &&&
 				      listA getChildren
 				      &&&
-				      ( get theAlbums >>> getRelatives p)
+				      getAbs getRelatives p
 				    )
 				  )
 			)
@@ -908,7 +911,7 @@ genHtml format conf p0
 		, insertText "[theTitle]"       theTitle
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources
-		, insertText "[theHeadTitle]"   theHeadTitle
+		, insertText "[theHeadTitle]"   theHeadTitle'
 
 		, ( hasName "tr"
 		    >>>
@@ -944,6 +947,11 @@ genHtml format conf p0
 		, insertP    "[thePrevPath]"    thePrevPath
 		, insertP    "[the1ChildPath]"  the1ChildPath
 
+                , insertNavT "[theParentTitle]" par
+                , insertNavT "[thePrevTitle]"   prv
+                , insertNavT "[the1ChildTitle]" child1p
+                , insertNavT "[theNextTitle]"   nxt
+
 		, guardNavi "theParentNav"      par
 		, guardNavi "thePrevNav"        prv
 		, guardNavi "the1ChildNav"      child1p
@@ -977,17 +985,21 @@ genHtml format conf p0
 	    theSubTitle		= valOf        "descr:Subtitle"
 	    theResources	= valOf        "descr:Resource"
 	    theDuration         = valOf' "1.0" "show:Duration"
+	    theHeadTitle	= removeMarkup theTitle
+            theHeadTitle'
+		| null theHeadTitle	= "\160"
+		| otherwise		= theHeadTitle
 
-	    theHeadTitle	= stringTrim . concat . runLA (xread >>> deep isText >>> getText) $ theTitle
+            removeMarkup	= stringTrim . concat . runLA (xread >>> deep isText >>> getText)
 
 	    replace n o		= sed (const n) (escRE o)
 
-            insertHeadTitle 	= if null theHeadTitle
-				  then "\160"
-				  else theHeadTitle
-
             insertText temp ins = hasMark temp :-> ( (getText >>^ replace ins temp) >>> xread )
 	    insertP    temp ins = hasMark temp :-> changeText (insertPath temp ins)
+
+	    insertNavT temp p'	= hasMark temp :-> ( changeNav $< getTitleText p' )
+				  where
+				  changeNav ins = changeText (replace ins temp)
 
             insertPath pt p'	= sed ins pt''
 		                  where
@@ -1014,6 +1026,18 @@ genHtml format conf p0
                                                   >>>
 						  removeAttr "id"
 						)
+            getTitleText p	= getAbs getTree p
+				  >>>
+				  getNode
+				  >>>
+				  arr (picAttrs
+				       >>>
+				       M.lookup "descr:Title"
+				       >>>
+				       maybe "" (": " ++)
+				       >>>
+				       removeMarkup
+				      )
 
             hasMark mark        = hasText (grep . escRE $ mark)
                                   where

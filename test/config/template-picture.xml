@@ -19,7 +19,7 @@
       var previmg  = '[1024x768/[thePrevPath].jpg]';
       [theJavaScriptCode]
     </script>
-    <script type="text/javascript" src="[theUpPath]/config/album.js"/>
+    <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
   </head>
   <body onload="initPicture();"
         class="picture"
