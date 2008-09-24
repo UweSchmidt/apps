@@ -3,7 +3,7 @@
 /* Navigation in picture pages */
 
 function trc (t, Text) {
-  if ( t >= 0 ) {
+  if ( t > 0 ) {
     alert(Text);
     /* nice try
        if (window.statusbar && window.statusbar.visible == true) {
