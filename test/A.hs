@@ -1,13 +1,15 @@
-module A
+module Main
 where
 
 import Photo2.CmdInterpreter
 import Photo2.ArchiveTypes
-import Photo2.FilePath
-import Photo2.Config
+-- import Photo2.FilePath
+-- import Photo2.Config
 
-m
-    = do
-      s1 <- cmdLoop emptyAppState
-      return ()
+m	:: IO ()
+m	= do
+	  cmdLoop emptyAppState
+	  return ()
 
+main	:: IO ()
+main	= m

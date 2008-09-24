@@ -9,6 +9,7 @@ import qualified Data.Map as M
 
 import           Photo2.ArchiveTypes
 import           Photo2.Arrow
+import           Photo2.Html
 import           Photo2.FilePath
 
 import           System.IO
