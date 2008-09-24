@@ -907,7 +907,7 @@ genHtml format conf p0
 	      >>>
 	      processTopDownWithAttrl
 	      ( choiceA
-		[ hasName "base"                :-> none -- addAttr "href" (joinPath . map (const "..") $ p)
+		[ hasName "base"                :-> none	 -- we do not use the base elemet for addressing the other docs -- addAttr "href" (joinPath . map (const "..") $ p)
 		, insertText "[theTitle]"       theTitle
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources
@@ -915,11 +915,16 @@ genHtml format conf p0
 
 		, ( hasName "tr"
 		    >>>
-		    hasAttrValue "class" (== "info")
+		    hasClass "info"
 		  )                             :-> ( ( insertInfoItem $< getAttrValue "id" )
 						      >>>
 						      removeAttr "id"
 						    )
+                , ( hasName "tr"
+		    >>>
+		    hasId "theAlbumRow"
+		  )				:-> (genTable $< (getAttrValue "size" >>> arr read))
+
 						    -- here the order is important
 		, hasMark "[theJavaScriptCode]" :-> ( getText
 						      >>>
@@ -999,8 +1004,11 @@ genHtml format conf p0
 
 	    insertNavT temp p'	= hasMark temp :-> ( changeNav $< getTitleText p' )
 				  where
-				  changeNav ins = changeText (replace ins temp)
-
+				  changeNav ins = changeText (replace ins' temp)
+						  where
+						  ins'
+						     | null ins	 = ins
+						     | otherwise = ": " ++ ins
             insertPath pt p'	= sed ins pt''
 		                  where
                                   pt'  = escRE pt
@@ -1019,6 +1027,44 @@ genHtml format conf p0
 		                  where
 				  val = valOf item
 
+            insertChild		:: AlbumTree ->CmdArrow XmlTree XmlTree
+	    insertChild t	= processTopDownWithAttrl
+				  ( choiceA
+				    [ insertP    "[theChildPath]"  (joinPath cp)
+				    , let temp = "[theChildTitle]"
+				      in hasMark temp :-> changeText (replace thePlainT temp)
+				    , this :-> this
+				    ]
+				  )
+	                          where
+				  cp		= p ++ [thePicId]
+				  thePicId	= picId thePic
+				  thePic	= head . runLA getNode $ t
+				  theTitleT	= getPlainTitle thePic
+
+				  thePlainT	| not (null theTitleT)	= theTitle
+						| match "pic-[0-9]+" thePicId
+								       	= sed (const "Bild ") "pic-0*" thePicId
+						| otherwise		= thePicId
+
+            genTable		:: Int -> CmdArrow XmlTree XmlTree
+	    genTable n		= ( ( getChildren
+				      >>>
+				      hasName "td"
+				      >>>
+				      catA (map insertChild cs)
+				    )
+				    >>.
+				    part
+				  )
+				  >>>
+				  selem "tr" [unlistA]
+				  where
+				  part []	= []
+				  part l	= h : part r
+						  where
+						  (h, r) = splitAt n l
+
 	    guardNavi nid p'	= hasId nid :-> ( ( if null p'
 			                            then replaceChildren (txt "\160")
 						    else this
@@ -1026,25 +1072,27 @@ genHtml format conf p0
                                                   >>>
 						  removeAttr "id"
 						)
-            getTitleText p	= getAbs getTree p
+            getTitleText p'	= getAbs getTree p'
 				  >>>
 				  getNode
 				  >>>
-				  arr (picAttrs
-				       >>>
-				       M.lookup "descr:Title"
-				       >>>
-				       maybe "" (": " ++)
-				       >>>
-				       removeMarkup
-				      )
+				  arr getPlainTitle
+
+            getPlainTitle	= picAttrs
+				  >>>
+				  M.lookup "descr:Title"
+				  >>>
+				  fromMaybe ""
+				  >>>
+				  removeMarkup
 
             hasMark mark        = hasText (grep . escRE $ mark)
                                   where
 				  anyCharSeq = "(.|[\n\r])*"
                                   grep re = match (anyCharSeq ++ re ++ anyCharSeq)
 
-	    hasId n 		= hasAttrValue "id" (==n)
+	    hasId n 		= hasAttrValue "id"    (==n)
+	    hasClass n		= hasAttrValue "class" (==n)
 
 	    valOf		= valOf' ""
             valOf' d n          = fromMaybe d . M.lookup n $ pas
