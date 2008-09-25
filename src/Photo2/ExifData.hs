@@ -169,6 +169,7 @@ prefixMap
       , ( "Contrast",			"exif"  )
       , ( "CreateDate",			"exif"  )
       , ( "DateTimeOriginal",		"exif"  )
+      , ( "DepthOfField",		"exif"  )
       , ( "Duration",			"show"  )
       , ( "ExposureCompensation",	"exif"  )
       , ( "ExposureMode",		"exif"  )
@@ -216,6 +217,7 @@ isAttrKey
 	      , "Contrast"
 	      , "CreateDate"
 	      , "DateTimeOriginal"
+	      , "DepthOfField"
 	      , "ExposureCompensation"
 	      , "ExposureMode"
 	      , "ExposureProgram"
@@ -250,3 +252,4 @@ isAttrKey
 	      , "WhiteBalance"
 	      ]
       )
+-- ------------------------------------------------------------

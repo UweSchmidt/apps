@@ -750,6 +750,7 @@ updateAttr	:: String -> String -> ConfigArrow AlbumTree AlbumTree
 updateAttr an av c p
     = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av) $
       editNode (arr $ change theAttrs (mergeAttr (newAttrKey (confPicAttrs c) an) av))
+
 {-
 updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
 updateAttrs am p
@@ -760,6 +761,11 @@ updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
 updateExifAttrs c p
     = runAction ("updating " ++ showPath p ++ " exif attributes") $
       editNode (arrIOE (importExifAttrs c p))
+
+deleteAttr	:: String -> PathArrow AlbumTree AlbumTree
+deleteAttr an p
+    = runAction ("deleting " ++ showPath p ++ " attr " ++ show an) $
+      editNode (arr $ change theAttrs (remAttrs an))
 
 -- ------------------------------------------------------------
 --

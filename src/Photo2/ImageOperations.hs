@@ -7,6 +7,7 @@ import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
 
 import           Data.Char
+import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
 
@@ -27,6 +28,8 @@ import           System.Time	( ClockTime
 import           System.Locale	( defaultTimeLocale )
 
 import           Text.Regex
+
+import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 
 -- ------------------------------------------------------------
 
@@ -67,6 +70,13 @@ mergeAttr	:: Name -> Value -> Attrs -> Attrs
 mergeAttr k v
     | null v	= M.delete k
     | otherwise	= M.insert k v
+
+remAttrs	:: Name -> Attrs -> Attrs
+remAttrs kp	= M.foldWithKey remK M.empty
+		  where
+		  remK k a m
+		      | match kp k	= m
+		      | otherwise	= M.insert k a m
 
 -- ------------------------------------------------------------
 
@@ -109,8 +119,7 @@ importExifAttrs c _p pic
 			      `M.union` xmpData
 			    )
 			    `M.union` fileData
-	      return $ change theAttrs (mergeAttrs newData) pic
-
+	      return $ change theAttrs (mergeAttrs (remAttrs "unknown:.*" newData)) pic
     where
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
@@ -141,9 +150,9 @@ importExifAttrs c _p pic
 
     fileData
 	= exifAttrs . unlines $
-	  [ "Ref-Orig : " ++ orig
-	  , "Ref-Raw : "  ++ raw
-	  , "Ref-Xmp : "  ++ xmp
+	  [ "RefOrig : " ++ orig
+	  , "RefRaw : "  ++ raw
+	  , "RefXmp : "  ++ xmp
 	  ]
 
 -- ------------------------------------------------------------

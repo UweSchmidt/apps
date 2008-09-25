@@ -139,6 +139,9 @@ parseCmd "newattrs"  args	= parseNewAttrKeys	args
 parseCmd "attr"      args
     | length args >=2		= parseAttr		args
 
+parseCmd "deleteattr" args
+    | length args ==2		= parseDeleteAttr	args
+
 parseCmd "rename"    args
     | length args == 2		= parseRename
 				  "rename" (renamePic (concat . drop 1 $ args))
@@ -166,38 +169,39 @@ parseCmd "?" []
     usage = unlines $
 	    [ "commands available from the promt:"
 	    , ""
-	    , "  ?                  help (this text)"
-	    , "  attr path n [vl]   set attribute value for picture/album or unset attr, if vl is missing"
-	    , "  cat [path]         list the contents of an entry, default is current working album"
-	    , "  close              write the whole data, albums, config and archive"
-	    , "  config             list config data"
-	    , "  dump [path]        list the contents of a whole album, default is current working album"
-	    , "  edited [path]      list all edited pictures"
-	    , "  exit,q             exit photo2"
-	    , "  find path kre vre  list all pictures with matching attribute key and value"
-	    , "  gen-html [p] [f]   generate HTML pages, default album is current album, default format \"html-1024x768\""
-	    , "  ls [path]          list album and picture names, default is the current working album"
-	    , "  lsr [path]         list album and picture names recursively, default is the current working album"
-	    , "  lsra [path]        load and list album and picture names recursively, default is the current working album"
-	    , "  newattrs [path]    change attribute keys to new format"
-	    , "  open <archive>     load a photo archive, configuration and root album"
-	    , "  options            list options"
-	    , "  pwd                print working album (dir)"
-	    , "  relatives [path]   list the paths of the parent, the previous and the next entry"
-	    , "  rename-cont [path] rename all pictures in an album"
-	    , "  rename path newid  rename picture"
-	    , "  set <opt> [val]    set or overwrite an option, default value is \"1\""
-	    , "      copy-copy      force creation of all copies in all required sizes"
-	    , "      copy-exif      force import of exif info from original"
-	    , "      copy-org       force import of original images"
-	    , "      debug          debug output"
-	    , "  defpicattr a val   define a picture attribute"
-	    , "  store-config       write the config data"
-	    , "  store [path]       write all albums addressed by path and unload subalbums"
-	    , "  storepics [path]   write all pictures and albums addressed by path and unload subalbums"
-	    , "  unset <opt>        unset an option"
-	    , "  update [path]      import image and update copies, if original has changed"
-	    , "  version            print photo2 version"
+	    , "  ?                          help (this text)"
+	    , "  attr path n [vl]           set attribute value for picture/album or unset attr, if vl is missing"
+	    , "  deleteattr path pattern    delete all attributes matching the attribute name pattern"
+	    , "  cat [path]                 list the contents of an entry, default is current working album"
+	    , "  close                      write the whole data, albums, config and archive"
+	    , "  config                     list config data"
+	    , "  dump [path]                list the contents of a whole album, default is current working album"
+	    , "  edited [path]              list all edited pictures"
+	    , "  exit,q                     exit photo2"
+	    , "  find path kre vre          list all pictures with matching attribute key and value"
+	    , "  gen-html [p] [f]           generate HTML pages, default album is current album, default format \"html-1024x768\""
+	    , "  ls [path]                  list album and picture names, default is the current working album"
+	    , "  lsr [path]                 list album and picture names recursively, default is the current working album"
+	    , "  lsra [path]                load and list album and picture names recursively, default is the current working album"
+	    , "  newattrs [path]            change attribute keys to new format"
+	    , "  open <archive>             load a photo archive, configuration and root album"
+	    , "  options                    list options"
+	    , "  pwd                        print working album (dir)"
+	    , "  relatives [path]           list the paths of the parent, the previous and the next entry"
+	    , "  rename-cont [path]         rename all pictures in an album"
+	    , "  rename path newid          rename picture"
+	    , "  set <opt> [val]            set or overwrite an option, default value is \"1\""
+	    , "      copy-copy              force creation of all copies in all required sizes"
+	    , "      copy-exif              force import of exif info from original"
+	    , "      copy-org               force import of original images"
+	    , "      debug                  debug output"
+	    , "  defpicattr a val           define a picture attribute"
+	    , "  store-config               write the config data"
+	    , "  store [path]               write all albums addressed by path and unload subalbums"
+	    , "  storepics [path]           write all pictures and albums addressed by path and unload subalbums"
+	    , "  unset <opt>                unset an option"
+	    , "  update [path]              import image and update copies, if original has changed"
+	    , "  version                    print photo2 version"
 	    ]
 
 parseCmd "version" []
@@ -380,6 +384,13 @@ parseAttr al		= parseWdCmd' ( changeAlbums $
 				      ) "attr" (take 1 al)
                           where
 			  (an : avl) = tail al
+
+parseDeleteAttr		:: [String] -> [Cmd]
+parseDeleteAttr al	= parseWdCmd' ( changeAlbums $
+					processTreeSelfAndDesc (deleteAttr ap)
+				      ) "deleteattr" (take 1 al)
+                          where
+			  (ap : _) = tail al
 
 -- TODO refactor
 

@@ -60,9 +60,29 @@
               <th>Belichtungszeit</th>
               <td>[exif:ExposureTime]</td>
             </tr>
+            <tr class="info" id="exif:ExposureMode">
+              <th>Belichtungsmessung</th>
+              <td>[exif:ExposureMode]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureProgram">
+              <th>Aufnahmebetriebsart</th>
+              <td>[exif:ExposureProgram]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureCompensation">
+              <th>Belichtungskorrektur</th>
+              <td>[exif:ExposureCompensation]</td>
+            </tr>
             <tr class="info" id="exif:FNumber">
               <th>Blende</th>
               <td>[exif:FNumber]</td>
+            </tr>
+            <tr class="info" id="exif:FocusDistance">
+              <th>Entfernung</th>
+              <td>[exif:FocusDistance]</td>
+            </tr>
+            <tr class="info" id="exif:DepthOfField">
+              <th>Tiefenschärfe</th>
+              <td>[exif:DepthOfField]</td>
             </tr>
             <tr class="info" id="exif:ISO">
               <th>ISO</th>
@@ -77,7 +97,7 @@
               <td>[exif:FocalLengthIn35mmFormat]</td>
             </tr>
             <tr class="info" id="exif:ShootingMode">
-              <th>Belichtungs-Modus</th>
+              <th>Aufnahmemodus</th>
               <td>[exif:ShootingMode]</td>
             </tr>
             <tr class="info" id="exif:ImageSize">
