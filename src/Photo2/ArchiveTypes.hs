@@ -497,6 +497,9 @@ optDebug		= "debug"
 optDryRun		:: String
 optDryRun		= "dry-run"
 
+optForceStore		:: String
+optForceStore		= "store-all"
+
 optForceOrig		:: String
 optForceOrig		= "copy-org"
 

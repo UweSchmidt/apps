@@ -123,10 +123,13 @@ editNode	= updateNode' (change theEdited (const True))
 clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
 clearEdited	= updateNode' (change theEdited (const False)) this
 
+entryEdited'	:: CmdArrow AlbumTree AlbumTree
+entryEdited'	= ( (get theConfig >>> isA (optON optForceStore)) `guards` this )
+		  <+>
+		  entryEdited
+
 entryEdited	:: CmdArrow AlbumTree AlbumTree
-entryEdited 	= ( getNode >>> isA picEdited )
-		  `guards`
-		  this
+entryEdited	= (getNode >>> isA picEdited) `guards` this
 
 isEditedAlbum	:: CmdArrow AlbumTree AlbumTree
 isEditedAlbum	= ( entryEdited <+> (getChildren >>> entryEdited) )
@@ -302,34 +305,63 @@ storeAllChangedEntries
 
 storeChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeChangedEntries p
-    = ( ( unloadSubEntries p
-	  >>>
-	  ( ( runAction ("storing all entries at: " ++ showPath p)
-	      storeEntryOK			-- store the changes
-	      >>>
-	      clearEdited			-- clear edited marks
+    = ( ( ( runAction ("storing all entries at: " ++ showPath p)
+	    ( storeEntry' $<<< ( (getNode >>^ isAl)
+				 &&&
+				 getConfig (albumPath p)
+				 &&&
+				 get theConfigName )
 	    )
-	    `when` entryEdited
+	    `when`
+	    entryEdited'						-- entry edited or store forced
+	  
 	  )
+	  >>>
+	  clearEdited							-- clear edited marks
+	  >>>
+	  runAction ("unload entry" ++ showPath p)
+	            (setTheRef p)
 	)
         `orElse`
-	this					-- errors when writing the album
+	this								-- errors when writing the album
       )
       `when` ( isEntryLoaded
 	       >>>
 	       neg (getChildren >>> deep entryEdited)			-- only albums already loaded are of interest
 	     )
-    where
-    storeEntryOK
-	= storeEntry $<<< ( (getNode >>^ isAl) &&& getConfig (albumPath p) &&& get theConfigName )
 
+setTheRef		:: PathArrow AlbumTree AlbumTree
+setTheRef p		= setRef $< getConfig (albumPath p)
+                          where
+			  setRef doc = updateNode (arr $ change theRef (const doc) >>> clearPic)
+				       >>>
+				       setChildren []
+
+storeEntry'	:: Bool -> FilePath -> FilePath -> CmdArrow AlbumTree AlbumTree
+storeEntry' isAlb doc conf
+    = perform mkdir
+      >>>
+      ( storeDocData xpAlbumTree rootName doc conf
+        `guards`
+        this
+      )
+    where
+    mkdir = constA doc >>> arrIOE mkDirectoryPath
+    rootName
+	| isAlb		= "album"
+	| otherwise	= "picture"
+
+-- ------------------------------------------------------------
 
 unloadSubEntries		:: PathArrow AlbumTree AlbumTree
 unloadSubEntries p
-    = runAction ("unloading entry: " ++ showPath p) $
-      processChildren ( setChildren []
-			>>>
-			updateNode (arr clearPic)
+    = runAction ("unloading all entries of: " ++ showPath p) $
+      processChildren ( ( setChildren []			-- picture is cleared only when external ref is set
+			  >>>
+			  updateNode (arr clearPic)
+			)
+		        `when`
+		        ( getNode >>> arr picRef >>> isA (not . null) )
 		      )
 
 -- ------------------------------------------------------------

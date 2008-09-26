@@ -131,6 +131,7 @@ parseCmd "edited"    args	= parseEdited    args
 parseCmd "cat"       args	= parseCat       args
 parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
+parseCmd "load"      args	= parseLoad      args
 parseCmd "store"     args	= parseStore     args
 parseCmd "storepics" args	= parseStorePics args
 parseCmd "update"    args	= parseUpdate    args
@@ -194,8 +195,10 @@ parseCmd "?" []
 	    , "      copy-copy              force creation of all copies in all required sizes"
 	    , "      copy-exif              force import of exif info from original"
 	    , "      copy-org               force import of original images"
+	    , "      store-all              force storeing entries even if not changed"
 	    , "      debug                  debug output"
 	    , "  defpicattr a val           define a picture attribute"
+	    , "  load [path]                load all subalbums and pictures"
 	    , "  store-config               write the config data"
 	    , "  store [path]               write all albums addressed by path and unload subalbums"
 	    , "  storepics [path]           write all pictures and albums addressed by path and unload subalbums"
@@ -344,6 +347,12 @@ parseRelatives		= parseWdCmd' relatives "relatives"
 				)
 			  fp []	= ""
 			  fp p	= mkAbsPath . joinPath $ p
+
+parseLoad		:: [String] -> [Cmd]
+parseLoad		= parseWdCmd' ld "load"
+                          where
+			  ld = changeAlbums $
+			       processTreeSelfAndDesc ( const $ this )
 
 parseStore		:: [String] -> [Cmd]
 parseStore		= parseWdCmd' storeAllChangedAlbums "store"
