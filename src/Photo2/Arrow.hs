@@ -217,14 +217,14 @@ loadDocData	:: PU b -> String -> CmdArrow a b
 loadDocData p doc
     = readDocument [ (a_remove_whitespace, v_1)
 		   , (a_validate, v_0)
-		   , (a_tagsoup, v_1)
+		   , (a_tagsoup, v_0)		-- don't use tagsoup, it reads lasily and does not close input files, so the can't be written later on
 		   ] doc
       >>>
       documentStatusOk
       >>>
-      {- runAction ("unpickle document: " ++ doc) -} (xunpickleVal p)
-      >>>
-      perform none -- ( xpickleDocument p [ (a_indent, v_1) ] "" )
+      runAction ("unpickle document: " ++ doc) (xunpickleVal p)
+      -- >>>
+      -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )	-- just for debug
       >>>
       traceStatus ("loaded  : " ++ show doc)
 
@@ -259,7 +259,7 @@ loadArchiveAndConfig doc
 
 loadAlbum	:: String -> String -> CmdArrow a AlbumTree
 loadAlbum base doc
-    = runAction ("loading and unpickling entry: " ++ show doc ++ " (base = " ++ show base ++ ")")
+    = runAction ("loading and unpickling entry: " ++ show doc)
       ( runInLocalURIContext ( constA base >>> changeBaseURI
 			       >>>
 			       loadDocData xpAlbumTree doc
