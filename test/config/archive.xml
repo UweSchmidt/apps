@@ -10,7 +10,6 @@
   <attr name="dtd">config/archive.dtd</attr>
   <attr name="entities">archive</attr>
   <attr name="imgtype">jpg</attr>
-  <attr name="store-all">1</attr>
   <picture-attributes>
     <attr name="cam:CameraModelName">(.*:)?CameraModelName|model</attr>
     <attr name="cam:FocalLength">(.*:)?FocalLength</attr>

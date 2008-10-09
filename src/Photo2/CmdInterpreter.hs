@@ -3,6 +3,7 @@ where
 
 import qualified Control.Monad as CM
 
+import           Data.Char
 import           Data.List
 import           Data.Maybe
 import qualified Data.Map as M
@@ -19,6 +20,49 @@ import           System.Console.Readline
 		 )
 
 import           Text.XML.HXT.Arrow
+import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
+
+-- ------------------------------------------------------------
+
+tokenizeCmdLine :: String -> Either String [String]
+tokenizeCmdLine	= checkTokens . tokenize' tokens
+
+checkTokens :: [Either String String] -> Either String [String]
+checkTokens ts
+    | tokensOk	= Right . map unescape . filter ( not . all isSpace) . concatMap (either (const []) (:[])) $ ts
+    | otherwise = Left . concatMap (either id id) $ ts
+    where
+    tokensOk = all (either (const False) (const True)) $ ts
+
+    unescape s@('\"' : _)	= filter (/= '\\') . init . tail $ s
+    unescape s			= s
+
+tokens	:: String
+tokens	= intercalate "|" . map par $ toks
+          where
+	  toks = [ "[^ \\n\\t\\r;" ++ q ++ bsbs ++ "]+"
+		 , q ++ "([^" ++ bsbs ++ q ++ "]|(" ++ bsbs ++ ".))*" ++ q
+		 , ";"
+		 , "[ \\n\\t\\r]+"
+		 ]
+	  par s	= "(" ++ s ++ ")"
+	  bsbs	= bs ++ bs
+	  q     = "\""
+	  bs    = "\\"
+
+parseCmdLine	:: Either String [String] -> [Cmd]
+parseCmdLine (Left line)	= illegalCmd "" [line]
+parseCmdLine (Right ts)		= concatMap parseCmd' . splitCmds $ ts
+				  where
+				  parseCmd' []		= []
+				  parseCmd' (c:args)	= parseCmd c args
+				  splitCmds []		= [[]]
+				  splitCmds (";" : rs)	= [] : splitCmds rs
+				  splitCmds (c : rs)	= let (cs:rss) = splitCmds rs in (c:cs):rss
+
+
+
+-- ------------------------------------------------------------
 
 type Cmd = AppState -> IO AppState
 
@@ -44,7 +88,8 @@ getCmd	:: String -> IO [Cmd]
 getCmd prompt
     = do
       line <- readCmdLine prompt
-      return $ uncurry parseCmd (scanLine line)
+      return . parseCmdLine . tokenizeCmdLine $ line
+      -- return $ uncurry parseCmd (scanLine line)
 
 readCmdLine	:: String -> IO String
 readCmdLine prompt
@@ -248,6 +293,8 @@ illegalCmd c args
 parseWdCmd	:: PathArrow a b -> String -> [String] -> [Cmd]
 parseWdCmd pa name ps
     | null ps
+      ||
+      null n
 	= mkWdCmd withCwd
     | not . null $ ps'
 	= illegalCmd name ps
