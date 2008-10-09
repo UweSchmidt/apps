@@ -153,8 +153,11 @@ parseCmd "rename-cont"    args
 				  "rename-cont"  renameContent
 				  args
 
-parseCmd "gen-html"  args
-    | length args <=2		= parseGenHtml          args
+parseCmd "html"  args
+    | length args <=2		= parseGenHtml False    args
+
+parseCmd "html-all"  args
+    | length args <=2		= parseGenHtml True     args
 
 parseCmd "find"      args
     | length args `elem` [1..3]	= parseFind		args
@@ -180,7 +183,8 @@ parseCmd "?" []
 	    , "  edited [path]              list all edited pictures"
 	    , "  exit,q                     exit photo2"
 	    , "  find path kre vre          list all pictures with matching attribute key and value"
-	    , "  gen-html [p] [f]           generate HTML pages, default album is current album, default format \"html-1024x768\""
+	    , "  html     [p] [f]           generate single HTML page, default album is current album, default format \"html-1024x768\""
+	    , "  html-all [p] [f]           generate all HTML pages, default album is current album, default format \"html-1024x768\""
 	    , "  ls [path]                  list album and picture names, default is the current working album"
 	    , "  lsr [path]                 list album and picture names recursively, default is the current working album"
 	    , "  lsra [path]                load and list album and picture names recursively, default is the current working album"
@@ -195,7 +199,7 @@ parseCmd "?" []
 	    , "      copy-copy              force creation of all copies in all required sizes"
 	    , "      copy-exif              force import of exif info from original"
 	    , "      copy-org               force import of original images"
-	    , "      store-all              force storeing entries even if not changed"
+	    , "      store-all              force storing entries even if not changed"
 	    , "      debug                  debug output"
 	    , "  defpicattr a val           define a picture attribute"
 	    , "  load [path]                load all subalbums and pictures"
@@ -314,12 +318,12 @@ parseCat		= parseWdCmd' cat "cat"
 								  ] ""
 				    )
 
-parseGenHtml		:: [String] -> [Cmd]
-parseGenHtml []		= parseGenHtml [".", "html-1024x768"]
-parseGenHtml [p]	= parseGenHtml (p : ["html-1024x768"])
-parseGenHtml (p:f:_)	= parseWdCmd' gen "gen-html" [p]
+parseGenHtml		:: Bool -> [String] -> [Cmd]
+parseGenHtml rec []	= parseGenHtml rec [".", "html-1024x768"]
+parseGenHtml rec [p]	= parseGenHtml rec (p : ["html-1024x768"])
+parseGenHtml rec (p:f:_)= parseWdCmd' gen (if rec then "html-all" else "html") [p]
 			  where
-			  gen = getTreeAndProcess (withConfig (genHtml f))
+			  gen = getTreeAndProcess (withConfig (genHtml rec f))
 
 parseDump		:: [String] -> [Cmd]
 parseDump		= parseWdCmd' dump "dump"

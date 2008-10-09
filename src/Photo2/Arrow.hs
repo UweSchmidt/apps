@@ -128,6 +128,11 @@ entryEdited'	= ( (get theConfig >>> isA (optON optForceStore)) `guards` this )
 		  <+>
 		  entryEdited
 
+albumEdited'	:: CmdArrow AlbumTree AlbumTree
+albumEdited'	= ( (get theConfig >>> isA (optON optForceStore)) `guards` this )
+		  <+>
+		  deep entryEdited
+
 entryEdited	:: CmdArrow AlbumTree AlbumTree
 entryEdited	= (getNode >>> isA picEdited) `guards` this
 
@@ -314,13 +319,11 @@ storeChangedEntries p
 	    )
 	    `when`
 	    entryEdited'						-- entry edited or store forced
-	  
 	  )
 	  >>>
 	  clearEdited							-- clear edited marks
 	  >>>
-	  runAction ("unload entry" ++ showPath p)
-	            (setTheRef p)
+	  setTheRef' clearPic p
 	)
         `orElse`
 	this								-- errors when writing the album
@@ -330,10 +333,10 @@ storeChangedEntries p
 	       neg (getChildren >>> deep entryEdited)			-- only albums already loaded are of interest
 	     )
 
-setTheRef		:: PathArrow AlbumTree AlbumTree
-setTheRef p		= setRef $< getConfig (albumPath p)
+setTheRef'		:: (Pic -> Pic) -> PathArrow AlbumTree AlbumTree
+setTheRef' cp p		= setRef $< getConfig (albumPath p)
                           where
-			  setRef doc = updateNode (arr $ change theRef (const doc) >>> clearPic)
+			  setRef doc = updateNode (arr $ change theRef (const doc) >>> cp)
 				       >>>
 				       setChildren []
 
@@ -352,19 +355,6 @@ storeEntry' isAlb doc conf
 	| otherwise	= "picture"
 
 -- ------------------------------------------------------------
-
-unloadSubEntries		:: PathArrow AlbumTree AlbumTree
-unloadSubEntries p
-    = runAction ("unloading all entries of: " ++ showPath p) $
-      processChildren ( ( setChildren []			-- picture is cleared only when external ref is set
-			  >>>
-			  updateNode (arr clearPic)
-			)
-		        `when`
-		        ( getNode >>> arr picRef >>> isA (not . null) )
-		      )
-
--- ------------------------------------------------------------
 -- store the album and all subalbums adressed by a path and mark them as unloaded
 
 storeAllChangedAlbums	:: PathArrow AlbumTree AlbumTree
@@ -374,32 +364,28 @@ storeAllChangedAlbums
 
 storeChangedAlbums	:: PathArrow AlbumTree AlbumTree
 storeChangedAlbums p
-    = ( ( ( runAction ("storing all albums at: " ++ showPath p) $
-	    ( storeAlbumOK			-- store the changes
-	      >>>
-	      clearEditedChildren		-- and clear edited marks
+    = ( ( ( runAction ("storing all albums at: " ++ showPath p)
+	    ( ( storeEntry' $<<< ( (getNode >>^ isAl)
+				   &&&
+				   getConfig (albumPath p)
+				   &&&
+				   get theConfigName )
+	      )
 	    )
-	    `orElse` this			-- errors when writing the album
+	    `when`
+	    (isAlbum >>> albumEdited')		-- album edited or store forced
 	  )
-	  `when` isEditedAlbum			-- some album entries have been changed
+	  >>>
+	  ( setTheRef' id p `when` isAlbum )
+	  >>>
+	  clearEdited				-- and clear edited marks for all children
 	)
-	>>>
-	unloadSubAlbums p
+	`orElse` this				-- errors when writing the album
       )
-      `when` (isAlbum >>> isEntryLoaded)	-- only albums already loaded are of interest
-    where
-    clearEditedChildren
-	= processChildren clearEdited
-    storeAlbumOK
-	= storeEntry True $<< ( getConfig (albumPath p) &&& get theConfigName )
-
-unloadSubAlbums		:: PathArrow AlbumTree AlbumTree
-unloadSubAlbums p
-    = ( runAction ("unloading album: " ++ showPath p) $
-	processChildren (setChildren [])
-      )
-      `whenNot`
-      (getChildren >>> deep entryEdited)
+      `when` ( isEntryLoaded
+	       >>>
+	       neg (getChildren >>> deep entryEdited)
+	     )
 
 -- ------------------------------------------------------------
 
