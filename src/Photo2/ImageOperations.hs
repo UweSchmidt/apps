@@ -110,15 +110,7 @@ importExifAttrs c _p pic
       if up
 	 then return pic
 	 else do
-	      exifDataOrig <- imgAttrs orig
-	      exifDataRaw  <- imgAttrs raw
-	      xmpData      <- imgAttrsXmp xmp
-	      let newData = ( ( exifDataOrig
-				`M.union` exifDataRaw
-			      )
-			      `M.union` xmpData
-			    )
-			    `M.union` fileData
+	      newData <- allImgAttrs ["All"] c orig raw xmp
 	      return $ change theAttrs (mergeAttrs (remAttrs "unknown:.*" newData)) pic
     where
     orig	= base </-> picOrig pic
@@ -128,22 +120,42 @@ importExifAttrs c _p pic
 
     base	= getDefOpt "../Diakaesten" "base"    c
 
-    debug	= optON  optDebug     c
     force	= optON  optForceExif c
     dry		= optOFF optForceExif c
-
-    exifAttrs	= parseExif (confPicAttrs c)
 
     upToDate
 	| dry		= return True
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanDate modified orig
 
+-- ------------------------------------------------------------
+
+allImgAttrs	:: [String] -> Config -> String -> String -> String -> IOE Attrs
+allImgAttrs opts c orig raw xmp
+    = do
+      exifDataOrig <- imgAttrs orig
+      exifDataRaw  <- imgAttrs raw
+      xmpData      <- imgAttrsXmp xmp
+      return ( ( ( exifDataOrig
+		   `M.union` exifDataRaw
+		 )
+		 `M.union` xmpData
+	       )
+	       `M.union` fileData
+	     )
+    where
+    debug	= optON  optDebug     c
+    exifAttrs	= parseExif (confPicAttrs c)
+
+    imgAttrs ""
+	= return $ emptyAttrs
     imgAttrs f
 	= do
-	  t <- execFct debug  ["exiftool", f] -- don't use "-s" option
+	  t <- execFct debug (["exiftool"] ++ opts ++ [f]) -- don't use "-s" option
 	  return $ exifAttrs t
 
+    imgAttrsXmp ""
+	= return $ emptyAttrs
     imgAttrsXmp _f
 	= do
 	  return $ emptyAttrs	-- parseXmp t
@@ -154,6 +166,7 @@ importExifAttrs c _p pic
 	  , "RefRaw : "  ++ raw
 	  , "RefXmp : "  ++ xmp
 	  ]
+
 
 -- ------------------------------------------------------------
 

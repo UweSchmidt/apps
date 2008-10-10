@@ -12,6 +12,8 @@ import           Photo2.ArchiveTypes
 import           Photo2.Arrow
 import           Photo2.Html
 import           Photo2.FilePath
+import           Photo2.ImportDialog
+import           Photo2.SearchNewImages
 
 import           System.IO
 import           System.Console.Readline
@@ -56,11 +58,10 @@ parseCmdLine (Right ts)		= concatMap parseCmd' . splitCmds $ ts
 				  where
 				  parseCmd' []		= []
 				  parseCmd' (c:args)	= parseCmd c args
+
 				  splitCmds []		= [[]]
 				  splitCmds (";" : rs)	= [] : splitCmds rs
 				  splitCmds (c : rs)	= let (cs:rss) = splitCmds rs in (c:cs):rss
-
-
 
 -- ------------------------------------------------------------
 
@@ -89,7 +90,6 @@ getCmd prompt
     = do
       line <- readCmdLine prompt
       return . parseCmdLine . tokenizeCmdLine $ line
-      -- return $ uncurry parseCmd (scanLine line)
 
 readCmdLine	:: String -> IO String
 readCmdLine prompt
@@ -246,6 +246,12 @@ parseCmd "?" []
 	    , "      copy-org               force import of original images"
 	    , "      store-all              force storing entries even if not changed"
 	    , "      debug                  debug output"
+	    , "      layout                 select the layout for html page generation"
+	    , "      import-base            base dir for image import, default is \"../Diakasten\""
+	    , "      import-dir             dir path relative to import-base, default is \".\""
+	    , "      import-since           only files newer than date are imported, default is \"2008-01-01\""
+	    , "      import-pattern         only files matching import pattern are imported, default pattern is \".*\""
+	    , "      import-by-date         images are sorted by creation date"
 	    , "  defpicattr a val           define a picture attribute"
 	    , "  load [path]                load all subalbums and pictures"
 	    , "  store-config               write the config data"
@@ -265,15 +271,6 @@ parseCmd "q" _		= fail ""
 
 parseCmd c args
     = illegalCmd c args
-
--- ------------------------------------------------------------
-
-scanLine	:: String -> (String, [String])
-scanLine s
-    | null args = ("",[])
-    | otherwise	= (head args, tail args)
-    where
-    args = words s
 
 -- ------------------------------------------------------------
 
@@ -366,8 +363,8 @@ parseCat		= parseWdCmd' cat "cat"
 				    )
 
 parseGenHtml		:: Bool -> [String] -> [Cmd]
-parseGenHtml rec []	= parseGenHtml rec [".", "html-1024x768"]
-parseGenHtml rec [p]	= parseGenHtml rec (p : ["html-1024x768"])
+parseGenHtml rec []	= parseGenHtml rec [".", ""]
+parseGenHtml rec [p]	= parseGenHtml rec (p : [""])
 parseGenHtml rec (p:f:_)= parseWdCmd' gen (if rec then "html-all" else "html") [p]
 			  where
 			  gen = getTreeAndProcess (withConfig (genHtml rec f))
@@ -415,10 +412,16 @@ parseTest		:: [String] -> [Cmd]
 parseTest		= parseWdCmd' test "xxx"
                           where
 			  test = changeAlbums $
+				 processTree (withConfig importPics)
+			  {-
+			  test = const (get theConfig >>> arrIOE  scanForNewImages >>> arrIO print)
+			  -}
+			  {-
+			  test = changeAlbums $
 				 processTreeSelfAndDesc ( const $ perform $
 							  getNode >>> arr picId >>> arrIO print
 							)
-
+							-}
 parseUpdate		:: [String] -> [Cmd]
 parseUpdate		= parseWdCmd' (changeAlbums update) "update"
                           where

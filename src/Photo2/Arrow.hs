@@ -42,6 +42,10 @@ arrIOE io
 	this
       )
 
+errMsg	:: String -> CmdArrow a ()
+errMsg	msg
+    = arrIO0 $ hPutStrLn stderr msg
+
 infixr 1 />>>/
 
 -- lift >>> to PathArrow level
