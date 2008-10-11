@@ -30,6 +30,7 @@
     <attr name="exif:Contrast">(.*:)?[Cc]ontrast</attr>
     <attr name="exif:CreateDate">(.*:)?CreateDate|date-and-time</attr>
     <attr name="exif:DateTimeOriginal">(.*:)?DateTimeOriginal|date-and-time-original</attr>
+    <attr name="exif:DepthOfField">(.*:)?[Dd]epth[oO]f[Ff]ield|depth-of-field</attr>
     <attr name="exif:ExposureCompensation">(.*:)?ExposureCompensation|exposure-bias|exposure-compensation</attr>
     <attr name="exif:ExposureMode">(.*:)?ExposureMode|exposure-mode</attr>
     <attr name="exif:ExposureProgram">(.*:)?ExposureProgram|exposure-program</attr>
