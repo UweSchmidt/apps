@@ -2,14 +2,12 @@
 <!DOCTYPE config SYSTEM "archive.dtd">
 <config>
   <attr name="base">../Diakaesten</attr>
-  <attr name="copy-exif">1</attr>
-  <attr name="copy-org">0</attr>
-  <attr name="create-copy">0</attr>
   <attr name="debug">1</attr>
   <attr name="dir">org</attr>
   <attr name="dtd">config/archive.dtd</attr>
   <attr name="entities">archive</attr>
   <attr name="imgtype">jpg</attr>
+  <attr name="import-base">../Diakaesten</attr>
   <attr name="import-pattern">.*/uwe2/.*</attr>
   <attr name="import-since">2007</attr>
   <picture-attributes>

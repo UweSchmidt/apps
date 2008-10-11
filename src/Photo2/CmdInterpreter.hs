@@ -13,7 +13,6 @@ import           Photo2.Arrow
 import           Photo2.Html
 import           Photo2.FilePath
 import           Photo2.ImportDialog
-import           Photo2.SearchNewImages
 
 import           System.IO
 import           System.Console.Readline
@@ -22,6 +21,7 @@ import           System.Console.Readline
 		 )
 
 import           Text.XML.HXT.Arrow
+-- import           Text.XML.HXT.DOM.UTF8Decoding
 import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 
 -- ------------------------------------------------------------
@@ -95,7 +95,7 @@ readCmdLine	:: String -> IO String
 readCmdLine prompt
     = do
       line <- readline prompt
-      let line' = stringTrim . fromMaybe "" $ line
+      let line' = stringTrim {- . fst . decodeUtf8 -} . fromMaybe "" $ line
       CM.when (length line' > 1) (addHistory line')
       if null line'
 	 then readCmdLine prompt
@@ -113,68 +113,56 @@ liftCmd c		= return $
 				   c
 				   return s )
 
-parseCmd		:: String -> [String] -> [Cmd]
-parseCmd "open" []	= parseCmd "open" ["archive.xml"]
+parseCmd						:: String -> [String] -> [Cmd]
+parseCmd c@"open" []					= parseCmd c ["archive.xml"]
+parseCmd   "open" [archive]				= mkCmd ( loadArchiveAndConfig archive
+								  >>>
+								  rootWd
+								  >>>
+								  withCwd loadAlbums
+								)
+parseCmd "close" []					= mkCmd ( withRootDir storeAllChangedAlbums
+								  >>>
+								  storeConfig
+								  >>>
+								  storeArchive
+								)
+							  ++
+							  parseCd []
 
-parseCmd "open" [archive]
-    = mkCmd ( loadArchiveAndConfig archive
-	      >>>
-	      rootWd
-	      >>>
-	      withCwd loadAlbums
-	    )
+parseCmd "config" []					= mkCmd ( get theConfig
+								  >>>
+								  xpickleDocument xpConfig [ (a_indent, v_1)
+											   , (a_no_xml_pi, v_1)
+											   , (a_output_encoding, usAscii)
+											   ] ""
+								)
+parseCmd "storeconfig" []				= mkCmd storeConfig
+parseCmd "options" []					= mkCmd ( get theConfigAttrs
+								  >>>
+								  arrIO dumpOptions
+								)
+                                                          where
+							  dumpOptions
+							      = putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v) . M.toList
 
-parseCmd "close" []
-    = mkCmd ( withRootDir storeAllChangedAlbums
-	      >>>
-	      storeConfig
-	      >>>
-	      storeArchive
-	    )
-      ++
-      parseCd []
+parseCmd c@"set" [n]					= parseCmd c [n,v_1]
+parseCmd   "set" [n,v]					= mkCmd ( changeComp theConfigAttrs (M.insert n v) )
+parseCmd "unset" [n]					= mkCmd ( changeComp theConfigAttrs (M.delete n) )
+parseCmd "defpicattr" [n,v]				= mkCmd ( changeComp theConfigPicAttrs (addEntry v n) )
+parseCmd "pwd" []					= mkCmd ( get theWd
+								  >>>
+								  arrIO (putStrLn . (rootPath </>) . joinPath)
+								)
+parseCmd c@"ls"            args				= parseLs' (getTreeAndProcessChildren constA) c args
+parseCmd c@"lsr"           args				= parseLs' (getTreeAndProcessDesc constA)     c args
+parseCmd c@"lsra"          args				= parseLs' (getTreeAndProcessDescC constA)    c args
+parseCmd c@"edited"        args				= parseLs' (getTreeAndProcessSelfAndDesc $
+								    \ p -> entryEdited `guards` constA p
+								   )                                  c args
+parseCmd c@"cat"           args				= parseCat                                    c args
+parseCmd c@"dump"          args				= parseDump                                   c args
 
-parseCmd "config" []
-    = mkCmd ( get theConfig
-	      >>>
-	      xpickleDocument xpConfig [ (a_indent, v_1)
-				       , (a_no_xml_pi, v_1)
-				       ] ""
-	    )
-
-parseCmd "options" []
-    = mkCmd ( get theConfigAttrs
-	      >>>
-	      arrIO dumpOptions
-	    )
-    where
-    dumpOptions
-	= putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v) . M.toList
-
-parseCmd "set" [n]
-    = parseCmd "set" [n,v_1]
-
-parseCmd "set" [n,v]
-    = mkCmd ( changeComp theConfigAttrs (M.insert n v) )
-
-parseCmd "unset" [n]
-    = mkCmd ( changeComp theConfigAttrs (M.delete n) )
-
-parseCmd "defpicattr" [n,v]
-    = mkCmd ( changeComp theConfigPicAttrs (addEntry v n) )
-
-parseCmd "pwd" []
-    = mkCmd ( get theWd
-	      >>>
-	      arrIO (putStrLn . (rootPath </>) . joinPath)
-	    )
-
-parseCmd "ls"        args	= parseLs        args
-parseCmd "lsr"       args	= parseLsr       args
-parseCmd "lsra"      args	= parseLsra      args
-parseCmd "edited"    args	= parseEdited    args
-parseCmd "cat"       args	= parseCat       args
-parseCmd "dump"      args	= parseDump      args
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "load"      args	= parseLoad      args
 parseCmd "store"     args	= parseStore     args
@@ -182,27 +170,15 @@ parseCmd "storepics" args	= parseStorePics args
 parseCmd "update"    args	= parseUpdate    args
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
 
-parseCmd "attr"      args
-    | length args >=2		= parseAttr		args
-
-parseCmd "deleteattr" args
-    | length args ==2		= parseDeleteAttr	args
-
-parseCmd "rename"    args
-    | length args == 2		= parseRename
-				  "rename" (renamePic (concat . drop 1 $ args))
-				  args
-
-parseCmd "rename-cont"    args
-    | length args <= 1		= parseRename
-				  "rename-cont"  renameContent
-				  args
-
-parseCmd "html"  args
-    | length args <=2		= parseGenHtml False    args
-
-parseCmd "html-all"  args
-    | length args <=2		= parseGenHtml True     args
+parseCmd c@"attr"          args	| length args >= 2	= parseAttr c args
+parseCmd c@"deleteattr"    args	| length args == 2	= parseDeleteAttr c args
+parseCmd c@"import"        args	| length args <= 1	= parseImport c args
+parseCmd c@"newalbum"      args	| length args == 2	= parseModifiy c (newAlbum (concat . drop 1 $ args)) args
+parseCmd c@"setalbumpic"   args	| length args == 2	= parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
+parseCmd c@"rename"        args	| length args == 2	= parseModifiy c (renamePic (concat . drop 1 $ args)) args
+parseCmd c@"rename-cont"   args	| length args <= 1	= parseModifiy c renameContent args
+parseCmd c@"html"          args	| length args <= 2	= parseGenHtml c False args
+parseCmd c@"html-all"      args | length args <= 2	= parseGenHtml c True args
 
 parseCmd "find"      args
     | length args `elem` [1..3]	= parseFind		args
@@ -240,6 +216,9 @@ parseCmd "?" []
 	    , "  relatives [path]           list the paths of the parent, the previous and the next entry"
 	    , "  rename-cont [path]         rename all pictures in an album"
 	    , "  rename path newid          rename picture"
+	    , "  newalbum path newid        create a new album within path"
+	    , "  setalbumpic path id        set the album picture from the list of pictures within the album"
+	    , "  import [path]              import new pictures into album"
 	    , "  set <opt> [val]            set or overwrite an option, default value is \"1\""
 	    , "      copy-copy              force creation of all copies in all required sizes"
 	    , "      copy-exif              force import of exif info from original"
@@ -253,8 +232,8 @@ parseCmd "?" []
 	    , "      import-pattern         only files matching import pattern are imported, default pattern is \".*\""
 	    , "      import-by-date         images are sorted by creation date"
 	    , "  defpicattr a val           define a picture attribute"
-	    , "  load [path]                load all subalbums and pictures"
-	    , "  store-config               write the config data"
+	    , "  load [path    ]            load all subalbums and pictures"
+	    , "  storeconfig                write the config data"
 	    , "  store [path]               write all albums addressed by path and unload subalbums"
 	    , "  storepics [path]           write all pictures and albums addressed by path and unload subalbums"
 	    , "  unset <opt>                unset an option"
@@ -329,20 +308,6 @@ findEntries ld gt out p
 
 -- ------------------------------------------------------------
 
-parseLs		:: [String] -> [Cmd]
-parseLs		= parseLs' (getTreeAndProcessChildren constA) "ls"
-
-parseLsr	:: [String] -> [Cmd]
-parseLsr	= parseLs' (getTreeAndProcessDesc constA) "lsr"
-
-parseLsra	:: [String] -> [Cmd]
-parseLsra	= parseLs' (getTreeAndProcessDescC constA) "lsra"
-
-parseEdited	:: [String] -> [Cmd]
-parseEdited	= parseLs' ( getTreeAndProcessDesc $
-			     \ p -> entryEdited `guards` constA p
-			   ) "edited"
-
 parseLs'		:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs' pa ps		= parseWdCmd' ls ps
                           where
@@ -352,32 +317,34 @@ parseLs' pa ps		= parseWdCmd' ls ps
 				  )
 				  `withDefaultRes` ()
 
-parseCat 		:: [String] -> [Cmd]
-parseCat		= parseWdCmd' cat "cat"
-                        where
-			cat = (getTreeAndProcess (\ p -> constA p &&& getNode))
-			      />>>/
-			      const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
-								  , (a_no_xml_pi, v_1)
-								  ] ""
-				    )
+parseGenHtml			:: String -> Bool -> [String] -> [Cmd]
+parseGenHtml c rec []		= parseGenHtml c rec [".", ""]
+parseGenHtml c rec [p]		= parseGenHtml c rec (p : [""])
+parseGenHtml c rec (p:f:_)	= parseWdCmd' gen c [p]
+                                  where
+				  gen = getTreeAndProcess (withConfig (genHtml rec f))
 
-parseGenHtml		:: Bool -> [String] -> [Cmd]
-parseGenHtml rec []	= parseGenHtml rec [".", ""]
-parseGenHtml rec [p]	= parseGenHtml rec (p : [""])
-parseGenHtml rec (p:f:_)= parseWdCmd' gen (if rec then "html-all" else "html") [p]
-			  where
-			  gen = getTreeAndProcess (withConfig (genHtml rec f))
+parseCat 			:: String -> [String] -> [Cmd]
+parseCat c			= parseWdCmd' cat c
+                                  where
+				  cat = (getTreeAndProcess (\ p -> constA p &&& getNode))
+					/>>>/
+					const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
+									    , (a_no_xml_pi, v_1)
+									    , (a_output_encoding, usAscii)
+									    ] ""
+					      )
 
-parseDump		:: [String] -> [Cmd]
-parseDump		= parseWdCmd' dump "dump"
-                          where
-			  dump = getTree
-				 />>>/
-				 const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
-								    , (a_no_xml_pi, v_1)
-								    ] ""
-				       )
+parseDump			:: String -> [String] -> [Cmd]
+parseDump c			= parseWdCmd' dump c
+                                  where
+				  dump = getTree
+					 />>>/
+					 const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
+									    , (a_no_xml_pi, v_1)
+									    , (a_output_encoding, usAscii)
+									    ] ""
+					       )
 
 parseRelatives		:: [String] -> [Cmd]
 parseRelatives		= parseWdCmd' relatives "relatives"
@@ -408,6 +375,12 @@ parseStore		= parseWdCmd' storeAllChangedAlbums "store"
 parseStorePics		:: [String] -> [Cmd]
 parseStorePics		= parseWdCmd' storeAllChangedEntries "storepics"
 
+parseImport		:: String -> [String] -> [Cmd]
+parseImport c		= parseWdCmd' imp c
+                          where
+			  imp = changeAlbums $
+				processTree (withConfig importPics)
+
 parseTest		:: [String] -> [Cmd]
 parseTest		= parseWdCmd' test "xxx"
                           where
@@ -436,22 +409,22 @@ parseNewAttrKeys	= parseWdCmd' ( changeAlbums $
 				        processTreeSelfAndDesc (withConfig updateAttrKeys)
 				      ) "newattrs"
 
-parseRename		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
-parseRename cn ca al	= parseWdCmd' ( changeAlbums $
+parseModifiy		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
+parseModifiy cn ca al	= parseWdCmd' ( changeAlbums $
 				        processTree (withConfig ca)
 				      ) cn (take 1 al)
 
-parseAttr		:: [String] -> [Cmd]
-parseAttr al		= parseWdCmd' ( changeAlbums $
+parseAttr		:: String -> [String] -> [Cmd]
+parseAttr c al		= parseWdCmd' ( changeAlbums $
 					processTree (withConfig (updateAttr an (unwords avl)))
-				      ) "attr" (take 1 al)
+				      ) c (take 1 al)
                           where
 			  (an : avl) = tail al
 
-parseDeleteAttr		:: [String] -> [Cmd]
-parseDeleteAttr al	= parseWdCmd' ( changeAlbums $
+parseDeleteAttr		:: String -> [String] -> [Cmd]
+parseDeleteAttr c al	= parseWdCmd' ( changeAlbums $
 					processTreeSelfAndDesc (deleteAttr ap)
-				      ) "deleteattr" (take 1 al)
+				      ) c (take 1 al)
                           where
 			  (ap : _) = tail al
 

@@ -28,9 +28,9 @@ import           Text.XML.HXT.Arrow
 importPics	:: ConfigArrow AlbumTree AlbumTree
 importPics c p
     = runAction ("importing pictures into " ++ showPath p)
-      ( ins $< (importScan >>> importSelection)
+      ( checkEntryLoaded
 	>>>
-	none
+	(ins $< (importScan >>> importSelection))
       )
     where
     importScan
@@ -42,8 +42,33 @@ importPics c p
 	  (arrIOE $ importDialog c)
 
     ins nps
-	= runAction ("import dialog for pictures\n" ++ concatMap (\ (o,_r,_x,a) -> "\t" ++ o ++ (show . M.toList $ a) ++ "\n") nps)
-	  ( this )
+	= runAction ( "import dialog for pictures\n"
+		      ++
+		      concatMap (\ (o,_r,_x,a) -> "\t" ++ o ++ (show . M.toList $ a) ++ "\n") nps
+		    )
+	  ( replaceChildren ( getChildren
+			      <+>
+			      ((getChildren >>> getPicId) >>. newPics)
+			    )
+	  )
+	  where
+	  newPics	:: [String] -> [AlbumTree]
+	  newPics used
+	    = zipWith newPic newIds nps
+	    where
+	    newIds	:: [String]
+	    newIds 	= filter (`notElem` used) . map picnr $ [1..]
+
+	    newPic	:: String -> PicDescr -> AlbumTree
+	    newPic pid (o,r,x,al)
+			= albumTree $
+			  emptyPic { picId	= pid
+				   , picOrig	= o
+				   , picRaw	= r
+				   , picXmp	= x
+				   , picAttrs	= al
+				   }
+
 
 -- ------------------------------------------------------------
 
@@ -56,7 +81,7 @@ importDialog cnf pics
       viewPics
       liftIO $ dialog emptyAttrs [] [] pics'
     where
-    imgBase	= normPath . getDefOpt "../Diakaesten" "import-base" $ cnf
+    imgBase	= normPath . getImportBase $ cnf
     pics'	= map (\ (x1, x2, x3) -> (x1, x2, x3, emptyAttrs)) pics
 
     viewPics

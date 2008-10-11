@@ -110,15 +110,15 @@ importExifAttrs c _p pic
       if up
 	 then return pic
 	 else do
-	      newData <- allImgAttrs ["All"] c orig raw xmp
-	      return $ change theAttrs (mergeAttrs (remAttrs "unknown:.*" newData)) pic
+	      newData <- allImgAttrs [] c orig raw xmp
+	      return $ change theAttrs (mergeAttrs newData) pic
     where
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
     xmp		= base </-> picXmp  pic
     modified	= fromMaybe "" . M.lookup fileModificationDateTime . picAttrs $ pic
 
-    base	= getDefOpt "../Diakaesten" "base"    c
+    base	= getImportBase c
 
     force	= optON  optForceExif c
     dry		= optOFF optForceExif c
@@ -152,7 +152,8 @@ allImgAttrs opts c orig raw xmp
     imgAttrs f
 	= do
 	  t <- execFct debug (["exiftool"] ++ opts ++ [f]) -- don't use "-s" option
-	  return $ exifAttrs t
+	  let res = exifAttrs t
+	  return $ res
 
     imgAttrsXmp ""
 	= return $ emptyAttrs
@@ -203,7 +204,7 @@ importOrig c p pic
     src		= base </-> picOrig pic
     dst		= dir  </> joinPath p `addExtension` imgtype
 
-    base	= getDefOpt "../Diakaesten" "base"    c
+    base	= getImportBase                       c
     dir         = getDefOpt "org"           "dir"     c
     imgtype	= getDefOpt "jpg"           "imgtype" c
 

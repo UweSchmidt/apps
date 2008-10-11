@@ -42,9 +42,11 @@ arrIOE io
 	this
       )
 
-errMsg	:: String -> CmdArrow a ()
+errMsg	:: String -> CmdArrow a b
 errMsg	msg
-    = arrIO0 $ hPutStrLn stderr msg
+    = ( arrIO0 $ hPutStrLn stderr msg )
+      >>>
+      none
 
 infixr 1 />>>/
 
@@ -123,6 +125,9 @@ updateNode	= updateNode' id
 
 editNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
 editNode	= updateNode' (change theEdited (const True))
+
+editNode'	:: ArrowTree a => (Pic -> Pic) -> a AlbumTree AlbumTree
+editNode'	= editNode . arr
 
 clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
 clearEdited	= updateNode' (change theEdited (const False)) this
@@ -234,7 +239,7 @@ loadDocData p doc
       >>>
       documentStatusOk
       >>>
-      runAction ("unpickle document: " ++ doc) (xunpickleVal p)
+      {- runAction ("unpickle document: " ++ doc) -} (xunpickleVal p)
       -- >>>
       -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )	-- just for debug
       >>>
@@ -375,20 +380,20 @@ storeChangedAlbums p
 				   &&&
 				   get theConfigName )
 	      )
+	      >>>
+	      clearEdited			-- and clear edited mark
+	      >>>
+	      setTheRef' id p
 	    )
 	    `when`
 	    (isAlbum >>> albumEdited')		-- album edited or store forced
 	  )
-	  >>>
-	  ( setTheRef' id p `when` isAlbum )
-	  >>>
-	  clearEdited				-- and clear edited marks for all children
 	)
 	`orElse` this				-- errors when writing the album
       )
       `when` ( isEntryLoaded
 	       >>>
-	       neg (getChildren >>> deep entryEdited)
+	       neg (getChildren >>> getChildren >>> deep entryEdited)
 	     )
 
 -- ------------------------------------------------------------
@@ -409,8 +414,7 @@ storeEntry isAlb doc conf
 
 storeDocData	:: PU b -> String -> FilePath -> FilePath -> CmdArrow b XmlTree
 storeDocData p rootName doc conf
-    = runAction ("pickle document: " ++ doc)
-                ( xpickleVal p ) 
+    = {- runAction ("pickle document: " ++ doc) -} ( xpickleVal p ) 
       >>>
       runAction ("write document:  " ++ doc)
 		( addDoctypeDecl rootName "" (pathFromTo doc (dirPath conf </> "archive.dtd"))
@@ -766,18 +770,18 @@ removeAlbumEntry p
 updateAttrKeys	:: ConfigArrow AlbumTree AlbumTree
 updateAttrKeys c p
     = runAction ("updating attribute keys for " ++ showPath p) $
-      editNode (arr $ change theAttrs (normAttrs (confPicAttrs c)))
+      editNode' (change theAttrs (normAttrs (confPicAttrs c)))
 
 updateAttr	:: String -> String -> ConfigArrow AlbumTree AlbumTree
 updateAttr an av c p
     = runAction ("updating " ++ showPath p ++ " attr " ++ show an ++ " with value " ++ show av) $
-      editNode (arr $ change theAttrs (mergeAttr (newAttrKey (confPicAttrs c) an) av))
+      editNode' (change theAttrs (mergeAttr (newAttrKey (confPicAttrs c) an) av))
 
 {-
 updateAttrs	:: Attrs -> PathArrow AlbumTree AlbumTree
 updateAttrs am p
     = runAction ("updating " ++ showPath p ++ " attributes " ++ show am) $
-      editNode (arr $ change theAttrs (mergeAttrs am))
+      editNode' (change theAttrs (mergeAttrs am))
 -}
 updateExifAttrs	:: ConfigArrow AlbumTree AlbumTree
 updateExifAttrs c p
@@ -787,7 +791,54 @@ updateExifAttrs c p
 deleteAttr	:: String -> PathArrow AlbumTree AlbumTree
 deleteAttr an p
     = runAction ("deleting " ++ showPath p ++ " attr " ++ show an) $
-      editNode (arr $ change theAttrs (remAttrs an))
+      editNode' (change theAttrs (remAttrs an))
+
+-- ------------------------------------------------------------
+--
+-- new empty album
+
+newAlbum	:: Name -> ConfigArrow AlbumTree AlbumTree
+newAlbum nn _c p
+    = runAction ("newalbum " ++ show nn ++ " in " ++ showPath p)
+      ( checkEntryLoaded
+	>>>
+	( ( notYetThere
+	    `guards`
+	    ( replaceChildren (getChildren <+> newEmptyAlbum)
+	      >>>
+	      editNode' id
+	    )
+	  )
+	  `orElse`
+	  errMsg ("album " ++ show nn ++ " already defined in " ++ showPath p)
+	)
+      )
+    where
+    notYetThere		= neg ( getChildren >>> getPicId >>> isA (== nn) )
+    newEmptyAlbum	= arr . const . albumTree $ emptyPic { picId	 = nn
+							     , isAl	 = True
+							     , picEdited = True
+							     }
+
+setAlbumPic	:: Name -> ConfigArrow AlbumTree AlbumTree
+setAlbumPic nn _c p
+    = runAction ("setalbumpic" ++ show nn ++ " for " ++ showPath p)
+      ( checkEntryLoaded
+	>>>
+	( ( setPic $< lookupPic )
+	  `orElse`
+	  errMsg ("picture " ++ show nn ++ " not found in album " ++ showPath p)
+	)
+      )
+    where
+    setPic pic
+	= editNode' ( \ p' -> p' { picOrig = picOrig pic
+				 , picRaw  = picRaw  pic
+				 , picXmp  = picXmp  pic
+				 }
+		    )
+    lookupPic
+	= getChildren >>> getNode >>> isA ((== nn) . picId)
 
 -- ------------------------------------------------------------
 --
@@ -838,13 +889,13 @@ renameContent c p
 	      &&
 	      (match "pic-[0-9]+" $ o)
 
-	picnr :: Int -> String
-	picnr = show
-		>>> reverse
-		>>> (++ "0000")
-		>>> take 4
-		>>> reverse
-		>>> ("pic-" ++)
+picnr :: Int -> String
+picnr = show
+	>>> reverse
+	>>> (++ "0000")
+	>>> take 4
+	>>> reverse
+	>>> ("pic-" ++)
 
 -- ------------------------------------------------------------
 --

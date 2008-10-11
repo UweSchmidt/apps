@@ -20,14 +20,21 @@ parseExif pl
       >>>
       map (splitKeyVal ':')
       >>>
-      map ( (words >>> concatMap capitalize >>> newAttrKey pl)
+      map ( ( map (\ c -> if isAlphaNum c then c else ' ')
+	      >>>
+	      words
+	      >>>
+	      concatMap capitalize
+	      >>>
+	      newAttrKey pl
+	    )
 	    ***
-	    (words >>> unwords >>> normDateTime)
+	    ( words >>> unwords >>> normDateTime )
 	  )
       >>>
       filter ( not . null . snd )
       >>>
-      filter ( ("unknown:" `isPrefixOf`) . fst )
+      filter ( not . ("unknown:" `isPrefixOf`) . fst )
       >>>
       M.fromList
 

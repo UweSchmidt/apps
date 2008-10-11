@@ -238,8 +238,11 @@ emptyName		= ""
 emptyPath		:: Path
 emptyPath		= []
 
+albumTree		:: Pic -> AlbumTree
+albumTree		= mkLeaf
+
 emptyAlbumTree		:: AlbumTree
-emptyAlbumTree		= mkLeaf emptyPic
+emptyAlbumTree		= albumTree emptyPic
 
 emptyGeo		:: Geo
 emptyGeo		= Geo 0 0
@@ -327,7 +330,7 @@ xpAlbumEntry		= xpElem "entry" $
 				   xpText
 				 )
 			         ( xpWrap ( \ (NTree e _) -> e
-					  , mkLeaf
+					  , albumTree
 					  ) $
 				   xpAlbumTree
 				 )
@@ -370,7 +373,7 @@ xpPicAttrs		= xpDefault [] $
 xpHtmlText		:: PU String
 xpHtmlText		= xpWrap ( showXML, readHTML ) $ xpTrees
                           where
-			  showXML  = concat . runLA ( xshow unlistA )
+			  showXML  = concat . runLA ( xshow (unlistA >>> escapeXmlDoc) )
 			  readHTML = runLA hread				-- hread ignores not wellformed attributes, e.g. unescaped &s in URLs
 
 xpLayouts		:: PU Layouts
@@ -508,5 +511,8 @@ optForceCopy		= "copy-copy"
 
 optForceExif		:: String
 optForceExif		= "copy-exif"
+
+getImportBase		:: Config -> String
+getImportBase		= getDefOpt "../Diakaesten" "import-base"
 
 -- ------------------------------------------------------------
