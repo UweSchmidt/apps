@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <base href="[rootPath]"/>
+    <title>[theHeadTitle]</title>
+    <meta name="description" content="Web Photo Album"/>
+    <meta name="author"      content="Uwe Schmidt"/>
+    <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
+    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1024x768.css"/>
+    <script type="text/javascript">
+      [theJavaScriptCode]
+      var duration = 7000 * [theDuration];
+      var nextp    = '[html-1024x768/[theNextPath].html]';
+      var prevp    = '[html-1024x768/[thePrevPath].html]';
+      var parentp  = '[html-1024x768/[theParentPath].html]';
+      var childp   = '[html-1024x768/[the1ChildPath].html]';
+      var nextimg  = '[1024x768/[theNextPath].jpg]';
+      var previmg  = '[1024x768/[thePrevPath].jpg]';
+      [theJavaScriptCode]
+    </script>
+    <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
+  </head>
+  <body onload="initPicture();"
+        class="picture"
+        style="background-image: url([1024x768/[thePath].jpg]);">
+    <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
+      <div class="title-area-line" id="title-area-line">
+        <div class="title"   >[theTitle]</div>
+        <div class="subtitle">[theSubTitle]</div>
+        <div class="resource">[theResources]</div>
+      </div>
+    </div>
+    <div class="info-area" onmouseover="showInfo();" onmouseout="hideInfo();">
+      <div class="info-area-content" id="info-area-content">
+        <div class="info">
+          <div class="subtitle">Bild-Daten</div>
+          <table class="info">
+            <tr class="info" id="descr:Title">
+              <th>Titel</th>
+              <td>[descr:Title]</td>
+            </tr>
+            <tr class="info" id="descr:Subtitle">
+              <th>Untertitel</th>
+              <td>[descr:Subtitle]</td>
+            </tr>
+            <tr class="info" id="descr:Comment">
+              <th>Kommentar</th>
+              <td>[descr:Comment]</td>
+            </tr>
+            <tr class="info" id="descr:Resource">
+              <th>Quellen</th>
+              <td>[descr:Resource]</td>
+            </tr>
+            <tr class="info" id="exif:CreateDate">
+              <th>Aufnahmedatum</th>
+              <td>[exif:CreateDate]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureTime">
+              <th>Belichtungszeit</th>
+              <td>[exif:ExposureTime]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureMode">
+              <th>Belichtungsmessung</th>
+              <td>[exif:ExposureMode]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureProgram">
+              <th>Aufnahmebetriebsart</th>
+              <td>[exif:ExposureProgram]</td>
+            </tr>
+            <tr class="info" id="exif:ExposureCompensation">
+              <th>Belichtungskorrektur</th>
+              <td>[exif:ExposureCompensation]</td>
+            </tr>
+            <tr class="info" id="exif:FNumber">
+              <th>Blende</th>
+              <td>[exif:FNumber]</td>
+            </tr>
+            <tr class="info" id="exif:FocusDistance">
+              <th>Entfernung</th>
+              <td>[exif:FocusDistance]</td>
+            </tr>
+            <tr class="info" id="exif:DepthOfField">
+              <th>Tiefenschärfe</th>
+              <td>[exif:DepthOfField]</td>
+            </tr>
+            <tr class="info" id="exif:ISO">
+              <th>ISO</th>
+              <td>[exif:ISO]</td>
+            </tr>
+            <tr class="info" id="exif:FocalLength">
+              <th>Brennweite</th>
+              <td>[exif:FocalLength]</td>
+            </tr>
+            <tr class="info" id="exif:FocalLengthIn35mmFormat">
+              <th>Brennweite (Kleinbild)</th>
+              <td>[exif:FocalLengthIn35mmFormat]</td>
+            </tr>
+            <tr class="info" id="exif:ShootingMode">
+              <th>Aufnahmemodus</th>
+              <td>[exif:ShootingMode]</td>
+            </tr>
+            <tr class="info" id="exif:ImageSize">
+              <th>Geometrie</th>
+              <td>[exif:ImageSize]</td>
+            </tr>
+            <tr class="info" id="file:FileModificationDateTime">
+              <th>Geändert</th>
+              <td>[file:FileModificationDateTime]</td>
+            </tr>
+            <tr class="info" id="file:RefOrig">
+              <th>Original-Datei</th>
+              <td>[file:RefOrig]</td>
+            </tr>
+            <tr class="info" id="file:RefRaw">
+              <th>Raw-Datei</th>
+              <td>[file:RefRaw]</td>
+            </tr>
+            <tr class="info" id="xxx">
+              <th>xxx</th>
+              <td>[xxx]</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <a href="javascript:parentPage()" title="Album" class="up" id="theUpButton">
+      <span id="theContainingAlbum">&nbsp;</span>
+    </a>
+    <a href="javascript:prevPage()" title="zur&uuml;ck" class="back" id="theBackButton">
+      <span id="thePreviousPic">&nbsp;</span>
+    </a>
+    <a href="javascript:nextPage()" title="weiter" class="forward" id="theForwardButton">
+      <span id="theNextPic">&nbsp;</span>
+    </a>
+  </body>
+</html>
+

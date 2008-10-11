@@ -138,29 +138,18 @@
       <attr name="geometry">100x75</attr>
       <attr name="geometry2">50x37</attr>
       <attr name="icons-per-row">9</attr>
-      <attr name="template">config/album-template.xml</attr>
     </page>
     <page type="picture">
       <attr name="dir">1024x768</attr>
       <attr name="geometry">1024x768</attr>
-      <attr name="template">config/picture-template.xml</attr>
     </page>
   </layout>
   <layout id="html-1024x768" type="html-css2">
-    <attr name="duration">7000</attr>
-    <attr name="geometry">1024x768</attr>
-    <page type="album">
-      <attr name="dir">100x75</attr>
-      <attr name="dir2">100x75</attr>
-      <attr name="geometry">100x75</attr>
-      <attr name="geometry2">50x37</attr>
-      <attr name="icons-per-row">9</attr>
-      <attr name="template">config/template-album.xml</attr>
+     <page type="album">
+       <attr name="template">config/html-1024x768-album-template.xml</attr>
     </page>
     <page type="picture">
-      <attr name="dir">1024x768</attr>
-      <attr name="geometry">1024x768</attr>
-      <attr name="template">config/template-picture.xml</attr>
+       <attr name="template">config/html-1024x768-picture-template.xml</attr>
     </page>
   </layout>
   <size>
