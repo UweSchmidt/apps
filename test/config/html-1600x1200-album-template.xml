@@ -7,16 +7,16 @@
     <meta name="description" content="Web Photo Album"/>
     <meta name="author"      content="Uwe Schmidt"/>
     <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
-    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1024x768.css"/>
+    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1600x1200.css"/>
     <script type="text/javascript">
       [theJavaScriptCode]
       var duration = 7000 * [theDuration];
-      var nextp    = '[html-1024x768/[theNextPath].html]';
-      var prevp    = '[html-1024x768/[thePrevPath].html]';
-      var parentp  = '[html-1024x768/[theParentPath].html]';
-      var childp   = '[html-1024x768/[the1ChildPath].html]';
-      var nextimg  = '[1024x768/[theNextPath].jpg]';
-      var previmg  = '[1024x768/[thePrevPath].jpg]';
+      var nextp    = '[html-1600x1200/[theNextPath].html]';
+      var prevp    = '[html-1600x1200/[thePrevPath].html]';
+      var parentp  = '[html-1600x1200/[theParentPath].html]';
+      var childp   = '[html-1600x1200/[the1ChildPath].html]';
+      var nextimg  = '[1600x1200/[theNextPath].jpg]';
+      var previmg  = '[1600x1200/[thePrevPath].jpg]';
       [theJavaScriptCode]
     </script>
     <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
@@ -96,7 +96,7 @@
         <tr id="theAlbumRow" size="9">
           <td class="icon"
               id="theAlbumCell">
-            <a href="javascript:childPage(&apos;[html-1024x768/[theChildPath].html]&apos;);"
+            <a href="javascript:childPage(&apos;[html-1600x1200/[theChildPath].html]&apos;);"
                title="[theChildTitle]">
               <img src="[100x75/[theChildPath].jpg]"
                    width="100"

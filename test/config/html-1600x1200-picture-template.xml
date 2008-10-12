@@ -7,23 +7,23 @@
     <meta name="description" content="Web Photo Album"/>
     <meta name="author"      content="Uwe Schmidt"/>
     <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
-    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1024x768.css"/>
+    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1600x1200.css"/>
     <script type="text/javascript">
       [theJavaScriptCode]
       var duration = 7000 * [theDuration];
-      var nextp    = '[html-1024x768/[theNextPath].html]';
-      var prevp    = '[html-1024x768/[thePrevPath].html]';
-      var parentp  = '[html-1024x768/[theParentPath].html]';
-      var childp   = '[html-1024x768/[the1ChildPath].html]';
-      var nextimg  = '[1024x768/[theNextPath].jpg]';
-      var previmg  = '[1024x768/[thePrevPath].jpg]';
+      var nextp    = '[html-1600x1200/[theNextPath].html]';
+      var prevp    = '[html-1600x1200/[thePrevPath].html]';
+      var parentp  = '[html-1600x1200/[theParentPath].html]';
+      var childp   = '[html-1600x1200/[the1ChildPath].html]';
+      var nextimg  = '[1600x1200/[theNextPath].jpg]';
+      var previmg  = '[1600x1200/[thePrevPath].jpg]';
       [theJavaScriptCode]
     </script>
     <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
   </head>
   <body onload="initPicture();"
         class="picture"
-        style="background-image: url([1024x768/[thePath].jpg]);">
+        style="background-image: url([1600x1200/[thePath].jpg]);">
     <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
       <div class="title-area-line" id="title-area-line">
         <div class="title"   >[theTitle]</div>
