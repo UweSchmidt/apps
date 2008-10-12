@@ -7,7 +7,8 @@
     <meta name="description" content="Web Photo Album"/>
     <meta name="author"      content="Uwe Schmidt"/>
     <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
-    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1600x1200.css"/>
+    <meta name="date"        content="[theDate]"/>
+    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/html-1600x1200.css"/>
     <script type="text/javascript">
       [theJavaScriptCode]
       var duration = 7000 * [theDuration];
@@ -19,7 +20,7 @@
       var previmg  = '[1600x1200/[thePrevPath].jpg]';
       [theJavaScriptCode]
     </script>
-    <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
+    <script type="text/javascript" src="[theUpPath]/config/html-album.js" charset="ISO-8859-1"/>
   </head>
   <body onload="initPicture();"
         class="picture"
