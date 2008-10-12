@@ -145,7 +145,7 @@ allImgAttrs opts c orig raw xmp
 	     )
     where
     debug	= optON  optDebug     c
-    exifAttrs	= parseExif (confPicAttrs c)
+    exifAttrs t	= parseExif (confPicAttrs c) t
 
     imgAttrs ""
 	= return $ emptyAttrs
@@ -401,9 +401,12 @@ execFct debug (cmd : args)
 	       rh  <- liftIO $ openFile tmpName ReadMode
 	       res <- liftIO $ hGetContents rh
 	       rmFile tmpName
-	       return (length res `seq` res)	-- hack for none lasy IO
+	       liftIO $ closeF (length res) rh
+	       return res
 	     ) ( \ _ -> return "" )
-      return res
+      return (length res `seq` res)
+    where
+    closeF l hdl = l `seq` hClose hdl
 
 -- ------------------------------------------------------------
 
