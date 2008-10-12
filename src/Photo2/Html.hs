@@ -101,7 +101,7 @@ genHtml rec format conf p0
 		      )
 	gen1Page	:: PathArrow AlbumTree AlbumTree
 	gen1Page p
-	    = runAction ("HTML Page for " ++ showPath p) $
+	    = -- runAction ("HTML Page for " ++ showPath p) $
 	      perform ( genSinglePage p $<
 			( getNode
 			  &&&
@@ -119,7 +119,9 @@ genHtml rec format conf p0
 	      >>>
 	      processTopDownWithAttrl
 	      ( choiceA
-		[ hasName "base"                :-> none	 -- we do not use the base elemet for addressing the other docs -- addAttr "href" (joinPath . map (const "..") $ p)
+		[ hasName "base"                :-> none	-- we do not use the base element
+		  						-- for addressing the other docs
+		  						-- addAttr "href" (joinPath . map (const "..") $ p)
 		, insertText "[theTitle]"       theTitle
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources

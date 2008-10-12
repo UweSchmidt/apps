@@ -162,7 +162,7 @@ parseCmd "pwd" []					= mkCmd ( get theWd
 parseCmd c@"ls"            args				= parseLs' (getTreeAndProcessChildren constA) c args
 parseCmd c@"ls-all"        args				= parseLs' (getTreeAndProcessDesc constA)     c args
 parseCmd c@"ls-rec"        args				= parseLs' (getTreeAndProcessDescC constA)    c args
-parseCmd c@"edited"        args				= parseLs' (getTreeAndProcessSelfAndDesc $
+parseCmd c@"ls-mod"        args				= parseLs' (getTreeAndProcessSelfAndDesc $
 								    \ p -> entryEdited `guards` constA p
 								   )                                  c args
 parseCmd c@"cat"           args				= parseCat                                    c args
@@ -185,7 +185,9 @@ parseCmd   "close"        []				= mkCmd ( withRootDir (withConfig (storeAll ""))
 							  parseCd []
 
 
-parseCmd "update"    args	= parseUpdate    args
+parseCmd c@"update"        args				= parseUpdate False                           c args
+parseCmd c@"update-all"    args				= parseUpdate True                            c args
+
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
 
 parseCmd c@"attr"          args	| length args >= 2	= parseAttr c args
@@ -244,16 +246,17 @@ parseCmd "?" []
 	    , "  ls     [path]              list album and picture names, default is the current working album"
 	    , "  ls-all [path]              list album and picture names recursively, default is the current working album"
 	    , "  ls-rec [path]              load and list album and picture names recursively, default is the current working album"
+	    , "  ls-mod [path]              list all modified entries"
 	    , "  cat    [path]              list the contents of an entry, default is current working album"
 	    , "  dump   [path]              list the contents of a whole album, default is current working album"
-	    , "  edited [path]              list all edited pictures"
 	    , "  find path kre vre          list all pictures with matching attribute key and value"
 	    , "  relatives [path]           list the paths of the parent, the previous and the next entry"
 	    , ""
 	    , "  newalbum path newid        create a new album within path"
 	    , "  setalbumpic path id        set the album picture from the list of pictures within the album"
-	    , "  import [path]              import new pictures into album"
-	    , "  update [path]              import image and update copies, if original has changed"
+	    , "  import     [path]          star import dialog for adding new pictures into album"
+	    , "  update     [path]          copy original and update copies, if original has changed"
+	    , "  update-all [path]          recursively copy originals and update copies, if originals have changed"
 	    , ""
 	    , "  html     [p] [f]           generate single HTML page, default album is current album, default format \"html-1024x768\""
 	    , "  html-all [p] [f]           generate all HTML pages, default album is current album, default format \"html-1024x768\""
@@ -425,10 +428,10 @@ parseTest		= parseWdCmd' test "xxx"
 							  getNode >>> arr picId >>> arrIO print
 							)
 							-}
-parseUpdate		:: [String] -> [Cmd]
-parseUpdate		= parseWdCmd' (changeAlbums update) "update"
+parseUpdate		:: Bool -> String -> [String] -> [Cmd]
+parseUpdate rec c	= parseWdCmd' (changeAlbums update) c
                           where
-			  update = processTreeSelfAndDesc
+			  update = ( if rec then processTreeSelfAndDesc else processTree )
 				   ( withConfig updatePic
 				     />>>/
 				     withConfig updateExifAttrs

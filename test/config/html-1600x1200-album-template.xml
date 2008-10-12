@@ -66,7 +66,7 @@
                 </a>
               </td>
               <td class="icon2" id="the1ChildNav">
-                <a href="javascript:childPage(&apos;[html-1024x748/[the1ChildPath].html]&apos;);"
+                <a href="javascript:childPage(&apos;[html-1600x1200/[the1ChildPath].html]&apos;);"
                    title="1.Bild[the1ChildTitle]"
                    id="the1ChildNav">
                   <img src="[160x120/[the1ChildPath].jpg]"
@@ -142,7 +142,7 @@
                 </a>
               </td>
               <td class="icon2" id="the1ChildNav">
-                <a href="javascript:childPage(&apos;[html-1024x748/[the1ChildPath].html]&apos;);"
+                <a href="javascript:childPage(&apos;[html-1600x1200/[the1ChildPath].html]&apos;);"
                    title="1.Bild[the1ChildTitle]"
                    id="the1ChildNav">
                   <img src="[160x120/[the1ChildPath].jpg]"

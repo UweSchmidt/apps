@@ -181,7 +181,7 @@ traceStatus msg
     = perform $
       traceS $<< (get theStatus &&& get (theConfigAttr "debug"))
     where
-    traceS st "1" = traceMsg 0 (replicate (level st) ' ' ++ msg)
+    traceS st "1" = traceMsg 0 (replicate ((level st) + 2) ' ' ++ msg)
     traceS _  _   = this
 
     level (Running i)	= 2 * i
@@ -331,7 +331,7 @@ storeAllChangedEntries
 
 storeChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeChangedEntries p
-    = ( ( ( runAction ("storing all entries at: " ++ showPath p)
+    = ( ( ( {- runAction ("storing all entries at: " ++ showPath p) -}
 	    ( storeEntry' $<<< ( (getNode >>^ isAl)
 				 &&&
 				 getConfig (albumPath p)
@@ -739,19 +739,18 @@ getAllWithAttr rek rev
 		>>>
 		arrL (load theAttrs >>> M.toList)
 		>>>
-		( if null rek
-		  then this
-		  else isA (match rek . fst)
-		)
+		matchKA
 		>>>
-		( if null rev
-		  then this
-		  else isA (match rev . snd)
-		)
+		matchKV
 	      )
 	/>>>/
 	(\ p -> arr (\ (k, v) -> (p, k, v)))
       )
+    where
+    matchK = match rek
+    matchV = match rev
+    matchKA = if null rek then this else isA (matchK . fst)
+    matchKV = if null rev then this else isA (matchV . snd)
 
 -- ------------------------------------------------------------
 
