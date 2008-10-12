@@ -312,6 +312,18 @@ loadAllAlbums p
 
 -- ------------------------------------------------------------
 
+storeAll		:: String -> ConfigArrow AlbumTree AlbumTree
+storeAll fmt c
+    | isPicFmt		= storeAllChangedEntries
+    | otherwise		= storeAllChangedAlbums
+    where
+    defaultFmt			= getDefOpt "picture" "store-format" c
+    fmt'	| null fmt	= defaultFmt
+                | otherwise	= fmt
+    isPicFmt			= fmt' /= "album"
+
+-- ------------------------------------------------------------
+
 storeAllChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeAllChangedEntries
     = changeAlbums $

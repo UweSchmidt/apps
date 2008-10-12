@@ -113,6 +113,22 @@ liftCmd c		= return $
 				   c
 				   return s )
 
+-- ------------------------------------------------------------
+
+align	:: [String] -> [String]
+align xs
+    = map ( take maxLen . (++ replicate maxLen ' ')) $ xs
+    where
+    maxLen = maximum . (0:) . map length $ xs
+
+fmtTable	:: String -> [(String, String)] -> [String]
+fmtTable del ts
+    = zipWith (\ x y -> x ++ del ++ y)
+              (align . map fst $ ts)
+	      (map snd $ ts)
+
+-- ------------------------------------------------------------
+
 parseCmd						:: String -> [String] -> [Cmd]
 parseCmd c@"open" []					= parseCmd c ["archive2.xml"]
 parseCmd   "open" [archive]				= mkCmd ( loadArchiveAndConfig archive
@@ -121,15 +137,6 @@ parseCmd   "open" [archive]				= mkCmd ( loadArchiveAndConfig archive
 								  >>>
 								  withCwd loadAlbums
 								)
-parseCmd "close" []					= mkCmd ( withRootDir storeAllChangedAlbums
-								  >>>
-								  storeConfig
-								  >>>
-								  storeArchive
-								)
-							  ++
-							  parseCd []
-
 parseCmd "config" []					= mkCmd ( get theConfig
 								  >>>
 								  xpickleDocument xpConfig [ (a_indent, v_1)
@@ -137,14 +144,12 @@ parseCmd "config" []					= mkCmd ( get theConfig
 											   , (a_output_encoding, usAscii)
 											   ] ""
 								)
-parseCmd "storeconfig" []				= mkCmd storeConfig
 parseCmd "options" []					= mkCmd ( get theConfigAttrs
 								  >>>
 								  arrIO dumpOptions
 								)
                                                           where
-							  dumpOptions
-							      = putStrLn . unlines . map (\ (n,v) -> n ++ "\t= " ++ v) . M.toList
+							  dumpOptions = putStrLn . unlines . fmtTable " = " . M.toList
 
 parseCmd c@"set" [n]					= parseCmd c [n,v_1]
 parseCmd   "set" [n,v]					= mkCmd ( changeComp theConfigAttrs (M.insert n v) )
@@ -155,8 +160,8 @@ parseCmd "pwd" []					= mkCmd ( get theWd
 								  arrIO (putStrLn . (rootPath </>) . joinPath)
 								)
 parseCmd c@"ls"            args				= parseLs' (getTreeAndProcessChildren constA) c args
-parseCmd c@"lsr"           args				= parseLs' (getTreeAndProcessDesc constA)     c args
-parseCmd c@"lsra"          args				= parseLs' (getTreeAndProcessDescC constA)    c args
+parseCmd c@"ls-all"        args				= parseLs' (getTreeAndProcessDesc constA)     c args
+parseCmd c@"ls-rec"        args				= parseLs' (getTreeAndProcessDescC constA)    c args
 parseCmd c@"edited"        args				= parseLs' (getTreeAndProcessSelfAndDesc $
 								    \ p -> entryEdited `guards` constA p
 								   )                                  c args
@@ -165,8 +170,21 @@ parseCmd c@"dump"          args				= parseDump                                  
 
 parseCmd "relatives" args	= parseRelatives args
 parseCmd "load"      args	= parseLoad      args
-parseCmd "store"     args	= parseStore     args
-parseCmd "storepics" args	= parseStorePics args
+
+parseCmd c@"store"         args				= parseStore ""                               c args
+parseCmd c@"store-picture" args				= parseStore "picture"                        c args
+parseCmd c@"store-album"   args				= parseStore "album"                          c args
+parseCmd   "store-config" []				= mkCmd storeConfig
+parseCmd   "close"        []				= mkCmd ( withRootDir (withConfig (storeAll ""))
+								  >>>
+								  storeConfig
+								  >>>
+								  storeArchive
+								)
+							  ++
+							  parseCd []
+
+
 parseCmd "update"    args	= parseUpdate    args
 parseCmd "newattrs"  args	= parseNewAttrKeys	args
 
@@ -195,49 +213,58 @@ parseCmd "?" []
 	    [ "commands available from the promt:"
 	    , ""
 	    , "  ?                          help (this text)"
-	    , "  attr path n [vl]           set attribute value for picture/album or unset attr, if vl is missing"
-	    , "  deleteattr path pattern    delete all attributes matching the attribute name pattern"
-	    , "  cat [path]                 list the contents of an entry, default is current working album"
+	    , ""
+	    , "  open [archive]             load a photo archive, configuration and root album, default is \"archive2.xml\""
+	    , "  load [path]                load all subalbums and pictures"
+	    , "  store [path]               write all albums and unload subalbums, format is given by option \"store-format\""
+	    , "  store-album   [path]       write all pictures and albums in album format"
+	    , "  store-picture [path]       write all pictures and albums in picture format"
+	    , "  store-config               write the config data"
 	    , "  close                      write the whole data, albums, config and archive"
-	    , "  config                     list config data"
-	    , "  dump [path]                list the contents of a whole album, default is current working album"
-	    , "  edited [path]              list all edited pictures"
 	    , "  exit,q                     exit photo2"
-	    , "  find path kre vre          list all pictures with matching attribute key and value"
-	    , "  html     [p] [f]           generate single HTML page, default album is current album, default format \"html-1024x768\""
-	    , "  html-all [p] [f]           generate all HTML pages, default album is current album, default format \"html-1024x768\""
-	    , "  ls [path]                  list album and picture names, default is the current working album"
-	    , "  lsr [path]                 list album and picture names recursively, default is the current working album"
-	    , "  lsra [path]                load and list album and picture names recursively, default is the current working album"
-	    , "  newattrs [path]            change attribute keys to new format"
-	    , "  open <archive>             load a photo archive, configuration and root album"
+	    , ""
 	    , "  options                    list options"
-	    , "  pwd                        print working album (dir)"
-	    , "  relatives [path]           list the paths of the parent, the previous and the next entry"
-	    , "  rename-cont [path]         rename all pictures in an album"
-	    , "  rename path newid          rename picture"
-	    , "  newalbum path newid        create a new album within path"
-	    , "  setalbumpic path id        set the album picture from the list of pictures within the album"
-	    , "  import [path]              import new pictures into album"
 	    , "  set <opt> [val]            set or overwrite an option, default value is \"1\""
 	    , "      copy-copy              force creation of all copies in all required sizes"
 	    , "      copy-exif              force import of exif info from original"
 	    , "      copy-org               force import of original images"
-	    , "      store-all              force storing entries even if not changed"
 	    , "      debug                  debug output"
-	    , "      layout                 select the layout for html page generation"
 	    , "      import-base            base dir for image import, default is \"../Diakasten\""
-	    , "      import-dir             dir path relative to import-base, default is \".\""
-	    , "      import-since           only files newer than date are imported, default is \"2008-01-01\""
-	    , "      import-pattern         only files matching import pattern are imported, default pattern is \".*\""
 	    , "      import-by-date         images are sorted by creation date"
-	    , "  defpicattr a val           define a picture attribute"
-	    , "  load [path    ]            load all subalbums and pictures"
-	    , "  storeconfig                write the config data"
-	    , "  store [path]               write all albums addressed by path and unload subalbums"
-	    , "  storepics [path]           write all pictures and albums addressed by path and unload subalbums"
+	    , "      import-dir             dir path relative to import-base, default is \".\""
+	    , "      import-pattern         only files matching import pattern are imported, default pattern is \".*\""
+	    , "      import-since           only files newer than date are imported, default is \"2008-01-01\""
+	    , "      layout                 select the layout for html page generation"
+	    , "      store-all              force storing entries even if not changed"
+	    , "      store-format           \"album\" or \"picture\", default is \"picture\""
 	    , "  unset <opt>                unset an option"
+	    , "  config                     list whole config data, not only options"
+	    , ""
+	    , "  pwd                        print working album (dir)"
+	    , "  ls     [path]              list album and picture names, default is the current working album"
+	    , "  ls-all [path]              list album and picture names recursively, default is the current working album"
+	    , "  ls-rec [path]              load and list album and picture names recursively, default is the current working album"
+	    , "  cat    [path]              list the contents of an entry, default is current working album"
+	    , "  dump   [path]              list the contents of a whole album, default is current working album"
+	    , "  edited [path]              list all edited pictures"
+	    , "  find path kre vre          list all pictures with matching attribute key and value"
+	    , "  relatives [path]           list the paths of the parent, the previous and the next entry"
+	    , ""
+	    , "  newalbum path newid        create a new album within path"
+	    , "  setalbumpic path id        set the album picture from the list of pictures within the album"
+	    , "  import [path]              import new pictures into album"
 	    , "  update [path]              import image and update copies, if original has changed"
+	    , ""
+	    , "  html     [p] [f]           generate single HTML page, default album is current album, default format \"html-1024x768\""
+	    , "  html-all [p] [f]           generate all HTML pages, default album is current album, default format \"html-1024x768\""
+	    , ""
+	    , "  attr path n [vl]           set attribute value for picture/album or unset attr, if vl is missing"
+	    , "  deleteattr path pattern    delete all attributes matching the attribute name pattern"
+	    , "  newattrs [path]            change attribute keys to new format"
+	    , "  rename-cont [path]         rename all pictures in an album"
+	    , "  rename path newid          rename picture"
+	    , "  defpicattr a val           define a picture attribute"
+	    , ""
 	    , "  version                    print photo2 version"
 	    ]
 
@@ -369,11 +396,14 @@ parseLoad		= parseWdCmd' ld "load"
 			  ld = changeAlbums $
 			       processTreeSelfAndDesc ( const $ this )
 
-parseStore		:: [String] -> [Cmd]
-parseStore		= parseWdCmd' storeAllChangedAlbums "store"
+parseStore		:: String -> String -> [String] -> [Cmd]
+parseStore f c		= parseWdCmd' (withConfig (storeAll f)) c
 
-parseStorePics		:: [String] -> [Cmd]
-parseStorePics		= parseWdCmd' storeAllChangedEntries "storepics"
+parseStoreAlbums	:: String -> [String] -> [Cmd]
+parseStoreAlbums c	= parseWdCmd' storeAllChangedAlbums c
+
+parseStorePics		:: String -> [String] -> [Cmd]
+parseStorePics c	= parseWdCmd' storeAllChangedEntries c
 
 parseImport		:: String -> [String] -> [Cmd]
 parseImport c		= parseWdCmd' imp c
