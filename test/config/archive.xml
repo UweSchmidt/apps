@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE config SYSTEM "archive.dtd">
 <config>
+  <attr name="album-dir">album2</attr>
   <attr name="base">../Diakaesten</attr>
   <attr name="debug">1</attr>
   <attr name="dir">org</attr>
@@ -10,6 +11,8 @@
   <attr name="import-base">../Diakaesten</attr>
   <attr name="import-pattern">.*/uwe2/.*</attr>
   <attr name="import-since">2007</attr>
+  <attr name="layout">html-1600x1200</attr>
+  <attr name="store-all">1</attr>
   <picture-attributes>
     <attr name="cam:CameraModelName">(.*:)?CameraModelName|model</attr>
     <attr name="cam:FocalLength">(.*:)?FocalLength</attr>
@@ -60,19 +63,19 @@
     <attr name="show:Duration">(.*:)?[Dd]uration</attr>
   </picture-attributes>
   <layout id="html-1024x768" type="html-css2">
-     <page type="album">
-       <attr name="template">config/html-1024x768-album-template.xml</attr>
+    <page type="album">
+      <attr name="template">config/html-1024x768-album-template.xml</attr>
     </page>
     <page type="picture">
-       <attr name="template">config/html-1024x768-picture-template.xml</attr>
+      <attr name="template">config/html-1024x768-picture-template.xml</attr>
     </page>
   </layout>
   <layout id="html-1600x1200" type="html-css2">
-     <page type="album">
-       <attr name="template">config/html-1600x1200-album-template.xml</attr>
+    <page type="album">
+      <attr name="template">config/html-1600x1200-album-template.xml</attr>
     </page>
     <page type="picture">
-       <attr name="template">config/html-1600x1200-picture-template.xml</attr>
+      <attr name="template">config/html-1600x1200-picture-template.xml</attr>
     </page>
   </layout>
   <size>

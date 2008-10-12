@@ -114,7 +114,7 @@ liftCmd c		= return $
 				   return s )
 
 parseCmd						:: String -> [String] -> [Cmd]
-parseCmd c@"open" []					= parseCmd c ["archive.xml"]
+parseCmd c@"open" []					= parseCmd c ["archive2.xml"]
 parseCmd   "open" [archive]				= mkCmd ( loadArchiveAndConfig archive
 								  >>>
 								  rootWd
