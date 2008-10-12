@@ -401,7 +401,7 @@ execFct debug (cmd : args)
 	       rh  <- liftIO $ openFile tmpName ReadMode
 	       res <- liftIO $ hGetContents rh
 	       rmFile tmpName
-	       return res
+	       return (length res `seq` res)	-- hack for none lasy IO
 	     ) ( \ _ -> return "" )
       return res
 
