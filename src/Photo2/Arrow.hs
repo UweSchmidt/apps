@@ -331,7 +331,7 @@ storeAllChangedEntries
 
 storeChangedEntries	:: PathArrow AlbumTree AlbumTree
 storeChangedEntries p
-    = ( ( ( {- runAction ("storing all entries at: " ++ showPath p) -}
+    = ( ( ( runAction ("storing all entries at: " ++ showPath p)
 	    ( storeEntry' $<<< ( (getNode >>^ isAl)
 				 &&&
 				 getConfig (albumPath p)
@@ -602,6 +602,19 @@ processTree pa p0
 	(n' : p') = p
 	nodeMatch = hasPicId n'
 
+loadProcessStore		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+loadProcessStore pa p
+    = runAction ("newformat for entry: " ++ showPath p) $
+      choiceA
+      [ isEntryLoaded	:-> pa p
+      , this		:-> ( checkEntryLoaded
+			      >>>
+			      pa p
+			      >>>
+			      storeChangedEntries p
+			    )
+      ]
+
 processTreeChildren		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
 processTreeChildren		= processTree . selChildrenAndProcess . checkAndProcess
 
@@ -655,6 +668,23 @@ selSelfAndDescAndProcessBU pa p
     = selDescAndProcessBU pa p
       >>>
       pa p
+-- ------------------------------------------------------------
+
+processTreeSelfAndDesc'		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+processTreeSelfAndDesc'		= processTree . selSelfAndDescAndProcessTD'
+
+selSelfAndDescAndProcessTD'	:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selSelfAndDescAndProcessTD' pa p
+    = loadProcessStore pa p
+      >>>
+      selDescAndProcessTD' pa p
+
+selDescAndProcessTD'		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
+selDescAndProcessTD' pa p
+    = processD (reverse p)	-- make p ++ [n] a bit more efficient
+    where
+    processD rp = processChildren
+		  ( (\ rp' -> loadProcessStore pa (reverse rp') >>> processD rp') $< (getPicId >>^ (:rp)) )
 
 -- ----------------------------------------
 

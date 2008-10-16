@@ -188,7 +188,9 @@ parseCmd   "close"        []				= mkCmd ( withRootDir (withConfig (storeAll ""))
 parseCmd c@"update"        args				= parseUpdate False                           c args
 parseCmd c@"update-all"    args				= parseUpdate True                            c args
 
-parseCmd "newattrs"  args	= parseNewAttrKeys	args
+parseCmd c@"newattrs"      args				= parseNewAttrKeys	                      c args
+parseCmd c@"newformat"     args				= parseNewFormat False                        c args
+parseCmd c@"newformat-all" args				= parseNewFormat True                         c args
 
 parseCmd c@"attr"          args	| length args >= 2	= parseAttr c args
 parseCmd c@"deleteattr"    args	| length args == 2	= parseDeleteAttr c args
@@ -263,7 +265,10 @@ parseCmd "?" []
 	    , ""
 	    , "  attr path n [vl]           set attribute value for picture/album or unset attr, if vl is missing"
 	    , "  deleteattr path pattern    delete all attributes matching the attribute name pattern"
-	    , "  newattrs [path]            change attribute keys to new format"
+	    , "  newattrs  [path]           change attribute keys to new format"
+	    , "  newformat     [path]       change entry into new album format"
+	    , "  newformat-all [path]       change all entries into new album format"
+	    , ""
 	    , "  rename-cont [path]         rename all pictures in an album"
 	    , "  rename path newid          rename picture"
 	    , "  defpicattr a val           define a picture attribute"
@@ -437,15 +442,31 @@ parseUpdate rec c	= parseWdCmd' (changeAlbums update) c
 				     withConfig updateExifAttrs
 				   )
 
-parseNewAttrKeys	:: [String] -> [Cmd]
-parseNewAttrKeys	= parseWdCmd' ( changeAlbums $
+parseNewFormat		:: Bool -> String -> [String] -> [Cmd]
+parseNewFormat rec c	= parseWdCmd' ( changeAlbums $
+				        ( if rec
+					  then processTreeSelfAndDesc'
+					  else processTree
+					) newFormat
+				      ) c
+			  where
+			  newFormat = loadProcessStore
+				      ( withConfig updateAttrKeys
+					/>>>/
+					deleteAttr "unknown:.*"
+					/>>>/
+					withConfig updateExifAttrs
+				      )
+
+parseNewAttrKeys	:: String -> [String] -> [Cmd]
+parseNewAttrKeys c	= parseWdCmd' ( changeAlbums $
 				        processTreeSelfAndDesc (withConfig updateAttrKeys)
-				      ) "newattrs"
+				      ) c
 
 parseModifiy		:: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
-parseModifiy cn ca al	= parseWdCmd' ( changeAlbums $
+parseModifiy c ca al	= parseWdCmd' ( changeAlbums $
 				        processTree (withConfig ca)
-				      ) cn (take 1 al)
+				      ) c (take 1 al)
 
 parseAttr		:: String -> [String] -> [Cmd]
 parseAttr c al		= parseWdCmd' ( changeAlbums $
