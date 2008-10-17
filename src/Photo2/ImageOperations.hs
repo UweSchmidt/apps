@@ -84,7 +84,7 @@ remAttrs kp	= M.foldWithKey remK M.empty
 mvPic	:: Name -> Config -> Path -> Pic -> IOE Pic
 mvPic newName c p pic
     = do
-      mapM renameCopy $ (M.keys . load theCopies $ pic)
+      mapM renameCopy $ (map show . M.keys . load theCopies $ pic)
       return $ store theId newName pic
     where
     imgtype	= getDefOpt "jpg"           "imgtype" c
@@ -184,7 +184,7 @@ importOrig c p pic
 	      mkDirectoryPath dst
 	      copy
 	      geo <- getImageSize dst
-	      return $ change theCopies (M.insert dir (Copy geo)) pic
+	      return $ change theCopies (M.insert (newAtom dir) (Copy geo)) pic
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src
@@ -233,7 +233,7 @@ createCopy c p s pic
 	 then do
 	      resize
 	      geo <- getImageSize dst
-	      return $ change theCopies (M.insert (sizeDir s) (Copy geo)) pic
+	      return $ change theCopies (M.insert (newAtom . sizeDir $ s) (Copy geo)) pic
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src
@@ -248,7 +248,7 @@ createCopy c p s pic
 	  crGeo Pad	= (sGeo, Geo (-1) (-1))
 	  crGeo Crop	= (sGeo, emptyGeo)
 
-	  sGeo   = maybe emptyGeo copyGeo . M.lookup dir . picCopies $ pic
+	  sGeo   = maybe emptyGeo copyGeo . M.lookup (newAtom dir) . picCopies $ pic
 	  cGeo   = sizeGeo    s
 	  aspect = sizeAspect s
 

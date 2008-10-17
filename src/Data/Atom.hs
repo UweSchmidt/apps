@@ -43,7 +43,6 @@
    Equality test for @Atom@s runs in /O(1)/, it is just a pointer comarison.
    The @Ord@ comparisons have the same runtime like the @ByteString@ comparisons.
    Internally there is an UTF8 comparison, but UTF8 encoding preserves the total order.
-   @read@ is an alias for @newAtom@.
 
    Warning: The internal cache never shrinks during execution. So using it in a
    undisciplined way can lead to memory leaks.

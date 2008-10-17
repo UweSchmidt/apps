@@ -53,17 +53,17 @@ data Config		= Config { confAttrs    :: Attrs
 type Attrs		= Map Atom Value
 type PicAttrs		= [(Value, Name)]
 
-type Layouts		= Map Name Layout
+type Layouts		= Map Atom Layout
 data Layout		= Layout { layoutType  :: Value
 				 , layoutAttrs :: Attrs
 				 , layoutPages :: Pages
 				 }
 			  deriving (Show)
 
-type Dictionaries	= Map Name Dictionary
+type Dictionaries	= Map Atom Dictionary
 type Dictionary		= Attrs
 
-type Pages		= Map Name Page
+type Pages		= Map Atom Page
 type Page		= Attrs
 
 type Sizes		= [Size]
@@ -103,7 +103,7 @@ data Pic		= Pic { picId     :: Name
 			      }
 			  deriving (Show, Eq)
 
-type Copies		= Map Name Copy
+type Copies		= Map Atom Copy
 data Copy		= Copy { copyGeo  :: Geo
 			       }
 			  deriving (Show, Eq)
@@ -307,7 +307,7 @@ xpWrapPic isa		= xpWrap ( \ (es,i,h,(o,r,x),cs,as)
 				     (xpDefault "" $ xpAttr "raw1"  $ xpText )
 				     (xpDefault "" $ xpAttr "xmp"   $ xpText )
 				   )
-			           ( xpMap "copy" "base" xpName xpCopy )
+			           ( xpMap "copy" "base" xpAtom xpCopy )
 				   ( xpAttrs )
 
 xpCopy			:: PU Copy
@@ -382,7 +382,7 @@ xpHtmlText		= xpWrap ( showXML, readHTML ) $ xpTrees
 			  readHTML = runLA hread				-- hread ignores not wellformed attributes, e.g. unescaped &s in URLs
 
 xpLayouts		:: PU Layouts
-xpLayouts		= xpMap "layout" "id" xpName xpLayout
+xpLayouts		= xpMap "layout" "id" xpAtom xpLayout
 
 xpLayout		:: PU Layout
 xpLayout		= xpWrap ( uncurry3 Layout
@@ -393,13 +393,13 @@ xpLayout		= xpWrap ( uncurry3 Layout
 				   ( xpPages )
 
 xpDictionaries		:: PU Dictionaries
-xpDictionaries		= xpMap "dictionary" "id" xpName xpDictionary
+xpDictionaries		= xpMap "dictionary" "id" xpAtom xpDictionary
 
 xpDictionary		:: PU Dictionary
 xpDictionary    	= xpAttrs
 
 xpPages			:: PU Pages
-xpPages			= xpMap "page" "type" xpName xpAttrs
+xpPages			= xpMap "page" "type" xpAtom xpAttrs
 
 xpSizes 		:: PU Sizes
 xpSizes			= xpList xpSize

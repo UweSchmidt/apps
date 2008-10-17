@@ -32,6 +32,9 @@ subTitleKey	= newAtom "descr:Subtitle"
 resourceKey	= newAtom "descr:Resource"
 durationKey	= newAtom "show:Duration"
 
+defLayoutKey	:: Atom
+defLayoutKey	= newAtom "html-1024x768"
+
 genHtml			:: Bool -> String -> ConfigArrow AlbumTree ()
 genHtml rec format conf p0
     = runAction ("prepare generate HTML pages in format " ++ show format' ++ " for " ++ showPath p0) $
@@ -44,14 +47,14 @@ genHtml rec format conf p0
 	      &&&
 	      ( arr layoutPages
 		>>>
-		( ( (arrL $ maybeToList . M.lookup (show albumKey))
+		( ( (arrL $ maybeToList . M.lookup albumKey)
 		    >>>
 		    (arrL $ maybeToList . M.lookup tempKey)
 		    >>>
 		    readTemplate "album"
 		  )
 		  &&&
-		  ( (arrL $ maybeToList . M.lookup (show picKey))
+		  ( (arrL $ maybeToList . M.lookup picKey)
 		    >>>
 		    (arrL $ maybeToList . M.lookup tempKey)
 		    >>>
@@ -69,8 +72,8 @@ genHtml rec format conf p0
       errMsg ("no layout spec found for format " ++ show format')
     where
     format'
-	| null format	= fromMaybe "html-1024x768" . M.lookup layoutKey . confAttrs $ conf
-	| otherwise	= format
+	| null format	= maybe defLayoutKey newAtom . M.lookup layoutKey . confAttrs $ conf
+	| otherwise	= newAtom format
 
     readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
 			  runInLocalURIContext $
@@ -335,7 +338,7 @@ genHtml rec format conf p0
 	    valOf		= valOf' ""
             valOf' d n          = fromMaybe d . M.lookup n $ pas
 
-            fullPath            = (format' </>)
+            fullPath            = (show format' </>)
             relPath             = (theUpPath </>)
 
 	    dst			= fullPath $ thePath `addExtension` "html"
