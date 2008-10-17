@@ -3,6 +3,7 @@ where
 
 import qualified Control.Monad as CM
 
+import           Data.Atom
 import           Data.List               ( isPrefixOf
 					 , isInfixOf
 					 )
@@ -144,7 +145,7 @@ importDialog cnf pics
 	    | c == 'a'
 		= dialog env (foldl (\ l e -> addEnv e : l) ss rs) ns []
 	    | c `elem` inames
-		= dialog (M.insert (head . filter ([c] `isPrefixOf`) $ names) v' env) ss ns rs
+		= dialog (M.insert (head . filter (([c] `isPrefixOf`) . show) $ keys) v' env) ss ns rs
 	    | c `elem` "h?"
 		= do
 		  hPutStrLn stdout usage
@@ -160,6 +161,7 @@ importDialog cnf pics
 	    v'	= concat . runLA (xshow hread) $ v	-- substitute HTML entity refs, e.g. &oslash;
 	    names  = ["title", "subtitle", "keywords", "comment", "descripion", "resource"]
 	    inames = map head names
+            keys   = map newAtom names
 
 	    addEnv (x1, x2, x3, e)
 		= (x1, x2, x3, normAttrs (confPicAttrs cnf) $ env `M.union` e)

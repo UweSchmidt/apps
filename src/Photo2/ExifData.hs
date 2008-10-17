@@ -4,6 +4,7 @@ where
 import           Control.Arrow
 import		 Control.Monad ( ) -- mplus )
 
+import           Data.Atom
 import           Data.Char
 import           Data.List
 import qualified Data.Map as M
@@ -34,7 +35,7 @@ parseExif pl
       >>>
       filter ( not . null . snd )
       >>>
-      filter ( not . ("unknown:" `isPrefixOf`) . fst )
+      filter ( not . ("unknown:" `isPrefixOf`) . show . fst )
       >>>
       M.fromList
 
@@ -84,14 +85,15 @@ normAttrs pl
     = M.foldWithKey norm emptyAttrs
     where
     norm k v m
-	| null k'	= m
-	| otherwise	= M.insert k' v m
+	| null . show $ k'	= m
+	| otherwise		= M.insert k' v m
 	where
-	k' = newAttrKey pl k
+	k' = newAttrKey pl (show k)
 
-newAttrKey	:: PicAttrs -> String -> String
+newAttrKey	:: PicAttrs -> String -> Atom
 newAttrKey pl k
-    = case matchFound pl of
+    = newAtom $
+      case matchFound pl of
       Just n	-> n
       Nothing   -> ("unknown:" ++) . snd . splitWith ':' $ k
     where
@@ -112,6 +114,9 @@ fileModificationDateTime'	= "FileModificationDateTime"
 
 fileModificationDateTime	:: String
 fileModificationDateTime	= addPrefix fileModificationDateTime'
+
+fileModificationKey		:: Atom
+fileModificationKey		= newAtom fileModificationDateTime
 
 oldKeys	:: [(String, String)]
 oldKeys

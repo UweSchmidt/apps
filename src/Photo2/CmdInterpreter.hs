@@ -3,6 +3,7 @@ where
 
 import qualified Control.Monad as CM
 
+import           Data.Atom
 import           Data.Char
 import           Data.List
 import           Data.Maybe
@@ -149,11 +150,13 @@ parseCmd "options" []					= mkCmd ( get theConfigAttrs
 								  arrIO dumpOptions
 								)
                                                           where
-							  dumpOptions = putStrLn . unlines . fmtTable " = " . M.toList
+							  dumpOptions = putStrLn . unlines . fmtTable " = "
+									.
+									map (first show) . M.toList
 
 parseCmd c@"set" [n]					= parseCmd c [n,v_1]
-parseCmd   "set" [n,v]					= mkCmd ( changeComp theConfigAttrs (M.insert n v) )
-parseCmd "unset" [n]					= mkCmd ( changeComp theConfigAttrs (M.delete n) )
+parseCmd   "set" [n,v]					= mkCmd ( changeComp theConfigAttrs (M.insert (newAtom n) v) )
+parseCmd "unset" [n]					= mkCmd ( changeComp theConfigAttrs (M.delete (newAtom n)  ) )
 parseCmd "defpicattr" [n,v]				= mkCmd ( changeComp theConfigPicAttrs (addEntry v n) )
 parseCmd "pwd" []					= mkCmd ( get theWd
 								  >>>

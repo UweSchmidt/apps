@@ -668,6 +668,7 @@ selSelfAndDescAndProcessBU pa p
     = selDescAndProcessBU pa p
       >>>
       pa p
+
 -- ------------------------------------------------------------
 
 processTreeSelfAndDesc'		:: PathArrow AlbumTree AlbumTree -> PathArrow AlbumTree AlbumTree
@@ -774,13 +775,13 @@ getAllWithAttr rek rev
 		matchKV
 	      )
 	/>>>/
-	(\ p -> arr (\ (k, v) -> (p, k, v)))
+	(\ p -> arr (\ (k, v) -> (p, show k, v)))
       )
     where
     matchK = match rek
     matchV = match rev
-    matchKA = if null rek then this else isA (matchK . fst)
-    matchKV = if null rev then this else isA (matchV . snd)
+    matchKA = if null rek then this else isA (matchK . show . fst)
+    matchKV = if null rev then this else isA (matchV        . snd)
 
 -- ------------------------------------------------------------
 

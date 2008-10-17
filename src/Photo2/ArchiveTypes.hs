@@ -1,6 +1,7 @@
 module Photo2.ArchiveTypes
 where
 
+import           Data.Atom
 import           Data.Char
 import		 Data.List
 import           Data.Maybe
@@ -49,7 +50,7 @@ data Config		= Config { confAttrs    :: Attrs
 				 }
 			  deriving (Show)
 
-type Attrs		= Map Name Value
+type Attrs		= Map Atom Value
 type PicAttrs		= [(Value, Name)]
 
 type Layouts		= Map Name Layout
@@ -165,8 +166,8 @@ selConfigPicAttrs	:: AppSelector PicAttrs
 selConfigPicAttrs	= (confPicAttrs,   \ x c -> c {confPicAttrs = x}) `sub` selConfig
 
 selConfigAttr		:: Name -> AppSelector Value
-selConfigAttr k		= (fromMaybe "" . M.lookup k,
-                                \ v as -> M.insert k v as)  `sub` selConfigAttrs
+selConfigAttr k		= (fromMaybe "" . M.lookup (newAtom k),
+                                \ v as -> M.insert (newAtom k) v as)  `sub` selConfigAttrs
 
 -- ------------------------------------------------------------
 
@@ -323,6 +324,10 @@ xpErrs			= xpList $
 xpName			:: PU Name
 xpName			= xpText
 
+xpAtom			:: PU Atom
+xpAtom			= xpWrap (newAtom, show) $
+			  xpName
+
 xpAlbumEntry		:: PU AlbumEntry
 xpAlbumEntry		= xpElem "entry" $
 			  xpPair ( xpAttr "path" $
@@ -360,7 +365,7 @@ xpConfig		= xpElem "config" $
 			  xp5Tuple xpAttrs xpPicAttrs xpLayouts xpDictionaries xpSizes
 	       
 xpAttrs			:: PU Attrs
-xpAttrs			= xpMap "attr" "name" xpName xpHtmlText
+xpAttrs			= xpMap "attr" "name" xpAtom xpHtmlText
 
 xpPicAttrs		:: PU PicAttrs
 xpPicAttrs		= xpDefault [] $
@@ -486,7 +491,7 @@ getOpt			:: String -> Config -> String
 getOpt			= getDefOpt ""
 
 getDefOpt		:: String -> String -> Config -> String
-getDefOpt d o		= fromMaybe d . M.lookup o . confAttrs
+getDefOpt d o		= fromMaybe d . M.lookup (newAtom o) . confAttrs
 
 optON			:: String -> Config -> Bool
 optON o			= (`elem` ["1","yes","true"]) . map toLower . getOpt o

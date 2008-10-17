@@ -6,6 +6,7 @@ import qualified Control.Exception as CE
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
 
+import           Data.Atom
 import           Data.Char
 import           Data.List
 import qualified Data.Map as M
@@ -66,17 +67,17 @@ dryCmd False _msg   cmd	= cmd
 mergeAttrs	:: Attrs -> Attrs -> Attrs
 mergeAttrs n o	= M.foldWithKey mergeAttr o n
 
-mergeAttr	:: Name -> Value -> Attrs -> Attrs
+mergeAttr	:: Atom -> Value -> Attrs -> Attrs
 mergeAttr k v
     | null v	= M.delete k
     | otherwise	= M.insert k v
 
-remAttrs	:: Name -> Attrs -> Attrs
+remAttrs	:: String -> Attrs -> Attrs
 remAttrs kp	= M.foldWithKey remK M.empty
 		  where
 		  remK k a m
-		      | match kp k	= m
-		      | otherwise	= M.insert k a m
+		      | match kp (show k)	= m
+		      | otherwise		= M.insert k a m
 
 -- ------------------------------------------------------------
 
@@ -116,7 +117,7 @@ importExifAttrs c _p pic
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
     xmp		= base </-> picXmp  pic
-    modified	= fromMaybe "" . M.lookup fileModificationDateTime . picAttrs $ pic
+    modified	= fromMaybe "" . M.lookup fileModificationKey . picAttrs $ pic
 
     base	= getImportBase c
 

@@ -1,4 +1,4 @@
-SRC	= $(wildcard ../src/Photo2/*.hs)
+SRC	= $(wildcard ../src/*/*.hs)
 
 all	: photo2
 

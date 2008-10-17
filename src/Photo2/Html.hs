@@ -1,6 +1,7 @@
 module Photo2.Html
 where
 
+import           Data.Atom
 import		 Data.List
 import           Data.Maybe
 import qualified Data.Map as M
@@ -17,6 +18,20 @@ import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 --
 -- generate HTML pages
 
+albumKey, picKey, tempKey, layoutKey	:: Atom
+
+albumKey	= newAtom "album"
+picKey		= newAtom "picture"
+tempKey		= newAtom "template"
+layoutKey       = newAtom "layout"
+
+titleKey, subTitleKey, resourceKey, durationKey :: Atom
+
+titleKey	= newAtom "descr:Title"
+subTitleKey	= newAtom "descr:Subtitle"
+resourceKey	= newAtom "descr:Resource"
+durationKey	= newAtom "show:Duration"
+
 genHtml			:: Bool -> String -> ConfigArrow AlbumTree ()
 genHtml rec format conf p0
     = runAction ("prepare generate HTML pages in format " ++ show format' ++ " for " ++ showPath p0) $
@@ -29,16 +44,16 @@ genHtml rec format conf p0
 	      &&&
 	      ( arr layoutPages
 		>>>
-		( ( (arrL $ maybeToList . M.lookup "album")
+		( ( (arrL $ maybeToList . M.lookup (show albumKey))
 		    >>>
-		    (arrL $ maybeToList . M.lookup "template")
+		    (arrL $ maybeToList . M.lookup tempKey)
 		    >>>
 		    readTemplate "album"
 		  )
 		  &&&
-		  ( (arrL $ maybeToList . M.lookup "picture")
+		  ( (arrL $ maybeToList . M.lookup (show picKey))
 		    >>>
-		    (arrL $ maybeToList . M.lookup "template")
+		    (arrL $ maybeToList . M.lookup tempKey)
 		    >>>
 		    readTemplate "picture"
 		  )
@@ -54,7 +69,7 @@ genHtml rec format conf p0
       errMsg ("no layout spec found for format " ++ show format')
     where
     format'
-	| null format	= fromMaybe "html-1024x768" . M.lookup "layout" . confAttrs $ conf
+	| null format	= fromMaybe "html-1024x768" . M.lookup layoutKey . confAttrs $ conf
 	| otherwise	= format
 
     readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
@@ -202,10 +217,10 @@ genHtml rec format conf p0
             theParentPath       = joinPath par
 	    the1ChildPath	= joinPath child1p
 
-	    theTitle		= valOf        "descr:Title"
-	    theSubTitle		= valOf        "descr:Subtitle"
-	    theResources	= valOf        "descr:Resource"
-	    theDuration         = valOf' "1.0" "show:Duration"
+	    theTitle		= valOf        titleKey
+	    theSubTitle		= valOf        subTitleKey
+	    theResources	= valOf        resourceKey
+	    theDuration         = valOf' "1.0" durationKey
 	    theHeadTitle	= removeMarkup theTitle
             theHeadTitle'
 		| null theHeadTitle	= "\160"
@@ -246,7 +261,7 @@ genHtml rec format conf p0
 						 ]
 				       )
 		                  where
-				  val = valOf item
+				  val = valOf . newAtom $ item
 				  tr	| "exif:" `isPrefixOf` item	= translateExif
 					| otherwise			= id
 
@@ -303,7 +318,7 @@ genHtml rec format conf p0
 
             getPlainTitle	= picAttrs
 				  >>>
-				  M.lookup "descr:Title"
+				  M.lookup titleKey
 				  >>>
 				  fromMaybe ""
 				  >>>

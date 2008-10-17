@@ -3,6 +3,7 @@ where
 
 import qualified Control.Monad as CM
 
+import           Data.Atom
 import           Data.Char
 import qualified Data.Map as M
 import           Data.Maybe
@@ -56,7 +57,7 @@ scanForNewImages c
 		        ( map normFn rawFilesFound )
 		        ( map normFn xmpFilesFound )
     where
-    keyDateAndTime	= "exif:CreateDate"
+    keyDateAndTime	= newAtom "exif:CreateDate"
 
     imgBase             = getDefOpt "../Diakaesten" "import-base"    c
     imgDir              = getDefOpt "."             "import-dir"     c
