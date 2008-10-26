@@ -1,6 +1,8 @@
 module Photo2.ArchiveTypes
 where
 
+import           Control.Parallel.Strategies
+
 import           Data.Atom
 import           Data.Char
 import		 Data.List
@@ -18,16 +20,17 @@ import           Photo2.FilePath
 --
 -- the global state
 
-data AppState		= AppState { albums      :: ! AlbumTree
-				   , archiveName :: ! Href
-				   , config      :: ! Config
-				   , configName  :: ! Href
-				   , status      :: ! Status
-				   , cwd	 :: ! Path
+data AppState		= AppState { albums      :: AlbumTree
+				   , archiveName :: Href
+				   , config      :: Config
+				   , configName  :: Href
+				   , status      :: Status
+				   , cwd	 :: Path
 				   }
 			  deriving (Show)
 
 type Options		= AssocList Name Value
+
 data Status		= Running Int
 			| Exc String
 			  deriving (Eq, Show)
@@ -519,5 +522,42 @@ optForceExif		= "copy-exif"
 
 getImportBase		:: Config -> String
 getImportBase		= getDefOpt "../Diakaesten" "import-base"
+
+-- ------------------------------------------------------------
+
+instance NFData AppState where
+    rnf (AppState a n cf cfn s wd)
+			= rnf a `seq` rnf n `seq` rnf cf `seq` rnf cfn `seq` rnf s `seq` rnf wd
+
+instance NFData Status where
+    rnf (Running i)	= rnf i
+    rnf (Exc msg)	= rnf msg
+
+instance NFData Config where
+    rnf (Config ca cp cl cd cs)
+			= rnf ca `seq` rnf cp `seq` rnf cl `seq` rnf cd `seq` rnf cs
+
+instance NFData Layout where
+    rnf (Layout lt la lp)
+			= rnf lt `seq` rnf la `seq` rnf lp
+
+instance NFData Size where
+    rnf (Size sd sg sa)	= rnf sd `seq` rnf sg `seq` rnf sa
+
+instance NFData AspectRatio where
+
+instance NFData Geo where
+    rnf (Geo w h)	= rnf w `seq` rnf h
+
+instance NFData Archive where
+    rnf (Archive ac ar)	= rnf ac `seq` rnf ar
+
+instance NFData Pic where
+    rnf (Pic pj ia pr po pw px pc pa pe pd)
+			= rnf pj `seq` rnf ia `seq` rnf pr `seq` rnf po `seq`
+			  rnf pw `seq` rnf px `seq` rnf pc `seq` rnf pa `seq` rnf pe `seq` rnf pd
+
+instance NFData Copy where
+    rnf (Copy cg)	= rnf cg
 
 -- ------------------------------------------------------------

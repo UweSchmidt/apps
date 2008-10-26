@@ -2,6 +2,7 @@ module Photo2.CmdInterpreter
 where
 
 import qualified Control.Monad as CM
+import           Control.Parallel.Strategies
 
 import           Data.Atom
 import           Data.Char
@@ -76,7 +77,7 @@ cmdLoop state
 	 then return state
 	 else do
 	      newState <- runCmds cmds state
-	      cmdLoop newState
+	      cmdLoop (newState `demanding` rnf newState)
     where
     prompt = ("photo2@" ++) . (++ "> ") . mkAbsPath . joinPath . cwd $ state
     runCmds [] s0

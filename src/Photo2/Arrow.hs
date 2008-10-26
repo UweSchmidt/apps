@@ -2,6 +2,7 @@ module Photo2.Arrow
 where
 
 import           Control.Monad.Error ( runErrorT )
+import           Control.Parallel.Strategies
 
 import           Data.Maybe
 import qualified Data.Map as M
@@ -123,10 +124,10 @@ updateNode' setEdit update
 updateNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
 updateNode	= updateNode' id
 
-editNode	:: ArrowTree a => a Pic Pic -> a AlbumTree AlbumTree
-editNode	= updateNode' (change theEdited (const True))
+editNode	:: (ArrowTree a, ArrowNF a) => a Pic Pic -> a AlbumTree AlbumTree
+editNode ea	= rnfA (updateNode' (change theEdited (const True)) ea)
 
-editNode'	:: ArrowTree a => (Pic -> Pic) -> a AlbumTree AlbumTree
+editNode'	:: (ArrowTree a, ArrowNF a) => (Pic -> Pic) -> a AlbumTree AlbumTree
 editNode'	= editNode . arr
 
 clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
@@ -230,7 +231,7 @@ runAction msg action
 
 -- ------------------------------------------------------------
 
-loadDocData	:: PU b -> String -> CmdArrow a b
+loadDocData	:: (NFData b) => PU b -> String -> CmdArrow a b
 loadDocData p doc
     = readDocument [ (a_remove_whitespace, v_1)
 		   , (a_validate, v_0)
@@ -239,7 +240,7 @@ loadDocData p doc
       >>>
       documentStatusOk
       >>>
-      {- runAction ("unpickle document: " ++ doc) -} (xunpickleVal p)
+      runAction ("unpickle document: " ++ doc) (rnfA (xunpickleVal p))
       -- >>>
       -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )	-- just for debug
       >>>

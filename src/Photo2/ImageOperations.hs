@@ -2,9 +2,12 @@ module Photo2.ImageOperations
 where
 
 import qualified Control.Exception as CE
--- import           Control.Monad	( when )
+
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
+
+import           Control.Parallel.Strategies
+
 
 import           Data.Atom
 import           Data.Char
@@ -112,7 +115,8 @@ importExifAttrs c _p pic
 	 then return pic
 	 else do
 	      newData <- allImgAttrs [] c orig raw xmp
-	      return $ change theAttrs (mergeAttrs newData) pic
+	      let pic' = change theAttrs (mergeAttrs newData) pic
+	      return (rnf pic' `seq` pic')
     where
     orig	= base </-> picOrig pic
     raw		= base </-> picRaw  pic
@@ -184,7 +188,8 @@ importOrig c p pic
 	      mkDirectoryPath dst
 	      copy
 	      geo <- getImageSize dst
-	      return $ change theCopies (M.insert (newAtom dir) (Copy geo)) pic
+	      let pic' = change theCopies (M.insert (newAtom dir) (Copy geo)) pic
+	      return (rnf pic' `seq` pic')
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src
@@ -233,7 +238,8 @@ createCopy c p s pic
 	 then do
 	      resize
 	      geo <- getImageSize dst
-	      return $ change theCopies (M.insert (newAtom . sizeDir $ s) (Copy geo)) pic
+	      let pic' = change theCopies (M.insert (newAtom . sizeDir $ s) (Copy geo)) pic
+	      return (rnf pic' `seq` pic')
 	 else return pic
     where
     existsSrc	= liftIO $ doesFileExist src
