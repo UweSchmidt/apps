@@ -1,10 +1,10 @@
 module Photo2.Arrow
 where
 
-import           Control.Monad.Error ( runErrorT )
+import           Control.Monad.Error	( runErrorT )
 import           Control.Parallel.Strategies
 
-import           Data.Maybe
+import           Data.Maybe		( )
 import qualified Data.Map as M
 
 import           Photo2.ArchiveTypes
@@ -130,8 +130,14 @@ editNode ea	= rnfA (updateNode' (change theEdited (const True)) ea)
 editNode'	:: (ArrowTree a, ArrowNF a) => (Pic -> Pic) -> a AlbumTree AlbumTree
 editNode'	= editNode . arr
 
+changeEdited	:: ArrowTree a => (Bool -> Bool) -> a AlbumTree AlbumTree
+changeEdited f	= updateNode' (change theEdited f) this
+
+setEdited	:: ArrowTree a => a AlbumTree AlbumTree
+setEdited	= changeEdited (const True)
+
 clearEdited	:: ArrowTree a => a AlbumTree AlbumTree
-clearEdited	= updateNode' (change theEdited (const False)) this
+clearEdited	= changeEdited (const False)
 
 entryEdited'	:: CmdArrow AlbumTree AlbumTree
 entryEdited'	= ( (get theConfig >>> isA (optON optForceStore)) `guards` this )
@@ -194,7 +200,7 @@ withStatusCheck	:: String -> CmdArrow a b -> CmdArrow a b
 withStatusCheck msg action
     = start
       >>>
-      traceStatus ("starting: " ++ msg)
+      traceStatus ("start   : " ++ msg)
       >>>
       ( ( action
 	  >>>
@@ -235,12 +241,14 @@ loadDocData	:: (NFData b) => PU b -> String -> CmdArrow a b
 loadDocData p doc
     = readDocument [ (a_remove_whitespace, v_1)
 		   , (a_validate, v_0)
-		   , (a_tagsoup, v_0)		-- don't use tagsoup, it reads lasily and does not close input files, so the can't be written later on
+		   , (a_tagsoup, v_0)
+		     -- don't use tagsoup, it reads lasily and does not close input files, so they can't be written later on
 		   ] doc
       >>>
       documentStatusOk
       >>>
-      runAction ("unpickle document: " ++ doc) (rnfA (xunpickleVal p))
+      -- runAction ("unpickle document: " ++ doc)
+      (rnfA (xunpickleVal p))
       -- >>>
       -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )	-- just for debug
       >>>
@@ -277,7 +285,7 @@ loadArchiveAndConfig doc
 
 loadAlbum	:: String -> String -> CmdArrow a AlbumTree
 loadAlbum base doc
-    = runAction ("loading and unpickling entry: " ++ show doc)
+    = -- runAction ("loading and unpickling entry: " ++ show doc)
       ( runInLocalURIContext ( constA base >>> changeBaseURI
 			       >>>
 			       loadDocData xpAlbumTree doc
@@ -895,12 +903,17 @@ renamePic nn c p
 	editNode (arrIOE (mvPic nn c p))
       )
 
+{-
 renameContent	:: ConfigArrow AlbumTree AlbumTree
 renameContent c p
     = runAction ("renaming album contents for " ++ showPath p)
       ( checkEntryLoaded
 	>>>
+	processChildren checkEntryLoaded
+	>>>
 	( rename $< listA (getChildren >>> getPicId) )
+	>>>
+	setEdited
       )
     where
     rename	:: [Name] -> CmdArrow AlbumTree AlbumTree
@@ -931,7 +944,7 @@ renameContent c p
 	    = n /= o
 	      &&
 	      (match "pic-[0-9]+" $ o)
-
+-}
 picnr :: Int -> String
 picnr = show
 	>>> reverse

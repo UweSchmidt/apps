@@ -6,7 +6,7 @@ import qualified Control.Exception as CE
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
 
-import           Control.Parallel.Strategies
+import           Control.Parallel.Strategies( rnf )
 
 
 import           Data.Atom
@@ -47,13 +47,15 @@ liftIO	:: IO a -> IOE a
 liftIO a
     = do
       r <- ME.liftIO $
-           CE.catch ( do
-		   r1 <- a
-		   return (Right r1)
-		 )
-                 (\ err -> return (Left $ show err))
+           catch' ( do
+		    r1 <- a
+		    return (Right r1)
+		  )
+                  (\ err -> return (Left $ show err))
       evalRc r
     where
+    catch' :: IO a -> (CE.SomeException -> IO a) -> IO a
+    catch' = CE.catch
     evalRc (Left msg)	= throwError msg
     evalRc (Right res)	= return res
 

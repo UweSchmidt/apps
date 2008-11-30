@@ -75,10 +75,11 @@ isDateTime	:: String -> Bool
 isDateTime
     = match r
     where
-    r = d ++ " " ++ t ++ s
+    r = d ++ " " ++ t ++ s ++ z
     d = "[0-9]{4}:[0-9]{2}:[0-9]{2}"
     t = "[0-9]{2}:[0-9]{2}:[0-9]{2}"
     s = "([.][0-9]{2})?"
+    z = "([-+][0-9]{2}:[0-9]{2}([.][0-9]{2})?)?"
 
 normAttrs	:: PicAttrs -> Attrs -> Attrs
 normAttrs pl

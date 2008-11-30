@@ -9,7 +9,7 @@ package require Img
 namespace import blt::tabnotebook
 
 set theArchivePath [lindex $argv 0]
-set testDir "/home/uwe/haskell/photo2/curr/test"
+set testDir "/home/uwe/haskell/photo2/trunk/test"
 
 if {$tcl_interactive} {
     cd $testDir
@@ -408,8 +408,8 @@ proc finGUI {} {
 #------------------------------------------------------------
 
 proc createWidgets {} {
-    wm title . "Photo Album Editor"
-    wm iconname . "Photo"
+    wm title . "Photo2 Album Editor"
+    wm iconname . "edit2"
 
     frame .menu -relief raised
     pack .menu -side top -fill x

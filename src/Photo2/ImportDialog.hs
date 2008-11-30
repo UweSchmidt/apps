@@ -17,7 +17,8 @@ import           Photo2.FilePath
 import           Photo2.ImageOperations
 import           Photo2.SearchNewImages
 
-import           System.Console.Readline ( readline
+import           System.Console.Editline.Readline
+					 ( readline
 					 , addHistory
 					 )
 import           System.IO

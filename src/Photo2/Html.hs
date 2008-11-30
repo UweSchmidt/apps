@@ -268,8 +268,8 @@ genHtml rec format conf p0
 				  tr	| "exif:" `isPrefixOf` item	= translateExif
 					| otherwise			= id
 
-            insertChild		:: AlbumTree ->CmdArrow XmlTree XmlTree
-	    insertChild t	= processTopDownWithAttrl
+            insertChild		:: Int -> AlbumTree ->CmdArrow XmlTree XmlTree
+	    insertChild no t	= processTopDownWithAttrl
 				  ( choiceA
 				    [ insertP    "[theChildPath]"  (joinPath cp)
 				    , let temp = "[theChildTitle]"
@@ -283,17 +283,20 @@ genHtml rec format conf p0
 				  thePic	= head . runLA getNode $ t
 				  theTitleT	= getPlainTitle thePic
 
-				  thePlainT	| not (null theTitleT)	= theTitleT
+				  thePlainT	| not (null theTitleT)	= bno ++ ": " ++ theTitleT
 						| match "pic-[0-9]+" thePicId
-								       	= sed (const "Bild ") "pic-0*" thePicId
-						| otherwise		= thePicId
+								       	= bno
+									  -- sed (const "Bild ") "pic-0*" thePicId
+						| otherwise		= bno ++ ": " ++ thePicId
+						where
+						bno			= "Bild " ++ show no
 
             genTable		:: Int -> CmdArrow XmlTree XmlTree
 	    genTable n		= ( ( getChildren
 				      >>>
 				      hasName "td"
 				      >>>
-				      catA (map insertChild cs)
+				      catA (zipWith insertChild [1..] cs)
 				    )
 				    >>.
 				    part

@@ -17,7 +17,7 @@ import           Photo2.FilePath
 import           Photo2.ImportDialog
 
 import           System.IO
-import           System.Console.Readline
+import           System.Console.Editline.Readline
                  ( readline
 		 , addHistory
 		 )
@@ -202,7 +202,7 @@ parseCmd c@"import"        args	| length args <= 1	= parseImport c args
 parseCmd c@"newalbum"      args	| length args == 2	= parseModifiy c (newAlbum (concat . drop 1 $ args)) args
 parseCmd c@"setalbumpic"   args	| length args == 2	= parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
 parseCmd c@"rename"        args	| length args == 2	= parseModifiy c (renamePic (concat . drop 1 $ args)) args
-parseCmd c@"rename-cont"   args	| length args <= 1	= parseModifiy c renameContent args
+-- parseCmd c@"rename-cont"   args	| length args <= 1	= parseModifiy c renameContent args
 parseCmd c@"html"          args	| length args <= 2	= parseGenHtml c False args
 parseCmd c@"html-all"      args | length args <= 2	= parseGenHtml c True args
 
@@ -273,7 +273,7 @@ parseCmd "?" []
 	    , "  newformat     [path]       change entry into new album format"
 	    , "  newformat-all [path]       change all entries into new album format"
 	    , ""
-	    , "  rename-cont [path]         rename all pictures in an album"
+	    -- , "  rename-cont [path]         rename all pictures in an album"
 	    , "  rename path newid          rename picture"
 	    , "  defpicattr a val           define a picture attribute"
 	    , ""
