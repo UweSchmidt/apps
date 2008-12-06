@@ -1,6 +1,6 @@
 Cabal-Version:  >= 1.2
 Name:           find-grep-sed
-Version:        0.1.0
+Version:        0.1.1
 Copyright:      2008, Uwe Schmidt
 Maintainer:     uwe@fh-wedel.de
 Author:         Uwe Schmidt
@@ -14,7 +14,13 @@ Description:
     Typical search, grep and sed function
 
 Library
-    build-depends: base >= 3, parsec >= 2.0 && < 3.0, unix >= 2.0, directory >= 1.0, hxt >= 8.0, regex-compat >= 0.71, containers >= 0.1
+    build-depends: base >= 4,
+                   parsec >= 2.0 && < 3.0,
+                   unix >= 2.0,
+                   directory >= 1.0,
+                   hxt >= 8.0,
+                   regex-compat >= 0.71,
+                   containers >= 0.1
 
     GHC-Options: -Wall
     Exposed-modules:

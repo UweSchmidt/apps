@@ -3,20 +3,21 @@ HSCOLOUR        = HsColour
 prog		= find-grep-sed
 
 all		:
-		./Setup.lhs configure && \
-		./Setup.lhs build
+		runhaskell ./Setup.lhs configure --global && \
+		runhaskell ./Setup.lhs build
 		cp dist/build/find-grep-sed/find-grep-sed .
 
 install		: all
-		sudo ./Setup.lhs install
+		sudo runhaskell ./Setup.lhs install --global
 		$(MAKE) installbin
+
 doc		:
 		$(HSCOLOUR) -print-css > $(HSCOLOUR)
-		./Setup.lhs haddock --hyperlink-source --hscolour-css=$(HSCOLOUR)
+		runhaskell ./Setup.lhs haddock --hyperlink-source --hscolour-css=$(HSCOLOUR)
 		rm -f $(HSCOLOUR)
 
 clean		:
-		./Setup.lhs clean
+		runhaskell ./Setup.lhs clean
 
 installbin	:
 		[ ! -f ~/bin/$(prog) ] || mv -f ~/bin/$(prog) ~/bin/$(prog)~

@@ -39,14 +39,16 @@ actions
       , ("findHtmlUtf8",		findFiles htmlUtf8Files		)
       , ("findNoneAsciiProgs",		findFiles noneAsciiProgFiles	)
       , ("findTclLatin1",		findFiles tclLatin1Files	)
+      , ("findTrailingSpace",           findFiles trailingBlankFiles    )
       , ("findUnknownFiles",		findFiles unknownFiles		)
       , ("findUppercaseImgFiles",	findFiles uppercaseImgFiles	)
       , ("findUnusedAlbumFiles",	processUnusedAlbumFiles printFiles	)
 
-      , ("grepHtmlLatin1",		grepFiles isUmlaut htmlLatin1Files	)
-      , ("grepHtmlUtf8",		grepFiles isUtf htmlUtf8Files		)
-      , ("grepNoneAsciiProgs",		grepFiles isUmlaut noneAsciiProgFiles	)
-      , ("grepTclLatin1",		grepFiles isUmlaut tclLatin1Files	)
+      , ("grepHtmlLatin1",		grepFiles isUmlaut      htmlLatin1Files		)
+      , ("grepHtmlUtf8",		grepFiles isUtf         htmlUtf8Files		)
+      , ("grepNoneAsciiProgs",		grepFiles isUmlaut      noneAsciiProgFiles	)
+      , ("grepTclLatin1",		grepFiles isUmlaut      tclLatin1Files		)
+      , ("grepTrailingSpace",           grepFiles hasTrailingWS textFiles		)
 
       , ("sedHtmlLatin1",		sedFiles substXhtmlChars htmlLatin1Files	)
       , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
@@ -77,7 +79,7 @@ usage	:: FilePath -> IO ()
 usage _dir
     = do
       pn <- getProgName
-      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir]\n" )
+      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.1)\n" )
     where
     cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
 

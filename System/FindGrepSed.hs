@@ -121,39 +121,43 @@ contentFind p f
 
 -- ------------------------------
 
-isBinary	:: String -> Bool
-isBinary	= not . isLatin1
+isBinary		:: String -> Bool
+isBinary		= not . isLatin1
 
-isAscii		:: String -> Bool
-isAscii		= all isAsciiChar
+isAscii			:: String -> Bool
+isAscii			= all isAsciiChar
 
-isLatin1	:: String -> Bool
-isLatin1	= all isLatin1Char
+isLatin1		:: String -> Bool
+isLatin1		= all isLatin1Char
 
-isUmlaut	:: String -> Bool
-isUmlaut s	= isLatin1 s && not (isAscii s)
+isUmlaut		:: String -> Bool
+isUmlaut s		= isLatin1 s && not (isAscii s)
 
-isUtf		:: String -> Bool
-isUtf s
-    = not (isAscii s) && isUtf8 s
+isUtf			:: String -> Bool
+isUtf s			= not (isAscii s) && isUtf8 s
 
-isUtf8		:: String -> Bool
-isUtf8 []	= True
+isUtf8			:: String -> Bool
+isUtf8 []		= True
 isUtf8 (c:cs)
     | isAsciiChar c	= isUtf8 cs
     | isUtf2Char c	= isUtf81 cs
     | isUtf3Char c	= isUtf82 cs
     | otherwise		= False
 
-isUtf81		:: String -> Bool
+isUtf81			:: String -> Bool
 isUtf81 (c:cs)
     | isUtf1Char c	= isUtf8 cs
 isUtf81 _		= False
 
-isUtf82		:: String -> Bool
+isUtf82			:: String -> Bool
 isUtf82 (c:cs)
     | isUtf1Char c	= isUtf81 cs
 isUtf82 _		= False
+
+hasTrailingWS		:: String -> Bool
+hasTrailingWS		= not . null . takeWhile isSpace . reverse
+
+-- ------------------------------------------------------------
 
 isAsciiChar	:: Char -> Bool
 isAsciiChar  c	= (' ' <= c && c <= '~') || (c `elem` "\n\t\r")
@@ -678,6 +682,12 @@ tclLatin1Files
 	      , HasCont isUmlaut
 	      ]
 
+trailingBlankFiles	:: FindExpr
+trailingBlankFiles
+    = AndExpr [ textFiles
+	      , HasCont (any hasTrailingWS . lines)
+	      ]
+
 -- ------------------------------
 
 uppercaseImgFiles	:: FindExpr
@@ -721,5 +731,5 @@ processUnusedAlbumFiles action dir
 	  h <- openFile "picturelist.txt" ReadMode
 	  c <- hGetContents h
 	  return $! (S.fromList . filter (not . null) . lines $ c)
-	  
+
 -- ------------------------------
