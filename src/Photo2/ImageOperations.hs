@@ -10,6 +10,8 @@ import           Control.Parallel.Strategies( rnf )
 
 
 import           Data.Atom
+import qualified Data.ByteString        as B
+import qualified Data.ByteString.Char8  as C
 import           Data.Char
 import           Data.List
 import qualified Data.Map as M
@@ -405,17 +407,11 @@ execFct debug (cmd : args)
            ( liftIO $ hPutStrLn stderr ("executed: " ++ command) )
       let command' = command ++ concatMap addArg ioReDir
       exec command'
-      res <- catchError
-	     ( do
-	       rh  <- liftIO $ openFile tmpName ReadMode
-	       res <- liftIO $ hGetContents rh
-	       rmFile tmpName
-	       liftIO $ closeF (length res) rh
-	       return res
-	     ) ( \ _ -> return "" )
-      return (length res `seq` res)
-    where
-    closeF l hdl = l `seq` hClose hdl
+      catchError ( do
+		   res <- liftIO $ B.readFile tmpName
+		   rmFile tmpName
+		   return (C.unpack res)
+		 ) ( \ _ -> return "" )
 
 -- ------------------------------------------------------------
 

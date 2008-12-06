@@ -282,7 +282,7 @@ parseCmd "?" []
 
 parseCmd "version" []
     = liftCmd $
-      hPutStrLn stdout "Photo2 version 0.0 from 2008-06-05"
+      hPutStrLn stdout "Photo2 version 0.1.1 from 2008-12-06"
 
 parseCmd "exit" _	= fail ""
 parseCmd "q" _		= fail ""
