@@ -5,13 +5,13 @@ body {
 }
 
 body.album {
-  color:               white;   /*#ff0000;*/
-  background-color:    #333333; /*#666666;*/
+  color:               white;
+  background-color:    black;
 }
 
 body.picture {
-  color:               white;   /*#ff0000;*/
-  background-color:    #333333; /*#666666;*/
+  color:               white;
+  background-color:    black;
   background-repeat: no-repeat;
   background-position:  center;
   background-attachment: fixed;
@@ -47,32 +47,32 @@ a:focus {
 }
 
 td.head2 div.title, td.head2 div.subtitle, td.head2 div.resources {
-  color:            #bbbbbb ; /*white;*/ /* #300008; */  /*#002060;*/
+  color:            #bbbbbb
 }
 
 
 .title, .subtitle, .resources .info, .back, .forward, .up {
-  color:            white; /* #300008; */  /*#002060;*/
+  color:            white;
   background-color: transparent;
 }
 
 .title, .back, .forward, .up {
-  font-size:   28px;
+  font-size:   32px;
   font-weight: bold;
 }
 
 .subtitle {
-  font-size:   20px;
+  font-size:   24px;
   font-weight: bold;
 }
 
 .resources {
-  font-size:   12px;
+  font-size:   16px;
   font-weight: bold;
 }
 
 .info {
-  font-size:12px;
+  font-size:   16px;
 }
 
 .back, .forward, .up {
@@ -100,10 +100,10 @@ div.title-area div.title-area-line, div.info-area div.info-area-content {
 }
 
 div.title-area div.title-area-line, div.info-area div.info-area-content {
-  padding-left:   12px;
-  padding-right:  12px;
-  padding-top:    10px;
-  padding-bottom: 10px;
+  padding-left:   18px;
+  padding-right:  18px;
+  padding-top:    13px;
+  padding-bottom: 13px;
 }
 
 /* div.title-area:hover div.title-area-line, div.info-area:hover div.info-area-content, */
@@ -113,19 +113,19 @@ div.title-area div.title-area-line, div.info-area div.info-area-content {
 a.back:hover {
   visibility:       visible;
   opacity:              0.6;
-  background-image: url(icons/left-50x50.gif);
+  background-image: url(icons/left-75x75.gif);
 }
 
 a.forward:hover {
   visibility:       visible;
   opacity:              0.6;
-  background-image: url(icons/right-50x50.gif);
+  background-image: url(icons/right-75x75.gif);
 }
 
 a.up:hover {
   visibility:       visible;
   opacity:              0.6;
-  background-image: url(icons/up-50x50.gif);
+  background-image: url(icons/up-75x75.gif);
 }
 
 table.info tr th {
@@ -144,19 +144,19 @@ table.info tr td {
 /* positioning and size */
 
 body.picture {
-  width:      1024px;
-  height:      768px;
+  width:      1400px;
+  height:     1050px;
 }
 
 body.album {
-  width:      1004px;
+  width:      1376px;
   height:       auto;
 }
 
 body {
   position: absolute;
-  width:      1024px;
-  height:      768px;
+  width:      1400px;
+  height:     1050px;
 
   margin:        0px;
   border:        0px;
@@ -169,17 +169,17 @@ div.title-area {
   right:         0px;
   bottom:      200px;
   width:       200px;
-  height:      800px;
+  height:      900px;
 }
 
 
 div.title-area div.title-area-line {
   position: absolute;
   bottom:     -200px; /*   0px;*/
-  right:       176px;
+  right:       200px;
   height:       auto;
   min-height:  200px;
-  width:       824px;
+  width:      1240px;
 }
 
 div.info-area {
@@ -187,7 +187,7 @@ div.info-area {
   left:          0px;
   bottom:        0px;
   height:      200px;
-  width:       824px;
+  width:      1240px;
 }
 
 div.info-area div.info-area-content {
@@ -195,31 +195,31 @@ div.info-area div.info-area-content {
   bottom:        0px;
   height:       auto;
   min-height:  200px;
-  width:       800px;
+  width:      1200px;
 }
 
 .forward {
   position: absolute;
   right:         0px;
   bottom:        0px;
-  width:        50px;
-  height:       50px;
+  width:        75px;
+  height:       75px;
 }
 
 .back {
   position: absolute;
-  right:        70px;
+  right:       100px;
   bottom:        0px;
-  width:        50px;
-  height:       50px;
+  width:        75px;
+  height:       75px;
 }
 
 .up {
   position: absolute;
-  right:        70px;
-  bottom:       70px;
-  width:        50px;
-  height:       50px;
+  right:       100px;
+  bottom:      100px;
+  width:        75px;
+  height:       75px;
 }
 
 /* ------------------------------------------------------------ */
@@ -234,9 +234,9 @@ table.head {
 }
 
 table.head tr td.head1 {
-  padding:           10px;
-  width:            100px;
-  height:           100px;
+  padding:           12px;
+  width:            140px;
+  height:           140px;
   vertical-align:     top;
 
   background-color: transparent;
@@ -246,18 +246,18 @@ table.head tr td.head1 {
 table.head tr td.head2 { 
   text-align:     left;
   vertical-align:  top;
-  padding:        10px;
+  padding:        12px;
 
   background-color: transparent;
   border:         0px solid red;
 }
 
 table.head tr td.head3 {
-  width:         190px;
-  padding-top:    10px;
-  padding-bottom: 10px;
-  padding-left:   10px;
-  padding-right:  10px;
+  width:         240px;
+  padding-top:    12px;
+  padding-bottom: 12px;
+  padding-left:   12px;
+  padding-right:  12px;
   text-align:    right;
   vertical-align:  top;
 
@@ -266,10 +266,10 @@ table.head tr td.head3 {
 }
 
 div.ruler {
-  width:              980px;
-  height:               3px;
-  margin-left:         10px;
-  margin-right:        10px;
+  width:             1360px;
+  height:               4px;
+  margin-left:         12px;
+  margin-right:        12px;
   background-color: #bbbbbb;
 }
 
@@ -280,24 +280,24 @@ table.nav {
 }
 
 table.nav tr td {
-  padding: 2px;
+  padding: 3px;
 }
 
 img.icon {
-  width:          100px;
-  height:          75px;
+  width:          140px;
+  height:         105px;
   border: 0px solid red;
 }
 
 img.icon2 {
-  width:           50px;
-  height:          37px;
+  width:           70px;
+  height:          52px;
   border: 0px solid red;
 }
 
 div.album-content {
-  padding-top:             10px;
-  padding-left:            10px;
+  padding-top:             12px;
+  padding-left:            12px;
   background-color: transparent;
 }
 
@@ -309,8 +309,8 @@ div.album-content > table {
 div.album-content > table tr td {
   padding-left:             0px;
   padding-top:              0px;
-  padding-right:           10px;
-  padding-bottom:           8px;
+  padding-right:           12px;
+  padding-bottom:           9px;
   background-color: transparent;
   border:       0px solid black;
 }
