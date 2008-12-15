@@ -362,7 +362,7 @@ genHtml rec format conf p0
 
 	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
 	    writeHtmlPage
-		= runAction ("write HTML page to file " ++ show dst) $
+		= {- runAction ("write HTML page to file " ++ show dst) $ -}
 		  addDoctypeDecl "html"
 				 "-//W3C//DTD XHTML 1.0 Transitional//EN"
 				  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
@@ -376,6 +376,8 @@ genHtml rec format conf p0
 		  writeDocument [ (a_indent, v_0)
 				, (a_output_encoding, isoLatin1)
 				] dst
+		  >>>
+		  traceStatus' ("written : " ++ show dst)
 
 -- ------------------------------------------------------------
 

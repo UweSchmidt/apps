@@ -1,12 +1,18 @@
 SRC	= $(wildcard ../src/*/*.hs)
 
-all	: photo2
+prog	= photo2
 
-photo2	: A.hs $(SRC)
+all	: $(prog)
+
+$(prog)	: A.hs $(SRC)
 	ghc --make -Wall -O2 -i../src -o $@ A.hs
+
+install		: $(prog)
+		[ ! -x "~/bin/$(prog)" ] || mv -f "~/bin/$(prog)" "~/bin/$(prog).bak"
+		cp $(prog) ~/bin
 
 clean	:
 	rm -f $(SRC:.hs=.hi)
 	rm -f $(SRC:.hs=.o)
-	rm -f A.hi A.o photo2
+	rm -f A.hi A.o $(prog)
 

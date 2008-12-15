@@ -194,6 +194,10 @@ traceStatus msg
     level (Running i)	= 2 * i
     level _		= 0
 
+traceStatus'	:: String -> CmdArrow a a
+traceStatus' msg
+    = traceStatus ("  " ++ msg)
+
 -- ------------------------------------------------------------
 
 withStatusCheck	:: String -> CmdArrow a b -> CmdArrow a b
@@ -252,7 +256,7 @@ loadDocData p doc
       -- >>>
       -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )	-- just for debug
       >>>
-      traceStatus ("loaded  : " ++ show doc)
+      traceStatus' ("loaded  : " ++ show doc)
 
 loadArchive	:: String -> CmdArrow a Archive
 loadArchive doc
@@ -449,7 +453,7 @@ storeDocData p rootName doc conf
       >>>
       documentStatusOk
       >>>
-      traceStatus ("stored  : " ++ show doc)
+      traceStatus' ("stored  : " ++ show doc)
 
 storeConfig	:: CmdArrow b XmlTree
 storeConfig
