@@ -71,6 +71,12 @@ genHtml rec format conf p0
       `orElse`
       errMsg ("no layout spec found for format " ++ show format')
     where
+    dictId = newAtom "exif-german"
+    translateExif	= translate
+			  . maybe [("xxx","xxx")] (map (show *** id) . M.toList)
+			  . M.lookup dictId
+			  . confDict
+			  $ conf
     format'
 	| null format	= maybe defLayoutKey newAtom . M.lookup layoutKey . confAttrs $ conf
 	| otherwise	= newAtom format
@@ -258,14 +264,16 @@ genHtml rec format conf p0
 
             insertInfoItem item	= if null val
 				  then none
-				  else processTopDown
+				  else processTopDownWithAttrl
 				       ( choiceA [ insertText ("[" ++ item ++ "]") (tr val)
 						 , this :-> this
 						 ]
 				       )
 		                  where
 				  val = valOf . newAtom $ item
-				  tr	| "exif:" `isPrefixOf` item	= translateExif
+				  tr	| "exif:" `isPrefixOf` item
+					  ||
+					  "cam:"  `isPrefixOf` item	= translateExif
 					| otherwise			= id
 
             insertChild		:: Int -> AlbumTree ->CmdArrow XmlTree XmlTree
@@ -374,7 +382,7 @@ genHtml rec format conf p0
 		  eeToHtml	-- this is a hack for firefox, it does not process empty xhtml elements, e.g. <div/>
 		  >>>
 		  writeDocument [ (a_indent, v_0)
-				, (a_output_encoding, isoLatin1)
+				, (a_output_encoding, usAscii)
 				] dst
 		  >>>
 		  traceStatus' ("written : " ++ show dst)
@@ -400,27 +408,9 @@ escRE		= concatMap esc
 		      | c `elem` "{}[].*+?|()\\"	= '\\' : c : []
 		      | otherwise			= c : []
 
--- ------------------------------------------------------------
-
-translateExif	:: String -> String
-translateExif	= translate exifTable
-
 translate	:: AssocList String String -> String -> String
 translate tb	= sed ( fromJust . (flip lookup) tb ) re
 		  where
 		  re = intercalate "|" . map (("("++) . (++")") . escRE . fst) $ tb
-
-exifTable	:: AssocList String String
-exifTable	= [ ("Continuous",	"Serie")
-		  , ("Auto",		"Automatik")
-		  , ("Multi-segment",	"Multi-Segment")
-		  , ("Single-Frame",	"Einzelbild")
-		  , ("No Flash",	"Ohne Blitz")
-		  , ("Off",		"Aus")
-		  , ("Center-weighted average",	"Mittenzentriert")
-		  , ("Fired, TTL Mode",	"Blitz mit TTL Modus")
-		  , ("Custom",		"Benutzerdefiniert")
-		  -- , ("",	"")
-		  ]
 
 -- ------------------------------------------------------------
