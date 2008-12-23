@@ -17,6 +17,7 @@ import           Photo2.FilePath
 import           Photo2.ImportDialog
 
 import           System.IO
+import           System.Cmd
 import           System.Console.Editline.Readline
                  ( readline
 		 , addHistory
@@ -277,6 +278,7 @@ parseCmd "?" []
 	    , "  rename path newid          rename picture"
 	    , "  defpicattr a val           define a picture attribute"
 	    , ""
+	    , "  !<shell command>           shell command"
 	    , "  version                    print photo2 version"
 	    ]
 
@@ -287,8 +289,12 @@ parseCmd "version" []
 parseCmd "exit" _	= fail ""
 parseCmd "q" _		= fail ""
 
-parseCmd c args
-    = illegalCmd c args
+parseCmd ('!':cmd) args	= liftCmd $
+			  do
+			  system (unwords $ cmd : args)
+			  return ()
+
+parseCmd c args		= illegalCmd c args
 
 -- ------------------------------------------------------------
 
