@@ -4,6 +4,7 @@ where
 import           Control.Monad.Error	( runErrorT )
 import           Control.Parallel.Strategies
 
+import           Data.List              ( isPrefixOf )
 import           Data.Maybe		( )
 import qualified Data.Map as M
 
@@ -979,5 +980,62 @@ updatePic c p
     copy s
 	= runAction ("create copy for " ++ show (sizeDir s) ++ " for " ++ p')
 	  ( arrIOE (createCopy c p s) )
+
+-- ------------------------------------------------------------
+--
+-- cleanup image dirs
+
+cleanupImgDirs	:: Bool -> Bool -> ConfigArrow AlbumTree ()
+cleanupImgDirs execute rec conf p0
+    = runAction ("cleanup image dirs for " ++ showPath p0) $
+      ( checkEntryLoaded
+	>>>
+	perform ( cleanupDirs $<
+		  listA (findAlbumDir <+> findOrgDir <+> findImgDirs <+> findHtmlDirs)
+		)
+	>>>
+	constA ()
+      )
+    where
+    findAlbumDir
+	= ( constA (getDefOpt ""  "album-dir" $ conf) >>> isA (not . null) )
+	  &&&
+	  constA "xml"
+
+    findOrgDir
+	= ( constA (getDefOpt ""    "dir"     $ conf) >>> isA (not . null) )
+	  &&&
+	  constA (getDefOpt "jpg" "imgtype" $ conf)
+
+    findImgDirs
+	= ( constL (confSizes conf) >>^ sizeDir )
+	  &&&
+	  constA (getDefOpt "jpg" "imgtype" $ conf)
+
+    findHtmlDirs
+	= ( constL (map (show . fst) . filter isHtmlFormat . M.assocs . confLayouts $ conf) )
+	  &&&
+	  constA "html"
+	where
+	isHtmlFormat = ("html" `isPrefixOf`) . layoutType . snd  
+
+    cleanupDirs	:: [(String,String)] -> CmdArrow AlbumTree AlbumTree
+    cleanupDirs	dirsExts
+	| rec		= getSelfAndDescAndProcess getChildrenAndCheck cleanup1Dir p0
+	| otherwise	= cleanup1Dir p0
+	where
+	cleanup1Dir p'	= seqA (map (flip cleanup1Dir' p') dirsExts)
+
+	cleanup1Dir' (dir, ext) path
+	    = perform ( isAlbum
+			>>>
+			runAction ("cleanup " ++ show dir' ++ " with " ++ show ext ++ " files")
+			( listA (getChildren >>> getNode >>^ (picId >>> (`addExtension` ext)))
+			  >>>
+			  arrIOE (cleanupDir execute dir')
+			)
+		      )
+	    where
+	    dir' 		= dir </> joinPath path
 
 -- ------------------------------------------------------------

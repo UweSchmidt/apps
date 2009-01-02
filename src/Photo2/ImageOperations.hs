@@ -538,3 +538,33 @@ fileNewerThanDates (r:refs) f
 	 else return False
 
 -- ------------------------------------------------------------
+{-
+cleanupDir		:: FilePath -> [String] -> IOE ()
+cleanupDir dir fl	= liftIO $ cleanupDir' dir fl
+-}
+cleanupDir		:: Bool -> FilePath -> [String] -> IOE ()
+cleanupDir execute dir fl
+    = do
+      ex <- liftIO $ doesDirectoryExist dir
+      when ex $
+	   do
+	   fl' <- liftIO $ getDirectoryContents dir
+	   mapM_ cleanEntry fl'
+	   return ()
+    where
+    cleanEntry e
+	| e `elem` fl
+	    = return ()
+	| otherwise
+	    = do
+	      isd <- liftIO $ doesDirectoryExist e'	-- don't touch dirs
+	      when (not isd) $
+		   do
+		   when execute (rmFile e')
+		   liftIO $ hPutStrLn stderr msg
+	where
+	e' = dir </> e
+	msg	| execute	= "unused file removed " ++ show e'
+		| otherwise	= "unused file found "   ++ show e'
+
+-- ------------------------------------------------------------

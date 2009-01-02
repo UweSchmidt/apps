@@ -276,7 +276,7 @@ genHtml rec format conf p0
 					  "cam:"  `isPrefixOf` item	= translateExif
 					| otherwise			= id
 
-            insertChild		:: Int -> AlbumTree ->CmdArrow XmlTree XmlTree
+            insertChild		:: Int -> AlbumTree -> CmdArrow XmlTree XmlTree
 	    insertChild no t	= processTopDownWithAttrl
 				  ( choiceA
 				    [ insertP    "[theChildPath]"  (joinPath cp)
@@ -297,7 +297,11 @@ genHtml rec format conf p0
 									  -- sed (const "Bild ") "pic-0*" thePicId
 						| otherwise		= bno ++ ": " ++ thePicId
 						where
-						bno			= "Bild " ++ show no
+						bno			= ( if isAl thePic
+									    then "Album "
+									    else "Bild "
+									  )
+									  ++ show no
 
             genTable		:: Int -> CmdArrow XmlTree XmlTree
 	    genTable n		= ( ( getChildren
