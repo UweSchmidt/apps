@@ -447,6 +447,8 @@ rmFile f
       )
       `mapError` (("remove file " ++ show f ++ " failed: ") ++)
 
+-- ------------------------------------------------------------
+
 rmDir		:: String -> IOE ()
 rmDir d
     = ( do
@@ -544,6 +546,14 @@ fileNewerThanDates (r:refs) f
       if newer
 	 then fileNewerThanDates refs f
 	 else return False
+
+-- ------------------------------------------------------------
+
+rmCopies		:: FilePath -> String -> [String] -> IOE ()
+rmCopies p ext dirs
+    = do
+      liftIO $ putStrLn ("rmCopies " ++ show (p,ext,dirs))
+      mapM_ rmFile . map ((`addExtension` ext) . (</> p)) $ dirs
 
 -- ------------------------------------------------------------
 

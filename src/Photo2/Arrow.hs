@@ -849,6 +849,19 @@ deleteAttr an p
     = runAction ("deleting " ++ showPath p ++ " attr " ++ show an) $
       editNode' (change theAttrs (remAttrs an))
 
+deleteCopies	:: ConfigArrow AlbumTree AlbumTree
+deleteCopies c p
+    = runAction ("deleting image copies for " ++ showPath p) $
+      ( perform ( getNode
+		  >>>
+		  arr (load theCopies >>> M.keys >>> map show)
+		  >>>
+		  arrIOE (rmCopies (joinPath p) (getDefOpt "jpg" "imgtype" $ c))
+		)
+	>>>
+	editNode' (change theCopies (const M.empty))
+      )
+
 -- ------------------------------------------------------------
 --
 -- new empty album
@@ -877,20 +890,29 @@ newAlbum nn _c p
 							     }
 
 setAlbumPic	:: Name -> ConfigArrow AlbumTree AlbumTree
-setAlbumPic nn _c p
+setAlbumPic nn c p
     = runAction ("setalbumpic" ++ show nn ++ " for " ++ showPath p)
       ( checkEntryLoaded
 	>>>
-	( ( setPic $< lookupPic )
-	  `orElse`
-	  errMsg ("picture " ++ show nn ++ " not found in album " ++ showPath p)
+	processChildren checkEntryLoaded
+	>>>
+	( ( ( ( setPic $< lookupPic )
+	      >>>
+	      deleteAttr "(cam|exif|file):.*" p
+	      >>>
+	      deleteCopies c p
+	    )
+	    `orElse`
+	    errMsg ("picture " ++ show nn ++ " not found in album " ++ showPath p)
+	  )
+	  `when` isAlbum
 	)
       )
     where
     setPic pic
-	= editNode' ( \ p' -> p' { picOrig = picOrig pic
-				 , picRaw  = picRaw  pic
-				 , picXmp  = picXmp  pic
+	= editNode' ( \ p' -> p' { picOrig   = picOrig pic
+				 , picRaw    = picRaw  pic
+				 , picXmp    = picXmp  pic
 				 }
 		    )
     lookupPic
