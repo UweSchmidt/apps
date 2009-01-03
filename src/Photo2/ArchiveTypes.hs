@@ -523,6 +523,12 @@ optForceExif		= "copy-exif"
 getImportBase		:: Config -> String
 getImportBase		= getDefOpt "../Diakaesten" "import-base"
 
+getImgType		:: Config -> String
+getImgType		= getDefOpt "jpg"           "imgtype"
+
+getOrgDir		:: Config -> String
+getOrgDir               = getDefOpt "org"           "dir"
+
 -- ------------------------------------------------------------
 
 instance NFData AppState where

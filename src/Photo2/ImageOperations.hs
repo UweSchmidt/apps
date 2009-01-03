@@ -94,7 +94,7 @@ mvPic newName c p pic
       mapM renameCopy $ (map show . M.keys . load theCopies $ pic)
       return $ store theId newName pic
     where
-    imgtype	= getDefOpt "jpg"           "imgtype" c
+    imgtype	= getImgType c
 
     renameCopy	:: Name -> IOE ()
     renameCopy	dir
@@ -214,9 +214,9 @@ importOrig c p pic
     src		= base </-> picOrig pic
     dst		= dir  </> joinPath p `addExtension` imgtype
 
-    base	= getImportBase                       c
-    dir         = getDefOpt "org"           "dir"     c
-    imgtype	= getDefOpt "jpg"           "imgtype" c
+    base	= getImportBase c
+    dir         = getOrgDir     c
+    imgtype	= getImgType    c
 
     debug	= optON  optDebug     c
     force	= optON  optForceOrig c
@@ -267,8 +267,8 @@ createCopy c p s pic
 	| force		= return False
 	| otherwise	= liftIO $ fileNewerThanFile src dst
 
-    dir         = getDefOpt "org"           "dir"     c
-    imgtype	= getDefOpt "jpg"           "imgtype" c
+    dir         = getOrgDir  c
+    imgtype	= getImgType c
 
     debug	= optON  optDebug     c
     force	= optON  optForceCopy c

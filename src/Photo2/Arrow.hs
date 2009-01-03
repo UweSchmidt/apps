@@ -856,7 +856,7 @@ deleteCopies c p
 		  >>>
 		  arr (load theCopies >>> M.keys >>> map show)
 		  >>>
-		  arrIOE (rmCopies (joinPath p) (getDefOpt "jpg" "imgtype" $ c))
+		  arrIOE (rmCopies (joinPath p) (getImgType c))
 		)
 	>>>
 	editNode' (change theCopies (const M.empty))
@@ -1020,19 +1020,19 @@ cleanupImgDirs execute rec conf p0
       )
     where
     findAlbumDir
-	= ( constA (getDefOpt ""  "album-dir" $ conf) >>> isA (not . null) )
+	= ( constA (getOpt "album-dir" $ conf) >>> isA (not . null) )
 	  &&&
 	  constA "xml"
 
     findOrgDir
-	= ( constA (getDefOpt ""    "dir"     $ conf) >>> isA (not . null) )
+	= ( constA (getOpt "dir"     $ conf) >>> isA (not . null) )
 	  &&&
-	  constA (getDefOpt "jpg" "imgtype" $ conf)
+	  constA (getImgType conf)
 
     findImgDirs
 	= ( constL (confSizes conf) >>^ sizeDir )
 	  &&&
-	  constA (getDefOpt "jpg" "imgtype" $ conf)
+	  constA (getImgType conf)
 
     findHtmlDirs
 	= ( constL (map (show . fst) . filter isHtmlFormat . M.assocs . confLayouts $ conf) )
