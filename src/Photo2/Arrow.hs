@@ -990,9 +990,9 @@ cleanupImgDirs execute rec conf p0
     = runAction ("cleanup image dirs for " ++ showPath p0) $
       ( checkEntryLoaded
 	>>>
-	perform ( cleanupDirs $<
-		  listA (findAlbumDir <+> findOrgDir <+> findImgDirs <+> findHtmlDirs)
-		)
+	( cleanupDirs p0 $<
+	  listA (findAlbumDir <+> findOrgDir <+> findImgDirs <+> findHtmlDirs)
+	)
 	>>>
 	constA ()
       )
@@ -1019,23 +1019,23 @@ cleanupImgDirs execute rec conf p0
 	where
 	isHtmlFormat = ("html" `isPrefixOf`) . layoutType . snd  
 
-    cleanupDirs	:: [(String,String)] -> CmdArrow AlbumTree AlbumTree
-    cleanupDirs	dirsExts
-	| rec		= getSelfAndDescAndProcess getChildrenAndCheck cleanup1Dir p0
-	| otherwise	= cleanup1Dir p0
+    cleanupDirs	:: Path -> [(String,String)] -> CmdArrow AlbumTree AlbumTree
+    cleanupDirs	path dirsExts
+	| rec		= getSelfAndDescAndProcess getChildrenAndCheck cleanup1Dir path
+	| otherwise	=                                              cleanup1Dir path
 	where
-	cleanup1Dir p'	= seqA (map (flip cleanup1Dir' p') dirsExts)
+	cleanup1Dir p'	= seqA . map (cleanup1Dir' p') $ dirsExts
 
-	cleanup1Dir' (dir, ext) path
-	    = perform ( isAlbum
-			>>>
-			runAction ("cleanup " ++ show dir' ++ " with " ++ show ext ++ " files")
-			( listA (getChildren >>> getNode >>^ (picId >>> (`addExtension` ext)))
-			  >>>
-			  arrIOE (cleanupDir execute dir')
-			)
-		      )
+	cleanup1Dir' p' (dir, ext)
+	    = perform
+	      ( runAction ("cleanup " ++ show dir' ++ " with " ++ show ext ++ " files")
+		( listA (getChildren >>> getNode >>^ picId)
+		  >>>
+		  arrIOE (cleanupDir execute dir' ext)
+		)
+	      )
+	      `when` isAlbum
 	    where
-	    dir' 		= dir </> joinPath path
+	    dir' 		= dir </> joinPath p'
 
 -- ------------------------------------------------------------

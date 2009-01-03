@@ -445,7 +445,15 @@ rmFile f
 	ex <- liftIO $ doesFileExist f
 	when ex (liftIO $ removeFile f)
       )
-      `mapError` (("remove " ++ show f ++ " failed: ") ++)
+      `mapError` (("remove file " ++ show f ++ " failed: ") ++)
+
+rmDir		:: String -> IOE ()
+rmDir d
+    = ( do
+	ex <- liftIO $ doesDirectoryExist d
+	when ex (liftIO $ removeDirectoryRecursive d)
+      )
+      `mapError` (("remove dir " ++ show d ++ " failed: ") ++)
 
 -- ------------------------------------------------------------
 
@@ -538,33 +546,39 @@ fileNewerThanDates (r:refs) f
 	 else return False
 
 -- ------------------------------------------------------------
-{-
-cleanupDir		:: FilePath -> [String] -> IOE ()
-cleanupDir dir fl	= liftIO $ cleanupDir' dir fl
--}
-cleanupDir		:: Bool -> FilePath -> [String] -> IOE ()
-cleanupDir execute dir fl
+
+cleanupDir		:: Bool -> FilePath -> String -> [String] -> IOE ()
+cleanupDir execute dir ext fl
     = do
-      ex <- liftIO $ doesDirectoryExist dir
+      ex <- liftIO $ doesDirectoryExist dir		-- dir must exist
       when ex $
 	   do
 	   fl' <- liftIO $ getDirectoryContents dir
 	   mapM_ cleanEntry fl'
-	   return ()
     where
+    fle = map (`addExtension` ext) fl
     cleanEntry e
-	| e `elem` fl
+	| e `elem` fle
+	  ||
+	  e `elem` [".",".."]
 	    = return ()
 	| otherwise
 	    = do
-	      isd <- liftIO $ doesDirectoryExist e'	-- don't touch dirs
-	      when (not isd) $
-		   do
-		   when execute (rmFile e')
-		   liftIO $ hPutStrLn stderr msg
+	      isd <- liftIO $ doesDirectoryExist e'
+	      if isd
+		 then when (not (e `elem` fl)) $
+			   do
+		           when execute (rmDir e')
+			   puts msg2
+		 else do
+		      when execute (rmFile e')
+		      puts msg
 	where
-	e' = dir </> e
+	e'                      = dir </> e
+	puts                    = liftIO . hPutStrLn stderr
 	msg	| execute	= "unused file removed " ++ show e'
 		| otherwise	= "unused file found "   ++ show e'
+	msg2	| execute	= "unused dir  removed " ++ show e'
+		| otherwise	= "unused dir  found "   ++ show e'
 
 -- ------------------------------------------------------------
