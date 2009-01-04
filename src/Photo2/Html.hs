@@ -32,50 +32,68 @@ defLayoutKey	= newAtom "html-1024x768"
 -- generate HTML pages
 
 genHtml			:: Bool -> String -> ConfigArrow AlbumTree ()
-genHtml rec format conf p0
-    = runAction ("prepare generate HTML pages in format " ++ show format' ++ " for " ++ showPath p0) $
+genHtml rec formats conf p0
+    = runAction ("prepare generate HTML pages in format(s) " ++ show formats' ++ " for " ++ showPath p0) $
       ( checkEntryLoaded
 	>>>
-	( genPages $<<<
-	  ( constL (maybeToList . M.lookup format' . confLayouts $ conf)
-	    >>>
-	    ( this
-	      &&&
-	      ( arr layoutPages
-		>>>
-		( ( (arrL $ maybeToList . M.lookup albumKey)
+	( (flip genAllPages p0) $<
+	  listA ( constL formats'	-- (maybeToList . M.lookup format' . confLayouts $ conf)
+		  >>>
+		  ( this
+		    &&&
+		    ( ( arrL (\ f -> maybeToList . M.lookup (newAtom f) . confLayouts $ conf)
+			>>>
+			( this
+			  &&&
+			  ( arr layoutPages
+			    >>>
+			    ( ( (arrL $ maybeToList . M.lookup albumKey)
+				>>>
+				(arrL $ maybeToList . M.lookup tempKey)
+				>>>
+				readTemplate "album"
+			      )
+			      &&&
+			      ( (arrL $ maybeToList . M.lookup picKey)
+				>>>
+				(arrL $ maybeToList . M.lookup tempKey)
+				>>>
+				readTemplate "picture"
+			      )
+			    )
+			  )
+			)
+		      )
+		      `orElse`
+		      errMsg ("layout spec not found")
+		    )
 		    >>>
-		    (arrL $ maybeToList . M.lookup tempKey)
-		    >>>
-		    readTemplate "album"
-		  )
-		  &&&
-		  ( (arrL $ maybeToList . M.lookup picKey)
-		    >>>
-		    (arrL $ maybeToList . M.lookup tempKey)
-		    >>>
-		    readTemplate "picture"
+		    filterCSS2
 		  )
 		)
-	      )
-	    )
-	  )
 	)
 	>>>
 	constA ()
       )
-      `orElse`
-      errMsg ("no layout spec found for format " ++ show format')
     where
-    dictId = newAtom "exif-german"
+    dictId 		= newAtom "exif-german"
     translateExif	= translate
 			  . maybe [("xxx","xxx")] (map (show *** id) . M.toList)
 			  . M.lookup dictId
 			  . confDict
 			  $ conf
-    format'
-	| null format	= maybe defLayoutKey newAtom . M.lookup layoutKey . confAttrs $ conf
-	| otherwise	= newAtom format
+
+    formats'		:: [String]
+    formats'
+	| null fs	= words . fromMaybe "html-1024x768" . M.lookup layoutKey . confAttrs $ conf
+	| otherwise	= fs
+	where
+	fs = words formats
+
+    filterCSS2		= ifP ((== "html-css2") . layoutType . fst . snd)
+			      (arr (fst &&& snd . snd))
+			      (errMsg ("layout type must be " ++ show "html-css2"))
+
 
     readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
 			  runInLocalURIContext $
@@ -91,38 +109,31 @@ genHtml rec format conf p0
 			    `orElse`
 			    (clearErrStatus >>> none)
 			  )
-			  
-    genPages	:: Layout -> XmlTree -> XmlTree -> CmdArrow AlbumTree AlbumTree
-    genPages layout aTemplate pTemplate
-	= runAction ("HTML page generation") $
-	  ( if layoutType layout == "html-css2"
-	    then genAllPages p0
-	    else errMsg ("format type must be " ++ show "html-css2")
-	  )
+
+    genAllPages		:: [(String, (XmlTree, XmlTree))] -> PathArrow AlbumTree AlbumTree
+    genAllPages	[] _pp
+	= errMsg ("no layout for layout type \"html-css2\" found")
+    genAllPages layouts pp
+	= withLocalAlbums $
+	  perform ( getAbs getTree pp
+		    >>>
+		    processChildren checkEntryLoaded
+		    >>>
+		    seqA (map (flip gen1Page pp) layouts)
+		    >>>
+		    ( if rec
+		      then getChildrenAndProcess getChildren (genAllPages layouts) pp
+		      else this
+		    )
+		  )
 	where
         getAbs		:: PathArrow AlbumTree b -> Path -> CmdArrow a b
 	getAbs pa p	= get theAlbums >>> pa p
 
-	genAllPages p
-	    = withLocalAlbums $
-	      perform ( ( if rec
-			  then loadChildAlbums	p	-- processChildren checkEntryLoaded
-			  else this
-			)
-			>>>
-			getAbs getTree p
-			>>>
-			gen1Page p
-			>>>
-			( if rec
-			  then getChildrenAndProcess getChildren genAllPages p
-			  else this
-			)
-		      )
-	gen1Page	:: PathArrow AlbumTree AlbumTree
-	gen1Page p
-	    = -- runAction ("HTML Page for " ++ showPath p) $
-	      perform ( genSinglePage p $<
+	gen1Page	:: (String, (XmlTree, XmlTree)) -> PathArrow AlbumTree AlbumTree
+	gen1Page (f, (at, pt)) p
+	    = -- runAction ("HTML Page for " ++ showPath p ++ " and format " ++ show f) $
+	      perform ( genSinglePage f at pt p $<
 			( getNode
 			  &&&
 			  listA ( getChildren >>> checkEntryLoaded )
@@ -131,8 +142,10 @@ genHtml rec format conf p0
 			)
 		      )
 
-	genSinglePage	:: Path -> (Pic, ([AlbumTree], (Path, Path, Path))) -> CmdArrow AlbumTree XmlTree
-	genSinglePage p (pic, (cs, (par, prv, nxt)))
+	genSinglePage	:: String -> XmlTree -> XmlTree ->
+			   Path ->
+			   (Pic, ([AlbumTree], (Path, Path, Path))) -> CmdArrow AlbumTree XmlTree
+	genSinglePage format' aTemplate pTemplate p (pic, (cs, (par, prv, nxt)))
 	    = choiceA [ isAlbum :-> constA aTemplate
 		      , this    :-> constA pTemplate
 		      ]
@@ -349,7 +362,7 @@ genHtml rec format conf p0
 	    valOf		= valOf' ""
             valOf' d n          = fromMaybe d . M.lookup n $ pas
 
-            fullPath            = (show format' </>)
+            fullPath            = (format' </>)
             relPath             = (theUpPath </>)
 
 	    dst			= fullPath $ thePath `addExtension` "html"
