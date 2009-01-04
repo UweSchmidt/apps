@@ -7,6 +7,7 @@ import           Data.Maybe
 import qualified Data.Map as M
 
 import           Photo2.ArchiveTypes
+import           Photo2.ExifData
 import           Photo2.FilePath
 import           Photo2.ImageOperations
 import           Photo2.Arrow
@@ -15,8 +16,6 @@ import           Text.XML.HXT.Arrow
 import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 
 -- ------------------------------------------------------------
---
--- generate HTML pages
 
 albumKey, picKey, tempKey, layoutKey	:: Atom
 
@@ -25,15 +24,12 @@ picKey		= newAtom "picture"
 tempKey		= newAtom "template"
 layoutKey       = newAtom "layout"
 
-titleKey, subTitleKey, resourceKey, durationKey :: Atom
-
-titleKey	= newAtom "descr:Title"
-subTitleKey	= newAtom "descr:Subtitle"
-resourceKey	= newAtom "descr:Resource"
-durationKey	= newAtom "show:Duration"
-
 defLayoutKey	:: Atom
 defLayoutKey	= newAtom "html-1024x768"
+
+-- ------------------------------------------------------------
+--
+-- generate HTML pages
 
 genHtml			:: Bool -> String -> ConfigArrow AlbumTree ()
 genHtml rec format conf p0

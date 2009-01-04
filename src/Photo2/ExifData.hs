@@ -2,7 +2,7 @@ module Photo2.ExifData
 where
 
 import           Control.Arrow
-import		 Control.Monad ( ) -- mplus )
+import           Control.Monad ( ) -- mplus )
 
 import           Data.Atom
 import           Data.Char
@@ -15,23 +15,41 @@ import           Photo2.ArchiveTypes
 import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 import           Text.XML.HXT.DOM.Util ( stringTrim )
 
-parseExif	:: PicAttrs -> String -> Attrs
+-- ------------------------------------------------------------
+
+titleKey, subTitleKey, resourceKey, durationKey, fileModificationKey :: Atom
+
+titleKey			= newAtom "descr:Title"
+subTitleKey			= newAtom "descr:Subtitle"
+resourceKey			= newAtom "descr:Resource"
+durationKey			= newAtom "show:Duration"
+fileModificationKey             = newAtom fileModificationDateTime
+
+fileModificationDateTime'       :: String
+fileModificationDateTime'       = "FileModificationDateTime"
+
+fileModificationDateTime        :: String
+fileModificationDateTime        = addPrefix fileModificationDateTime'
+
+-- ------------------------------------------------------------
+
+parseExif       :: PicAttrs -> String -> Attrs
 parseExif pl
     = lines
       >>>
       map (splitKeyVal ':')
       >>>
       map ( ( map (\ c -> if isAlphaNum c then c else ' ')
-	      >>>
-	      words
-	      >>>
-	      concatMap capitalize
-	      >>>
-	      newAttrKey pl
-	    )
-	    ***
-	    ( words >>> unwords >>> normDateTime )
-	  )
+              >>>
+              words
+              >>>
+              concatMap capitalize
+              >>>
+              newAttrKey pl
+            )
+            ***
+            ( words >>> unwords >>> normDateTime )
+          )
       >>>
       filter ( not . null . snd )
       >>>
@@ -39,39 +57,39 @@ parseExif pl
       >>>
       M.fromList
 
-splitKeyVal	:: Char -> String -> (String, String)
+splitKeyVal     :: Char -> String -> (String, String)
 splitKeyVal c
     = break (== c)
       >>>
       ( stringTrim
-	***
-	( drop 1 >>> stringTrim )
+        ***
+        ( drop 1 >>> stringTrim )
       )
 
-splitWith	:: Char -> String -> (String, String)
+splitWith       :: Char -> String -> (String, String)
 splitWith c
     = splitKeyVal c
       >>>
       ( \ (x,y) -> if null y then (y,x) else (x,y) )
 
-capitalize	:: String -> String
-capitalize (c:s1)	| isAlpha c	= toUpper c : s1
-capitalize s				= s
+capitalize      :: String -> String
+capitalize (c:s1)       | isAlpha c     = toUpper c : s1
+capitalize s                            = s
 
-toAlphaNum	:: Char -> Char
+toAlphaNum      :: Char -> Char
 toAlphaNum c
-    | isAlphaNum c	= c
-    | otherwise		= ' '
+    | isAlphaNum c      = c
+    | otherwise         = ' '
 
-normDateTime	:: String -> String
+normDateTime    :: String -> String
 normDateTime s
-    | isDateTime s	= d' ++ t
-    | otherwise		= s
+    | isDateTime s      = d' ++ t
+    | otherwise         = s
     where
     (d, t) = break (== ' ') s
     d'     = map (\ c -> if c == ':' then '-' else c) d
 
-isDateTime	:: String -> Bool
+isDateTime      :: String -> Bool
 isDateTime
     = match r
     where
@@ -81,45 +99,38 @@ isDateTime
     s = "([.][0-9]{2})?"
     z = "([-+][0-9]{2}:[0-9]{2}([.][0-9]{2})?)?"
 
-normAttrs	:: PicAttrs -> Attrs -> Attrs
+normAttrs       :: PicAttrs -> Attrs -> Attrs
 normAttrs pl
     = M.foldWithKey norm emptyAttrs
     where
     norm k v m
-	| null . show $ k'	= m
-	| otherwise		= M.insert k' v m
-	where
-	k' = newAttrKey pl (show k)
+        | null . show $ k'      = m
+        | otherwise             = M.insert k' v m
+        where
+        k' = newAttrKey pl (show k)
 
-newAttrKey	:: PicAttrs -> String -> Atom
+newAttrKey      :: PicAttrs -> String -> Atom
 newAttrKey pl k
     = newAtom $
       case matchFound pl of
-      Just n	-> n
+      Just n    -> n
       Nothing   -> ("unknown:" ++) . snd . splitWith ':' $ k
     where
-    matchKey	:: Value -> Name -> Maybe Name
+    matchKey    :: Value -> Name -> Maybe Name
     matchKey p n
-	| match p k = Just n
-	| otherwise = Nothing
+        | match p k = Just n
+        | otherwise = Nothing
 
     foldMatch :: Maybe Name -> (Value, Name) -> Maybe Name
     foldMatch r@(Just _) _ = r
-    foldMatch Nothing	 e = uncurry matchKey e
+    foldMatch Nothing    e = uncurry matchKey e
 
     matchFound :: PicAttrs -> Maybe Name
     matchFound = foldl foldMatch Nothing
 
-fileModificationDateTime'	:: String
-fileModificationDateTime'	= "FileModificationDateTime"
+-- ------------------------------------------------------------
 
-fileModificationDateTime	:: String
-fileModificationDateTime	= addPrefix fileModificationDateTime'
-
-fileModificationKey		:: Atom
-fileModificationKey		= newAtom fileModificationDateTime
-
-oldKeys	:: [(String, String)]
+oldKeys :: [(String, String)]
 oldKeys
     = [ ("modified", fileModificationDateTime')
       , ("duration", "Duration")
@@ -166,103 +177,103 @@ oldKeys
       , ("white-balance", "WhiteBalance")
       ]
 
-addPrefix	:: String -> String
+addPrefix       :: String -> String
 addPrefix s
-    | null v	= (fromMaybe "unknown" . lookup k $ prefixMap) ++ ":" ++ k
+    | null v    = (fromMaybe "unknown" . lookup k $ prefixMap) ++ ":" ++ k
     | otherwise = s
     where
     (k, v) = splitKeyVal ':' s
 
-prefixMap	:: [(String, String)]
+prefixMap       :: [(String, String)]
 prefixMap
-    = [ ( "Aperture",			"exif"  )
-      , ( "CameraModelName",		"cam"   )
-      , ( "ColorSpaceData",		"exif"  )
-      , ( "Comment",			"descr" )
-      , ( "Contrast",			"exif"  )
-      , ( "CreateDate",			"exif"  )
-      , ( "DateTimeOriginal",		"exif"  )
-      , ( "DepthOfField",		"exif"  )
-      , ( "Duration",			"show"  )
-      , ( "ExposureCompensation",	"exif"  )
-      , ( "ExposureMode",		"exif"  )
-      , ( "ExposureProgram",		"exif"  )
-      , ( "ExposureTime",		"exif"  )
-      , ( "FNumber",			"exif"  )
-      , ( fileModificationDateTime',	"file"  )
-      , ( "FileSize",			"file"  )
-      , ( "Flash",			"exif"  )
-      , ( "FocalLength",		"cam"   )
-      , ( "FocalLengthIn35mmFormat",	"cam"   )
-      , ( "FocusDistance",		"exif"  )
-      , ( "FocusMode",			"exif"  )
-      , ( "ISO",			"exif"  )
-      , ( "ImageSize",			"exif"  )
-      , ( "Keywords",			"descr" )
-      , ( "Lens",			"cam"   )
-      , ( "LensID",			"cam"   )
-      , ( "LensSpec",			"cam"   )
-      , ( "Make",			"cam"   )
-      , ( "MeteringMode",		"exif"  )
-      , ( "Quality",			"exif"  )
-      , ( "RefOrig",			"file"  )
-      , ( "RefRaw",			"file"  )
-      , ( "RefXmp",			"file"  )
-      , ( "Resource",			"descr" )
-      , ( "Saturation",			"exif"  )
-      , ( "Sharpness",			"exif"  )
-      , ( "ShootingMode",		"exif"  )
-      , ( "ShutterSpeed",		"exif"  )
-      , ( "Subject",			"descr" )
-      , ( "Subtitle",			"descr" )
-      , ( "Title",			"descr" )
-      , ( "UserComment",		"descr" )
-      , ( "VibrationReduction",		"exif"  )
-      , ( "WhiteBalance",		"exif"  )
+    = [ ( "Aperture",                   "exif"  )
+      , ( "CameraModelName",            "cam"   )
+      , ( "ColorSpaceData",             "exif"  )
+      , ( "Comment",                    "descr" )
+      , ( "Contrast",                   "exif"  )
+      , ( "CreateDate",                 "exif"  )
+      , ( "DateTimeOriginal",           "exif"  )
+      , ( "DepthOfField",               "exif"  )
+      , ( "Duration",                   "show"  )
+      , ( "ExposureCompensation",       "exif"  )
+      , ( "ExposureMode",               "exif"  )
+      , ( "ExposureProgram",            "exif"  )
+      , ( "ExposureTime",               "exif"  )
+      , ( "FNumber",                    "exif"  )
+      , ( fileModificationDateTime',    "file"  )
+      , ( "FileSize",                   "file"  )
+      , ( "Flash",                      "exif"  )
+      , ( "FocalLength",                "cam"   )
+      , ( "FocalLengthIn35mmFormat",    "cam"   )
+      , ( "FocusDistance",              "exif"  )
+      , ( "FocusMode",                  "exif"  )
+      , ( "ISO",                        "exif"  )
+      , ( "ImageSize",                  "exif"  )
+      , ( "Keywords",                   "descr" )
+      , ( "Lens",                       "cam"   )
+      , ( "LensID",                     "cam"   )
+      , ( "LensSpec",                   "cam"   )
+      , ( "Make",                       "cam"   )
+      , ( "MeteringMode",               "exif"  )
+      , ( "Quality",                    "exif"  )
+      , ( "RefOrig",                    "file"  )
+      , ( "RefRaw",                     "file"  )
+      , ( "RefXmp",                     "file"  )
+      , ( "Resource",                   "descr" )
+      , ( "Saturation",                 "exif"  )
+      , ( "Sharpness",                  "exif"  )
+      , ( "ShootingMode",               "exif"  )
+      , ( "ShutterSpeed",               "exif"  )
+      , ( "Subject",                    "descr" )
+      , ( "Subtitle",                   "descr" )
+      , ( "Title",                      "descr" )
+      , ( "UserComment",                "descr" )
+      , ( "VibrationReduction",         "exif"  )
+      , ( "WhiteBalance",               "exif"  )
       ]
 
-isAttrKey	:: String -> Bool
+isAttrKey       :: String -> Bool
 isAttrKey
     = (`elem` [ "Aperture"
-	      , "CameraModelName"
-	      , "ColorSpaceData"
-	      , "Comment"
-	      , "Contrast"
-	      , "CreateDate"
-	      , "DateTimeOriginal"
-	      , "DepthOfField"
-	      , "ExposureCompensation"
-	      , "ExposureMode"
-	      , "ExposureProgram"
-	      , "ExposureTime"
-	      , "FNumber"
-	      , fileModificationDateTime'
-	      , "FileSize"
-	      , "Flash"
-	      , "FocalLength"
-	      , "FocalLengthIn35mmFormat"
-	      , "FocusDistance"
-	      , "FocusMode"
-	      , "ISO"
-	      , "ImageSize"
-	      , "Keywords"
-	      , "Lens"
-	      , "LensID"
-	      , "Make"
-	      , "MeteringMode"
-	      , "Quality"
-	      , "RefOrig"
-	      , "RefRaw"
-	      , "RefXmp"
-	      , "Saturation"
-	      , "Sharpness"
-	      , "ShutterSpeed"
-	      , "Subject"
-	      , "Subtitle"
-	      , "Title"
-	      , "UserComment"
-	      , "VibrationReduction"
-	      , "WhiteBalance"
-	      ]
+              , "CameraModelName"
+              , "ColorSpaceData"
+              , "Comment"
+              , "Contrast"
+              , "CreateDate"
+              , "DateTimeOriginal"
+              , "DepthOfField"
+              , "ExposureCompensation"
+              , "ExposureMode"
+              , "ExposureProgram"
+              , "ExposureTime"
+              , "FNumber"
+              , fileModificationDateTime'
+              , "FileSize"
+              , "Flash"
+              , "FocalLength"
+              , "FocalLengthIn35mmFormat"
+              , "FocusDistance"
+              , "FocusMode"
+              , "ISO"
+              , "ImageSize"
+              , "Keywords"
+              , "Lens"
+              , "LensID"
+              , "Make"
+              , "MeteringMode"
+              , "Quality"
+              , "RefOrig"
+              , "RefRaw"
+              , "RefXmp"
+              , "Saturation"
+              , "Sharpness"
+              , "ShutterSpeed"
+              , "Subject"
+              , "Subtitle"
+              , "Title"
+              , "UserComment"
+              , "VibrationReduction"
+              , "WhiteBalance"
+              ]
       )
 -- ------------------------------------------------------------

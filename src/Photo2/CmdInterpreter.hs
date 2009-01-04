@@ -271,7 +271,7 @@ parseCmd "?" []
             , ""
             , "  newalbum    path newid     create a new album within path"
             , "  setalbumpic path id        set the album picture from the list of pictures within the album"
-	    , "  sortalbum  [path]          sort pictures by date"
+            , "  sortalbum  [path]          sort pictures by date"
             , "  import     [path]          star import dialog for adding new pictures into album"
             , "  update     [path]          copy original and update copies, if original has changed"
             , "  update-all [path]          recursively copy originals and update copies, if originals have changed"
@@ -291,18 +291,18 @@ parseCmd "?" []
             , "  rename path newid          rename picture"
             , "  defpicattr a val           define a picture attribute"
             , ""
-	    , "  dirty       [path]         list unused files"
-	    , "  dirty-all   [path]         list unused files recursively"
-	    , "  cleanup     [path]         cleanup image dirs"
-	    , "  cleanup-all [path]         cleanup image dirs recursively"
-	    , ""
+            , "  dirty       [path]         list unused files"
+            , "  dirty-all   [path]         list unused files recursively"
+            , "  cleanup     [path]         cleanup image dirs"
+            , "  cleanup-all [path]         cleanup image dirs recursively"
+            , ""
             , "  !<shell command>           shell command"
             , "  version                    print photo2 version"
             ]
 
 parseCmd "version" []
     = liftCmd $
-      hPutStrLn stdout "Photo2 version 0.1.2 from 2009-01-03"
+      hPutStrLn stdout "Photo2 version 0.1.3 from 2009-01-04"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -371,20 +371,20 @@ findEntries ld gt out p
 
 -- ------------------------------------------------------------
 
-parseLs'                	:: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
-parseLs' pa ps          	= parseWdCmd' ls ps
+parseLs'                        :: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
+parseLs' pa ps                  = parseWdCmd' ls ps
                                   where
-				  ls    = ( pa
-					    />>>/
-					    const (arrIO (putStrLn . mkAbsPath . joinPath))
-					  )
-					  `withDefaultRes` ()
+                                  ls    = ( pa
+                                            />>>/
+                                            const (arrIO (putStrLn . mkAbsPath . joinPath))
+                                          )
+                                          `withDefaultRes` ()
 
-parseCleanup			:: String -> Bool -> Bool -> [String] -> [Cmd]
+parseCleanup                    :: String -> Bool -> Bool -> [String] -> [Cmd]
 parseCleanup c ex rec []        = parseCleanup c ex rec ["."]
 parseCleanup c ex rec (p:_)     = parseWdCmd' gen c [p]
-				  where
-				  gen = getTreeAndProcess (withConfig (cleanupImgDirs ex rec))
+                                  where
+                                  gen = getTreeAndProcess (withConfig (cleanupImgDirs ex rec))
 
 parseGenHtml                    :: String -> Bool -> [String] -> [Cmd]
 parseGenHtml c rec []           = parseGenHtml c rec [".", ""]

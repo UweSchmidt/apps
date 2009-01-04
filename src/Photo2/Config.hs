@@ -2,18 +2,80 @@ module Photo2.Config
 where
 
 import           Data.Atom
-import qualified Data.Map as M
+import           Data.Char
+import qualified Data.Map               as M
 import           Data.Maybe
 
 import           Photo2.ArchiveTypes
 import           Photo2.FilePath
 
-keyAlbumDir	:: Atom
-keyAlbumDir	= newAtom "album-dir"
+-- ------------------------------------------------------------
 
-albumDir	:: Config -> FilePath
-albumDir	= fromMaybe "album2" . M.lookup keyAlbumDir . confAttrs
+statusOk                :: Status -> Bool
+statusOk (Exc _)        = False
+statusOk _              = True
 
-albumPath	:: Path -> Config -> FilePath
-albumPath p c	= albumDir c </> (joinPath p `addExtension` "xml")
+startTr                 :: Status -> Status
+startTr (Running l)     = Running (l + 1)
+startTr e               = e
 
+stopTr                  :: Status -> Status
+stopTr (Running l)      = Running (l - 1)
+stopTr e                = e
+
+-- ------------------------------------------------------------
+
+keyAlbumDir             :: Atom
+keyAlbumDir             = newAtom "album-dir"
+
+keyCreateDate           :: Atom
+keyCreateDate           = newAtom "exif:CreateDate"
+
+-- ------------------------------------------------------------
+
+albumDir                :: Config -> FilePath
+albumDir                = fromMaybe "album2" . M.lookup keyAlbumDir . confAttrs
+
+albumPath               :: Path -> Config -> FilePath
+albumPath p c           = albumDir c </> (joinPath p `addExtension` "xml")
+
+getOpt                  :: String -> Config -> String
+getOpt                  = getDefOpt ""
+
+getDefOpt               :: String -> String -> Config -> String
+getDefOpt d o           = fromMaybe d . M.lookup (newAtom o) . confAttrs
+
+optON                   :: String -> Config -> Bool
+optON o                 = (`elem` ["1","yes","true"]) . map toLower . getOpt o
+
+optOFF                  :: String -> Config -> Bool
+optOFF o                = (`elem` ["0","no","false"]) . map toLower . getOpt o
+
+optDebug                :: String
+optDebug                = "debug"
+
+optDryRun               :: String
+optDryRun               = "dry-run"
+
+optForceStore           :: String
+optForceStore           = "store-all"
+
+optForceOrig            :: String
+optForceOrig            = "copy-org"
+
+optForceCopy            :: String
+optForceCopy            = "copy-copy"
+
+optForceExif            :: String
+optForceExif            = "copy-exif"
+
+getImportBase           :: Config -> String
+getImportBase           = getDefOpt "../Diakaesten" "import-base"
+
+getImgType              :: Config -> String
+getImgType              = getDefOpt "jpg"           "imgtype"
+
+getOrgDir               :: Config -> String
+getOrgDir               = getDefOpt "org"           "dir"
+
+-- ------------------------------------------------------------
