@@ -200,12 +200,13 @@ parseCmd c@"newattrs"      args                         = parseNewAttrKeys      
 parseCmd c@"newformat"     args                         = parseNewFormat False                        c args
 parseCmd c@"newformat-all" args                         = parseNewFormat True                         c args
 
-parseCmd c@"attr"          args | length args >= 2      = parseAttr c args
-parseCmd c@"deleteattr"    args | length args == 2      = parseDeleteAttr c args
-parseCmd c@"import"        args | length args <= 1      = parseImport c args
-parseCmd c@"newalbum"      args | length args == 2      = parseModifiy c (newAlbum (concat . drop 1 $ args)) args
+parseCmd c@"attr"          args | length args >= 2      = parseAttr                                   c args
+parseCmd c@"deleteattr"    args | length args == 2      = parseDeleteAttr                             c args
+parseCmd c@"sortalbum"     args | length args <= 1      = parseSort                                   c args
+parseCmd c@"import"        args | length args <= 1      = parseImport                                 c args
+parseCmd c@"newalbum"      args | length args == 2      = parseModifiy c (newAlbum    (concat . drop 1 $ args)) args
 parseCmd c@"setalbumpic"   args | length args == 2      = parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
-parseCmd c@"rename"        args | length args == 2      = parseModifiy c (renamePic (concat . drop 1 $ args)) args
+parseCmd c@"rename"        args | length args == 2      = parseModifiy c (renamePic   (concat . drop 1 $ args)) args
 -- parseCmd c@"rename-cont"   args      | length args <= 1      = parseModifiy c renameContent args
 
 parseCmd c@"dirty"         args | length args <=1       = parseCleanup c False False args
@@ -268,8 +269,9 @@ parseCmd "?" []
             , "  find path kre vre          list all pictures with matching attribute key and value"
             , "  relatives [path]           list the paths of the parent, the previous and the next entry"
             , ""
-            , "  newalbum path newid        create a new album within path"
+            , "  newalbum    path newid     create a new album within path"
             , "  setalbumpic path id        set the album picture from the list of pictures within the album"
+	    , "  sortalbum  [path]          sort pictures by date"
             , "  import     [path]          star import dialog for adding new pictures into album"
             , "  update     [path]          copy original and update copies, if original has changed"
             , "  update-all [path]          recursively copy originals and update copies, if originals have changed"
@@ -300,7 +302,7 @@ parseCmd "?" []
 
 parseCmd "version" []
     = liftCmd $
-      hPutStrLn stdout "Photo2 version 0.1.1 from 2008-12-06"
+      hPutStrLn stdout "Photo2 version 0.1.2 from 2009-01-03"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -445,6 +447,12 @@ parseStoreAlbums c      = parseWdCmd' storeAllChangedAlbums c
 
 parseStorePics          :: String -> [String] -> [Cmd]
 parseStorePics c        = parseWdCmd' storeAllChangedEntries c
+
+parseSort               :: String -> [String] -> [Cmd]
+parseSort c             = parseWdCmd' srt c
+                          where
+                          srt = changeAlbums $
+                                processTree (withConfig sortPics)
 
 parseImport             :: String -> [String] -> [Cmd]
 parseImport c           = parseWdCmd' imp c

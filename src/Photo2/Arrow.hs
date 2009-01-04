@@ -1,12 +1,16 @@
 module Photo2.Arrow
 where
 
-import           Control.Monad.Error	( runErrorT )
+import           Control.Monad.Error	        ( runErrorT )
 import           Control.Parallel.Strategies
 
-import           Data.List              ( isPrefixOf )
-import           Data.Maybe		( )
-import qualified Data.Map as M
+import           Data.Atom
+import           Data.List                      ( isPrefixOf
+						, sortBy
+						)
+import           Data.Maybe		        ( fromMaybe )
+import qualified Data.Map                       as M
+import qualified Data.Tree.NTree.TypeDefs	as NT
 
 import           Photo2.ArchiveTypes
 import           Photo2.Config
@@ -218,7 +222,7 @@ withStatusCheck msg action
 	  >>>
 	  failed msg
 	  >>>
-	 none
+	  none
 	)
       )
 
@@ -982,6 +986,26 @@ picnr = show
 
 -- ------------------------------------------------------------
 --
+-- sort all pictures by date
+
+sortPics	:: ConfigArrow AlbumTree AlbumTree
+sortPics _ p
+    = runAction ("sorting " ++ showPath p ++ " by date")
+      ( checkEntryLoaded
+	>>>
+	processChildren checkEntryLoaded
+	>>>
+	changeChildren sortByDate
+	>>>
+	setEdited
+      )
+      `when` isAlbum
+    where
+    sortByDate  = sortBy (\ t1 t2 -> compare (date t1) (date t2))
+    date	= fromMaybe "" . M.lookup (newAtom "exif:CreateDate") . picAttrs . NT.getNode
+
+-- ------------------------------------------------------------
+--
 -- update image data for a single node, the arrow input
 
 updatePic	:: ConfigArrow AlbumTree AlbumTree
@@ -1012,9 +1036,9 @@ cleanupImgDirs execute rec conf p0
     = runAction ("cleanup image dirs for " ++ showPath p0) $
       ( checkEntryLoaded
 	>>>
-	( cleanupDirs p0 $<
-	  listA (findAlbumDir <+> findOrgDir <+> findImgDirs <+> findHtmlDirs)
-	)
+	perform ( cleanupDirs p0 $<
+		  listA (findAlbumDir <+> findOrgDir <+> findImgDirs <+> findHtmlDirs)
+		)
 	>>>
 	constA ()
       )
