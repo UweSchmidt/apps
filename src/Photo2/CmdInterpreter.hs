@@ -302,7 +302,7 @@ parseCmd "?" []
 
 parseCmd "version" []
     = liftCmd $
-      hPutStrLn stdout "Photo2 version 0.1.3 from 2009-01-04"
+      hPutStrLn stdout "Photo2 version 0.1.4 from 2009-01-11"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -460,20 +460,6 @@ parseImport c           = parseWdCmd' imp c
                           imp = changeAlbums $
                                 processTree (withConfig importPics)
 
-parseTest               :: [String] -> [Cmd]
-parseTest               = parseWdCmd' test "xxx"
-                          where
-                          test = changeAlbums $
-                                 processTree (withConfig importPics)
-                          {-
-                          test = const (get theConfig >>> arrIOE  scanForNewImages >>> arrIO print)
-                          -}
-                          {-
-                          test = changeAlbums $
-                                 processTreeSelfAndDesc ( const $ perform $
-                                                          getNode >>> arr picId >>> arrIO print
-                                                        )
-                                                        -}
 parseUpdate             :: Bool -> String -> [String] -> [Cmd]
 parseUpdate rec c       = parseWdCmd' (changeAlbums update) c
                           where
@@ -557,4 +543,25 @@ parseCd ps
         where
         p = normalPath p0
 
+-- ------------------------------------------------------------
+
+parseTest               :: [String] -> [Cmd]
+parseTest ps            = parseWdCmd test "xxx" ps
+                          where
+			  test p = findAlbumPath p
+				   >>>
+				   arrIO print
+			  {-
+                          test = changeAlbums $
+                                 processTree (withConfig importPics)
+		          -}
+                          {-
+                          test = const (get theConfig >>> arrIOE  scanForNewImages >>> arrIO print)
+                          -}
+                          {-
+                          test = changeAlbums $
+                                 processTreeSelfAndDesc ( const $ perform $
+                                                          getNode >>> arr picId >>> arrIO print
+                                                        )
+                                                        -}
 -- ------------------------------------------------------------

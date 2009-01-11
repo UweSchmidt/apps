@@ -725,7 +725,7 @@ withDir         :: Path -> PathArrow a b -> CmdArrow a b
 withDir p c     = (\ p' -> withAbsDir p' c) $< (get theWd >>^ (++ p))
 
 withAbsDir      :: Path -> PathArrow a b -> CmdArrow a b
-withAbsDir p c  = c (normalPath p)
+withAbsDir p c  = c $< findAlbumPath (normalPath p)
 
 withCwd         :: PathArrow a b -> CmdArrow a b
 withCwd         = withDir []
@@ -1082,5 +1082,81 @@ cleanupImgDirs execute rec conf p0
               `when` isAlbum
             where
             dir'                = dir </> joinPath p'
+
+-- ------------------------------------------------------------
+
+findAlbumPath	:: PathArrow a Path
+findAlbumPath p
+    = get theAlbums
+      >>>
+      findPath' p
+      >>>
+      isA (not . null . fst)
+      >>>
+      perform (snd ^>> set theAlbums)
+      >>>
+      arr fst
+
+findPath'	:: PathArrow AlbumTree (Path, AlbumTree)
+findPath' p	= -- runAction ("findpath for " ++ showPath p) $
+		  findPath p
+
+findPath	:: PathArrow AlbumTree (Path, AlbumTree)
+findPath p
+    | null p	= none
+    | null p'	= ( ifA nodeMatch
+		       (getPicId >>^ return)
+                       (constA [])
+		  )
+		  &&&
+		  this
+    | otherwise	= ifA nodeMatch
+		      ( checkEntryLoaded
+			>>>
+			( replaceCh $< findCh p')
+		      )
+		      (constA [] &&& this)
+    where
+    (n' : p') = p
+    nodeMatch = getPicId >>> isA (wildcardMatch n')
+
+    replaceCh (newp', newCh)
+	| null newp'	= none
+	| otherwise	= (getPicId >>^ (:newp'))
+			  &&&
+			  replaceChildren (constL newCh)
+
+    findCh	:: PathArrow AlbumTree (Path, [AlbumTree])
+    findCh p''	= -- runAction ("findCh with path " ++ showPath p'') $
+		  listA ( getChildren
+			  >>>
+			  findPath' p''
+			)
+                  -- >>>
+		  -- perform ( arr (map fst) >>> arrIO print)
+		  >>^
+		  splitPathsTrees
+		  where
+		  splitPathsTrees ps
+		      | null np				-- no path found
+			||
+			not (null (tail np))		-- 2 or more paths found: ambigious path
+			  = ([],[])
+		      | otherwise
+			  = (head np, map snd ps)
+		      where
+		      np = filter (not . null) . map fst $ ps
+
+wildcardMatch	:: String -> String -> Bool
+wildcardMatch p
+    | containsWCs p	= match p'
+    | otherwise		= (p ==)
+    where
+    containsWCs	= any (`elem` "*?[]")
+    p'		= concatMap substWC p
+
+    substWC '*'	= ".*"
+    substWC '?' = "."
+    substWC c   = [c]
 
 -- ------------------------------------------------------------
