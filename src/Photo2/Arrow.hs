@@ -42,16 +42,28 @@ arrIOE  :: (a -> IOE b) -> CmdArrow a b
 arrIOE io
     = arrIO (runErrorT . io)
       >>>
-      ( ( arrIO (\ s -> hPutStrLn stderr s) >>> none )
+      ( ( errMsg $< this )
         |||
         this
       )
 
 errMsg  :: String -> CmdArrow a b
 errMsg  msg
-    = ( arrIO0 $ hPutStrLn stderr msg )
+    = (getUserState >>^ load selWriteLog)
+      >>>
+      arrIO ($ msg)
       >>>
       none
+
+putRes	:: CmdArrow String ()
+putRes  = resMsg $< this
+
+resMsg	:: String -> CmdArrow a ()
+resMsg  msg
+    = (getUserState >>^ load selWriteRes)
+      >>>
+      arrIO ($ msg)
+
 
 infixr 1 />>>/
 

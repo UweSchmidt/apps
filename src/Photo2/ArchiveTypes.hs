@@ -16,6 +16,8 @@ import           Data.Tree.NTree.TypeDefs
 
 import           Photo2.FilePath
 
+import           System.IO
+
 -- ------------------------------------------------------------
 --
 -- the global state
@@ -26,8 +28,9 @@ data AppState           = AppState { albums      :: AlbumTree
                                    , configName  :: Href
                                    , status      :: Status
                                    , cwd         :: Path
+				   , writeLog    :: String -> IO ()
+				   , writeRes	 :: String -> IO ()
                                    }
-                          deriving (Show)
 
 type Options            = AssocList Name Value
 
@@ -142,7 +145,7 @@ store s v               = change s (const v)
 
 -- ------------------------------------------------------------
 
-type AppSelector a = Selector AppState a
+type AppSelector a 	= Selector AppState a
 
 selAlbums               :: AppSelector AlbumTree
 selAlbums               = (albums,      \ x s -> s {albums = x})
@@ -162,6 +165,12 @@ selStatus               = (status,      \ x s -> s {status = x})
 selWd                   :: AppSelector Path
 selWd                   = (cwd,         \ x s -> s {cwd = x})
 
+selWriteLog		:: AppSelector (String -> IO ())
+selWriteLog		= (writeLog,    \ x s -> s {writeLog = x})
+
+selWriteRes		:: AppSelector (String -> IO ())
+selWriteRes		= (writeRes,    \ x s -> s {writeRes = x})
+
 selConfigAttrs          :: AppSelector Attrs
 selConfigAttrs          = (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
 
@@ -174,7 +183,7 @@ selConfigAttr k         = (fromMaybe "" . M.lookup (newAtom k),
 
 -- ------------------------------------------------------------
 
-type PicSelector a = Selector Pic a
+type PicSelector a 	= Selector Pic a
 
 theId                   :: PicSelector Name
 theId                   = ( picId,     \ n x -> x { picId     = n } )
@@ -203,6 +212,8 @@ emptyAppState           = AppState { albums       = emptyAlbumTree
                                    , configName   = ""
                                    , status       = Running 0
                                    , cwd          = []
+				   , writeLog	  = hPutStrLn stderr
+				   , writeRes	  = hPutStrLn stdout
                                    }
 
 emptyConfig             :: Config
@@ -477,7 +488,7 @@ showPic p               = concat . intersperse "\n" . filter (not . null) $
 -- ------------------------------------------------------------
 
 instance NFData AppState where
-    rnf (AppState a n cf cfn s wd)
+    rnf (AppState a n cf cfn s wd _wl _wr)
                         = rnf a `seq` rnf n `seq` rnf cf `seq` rnf cfn `seq` rnf s `seq` rnf wd
 
 instance NFData Status where

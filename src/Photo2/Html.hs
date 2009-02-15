@@ -367,6 +367,7 @@ genHtml rec formats conf p0
 
 	    dst			= fullPath $ thePath `addExtension` "html"
 
+{- no longer required: new option
             eeToHtml		= processBottomUp
 				  ( replaceChildren (cmt " firefox hack ")	-- insert a comment for preventing e.g. <div/>
 				    `when`
@@ -380,6 +381,7 @@ genHtml rec formats conf p0
 				      neg getChildren
 				    )
 				  )
+-}
 
 	    writeHtmlPage	:: CmdArrow XmlTree XmlTree
 	    writeHtmlPage
@@ -392,9 +394,11 @@ genHtml rec formats conf p0
 		  >>>
 		  indentDoc
 		  >>>
-		  eeToHtml	-- this is a hack for firefox, it does not process empty xhtml elements, e.g. <div/>
+		  this -- eeToHtml -- not longer neccessay because of added option	-- this is a hack for firefox, it does not process empty xhtml elements, e.g. <div/>
 		  >>>
 		  writeDocument [ (a_indent, v_0)
+				, (a_output_html, v_1)
+				, (a_no_empty_elements, v_1)
 				, (a_output_encoding, usAscii)
 				] dst
 		  >>>

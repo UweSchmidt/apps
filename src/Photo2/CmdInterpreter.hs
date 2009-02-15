@@ -149,10 +149,10 @@ parseCmd "config" []                                    = mkCmd ( get theConfig
                                                                 )
 parseCmd "options" []                                   = mkCmd ( get theConfigAttrs
                                                                   >>>
-                                                                  arrIO dumpOptions
+                                                                  arr dumpOptions >>> putRes
                                                                 )
                                                           where
-                                                          dumpOptions = putStrLn . unlines . fmtTable " = "
+                                                          dumpOptions = unlines . fmtTable " = "
                                                                         .
                                                                         map (first show) . M.toList
 
@@ -164,7 +164,7 @@ parseCmd "unset" [n]                                    = mkCmd ( changeComp the
 parseCmd "defpicattr" [n,v]                             = mkCmd ( changeComp theConfigPicAttrs (addEntry v n) )
 parseCmd "pwd" []                                       = mkCmd ( get theWd
                                                                   >>>
-                                                                  arrIO (putStrLn . (rootPath </>) . joinPath)
+                                                                  arr ((rootPath </>) . joinPath) >>> putRes
                                                                 )
 parseCmd c@"ls"            args                         = parseLs' (getTreeAndProcessChildren constA) c args
 parseCmd c@"ls-all"        args                         = parseLs' (getTreeAndProcessDesc constA)     c args
@@ -225,8 +225,7 @@ parseCmd "cd"        args       = parseCd               args
 parseCmd "xxx" args             = parseTest             args
 
 parseCmd "?" []
-    = liftCmd $
-      hPutStrLn stdout usage
+    = outputCmd usage
     where
     usage = unlines $
             [ "commands available from the promt:"
@@ -301,8 +300,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = liftCmd $
-      hPutStrLn stdout "Photo2 version 0.1.4 from 2009-01-11"
+    = outputCmd $ "Photo2 version 0.1.5 from 2009-02-15"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -316,12 +314,26 @@ parseCmd c args         = illegalCmd c args
 
 -- ------------------------------------------------------------
 
+outputCmd	:: (Monad m) => String -> m Cmd
+outputCmd msg
+    = return out
+      where
+      out aState
+	  = do
+	    load selWriteRes aState $ msg
+	    return aState
+
 illegalCmd      :: (Monad m) => String -> [String] -> m Cmd
 illegalCmd c args
-    = liftCmd $
-      hPutStrLn stderr ( "unknown command or wrong arguments: " ++ unwords (c : args) ++ "\n" ++
-                         "try ? for help"
-                       )
+    = return illegal
+      where
+      illegal aState
+	  = do
+	    load selWriteLog aState $
+		    "unknown command or wrong arguments: "
+		    ++ unwords (c : args) ++ "\n"
+		    ++ "try ? for help"
+	    return aState
 
 -- ------------------------------------------------------------
 --
@@ -345,7 +357,7 @@ parseWdCmd pa name ps
         = mkWdCmd $ withDir p
     where
     mkWdCmd wd  = mkCmd $ wd (\ p'' -> pa p'' `orElse` cFailed)
-    cFailed     = perform (arrIO0 $ hPutStrLn stderr ("command failed: " ++ unwords (name : ps)))
+    cFailed     = errMsg ("command failed: " ++ unwords (name : ps))
                   >>>
                   none
     (n : ps')   = ps
@@ -374,11 +386,11 @@ findEntries ld gt out p
 parseLs'                        :: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs' pa ps                  = parseWdCmd' ls ps
                                   where
-                                  ls    = ( pa
-                                            />>>/
-                                            const (arrIO (putStrLn . mkAbsPath . joinPath))
-                                          )
-                                          `withDefaultRes` ()
+                                  ls = ( pa
+                                         />>>/
+                                         const (arr (mkAbsPath . joinPath) >>> putRes)
+                                       )
+                                       `withDefaultRes` ()
 
 parseCleanup                    :: String -> Bool -> Bool -> [String] -> [Cmd]
 parseCleanup c ex rec []        = parseCleanup c ex rec ["."]
@@ -422,14 +434,17 @@ parseRelatives          = parseWdCmd' relatives "relatives"
                           relatives
                               = getRelatives
                                 />>>/
-                                (\ p -> arrIO ( \ (parent, prev, next) ->
-                                                putStrLn ( "this     = " ++ fp p      ++ "\n" ++
-                                                           "parent   = " ++ fp parent ++ "\n" ++
-                                                           "previous = " ++ fp prev   ++ "\n" ++
-                                                           "next     = " ++ fp next
-                                                         )
+                                (\ p -> ( arr ( \ (parent, prev, next) ->
+                                                ( "this     = " ++ fp p      ++ "\n" ++
+                                                  "parent   = " ++ fp parent ++ "\n" ++
+                                                  "previous = " ++ fp prev   ++ "\n" ++
+                                                  "next     = " ++ fp next
+                                                )
                                               )
-                                )
+					  >>>
+					  putRes
+					)
+				)
                           fp [] = ""
                           fp p  = mkAbsPath . joinPath $ p
 
@@ -518,7 +533,7 @@ parseFind al            = parseWdCmd fe "find" (take 1 al)
                           rev   = concat          . drop 2 $ al
                           fe    = findEntries loadAlbums (getAllWithAttr rek rev) puts
                           puts (p, k, v)
-                              = putStrLn ( intercalate ": "
+                              = putStrLn ( intercalate ": "			-- remove putStrLn
                                            [ mkAbsPath . joinPath $ p
                                            , k , v
                                            ]
