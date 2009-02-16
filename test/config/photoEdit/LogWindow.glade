@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
+<!--Generated with glade3 3.4.5 on Sat Feb  7 19:51:52 2009 -->
+<glade-interface>
+  <widget class="GtkWindow" id="logwindow">
+    <property name="width_request">600</property>
+    <property name="title" translatable="yes">Photo2 log file</property>
+    <child>
+      <widget class="GtkScrolledWindow" id="scrolledwindow1">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+        <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+        <child>
+          <widget class="GtkTextView" id="loggingarea">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="editable">False</property>
+            <property name="text" translatable="yes">ahhahaha
+ajajajja
+alakakak
+sskskss
+
+sksksks
+s
+s
+s
+s
+s
+s
+s
+
+s
+s
+s
+s
+s
+s
+s
+
+s
+s</property>
+          </widget>
+        </child>
+      </widget>
+    </child>
+  </widget>
+</glade-interface>

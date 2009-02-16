@@ -172,6 +172,8 @@ parseCmd c@"ls-rec"        args                         = parseLs' (getTreeAndPr
 parseCmd c@"ls-mod"        args                         = parseLs' (getTreeAndProcessSelfAndDesc $
                                                                     \ p -> entryEdited `guards` constA p
                                                                    )                                  c args
+parseCmd c@"list"          args                         = parseLs'' (getTreeAndProcessChildren constA) c args
+
 parseCmd c@"cat"           args                         = parseCat                                    c args
 parseCmd c@"dump"          args                         = parseDump                                   c args
 
@@ -391,6 +393,18 @@ parseLs' pa ps                  = parseWdCmd' ls ps
                                          const (arr (mkAbsPath . joinPath) >>> putRes)
                                        )
                                        `withDefaultRes` ()
+
+parseLs''                       :: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
+parseLs'' pa ps                 = parseWdCmd' ls ps
+                                  where
+				  ls p = listA ( pa p
+						 >>>
+						 arr (mkAbsPath . joinPath)
+					       )
+					 >>>
+					 arr unwords
+					 >>>
+					 putRes
 
 parseCleanup                    :: String -> Bool -> Bool -> [String] -> [Cmd]
 parseCleanup c ex rec []        = parseCleanup c ex rec ["."]

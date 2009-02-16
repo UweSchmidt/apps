@@ -146,6 +146,9 @@ rootPath        = [FP.pathSeparator]
 dirPath         :: FilePath -> FilePath
 dirPath         = FP.takeDirectory
 
+fileName	:: FilePath -> String
+fileName	= FP.takeFileName
+
 pathFromTo      :: String -> String -> String
 pathFromTo ref1 ref2
     | td1 == thisDir
