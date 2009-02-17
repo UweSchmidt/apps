@@ -147,13 +147,16 @@ parseCmd "config" []                                    = mkCmd ( get theConfig
                                                                                            , (a_output_encoding, usAscii)
                                                                                            ] ""
                                                                 )
-parseCmd "options" []                                   = mkCmd ( get theConfigAttrs
+parseCmd "options" []                                  = parseCmd "options" [".*"]
+parseCmd "options" [pat]                               = mkCmd ( get theConfigAttrs
                                                                   >>>
                                                                   arr dumpOptions >>> putRes
                                                                 )
                                                           where
                                                           dumpOptions = unlines . fmtTable " = "
                                                                         .
+									filter (match pat . fst)
+									.
                                                                         map (first show) . M.toList
 
 parseCmd c@"set" [n]                                    = parseCmd c [n,v_1]

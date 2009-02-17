@@ -571,7 +571,7 @@ lightboxTableLayout len	= withTabs layout
 	= do
 	  g@(w, _h) <- widgetGetSize widget
 	  trcMsg $ "geo of lightbox is " ++ show g
-          let l@(_rows, cols) = ( (len + cols -1) `div` cols
+          let l@(_rows, cols) = ( ((len `max` 1) + cols - 1) `div` cols
 				, picCols w
 				)
 	  trcMsg $ "layout of lightbox is " ++ show l
@@ -870,7 +870,7 @@ modifyTable modifyTbs tab
 
       tbs' <- modifyTbs tbs
       cols <- get tab tableNColumns
-      rows <- return $ ((length tbs' `max` 1)+ cols - 1) `div` cols
+      rows <- return $ ((length tbs' `max` 1) + cols - 1) `div` cols
       trcMsg $ "modifyTable " ++ show (rows, cols, length tbs')
 
       tableResize   tab rows cols
@@ -1094,17 +1094,48 @@ openArchive	:: IO ()
 openArchive
     = do
       execCmd "open"
-      [rootPath] <- execCmdL "pwd"
-      openAlbum rootPath
+      rootPath <- execCmd1 "pwd"
+      when (not . null $ rootPath)
+	   $ do
+	     openClipboard rootPath
+	     openAlbum     rootPath
+
+openClipboard	:: String -> IO ()
+openClipboard path
+    = do
+      res <- execCmdL $ unwords ["options", optionClipboard]
+      cb  <- case res of
+		      [_,_,w] -> return w
+		      _       -> do
+				 execCmdL $ unwords ["newalbum", path, defaultClipboard]
+				 return $ path </> defaultClipboard
+      cs <- listAlbum cb
+      withTabs ( \ tabs ->
+		 do
+		 notebookSetCurrentPage tabs 0	-- fill clipboard tab	
+		 withLightbox $ loadLightbox cb cs
+		 widgetShowAll tabs
+		 notebookSetCurrentPage tabs 0
+		 return ()
+	       )
+    where
+    defaultClipboard = "Clipboard"
+    optionClipboard  = "clipboard"
 
 openAlbum	:: String -> IO ()
 openAlbum path
     = do
-      contents <- execCmdL "ls"
+      cs <- listAlbum path
+      openTab path cs
+
+listAlbum	:: String -> IO [(String, String)]
+listAlbum path
+    = do
+      contents <- execCmdL $ unwords ["ls", path]
       names    <- return $ map fileName contents
       paths    <- return $ map (("160x120" ++) . (++ ".jpg")) contents
-      trcMsg $ "openAlbum: " ++ show (path, names)
-      openTab path (zip names paths)
+      trcMsg $ "listAlbum: " ++ show (path, names)
+      return (zip names paths)
 
 openTab		:: String -> [(String, String)] -> IO ()
 openTab path cs	= withTabs $ open
@@ -1227,14 +1258,19 @@ sortBySelection sns ns
 
 execCmd		:: String -> IO String
 execCmd cmd	= do
+		  logMsg $ "exec: cmd= " ++ cmd
 		  m0        <- getModel
 		  log       <- getLogger
 		  (res, m1) <- execModel log cmd m0
 		  setModel m1
+		  logMsg $ "exec: res= " ++ res
 		  return res
 
 execCmdL	:: String -> IO [String]
 execCmdL cmd	= execCmd cmd >>= return . words
+
+execCmd1	:: String -> IO String
+execCmd1 cmd	= execCmdL cmd >>= return . unwords
 
 quitM		= execCmd "exit"
 saveAndQuitM	= execCmd "close ; exit"
