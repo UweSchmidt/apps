@@ -1,6 +1,8 @@
 module Photo2.ModelInterface
 where
 
+import           Data.IORef
+
 import Photo2.ArchiveTypes
 import Photo2.CmdInterpreter
 
@@ -11,15 +13,23 @@ type Model	= AppState
 initModel	= emptyAppState
 
 execModel	:: (String -> IO ()) ->
-		   (String -> IO ()) ->
 		   String ->
-		   AppState -> IO AppState
-execModel evalRes logger cmd s0
-    = runCmds cmds s1
+		   AppState -> IO (String, AppState)
+execModel logger cmd s0
+    = do
+      resVar <- newIORef []
+      s1  <- return $
+	     s0 { writeLog = logger
+		, writeRes = addTo resVar
+		}
+      s2  <- runCmds cmds s1
+      res <- readIORef resVar
+      return (unlines . reverse $ res, s2)
     where
-    s1 = s0 { writeLog = logger
-	    , writeRes = evalRes
-	    }
+    addTo :: IORef [String] -> String -> IO ()
+    addTo var val
+	= do
+	  modifyIORef var (val :)
 
     cmds = parseCmdLine . tokenizeCmdLine $ cmd
 

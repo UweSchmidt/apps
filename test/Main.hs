@@ -1093,29 +1093,25 @@ closeTab
 openArchive	:: IO ()
 openArchive
     = do
-      openM
-      exec openRootAlbum "pwd"
-    where
-    openRootAlbum rp
-	= do
-	  trcMsg $ "openRootAlbum: " ++ rp
-	  exec (openAlbum (unwords . words $ rp)) "list"
+      execCmd "open"
+      [rootPath] <- execCmdL "pwd"
+      openAlbum rootPath
 
-openAlbum path contents
+openAlbum	:: String -> IO ()
+openAlbum path
     = do
+      contents <- execCmdL "ls"
+      names    <- return $ map fileName contents
+      paths    <- return $ map (("160x120" ++) . (++ ".jpg")) contents
       trcMsg $ "openAlbum: " ++ show (path, names)
       openTab path (zip names paths)
-      where
-      conts = words contents
-      names = map fileName conts
-      paths = map (("160x120" ++) . (++ ".jpg")) conts
 
 openTab		:: String -> [(String, String)] -> IO ()
 openTab path cs	= withTabs $ open
     where
     open tabs
 	= do
-	  trcMsg $ "openAlbum: " ++ show (path, cs)
+	  trcMsg $ "openTab: " ++ show (path, cs)
 	  n <- notebookGetNPages tabs
 	  i <- addTab (fileName path) tabs
 	  notebookSetCurrentPage tabs i
@@ -1229,18 +1225,18 @@ sortBySelection sns ns
 --
 -- model calling functions
 
-exec		:: (String -> IO ()) -> String -> IO ()
-exec evalR cmd  = do
-		  m0 <- getModel
-		  m1 <- execModel evalR logMsg cmd m0
+execCmd		:: String -> IO String
+execCmd cmd	= do
+		  m0        <- getModel
+		  log       <- getLogger
+		  (res, m1) <- execModel log cmd m0
 		  setModel m1
+		  return res
 
-exec0		:: String -> IO ()
-exec0		= exec trcMsg
+execCmdL	:: String -> IO [String]
+execCmdL cmd	= execCmd cmd >>= return . words
 
-openM		= exec0 "open"
-quitM		= exec0 "exit"
-saveAndQuitM	= exec0 "close ; exit"
+quitM		= execCmd "exit"
+saveAndQuitM	= execCmd "close ; exit"
 
 -- ------------------------------------------------------------
-
