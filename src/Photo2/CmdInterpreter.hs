@@ -178,6 +178,7 @@ parseCmd c@"ls-mod"        args                         = parseLs' (getTreeAndPr
 parseCmd c@"list"          args                         = parseLs'' (getTreeAndProcessChildren constA) c args
 
 parseCmd c@"cat"           args                         = parseCat                                    c args
+parseCmd c@"isalbum"       args                         = parseIsAlbum                                c args
 parseCmd c@"dump"          args                         = parseDump                                   c args
 
 parseCmd "relatives" args       = parseRelatives args
@@ -422,6 +423,17 @@ parseGenHtml c rec [p,f]        = parseWdCmd' gen c [p]
                                   where
                                   gen = getTreeAndProcess (withConfig (genHtml rec f))
 parseGenHtml c rec (p:fl)       = concatMap (\ f -> parseGenHtml c rec [p,f]) fl
+
+parseIsAlbum			:: String -> [String] -> [Cmd]
+parseIsAlbum c                  = parseWdCmd' isAlbum c
+				  where
+				  isAlbum p = getTree p
+					      >>>
+					      getNode
+					      >>>
+					      arr (show . isAl)
+					      >>>
+					      putRes
 
 parseCat                        :: String -> [String] -> [Cmd]
 parseCat c                      = parseWdCmd' cat c

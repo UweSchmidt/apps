@@ -10,6 +10,7 @@ import           Data.Either
 import qualified Data.Function as F  	( on )
 import           Data.IORef
 import           Data.List	   	( delete
+					, elemIndex
 					, sortBy
 					)
 import           Data.Maybe
@@ -117,6 +118,7 @@ main = do
   changeLogger	installLogWindowLogger
 
   withWindow  	widgetShowAll
+  openArchive
   mainGUI
 
 -- ------------------------------------------------------------
@@ -279,6 +281,15 @@ getClipboard		= withClipboard		return
 
 getLogger               = withLogger		return
 
+getAllAlbumPaths	= withTabs           $ withLightboxTables widgetGetName
+getCurrAlbumPath	= withLightboxTable  $ widgetGetName
+getLastSelectedPath	= do
+			  path <- getCurrAlbumPath
+			  ss   <- getCurrSelected
+			  if null ss
+			     then return ""
+			     else return $ path </> head ss
+		          
 -- ------------------------------------------------------------
 --
 -- the combinators for actions on subcomponents
@@ -412,7 +423,7 @@ installGUIControls g
     installButtonControls	:: IO ()
     installButtonControls
 	= do
-	  onActivateBP open 	"open" 			openArchive
+	  onActivateBP open 	"open" 			openSelectedAlbum -- openArchive
 	  onActivateBP save     "save album"	        $ warnMsg "not yet implemented"
 	  onActivateBP close    "close album"		closeTab
 	  onActivateBP quit 	"quit"			quitDialog
@@ -671,6 +682,7 @@ switchTab i	= withTabs switchTab
 	  tn   <- widgetGetName tb
 	  trcMsg $ "current tab (" ++ show i ++ ") contains " ++ tn
 	  setLightbox (w, tb)
+	  widgetShowAll tabs
 	  return ()
 
 -- ------------------------------------------------------------
@@ -1109,7 +1121,7 @@ openClipboard path
 		      _       -> do
 				 execCmdL $ unwords ["newalbum", path, defaultClipboard]
 				 return $ path </> defaultClipboard
-      cs <- listAlbum cb
+      cs <- listAlbumContents cb
       withTabs ( \ tabs ->
 		 do
 		 notebookSetCurrentPage tabs 0	-- fill clipboard tab	
@@ -1125,16 +1137,17 @@ openClipboard path
 openAlbum	:: String -> IO ()
 openAlbum path
     = do
-      cs <- listAlbum path
+      trcMsg $ "openAlbum " ++ path
+      cs <- listAlbumContents path
       openTab path cs
 
-listAlbum	:: String -> IO [(String, String)]
-listAlbum path
+listAlbumContents	:: String -> IO [(String, String)]
+listAlbumContents path
     = do
       contents <- execCmdL $ unwords ["ls", path]
       names    <- return $ map fileName contents
       paths    <- return $ map (("160x120" ++) . (++ ".jpg")) contents
-      trcMsg $ "listAlbum: " ++ show (path, names)
+      trcMsg $ "listAlbumContents: " ++ show (path, names)
       return (zip names paths)
 
 openTab		:: String -> [(String, String)] -> IO ()
@@ -1149,6 +1162,21 @@ openTab path cs	= withTabs $ open
 	  withLightbox $ loadLightbox path cs
 	  widgetShowAll tabs
 	  notebookSetCurrentPage tabs i
+
+openSelectedAlbum	:: IO ()
+openSelectedAlbum
+    = do
+      path <- getLastSelectedPath
+      when (not . null $ path) $
+	   do
+	   t <- execCmd1 $ unwords ["isalbum", path]			-- check: is it an album?
+	   if (t == "True")
+	      then do
+		   allPaths <- getAllAlbumPaths
+		   maybe (openAlbum path)				-- not yet loaded
+                         (withTabs . flip notebookSetCurrentPage)	-- already loaded
+			 $ elemIndex path allPaths
+	      else return ()						-- not yet done: open image in extra window
 
 {-
 openAlbum	:: String -> IO ()
