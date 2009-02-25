@@ -388,7 +388,7 @@ buildButtons gm
 
 		 , ("showLogWindow", 	Nothing			)      	-- view menu
 		 , ("clearLogWindow", 	Nothing			)
-		 , ("align",		Nothing			)
+		 , ("align",		Just "tbalign"		)
 		 , ("sort",		Just "tbsort"		)
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
@@ -1109,8 +1109,8 @@ openArchive
       rootPath <- execCmd1 "pwd"
       when (not . null $ rootPath)
 	   $ do
-	     openClipboard rootPath
-	     openAlbum     rootPath
+	     openClipboard  rootPath
+	     openAlbumOrPic rootPath
 
 openClipboard	:: String -> IO ()
 openClipboard path
@@ -1134,12 +1134,25 @@ openClipboard path
     defaultClipboard = "Clipboard"
     optionClipboard  = "clipboard"
 
-openAlbum	:: String -> IO ()
-openAlbum path
+openAlbumOrPic	:: String -> IO ()
+openAlbumOrPic path
     = do
-      trcMsg $ "openAlbum " ++ path
-      cs <- listAlbumContents path
-      openTab path cs
+      t <- execCmd1 $ unwords ["isalbum", path]			-- check: is it an album?
+      if (t == "True")
+	 then do
+	      allPaths <- getAllAlbumPaths
+	      maybe (openAlbum path)				-- not yet loaded
+		    (withTabs . flip notebookSetCurrentPage)	-- already loaded
+		    $ elemIndex path allPaths
+	 else return ()						-- not yet done: open image in extra window
+    where
+    openAlbum	:: String -> IO ()
+    openAlbum path
+	= do
+	  trcMsg $ "openAlbum " ++ path
+	  cs <- listAlbumContents path
+	  openTab path cs
+
 
 listAlbumContents	:: String -> IO [(String, String)]
 listAlbumContents path
@@ -1167,16 +1180,14 @@ openSelectedAlbum	:: IO ()
 openSelectedAlbum
     = do
       path <- getLastSelectedPath
-      when (not . null $ path) $
-	   do
-	   t <- execCmd1 $ unwords ["isalbum", path]			-- check: is it an album?
-	   if (t == "True")
-	      then do
-		   allPaths <- getAllAlbumPaths
-		   maybe (openAlbum path)				-- not yet loaded
-                         (withTabs . flip notebookSetCurrentPage)	-- already loaded
-			 $ elemIndex path allPaths
-	      else return ()						-- not yet done: open image in extra window
+      if not . null $ path
+	 then openAlbumOrPic path
+	 else openRootAlbum
+    where
+    openRootAlbum
+	= do
+	  rootPath <- execCmd1 "pwd"
+	  when (not . null $ rootPath) $ openAlbumOrPic rootPath
 
 {-
 openAlbum	:: String -> IO ()

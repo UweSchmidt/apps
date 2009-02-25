@@ -425,9 +425,9 @@ parseGenHtml c rec [p,f]        = parseWdCmd' gen c [p]
 parseGenHtml c rec (p:fl)       = concatMap (\ f -> parseGenHtml c rec [p,f]) fl
 
 parseIsAlbum			:: String -> [String] -> [Cmd]
-parseIsAlbum c                  = parseWdCmd' isAlbum c
+parseIsAlbum c                  = parseWdCmd' isAlbum' c
 				  where
-				  isAlbum p = getTree p
+				  isAlbum' p = getTree p
 					      >>>
 					      getNode
 					      >>>

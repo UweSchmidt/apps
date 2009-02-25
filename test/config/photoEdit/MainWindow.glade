@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Feb 15 15:41:05 2009 -->
+<!--Generated with glade3 3.4.5 on Sat Feb 21 11:04:28 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -198,7 +198,7 @@
                     <child>
                       <widget class="GtkImageMenuItem" id="sort">
                         <property name="visible">True</property>
-                        <property name="label" translatable="yes">move</property>
+                        <property name="label" translatable="yes">sort</property>
                         <property name="use_underline">True</property>
                         <child internal-child="image">
                           <widget class="GtkImage" id="menu-item-image6">
@@ -393,11 +393,21 @@
               </packing>
             </child>
             <child>
+              <widget class="GtkToolButton" id="tbalign">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">align</property>
+                <property name="stock_id">gtk-justify-center</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
               <widget class="GtkToolButton" id="tbsort">
                 <property name="visible">True</property>
                 <property name="has_tooltip">True</property>
                 <property name="tooltip_text">reorder selected images</property>
-                <property name="label" translatable="yes">move</property>
+                <property name="label" translatable="yes">sort</property>
                 <property name="stock_id">gtk-refresh</property>
               </widget>
               <packing>
