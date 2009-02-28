@@ -408,7 +408,12 @@ installGUIControls g
 		             return True
 		    )
       mw `onDestroy` mainQuit
+
+      mw `on` configureEvent   $ liftIO resize
+      mw `on` enterNotifyEvent $ liftIO resize		-- this is a hack, but what's the right event
+
       ts `onSwitchPage` switchTab
+
       installButtonControls
       configureLogWindow
     where
@@ -419,6 +424,9 @@ installGUIControls g
     cs = controls  g
     qd = quitdlg   g
 
+    resize	= do
+		  resizeLightboxTable
+		  return False
     
     installButtonControls	:: IO ()
     installButtonControls
@@ -550,7 +558,7 @@ loadLightbox path ps (lbw, lbt)
       widgetSetName            lbw path
       remLightboxTableContents lbt
       fillLightbox
-      withWindow installResize
+      -- withWindow installResize
       widgetShowAll      lbw
 
     where
@@ -682,6 +690,7 @@ switchTab i	= withTabs switchTab
 	  tn   <- widgetGetName tb
 	  trcMsg $ "current tab (" ++ show i ++ ") contains " ++ tn
 	  setLightbox (w, tb)
+	  resizeLightboxTable
 	  widgetShowAll tabs
 	  return ()
 
@@ -919,13 +928,11 @@ resizeTable cols tab
 -- ------------------------------------------------------------
 
 resizeLightboxTable	:: IO ()
-resizeLightboxTable	= withLightbox resizeLightbox
-
-resizeLightbox (lbw, lbt)
+resizeLightboxTable
     = do
-      (w, h) <- widgetGetSize lbw
-      trcMsg $ "width of lightbox is " ++ show w
-      resizeTable (picCols w) lbt
+      (w, h) <- withTabs widgetGetSize
+      trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
+      withLightboxTable (resizeTable (picCols w))
 
 -- ------------------------------------------------------------
 
@@ -1043,7 +1050,6 @@ copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
 
       news <- freshNames dstLbt
       tbs3 <- mapM (uncurry copyTb) . zip news $ tbs2
-      resizeLightbox dstLb
       appendToggleButtons tbs3 dstLbt
     where
     copyTb	:: String -> ToggleButton -> IO ToggleButton
