@@ -4,6 +4,7 @@ where
 import           Control.Monad.Error            ( runErrorT )
 import           Control.Parallel.Strategies
 
+import           Data.Function                  ( on )
 import           Data.List                      ( isPrefixOf
                                                 , sortBy
                                                 )
@@ -1014,6 +1015,57 @@ sortPics _ p
     where
     sortByDate  = sortBy (\ t1 t2 -> compare (date t1) (date t2))
     date        = fromMaybe "" . M.lookup keyCreateDate . picAttrs . NT.getNode
+
+-- ------------------------------------------------------------
+--
+-- copy a picture
+
+copyPicture	:: Path -> PathArrow AlbumTree AlbumTree
+copyPicture dst src
+    = runAction ("copy " ++ showPath src ++ " to " ++ showPath dst)
+      ( loadAndCheckAlbum dstAlbum
+	>>>
+	(copyToDst $< (getTree src >>> getNode))
+      )
+    where
+    dstAlbum = init dst
+    dstId    = last dst
+    copyToDst srcPic
+	= changeAlbums (processTree insertSrc) dstAlbum
+	  where
+	  insertSrc p
+	      = runAction ("insertSrc " ++ showPath p ++ "/" ++ dstId ++ " " ++ show (picId srcPic)) $
+		( changeChildren (++ [pic'])
+		  >>>
+		  perform (arrIOE $ const (copyCopies dst src srcPic))
+		  >>>
+		  setEdited
+		)
+	      where
+	      pic' = albumTree $ srcPic { picId     = dstId
+					, isAl	    = False
+					, picEdited = True
+					}
+
+-- ------------------------------------------------------------
+--
+-- sort all pictures by a given new sequence
+
+sortPictures	:: [String] -> PathArrow AlbumTree AlbumTree
+sortPictures ns p
+    = runAction ("sorting " ++ showPath p ++ " by " ++ unwords ns)
+      ( checkEntryLoaded
+        >>>
+        changeChildren sortBySeq
+        >>>
+        setEdited
+      )
+      `when` isAlbum
+    where
+    sq	:: [Int]
+    sq	= map read ns
+
+    sortBySeq	= map snd . sortBy (compare `on` fst) . zip sq
 
 -- ------------------------------------------------------------
 --

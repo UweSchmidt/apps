@@ -432,7 +432,7 @@ installGUIControls g
     installButtonControls
 	= do
 	  onActivateBP open 	"open" 			openSelectedAlbum -- openArchive
-	  onActivateBP save     "save album"	        $ warnMsg "not yet implemented"
+	  onActivateBP save     "save album"	        storeTab
 	  onActivateBP close    "close album"		closeTab
 	  onActivateBP quit 	"quit"			quitDialog
 
@@ -586,9 +586,9 @@ remLightboxTableContents lbt
 mkLightbox	:: IO Lightbox
 mkLightbox
     = do
-      t <- tableNew 1 1 True
-      widgetSetName t "empty lightbox table"
-      w <- scrolledWindowNew Nothing Nothing
+      t                          <- tableNew 1 1 True
+      widgetSetName                 t "empty lightbox table"
+      w                          <- scrolledWindowNew Nothing Nothing
       widgetSetName                 w "empty lightbox"
       scrolledWindowAddWithViewport w t
       scrolledWindowSetPolicy       w PolicyAutomatic PolicyAutomatic
@@ -679,16 +679,20 @@ sortSelected	= withLightboxTable $ withCurrSelected . sortBySelected
     sortBySelected tab xs@(x:xs1)
 	= do
 	  clearSelected
-	  tbs <- withToggleButtons return      tab
-	  ns  <- withToggleButtons ( \ tb ->
-				     do
-				     Just n <- get tb widgetName
-				     return n
-				   )		tab
+	  tn  <- widgetGetName     tab
+	  tbs <- getToggleButtons  tab
+	  ns  <- withToggleButtons
+		 ( \ tb ->
+		   do
+		   Just n <- get tb widgetName
+		   return n
+		 )		   tab
 
 	  let newns  = sortNs (zip (sortBySelect ns) [1..]) ns
 	  let newtbs = map snd . sortBy (compare `F.on` fst) . zip newns $ tbs
-	  trcMsg $ "new sequence: " ++ unwords (map show newns)
+	  trcMsg $ "sort " ++ tn ++ " new sequence: " ++ unwords (map show newns)
+
+          execCmd $ unwords ("sortpictures" : tn : map show newns)
 
 	  withToggleButtons_ (containerRemove tab) tab
 	  fillTable tab newtbs
@@ -706,16 +710,28 @@ sortSelected	= withLightboxTable $ withCurrSelected . sortBySelected
 
 -- ------------------------------------------------------------
 
+storeTab	:: IO ()
+storeTab
+    = withLightboxTable ( \ lbt -> 
+			  do
+			  pn <- widgetGetName lbt
+			  execCmd $ unwords ["store", pn]
+			  return ()
+			)
+
+-- ------------------------------------------------------------
+
 invertSelected	:: IO ()
 invertSelected
     = do
       trcMsg $ "invert selection"
-      withLightboxTable $ withToggleButtons_ ( \ tb ->
-					  do
-					  v <- toggleButtonGetActive tb
-					  toggleButtonSetActive      tb (not v)
-					  return ()
-					)
+      withLightboxTable $
+        withToggleButtons_ ( \ tb ->
+			     do
+			     v <- toggleButtonGetActive tb
+			     toggleButtonSetActive      tb (not v)
+			     return ()
+			   )
 
 -- ------------------------------------------------------------
 
@@ -1012,6 +1028,9 @@ copyToClipboard c
 copySelected	:: (String, [String]) -> Lightbox -> Lightbox -> IO ()
 copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
     = do
+      src <- widgetGetName srcLbt
+      dst <- widgetGetName dstLbt
+      trcMsg $ "copy selected " ++ show (pn,sns) ++ " from " ++ src ++ " to " ++ dst
       (_, tbs) <- partitionToggleButtons
 		  ( \ tb ->
 		    do
@@ -1023,18 +1042,28 @@ copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
       tbs2 <- return $ sortBySelection sns ns tbs
 
       news <- freshNames dstLbt
-      tbs3 <- mapM (uncurry copyTb) . zip news $ tbs2
-      appendToggleButtons tbs3 dstLbt
+      tbs3 <- mapM (uncurry $ copyTb src dst) . zip (zip sns news) $ tbs2
+      appendToggleButtons (concat tbs3) dstLbt
     where
-    copyTb	:: String -> ToggleButton -> IO ToggleButton
-    copyTb tbId tb
+    copyTb	:: String -> String -> (String, String) -> ToggleButton -> IO [ToggleButton]
+    copyTb src dst (sid, did) tb
 	= do
-	  n          <- widgetGetName        tb
-	  [vb]       <- containerGetChildren (castToContainer tb)
-	  [_, i1, _] <- containerGetChildren (castToContainer vb)
-	  tbImg      <- get (castToImage i1) imageFile
-	  trcMsg $ "copyTb id = " ++ tbId ++ " img = " ++ tbImg
-	  mkToggleButton tbId tbImg
+	  isAl <- isAlbum srcPath
+	  if isAl
+	     then do
+		  warnMsg $ "can't copy or move whole album " ++ srcPath
+		  return []
+	     else do
+		  [vb]       <- containerGetChildren (castToContainer tb)
+		  [_, i1, _] <- containerGetChildren (castToContainer vb)
+		  tbImg      <- get (castToImage i1) imageFile
+		  trcMsg $ unwords ["copyTb", srcPath, dstPath, "img=", tbImg]
+		  res <- mkToggleButton did tbImg
+		  execCmd $ unwords ["copypicture", srcPath, dstPath]
+		  return [res]
+	where
+	srcPath = src </> sid
+	dstPath = dst </> did
 
 removeSelected	:: (String, [String]) -> IO ()
 removeSelected (pn, sns)
@@ -1276,6 +1305,11 @@ execCmdL cmd	= execCmd cmd >>= return . words
 
 execCmd1	:: String -> IO String
 execCmd1 cmd	= execCmdL cmd >>= return . unwords
+
+isAlbum		:: String -> IO Bool
+isAlbum	path	= do
+		  t <- execCmd1 $ unwords ["isalbum", path]
+		  return (t == "True")
 
 quitM		= execCmd "exit"
 saveAndQuitM	= execCmd "close ; exit"

@@ -593,3 +593,15 @@ cleanupDir execute dir ext fl
                 | otherwise     = "unused dir  found "   ++ show e'
 
 -- ------------------------------------------------------------
+
+copyCopies 	:: Path -> Path -> Pic -> IOE ()
+copyCopies dst src pic
+    = do
+      liftIO $ mapM_ link copies
+      return ()
+    where
+    copies = map show . M.keys . picCopies $ pic
+    link dir
+	= putStrLn $ unwords ["ln", dir </> listToPath src `addExtension` ".jpg", dir </> listToPath dst `addExtension` ".jpg"]
+
+-- ------------------------------------------------------------

@@ -209,10 +209,12 @@ parseCmd c@"newformat-all" args                         = parseNewFormat True   
 parseCmd c@"attr"          args | length args >= 2      = parseAttr                                   c args
 parseCmd c@"deleteattr"    args | length args == 2      = parseDeleteAttr                             c args
 parseCmd c@"sortalbum"     args | length args <= 1      = parseSort                                   c args
+parseCmd c@"sortpictures"  args | length args >= 1      = parseSortPictures                           c args
 parseCmd c@"import"        args | length args <= 1      = parseImport                                 c args
 parseCmd c@"newalbum"      args | length args == 2      = parseModifiy c (newAlbum    (concat . drop 1 $ args)) args
 parseCmd c@"setalbumpic"   args | length args == 2      = parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
 parseCmd c@"rename"        args | length args == 2      = parseModifiy c (renamePic   (concat . drop 1 $ args)) args
+parseCmd c@"copypicture"   args | length args == 2      = parseCopyPic                                c args
 -- parseCmd c@"rename-cont"   args      | length args <= 1      = parseModifiy c renameContent args
 
 parseCmd c@"dirty"         args | length args <=1       = parseCleanup c False False args
@@ -493,10 +495,15 @@ parseStorePics          :: String -> [String] -> [Cmd]
 parseStorePics c        = parseWdCmd' storeAllChangedEntries c
 
 parseSort               :: String -> [String] -> [Cmd]
-parseSort c             = parseWdCmd' srt c
+parseSort c             = parseWdCmd' srt c 
                           where
                           srt = changeAlbums $
                                 processTree (withConfig sortPics)
+
+parseSortPictures       :: String -> [String] -> [Cmd]
+parseSortPictures c al  = parseWdCmd' ( changeAlbums $
+					processTree (sortPictures $ drop 1 al)
+				      ) c (take 1 al)
 
 parseImport             :: String -> [String] -> [Cmd]
 parseImport c           = parseWdCmd' imp c
@@ -538,6 +545,15 @@ parseModifiy            :: String -> ConfigArrow AlbumTree AlbumTree -> [String]
 parseModifiy c ca al    = parseWdCmd' ( changeAlbums $
                                         processTree (withConfig ca)
                                       ) c (take 1 al)
+
+parseCopyPic		:: String -> [String] -> [Cmd]
+parseCopyPic c [a1,a2]
+    | "/" `isPrefixOf` a2
+                 	= parseWdCmd' ( changeAlbums $
+					copyPicture p2
+				      ) c [a1]
+                        where
+			p2 = drop 1 . splitPath $ a2
 
 parseAttr               :: String -> [String] -> [Cmd]
 parseAttr c al          = parseWdCmd' ( changeAlbums $
