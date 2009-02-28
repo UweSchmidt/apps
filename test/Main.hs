@@ -552,49 +552,24 @@ installLogWindowLogger	oldLog
 
 -- ------------------------------------------------------------
 
-loadLightbox	:: String -> [(String, String)] -> Lightbox -> IO ()
-loadLightbox path ps (lbw, lbt)
+loadLightbox	:: String -> [(String, String)] -> IO ()
+loadLightbox path ps
     = do
+      (lbw, lbt)            <- getLightbox
       widgetSetName            lbw path
       remLightboxTableContents lbt
-      fillLightbox
-      -- withWindow installResize
-      widgetShowAll      lbw
-
+      fillLightbox             lbt
+      widgetShowAll            lbw
     where
-    installResize mw
+    fillLightbox lbt
 	= do
-	  mw `on` configureEvent   $ liftIO resize
-	  mw `on` windowStateEvent $ liftIO resize
-	where
-	resize
-	    = do
-	      trcMsg "configure event on main window"
-	      resizeLightboxTable
-	      return False
-
-    fillLightbox
-	= do
-	  geo   <- lightboxTableLayout (length ps)
-	  uncurry (tableResize lbt) geo
-	  ws    <- mapM (uncurry mkToggleButton) ps
-	  fillTable     lbt ws
-	  widgetSetName lbt path
-
--- ------------------------------------------------------------
-
-lightboxTableLayout	:: Int -> IO (Int, Int)
-lightboxTableLayout len	= withTabs layout
-    where
-    layout widget
-	= do
-	  g@(w, _h) <- widgetGetSize widget
-	  trcMsg $ "geo of lightbox is " ++ show g
-          let l@(_rows, cols) = ( ((len `max` 1) + cols - 1) `div` cols
-				, picCols w
-				)
-	  trcMsg $ "layout of lightbox is " ++ show l
-          return l
+	  cols              <- get lbt tableNRows
+	  rows              <- return $ ((length ps `max` 1) + cols - 1) `div` cols
+	  tableResize          lbt rows cols
+	  ws                <- mapM (uncurry mkToggleButton) ps
+	  fillTable            lbt ws
+	  resizeLightboxTable
+	  widgetSetName        lbt path
 
 -- ------------------------------------------------------------
 
@@ -917,7 +892,6 @@ resizeTable cols tab
       when ( oldCols /= cols) $
 	   do
 	   (modifyTable resize tab)
-	   -- withWindow  widgetShowAll
     where
     resize tbs
 	= do
@@ -1131,7 +1105,7 @@ openClipboard path
       withTabs ( \ tabs ->
 		 do
 		 notebookSetCurrentPage tabs 0	-- fill clipboard tab	
-		 withLightbox $ loadLightbox cb cs
+		 loadLightbox cb cs
 		 widgetShowAll tabs
 		 notebookSetCurrentPage tabs 0
 		 return ()
@@ -1178,7 +1152,7 @@ openTab path cs	= withTabs $ open
 	  n <- notebookGetNPages tabs
 	  i <- addTab (fileName path) tabs
 	  notebookSetCurrentPage tabs i
-	  withLightbox $ loadLightbox path cs
+	  loadLightbox path cs
 	  widgetShowAll tabs
 	  notebookSetCurrentPage tabs i
 
@@ -1195,24 +1169,10 @@ openSelectedAlbum
 	  rootPath <- execCmd1 "pwd"
 	  when (not . null $ rootPath) $ openAlbumOrPic rootPath
 
-{-
-openAlbum	:: String -> IO ()
-openAlbum path	= withTabs $ openTab
-    where
-    openTab tabs
-	= do
-	  n <- notebookGetNPages tabs
-	  let name = drop 1 path ++" (" ++ show n ++ ")"
-	  i <- addTab name tabs
-	  notebookSetCurrentPage tabs i
-	  loadAlbum $ path
-	  widgetShowAll tabs
-	  notebookSetCurrentPage tabs i
--}	  
 -- ------------------------------------------------------------
 
 loadAlbum	:: String -> IO ()
-loadAlbum n	= withLightbox $ loadLightbox n imageDescr
+loadAlbum n	= loadLightbox n imageDescr
 
 imageDescr	= zip imgNames ( map imgFile $ imgNames )
 		  where
