@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Mar  1 14:31:19 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar  1 17:45:03 2009 -->
 <glade-interface>
   <widget class="GtkDialog" id="albumDialog">
     <property name="border_width">5</property>
@@ -28,7 +28,7 @@
               </packing>
             </child>
             <child>
-              <widget class="GtkEntry" id="albumid">
+              <widget class="GtkEntry" id="albumId">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </widget>
@@ -54,7 +54,7 @@
                 <property name="tooltip_text">Cancel Album Id Dialog</property>
                 <property name="label" translatable="yes">gtk-cancel</property>
                 <property name="use_stock">True</property>
-                <property name="response_id">0</property>
+                <property name="response_id">-6</property>
               </widget>
             </child>
             <child>
@@ -64,7 +64,7 @@
                 <property name="receives_default">True</property>
                 <property name="label" translatable="yes">gtk-ok</property>
                 <property name="use_stock">True</property>
-                <property name="response_id">0</property>
+                <property name="response_id">-5</property>
               </widget>
               <packing>
                 <property name="position">1</property>

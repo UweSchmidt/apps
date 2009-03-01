@@ -397,6 +397,9 @@ buildButtons gm
 		 , ("cbcopy",		Just "tbcbcopy"		)
 		 , ("cbdelete",		Just "tbcbdelete"	)
 
+		 , ("newalbum",		Just "tbnewalbum"	)
+		 , ("newpic",		Just "tbnewpic"		)
+
 		 , ("showLogWindow", 	Nothing			)      	-- view menu
 		 , ("clearLogWindow", 	Nothing			)
 		 , ("align",		Just "tbalign"		)
@@ -442,7 +445,7 @@ installGUIControls g
     installButtonControls	:: IO ()
     installButtonControls
 	= do
-	  onActivateBP open 	"open" 			openSelectedAlbum -- openArchive
+	  onActivateBP open 	"open" 			openSelectedAlbum
 	  onActivateBP save     "save album"	        storeTab
 	  onActivateBP close    "close album"		closeTab
 	  onActivateBP quit 	"quit"			quitDialog
@@ -453,17 +456,21 @@ installGUIControls g
 	  onActivateBP cbcopy  	"copy from clipboard"   $ copySelectionFromClipboard  False
 	  onActivateBP cbdelete	"delete from clipboard" $ deleteSelectedFromClipboard
 
+	  onActivateBP newalbum	"make pic to album"     $ newSelectedAlbum
+	  onActivateBP newpic	"make album to pic"     $ newSelectedPic
+
 	  onActivateBP log  	"show log"  	showLogWindow
 	  onActivateBP clearlog "clear log" 	clearLogWindow
 	  onActivateBP align    "align"         resizeLightboxTable
 	  onActivateBP sort     "sort"          sortSelected
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
-	  onActivateBP test     "test"          testOP
+	  onActivateBP test     "test"          testOP2
 	  return ()
 	where
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
+	  newalbum, newpic,
 	  log, clearlog, align, sort, invert, deselect, test] = cs
 
     showLogWindow
@@ -630,8 +637,6 @@ addTab lab tabs
       i <- notebookAppendPage tabs w lab
       trcMsg $ "addTab " ++ show i
       changeSelected $ return . (++ [[]])		-- add empty selection list
-      -- widgetShowAll          tabs
-      -- notebookSetCurrentPage tabs i
       return i
 
 -- ------------------------------------------------------------
@@ -684,16 +689,16 @@ switchTab i	= withTabs switchTab
 	= do
 	  trcMsg $ "switchTabs " ++ show i
 	  setCurrTab i
-	  Just w' <- notebookGetNthPage tabs i
-	  let w = castToScrolledWindow w'
-	  n <- widgetGetName w
-	  tb <- getLbxTable w
-	  tn   <- widgetGetName tb
+	  Just w'	<- notebookGetNthPage tabs i
+	  let w 	=  castToScrolledWindow w'
+	  n 		<- widgetGetName w
+	  tb 		<- getLbxTable w
+	  tn   		<- widgetGetName tb
 	  trcMsg $ "current tab (" ++ show i ++ ") contains " ++ tn
-	  setLightbox (w, tb)
+	  setLightbox 	(w, tb)
 	  resizeLightboxTable
 	  widgetShowAll tabs
-	  return ()
+	  return 	()
 
 -- ------------------------------------------------------------
 
@@ -1023,7 +1028,7 @@ copySelectionFromClipboard mv
 		   c   <- return (clipboard, cbs)
 		   copySelected c cb lb
 		   when mv $
-			withClipboardDo (removeSelected c)
+			withClipboardDo deleteSelectedFromClipboard
 		   withClipboardDo clearSelected
 		   widgetShowAll lbw
 
@@ -1078,8 +1083,8 @@ copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
 	  [_, i1, _] <- containerGetChildren (castToContainer vb)
 	  tbImg      <- get (castToImage i1) imageFile
 	  trcMsg $ unwords ["copyTb", srcPath, dstPath, "img=", tbImg]
-	  res <- mkToggleButton did tbImg
 	  execCmd ["copypicture", srcPath, dstPath]
+	  res <- mkToggleButton did (pathToIcon dstPath)
 	  return [res]
 	where
 	srcPath = src </> sid
@@ -1088,17 +1093,20 @@ copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
 -- ------------------------------------------------------------
 
 removeSelected	:: (String, [String]) -> IO ()
-removeSelected (pn, sns)
+removeSelected sel
     = do
       lbt      <- getLightboxTable
+      removeSelected' sel lbt
+
+removeSelected'	:: (String, [String]) -> Table -> IO ()
+removeSelected' (pn, sns) lbt
+    = do
       (s1, s2) <- partitionToggleButtons
 		  ( \ tb ->
 		    do
 		    n <- widgetGetName tb
 		    if (n `elem` sns)
-		       then do
-		            isa <- isAlbum (pn </> n)	-- don't remove whole albums
-		            return (not isa)
+		       then isPicture (pn </> n)
 		       else return False
 		  ) lbt
       setToggleButtons s1 lbt
@@ -1201,7 +1209,7 @@ listAlbumContents path
     = do
       contents <- execCmdL ["ls", path]
       names    <- return $ map fileName contents
-      paths    <- return $ map (("160x120" ++) . (++ ".jpg")) contents
+      paths    <- return $ map pathToIcon contents
       trcMsg $ "listAlbumContents: " ++ show (path, names)
       return (zip names paths)
 
@@ -1218,6 +1226,8 @@ openTab path cs	= withTabs $ open
 	  widgetShowAll tabs
 	  notebookSetCurrentPage tabs i
 
+-- ------------------------------------------------------------
+
 openSelectedAlbum	:: IO ()
 openSelectedAlbum
     = do
@@ -1230,6 +1240,69 @@ openSelectedAlbum
 	= do
 	  rootPath <- execCmd1 ["pwd"]
 	  when (not . null $ rootPath) $ openAlbumOrPic rootPath
+
+-- ------------------------------------------------------------
+
+newSelectedAlbum	:: IO ()
+newSelectedAlbum
+    = do
+      path <- getLastSelectedPath
+      if null path
+	 then warnMsg "no picture selected"
+	 else do
+	      isp <- isPicture path
+	      if not isp
+		 then warnMsg "last selected must be a picture"
+		 else do
+		      newName <- albumDialog
+		      when (not . null $ newName)
+			   ( do
+			     execCmd ["makealbum", path]
+			     execCmd ["rename",    path, newName]
+			     clearSelected
+			     withLightboxTable updateToggleButtons
+			     return ()
+			   )
+
+newSelectedPic		:: IO ()
+newSelectedPic
+    = do
+      path <- getLastSelectedPath
+      if null path
+	 then warnMsg "no album selected"
+	 else do
+	      isa <- isAlbum path
+	      if not isa
+		 then warnMsg "last selected must be an album"
+		 else do
+		      contents <- execCmd1 ["ls", path]
+		      if not . null $ contents
+			 then warnMsg "selected album is not empty"
+			 else do
+			      execCmd ["makepicture", path]
+			      clearSelected
+
+-- ------------------------------------------------------------
+
+updateToggleButtons	:: Table -> IO ()
+updateToggleButtons lbt
+    = do
+      path	<- widgetGetName	lbt
+      contents	<- listAlbumContents	path
+      tbs	<- getToggleButtons	lbt
+      mapM_ (uncurry updateTb)        $ zip tbs contents
+      widgetShowAll                     lbt
+    where
+    updateTb	:: ToggleButton -> (String, String) -> IO ()
+    updateTb tb (name, img)
+	= do
+	  set              tb [widgetName := Just name]
+	  [vb]	     	<- containerGetChildren (castToContainer tb)
+	  [_, i1, l1]	<- containerGetChildren (castToContainer vb)
+	  labelSetText     (castToLabel l1) name
+	  oldImg	<- get (castToImage i1) imageFile
+	  when (oldImg /= img)
+	       (imageSetFromFile (castToImage i1) img)
 
 -- ------------------------------------------------------------
 
@@ -1288,6 +1361,11 @@ listTab lbt
 
 -- ------------------------------------------------------------
 
+pathToIcon	:: String -> String
+pathToIcon	= ("160x120" ++) . (++ ".jpg")
+
+-- ------------------------------------------------------------
+
 listLightboxContents	= withTabs $ (\ lbt -> lightboxContents lbt >>= logMsg . show )
 listSelectedContents     = selectedContents >>= logMsg . show
 
@@ -1296,7 +1374,11 @@ testOP = do
 	 withSelected $ logMsg . ("selection= " ++ ) . show
 	 withCurrTab  $ logMsg . ("currTab=   " ++) . show
 
-testOP2 = listSelectedContents
+testOP2
+    = do
+      cmd <- albumDialog
+      execCmd $ words cmd
+      return ()
 
 -- ------------------------------------------------------------
 --
@@ -1345,6 +1427,11 @@ isAlbum		:: String -> IO Bool
 isAlbum	path	= do
 		  t <- execCmd1 ["isalbum", path]
 		  return (t == "True")
+
+isPicture		:: String -> IO Bool
+isPicture path	= do
+		  t <- execCmd1 ["isalbum", path]
+		  return (t == "False")
 
 quitM		= execCmd ["exit"]
 saveAndQuitM	= execCmd ["close", ";", "exit"]

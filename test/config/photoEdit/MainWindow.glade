@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sat Feb 21 11:04:28 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar  1 17:57:41 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -136,6 +136,40 @@
                           <widget class="GtkImage" id="menu-item-image12">
                             <property name="visible">True</property>
                             <property name="stock">gtk-delete</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkSeparatorMenuItem" id="menuitem5">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">menuitem5</property>
+                        <property name="use_underline">True</property>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="newalbum">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">convert a picture into an empty album</property>
+                        <property name="label" translatable="yes">pic-&gt;alb</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image13">
+                            <property name="stock">gtk-add</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="newpic">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">convert an empty album into a picture</property>
+                        <property name="label" translatable="yes">alb-&gt;pic</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image14">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-remove</property>
                           </widget>
                         </child>
                       </widget>
@@ -379,6 +413,36 @@
                 <property name="tooltip_text">delete images from clipboard</property>
                 <property name="label" translatable="yes">delete</property>
                 <property name="stock_id">gtk-delete</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkSeparatorToolItem" id="separatorbutton27">
+                <property name="visible">True</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkToolButton" id="tbnewalbum">
+                <property name="visible">True</property>
+                <property name="tooltip_text">convert a picture into an empty album</property>
+                <property name="label" translatable="yes">pic-&gt;alb</property>
+                <property name="stock_id">gtk-add</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkToolButton" id="tbnewpic">
+                <property name="visible">True</property>
+                <property name="tooltip_text">convert an empty album into a picture</property>
+                <property name="label" translatable="yes">alb-&gt;pic</property>
+                <property name="stock_id">gtk-remove</property>
               </widget>
               <packing>
                 <property name="homogeneous">True</property>

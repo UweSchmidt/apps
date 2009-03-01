@@ -215,6 +215,9 @@ parseCmd c@"newalbum"      args | length args == 2      = parseModifiy c (newAlb
 parseCmd c@"setalbumpic"   args | length args == 2      = parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
 parseCmd c@"rename"        args | length args == 2      = parseModifiy c (renamePic   (concat . drop 1 $ args)) args
 parseCmd c@"removepicture" args | length args == 2      = parseModifiy c (removePicture (concat . drop 1 $ args)) args
+parseCmd c@"makealbum"     args | length args <= 1      = parseModifiy c (makeAlbum)   args
+parseCmd c@"makepicture"   args | length args <= 1      = parseModifiy c (makePicture) args
+
 parseCmd c@"copypicture"   args | length args == 2      = parseCopyPic                                c args
 -- parseCmd c@"rename-cont"   args      | length args <= 1      = parseModifiy c renameContent args
 

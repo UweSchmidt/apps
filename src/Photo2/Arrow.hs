@@ -1075,6 +1075,26 @@ removePicture pic conf path
 
 -- ------------------------------------------------------------
 --
+-- convert a picture into an album
+
+makeAlbum	:: ConfigArrow AlbumTree AlbumTree
+makeAlbum _conf path
+    = runAction ("make picture into album " ++ showPath path)
+      ( editNode' (\ p -> p { isAl = True }) )
+      `when` (neg isAlbum)
+
+-- ------------------------------------------------------------
+--
+-- convert an empty album into a picture
+
+makePicture	:: ConfigArrow AlbumTree AlbumTree
+makePicture _conf path
+    = runAction ("make album into picture " ++ showPath path)
+      ( editNode' (\ p -> p { isAl = False }) )
+      `when` (isAlbum >>> neg getChildren)
+
+-- ------------------------------------------------------------
+--
 -- sort all pictures by a given new sequence
 
 sortPictures	:: [String] -> PathArrow AlbumTree AlbumTree
