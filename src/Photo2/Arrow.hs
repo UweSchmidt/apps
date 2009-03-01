@@ -865,6 +865,8 @@ deleteAttr an p
     = runAction ("deleting " ++ showPath p ++ " attr " ++ show an) $
       editNode' (change theAttrs (remAttrs an))
 
+-- ------------------------------------------------------------
+
 deleteCopies    :: ConfigArrow AlbumTree AlbumTree
 deleteCopies c p
     = runAction ("deleting image copies for " ++ showPath p) $
@@ -1020,8 +1022,8 @@ sortPics _ p
 --
 -- copy a picture
 
-copyPicture	:: Path -> PathArrow AlbumTree AlbumTree
-copyPicture dst src
+copyPicture	:: Path -> ConfigArrow AlbumTree AlbumTree
+copyPicture dst conf src
     = runAction ("copy " ++ showPath src ++ " to " ++ showPath dst)
       ( loadAndCheckAlbum dstAlbum
 	>>>
@@ -1037,15 +1039,39 @@ copyPicture dst src
 	      = runAction ("insertSrc " ++ showPath p ++ "/" ++ dstId ++ " " ++ show (picId srcPic)) $
 		( changeChildren (++ [pic'])
 		  >>>
-		  perform (arrIOE $ const (copyCopies dst src srcPic))
+		  perform (arrIOE $ const (cpCopies (getImgType conf) dst src copies))
 		  >>>
 		  setEdited
 		)
 	      where
-	      pic' = albumTree $ srcPic { picId     = dstId
-					, isAl	    = False
-					, picEdited = True
+	      copies = map show . M.keys . picCopies $ srcPic
+	      pic' = albumTree $ srcPic { picId     = dstId		-- new pic id
+					, isAl	    = False		-- it's a picture even if the source is an album
+					, picEdited = True		-- and it's modified
 					}
+
+-- ------------------------------------------------------------
+--
+-- remove a picture, albums remain unchanged
+
+removePicture	:: String -> ConfigArrow AlbumTree AlbumTree
+removePicture pic conf path
+    = runAction ("remove " ++ showPath picPath)
+      ( processChildren ( ( deleteCopies conf picPath
+			    >>>
+			    none
+			  )
+                          `when` (neg isAlbum
+				  >>>
+				  (getPicId >>> isA (== pic))
+				 )
+			)
+	>>>
+	setEdited
+      )
+      `when` isAlbum
+    where
+    picPath = path ++ [pic]
 
 -- ------------------------------------------------------------
 --

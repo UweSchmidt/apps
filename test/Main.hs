@@ -110,6 +110,7 @@ main = do
 			[ "MainWindow.glade"
 			, "LogWindow.glade"
 			, "QuitDialog.glade"
+			, "AlbumIdDialog.glade"
 			]
   initApp 	xwins
   withGUI  	installGUIControls
@@ -152,10 +153,12 @@ data GUI = GUI { window    :: Window
 	       , logwindow :: Window
 	       , logarea   :: TextView
 	       , quitdlg   :: Dialog
+	       , albumdlg  :: EDialog 
 	       }
 
 type Lightbox	= (ScrolledWindow, Table)
 type Buttons	= [ButtonPair]
+type EDialog    = (Dialog, Entry)
 
 -- ------------------------------------------------------------
 
@@ -171,6 +174,7 @@ theButtons      = (controls,  \ b g -> g {controls  = b})
 theLogWindow	= (logwindow, \ w g -> g {logwindow = w})
 theLogArea	= (logarea,   \ a g -> g {logarea   = a})
 theQuitDlg	= (quitdlg,   \ d g -> g {quitdlg   = d})
+theAlbumDlg     = (albumdlg,  \ d g -> g {albumdlg  = d})
 
 -- ------------------------------------------------------------
 
@@ -262,6 +266,7 @@ withTabs                = withComp (theTabs      `sub` theGUI)
 withLightbox            = withComp (theLightbox       `sub` theGUI)
 withLightboxTable       = withComp (theLightboxTable  `sub` theGUI)
 withLightboxWindow      = withComp (theLightboxWindow `sub` theGUI)
+withAlbumDialog         = withComp (theAlbumDlg       `sub` theGUI)
 
 withLogger              = withComp (theLogger         `sub` theCtrl)
 withSelected            = withComp (theSelected       `sub` theCtrl)
@@ -274,10 +279,12 @@ withCurrTab             = withComp (theCurrTab        `sub` theCtrl)
 getModel                = withModel             return
 
 getLightbox		= withLightbox		return
+getLightboxTable	= withLightboxTable	return
 getSelected             = withSelected		return
 getCurrSelected         = withCurrSelected	return
 getClipboardSelected	= withClipboardSelected	return
 getClipboard		= withClipboard		return
+getAlbumDialog          = withAlbumDialog       return
 
 getLogger               = withLogger		return
 
@@ -356,7 +363,7 @@ warnMsg		= logMsg . ("Warning: " ++)
 -- ------------------------------------------------------------
 
 buildGUI	:: [GladeXML] -> IO GUI
-buildGUI [gm, gl, qd]
+buildGUI [gm, gl, qd, ad]
     = do
       window    <- xmlGetWidget gm castToWindow         "main"
       statusbar <- xmlGetWidget gm castToStatusbar      "statusbar"
@@ -368,8 +375,12 @@ buildGUI [gm, gl, qd]
       logwindow <- xmlGetWidget gl castToWindow         "logwindow"
       logarea   <- xmlGetWidget gl castToTextView       "loggingarea"
       quitDlg   <- xmlGetWidget qd castToDialog         "quitDialog"
+      albumDlg  <- xmlGetWidget ad castToDialog         "albumDialog"
+      albumEnt  <- xmlGetWidget ad castToEntry          "albumId"
 
-      return $ GUI window statusbar tabs (lightbox, lbxtable) controls logwindow logarea quitDlg
+      return $ GUI window statusbar tabs (lightbox, lbxtable)
+	           controls logwindow logarea
+		   quitDlg (albumDlg, albumEnt)
 
 buildButtons	:: GladeXML -> IO Buttons
 buildButtons gm
@@ -463,7 +474,7 @@ installGUIControls g
 
     quitDialog
 	= do
-	  stateChanged <- return False
+	  stateChanged <- return True
 	  if stateChanged
 	     then do
 		  res <- dialogRun qd
@@ -487,6 +498,21 @@ installGUIControls g
 			         return True
 			)
 	  return ()
+
+-- ------------------------------------------------------------
+
+albumDialog	:: IO String
+albumDialog
+    = do
+      (ad, en)  <- getAlbumDialog
+      entrySetText              en ""
+      res       <- dialogRun    ad
+      widgetHide                ad
+      str	<- entryGetText en
+      return $ evalRes res str
+    where
+    evalRes ResponseOk s        = s
+    evalRes _		_	= ""
 
 -- ------------------------------------------------------------
 
@@ -692,7 +718,7 @@ sortSelected	= withLightboxTable $ withCurrSelected . sortBySelected
 	  let newtbs = map snd . sortBy (compare `F.on` fst) . zip newns $ tbs
 	  trcMsg $ "sort " ++ tn ++ " new sequence: " ++ unwords (map show newns)
 
-          execCmd $ unwords ("sortpictures" : tn : map show newns)
+          execCmd ("sortpictures" : tn : map show newns)
 
 	  withToggleButtons_ (containerRemove tab) tab
 	  fillTable tab newtbs
@@ -715,7 +741,7 @@ storeTab
     = withLightboxTable ( \ lbt -> 
 			  do
 			  pn <- widgetGetName lbt
-			  execCmd $ unwords ["store", pn]
+			  execCmd ["store", pn]
 			  return ()
 			)
 
@@ -911,7 +937,7 @@ resizeTable cols tab
     where
     resize tbs
 	= do
-	  trcMsg $ "resizeTable cols = " ++ show cols
+	  -- trcMsg $ "resizeTable cols = " ++ show cols
 	  set tab [tableNColumns := cols]
 	  return tbs
 
@@ -921,7 +947,7 @@ resizeLightboxTable	:: IO ()
 resizeLightboxTable
     = do
       (w, h) <- withTabs widgetGetSize
-      trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
+      -- trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
       withLightboxTable (resizeTable (picCols w))
 
 -- ------------------------------------------------------------
@@ -938,7 +964,7 @@ clearLogWindow
 
 saveAppState	:: IO ()
 saveAppState	= do
-		  warnMsg "save application state (not yet done)"
+		  execCmd ["close"]
 		  return ()
 
 -- ------------------------------------------------------------
@@ -1048,34 +1074,41 @@ copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
     copyTb	:: String -> String -> (String, String) -> ToggleButton -> IO [ToggleButton]
     copyTb src dst (sid, did) tb
 	= do
-	  isAl <- isAlbum srcPath
-	  if isAl
-	     then do
-		  warnMsg $ "can't copy or move whole album " ++ srcPath
-		  return []
-	     else do
-		  [vb]       <- containerGetChildren (castToContainer tb)
-		  [_, i1, _] <- containerGetChildren (castToContainer vb)
-		  tbImg      <- get (castToImage i1) imageFile
-		  trcMsg $ unwords ["copyTb", srcPath, dstPath, "img=", tbImg]
-		  res <- mkToggleButton did tbImg
-		  execCmd $ unwords ["copypicture", srcPath, dstPath]
-		  return [res]
+	  [vb]       <- containerGetChildren (castToContainer tb)
+	  [_, i1, _] <- containerGetChildren (castToContainer vb)
+	  tbImg      <- get (castToImage i1) imageFile
+	  trcMsg $ unwords ["copyTb", srcPath, dstPath, "img=", tbImg]
+	  res <- mkToggleButton did tbImg
+	  execCmd ["copypicture", srcPath, dstPath]
+	  return [res]
 	where
 	srcPath = src </> sid
 	dstPath = dst </> did
 
+-- ------------------------------------------------------------
+
 removeSelected	:: (String, [String]) -> IO ()
 removeSelected (pn, sns)
     = do
-      (s1, s2) <-  withLightboxTable $
-		   partitionToggleButtons ( \ tb ->
-					    do
-					    n <- widgetGetName tb
-					    return (n `elem` sns)
-					  )
-      withLightboxTable $ setToggleButtons s1
-      mapM_ widgetDestroy s2
+      lbt      <- getLightboxTable
+      (s1, s2) <- partitionToggleButtons
+		  ( \ tb ->
+		    do
+		    n <- widgetGetName tb
+		    if (n `elem` sns)
+		       then do
+		            isa <- isAlbum (pn </> n)	-- don't remove whole albums
+		            return (not isa)
+		       else return False
+		  ) lbt
+      setToggleButtons s1 lbt
+      mapM_ rmTb s2
+    where
+    rmTb tb
+	= do
+	  pid <- widgetGetName tb
+	  execCmd ["removepicture", pn, pid]
+	  widgetDestroy        tb
 
 -- ------------------------------------------------------------
 
@@ -1114,8 +1147,8 @@ closeTab
 openArchive	:: IO ()
 openArchive
     = do
-      execCmd "open"
-      rootPath <- execCmd1 "pwd"
+      execCmd ["open"]
+      rootPath <- execCmd1 ["pwd"]
       when (not . null $ rootPath)
 	   $ do
 	     openClipboard  rootPath
@@ -1124,11 +1157,11 @@ openArchive
 openClipboard	:: String -> IO ()
 openClipboard path
     = do
-      res <- execCmdL $ unwords ["options", optionClipboard]
+      res <- execCmdL ["options", optionClipboard]
       cb  <- case res of
 		      [_,_,w] -> return w
 		      _       -> do
-				 execCmdL $ unwords ["newalbum", path, defaultClipboard]
+				 execCmdL ["newalbum", path, defaultClipboard]
 				 return $ path </> defaultClipboard
       cs <- listAlbumContents cb
       withTabs ( \ tabs ->
@@ -1146,8 +1179,8 @@ openClipboard path
 openAlbumOrPic	:: String -> IO ()
 openAlbumOrPic path
     = do
-      t <- execCmd1 $ unwords ["isalbum", path]			-- check: is it an album?
-      if (t == "True")
+      t <- isAlbum path						-- check: is it an album?
+      if t
 	 then do
 	      allPaths <- getAllAlbumPaths
 	      maybe (openAlbum path)				-- not yet loaded
@@ -1166,7 +1199,7 @@ openAlbumOrPic path
 listAlbumContents	:: String -> IO [(String, String)]
 listAlbumContents path
     = do
-      contents <- execCmdL $ unwords ["ls", path]
+      contents <- execCmdL ["ls", path]
       names    <- return $ map fileName contents
       paths    <- return $ map (("160x120" ++) . (++ ".jpg")) contents
       trcMsg $ "listAlbumContents: " ++ show (path, names)
@@ -1195,7 +1228,7 @@ openSelectedAlbum
     where
     openRootAlbum
 	= do
-	  rootPath <- execCmd1 "pwd"
+	  rootPath <- execCmd1 ["pwd"]
 	  when (not . null $ rootPath) $ openAlbumOrPic rootPath
 
 -- ------------------------------------------------------------
@@ -1290,8 +1323,8 @@ sortBySelection sns ns
 --
 -- model calling functions
 
-execCmd		:: String -> IO String
-execCmd cmd	= do
+execCmd		:: [String] -> IO String
+execCmd ws	= do
 		  logMsg $ "exec: cmd= " ++ cmd
 		  m0        <- getModel
 		  log       <- getLogger
@@ -1299,19 +1332,21 @@ execCmd cmd	= do
 		  setModel m1
 		  logMsg $ "exec: res= " ++ res
 		  return res
+		where
+		cmd = unwords ws
 
-execCmdL	:: String -> IO [String]
-execCmdL cmd	= execCmd cmd >>= return . words
+execCmdL	:: [String] -> IO [String]
+execCmdL ws	= execCmd ws >>= return . words
 
-execCmd1	:: String -> IO String
-execCmd1 cmd	= execCmdL cmd >>= return . unwords
+execCmd1	:: [String] -> IO String
+execCmd1 ws	= execCmdL ws >>= return . unwords
 
 isAlbum		:: String -> IO Bool
 isAlbum	path	= do
-		  t <- execCmd1 $ unwords ["isalbum", path]
+		  t <- execCmd1 ["isalbum", path]
 		  return (t == "True")
 
-quitM		= execCmd "exit"
-saveAndQuitM	= execCmd "close ; exit"
+quitM		= execCmd ["exit"]
+saveAndQuitM	= execCmd ["close", ";", "exit"]
 
 -- ------------------------------------------------------------

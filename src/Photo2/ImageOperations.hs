@@ -26,7 +26,9 @@ import           System ( system )
 import           System.Directory
 import           System.Exit
 import           System.IO
-import           System.Posix   ( getProcessID )
+import           System.Posix   ( createLink
+				, getProcessID
+				)
 import           System.Time    ( ClockTime
                                 , toCalendarTime
                                 , formatCalendarTime
@@ -450,6 +452,16 @@ rmFile f
 
 -- ------------------------------------------------------------
 
+lnFile		:: String -> String -> IOE ()
+lnFile src dst
+    = ( do
+	ex <- liftIO $ doesFileExist src
+	when ex (liftIO $ createLink src dst)
+      )
+      `mapError` ((unwords ["link file", show src, show dst, "failed: "]) ++)
+
+-- ------------------------------------------------------------
+
 rmDir           :: String -> IOE ()
 rmDir d
     = ( do
@@ -594,14 +606,18 @@ cleanupDir execute dir ext fl
 
 -- ------------------------------------------------------------
 
-copyCopies 	:: Path -> Path -> Pic -> IOE ()
-copyCopies dst src pic
+cpCopies 	:: String -> Path -> Path -> [String] -> IOE ()
+cpCopies ext dst src copies
     = do
-      liftIO $ mapM_ link copies
-      return ()
+      mapM_ link copies
     where
-    copies = map show . M.keys . picCopies $ pic
     link dir
-	= putStrLn $ unwords ["ln", dir </> listToPath src `addExtension` ".jpg", dir </> listToPath dst `addExtension` ".jpg"]
+	= do
+	  liftIO $ putStrLn $ unwords ["ln", srcFile, dstFile]
+	  mkDirectoryPath dstFile
+	  lnFile srcFile  dstFile
+	where
+	srcFile = dir </> listToPath src `addExtension` ext
+	dstFile = dir </> listToPath dst `addExtension` ext
 
 -- ------------------------------------------------------------
