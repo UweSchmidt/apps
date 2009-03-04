@@ -918,7 +918,7 @@ modifyTable modifyTbs tab
 
       tableResize   tab rows cols
       fillTable     tab tbs'
-      widgetShowAll tab
+      -- widgetShowAll tab
       
 -- ------------------------------------------------------------
 
@@ -954,6 +954,7 @@ resizeLightboxTable
       (w, h) <- withTabs widgetGetSize
       -- trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
       withLightboxTable (resizeTable (picCols w))
+      withLightboxTable widgetShowAll
 
 -- ------------------------------------------------------------
 
@@ -1005,6 +1006,7 @@ copySelectionToClipboard mv
 	      copyToClipboard c
 	      when mv $
 		   removeSelected c
+	      withLightbox (widgetShowAll . fst)
 
 copySelectionFromClipboard	:: Bool -> IO ()
 copySelectionFromClipboard mv
@@ -1042,6 +1044,7 @@ deleteSelectedFromClipboard
 	 else do
 	      clearSelected
 	      removeSelected c
+	      withLightbox (widgetShowAll . fst)
 
 -- ------------------------------------------------------------
 
