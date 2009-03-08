@@ -218,7 +218,9 @@ parseCmd c@"removepicture" args | length args == 2      = parseModifiy c (remove
 parseCmd c@"makealbum"     args | length args <= 1      = parseModifiy c (makeAlbum)   args
 parseCmd c@"makepicture"   args | length args <= 1      = parseModifiy c (makePicture) args
 
-parseCmd c@"copypicture"   args | length args == 2      = parseCopyPic                                c args
+parseCmd c@"copypicture"   [a1, a2]
+                                | "/" `isPrefixOf` a2   = parseCopyPic c a1 a2
+
 -- parseCmd c@"rename-cont"   args      | length args <= 1      = parseModifiy c renameContent args
 
 parseCmd c@"dirty"         args | length args <=1       = parseCleanup c False False args
@@ -550,9 +552,8 @@ parseModifiy c ca al    = parseWdCmd' ( changeAlbums $
                                         processTree (withConfig ca)
                                       ) c (take 1 al)
 
-parseCopyPic		:: String -> [String] -> [Cmd]
-parseCopyPic c [a1,a2]
-    | "/" `isPrefixOf` a2
+parseCopyPic		:: String -> String -> String -> [Cmd]
+parseCopyPic c a1 a2
                  	= parseWdCmd' ( changeAlbums $
 					withConfig (copyPicture p2)
 				      ) c [a1]

@@ -51,14 +51,14 @@ genHtml rec formats conf p0
 				>>>
 				(arrL $ maybeToList . M.lookup tempKey)
 				>>>
-				readTemplate "album"
+				readTemplate
 			      )
 			      &&&
 			      ( (arrL $ maybeToList . M.lookup picKey)
 				>>>
 				(arrL $ maybeToList . M.lookup tempKey)
 				>>>
-				readTemplate "picture"
+				readTemplate
 			      )
 			    )
 			  )
@@ -94,22 +94,6 @@ genHtml rec formats conf p0
 			      (arr (fst &&& snd . snd))
 			      (errMsg ("layout type must be " ++ show "html-css2"))
 
-{-
-    readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
-			  runInLocalURIContext $
-			  ( ( readFromDocument [ (a_validate, v_0)
-					       , (a_parse_html,v_1)
-					       , (a_preserve_comment, v_1)
-					       , (a_remove_whitespace, v_1)
-					       , (a_trace, v_0)
-					       ]
-			      >>>
-			      documentStatusOk
-			    )
-			    `orElse`
-			    (clearErrStatus >>> none)
-			  )
--}
     genAllPages		:: [(String, (XmlTree, XmlTree))] -> PathArrow AlbumTree AlbumTree
     genAllPages	[] _pp
 	= errMsg ("no layout for layout type \"html-css2\" found")
@@ -432,8 +416,8 @@ translate tb	= sed ( fromJust . (flip lookup) tb ) re
 
 -- ------------------------------------------------------------
 
-readTemplate	:: String -> CmdArrow String XmlTree
-readTemplate pt
+readTemplate	:: CmdArrow String XmlTree
+readTemplate
     = read' $< this
     where
     read' url
@@ -448,7 +432,7 @@ readTemplate pt
 	cacheTemplate t
 	    = constA t
 	      >>>
-	      changeUserState (\ t s -> store (selTemplate url) [t] s)
+	      changeUserState (\ t' -> store (selTemplate url) [t'])
 	readTemplate'	= runAction ("read template for " ++ show url) $
 			  runInLocalURIContext $
 			  ( ( readFromDocument [ (a_validate, v_0)
