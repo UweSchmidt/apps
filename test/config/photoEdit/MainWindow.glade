@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Mar  1 17:57:41 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar  8 14:15:56 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -237,6 +237,20 @@
                         <child internal-child="image">
                           <widget class="GtkImage" id="menu-item-image6">
                             <property name="visible">True</property>
+                            <property name="stock">gtk-media-rewind</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="update">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">update copies and exif data from original</property>
+                        <property name="label" translatable="yes">update</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image15">
+                            <property name="visible">True</property>
                             <property name="stock">gtk-refresh</property>
                           </widget>
                         </child>
@@ -472,6 +486,17 @@
                 <property name="has_tooltip">True</property>
                 <property name="tooltip_text">reorder selected images</property>
                 <property name="label" translatable="yes">sort</property>
+                <property name="stock_id">gtk-media-rewind</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkToolButton" id="tbupdate">
+                <property name="visible">True</property>
+                <property name="tooltip_text">update copies and exif from original</property>
+                <property name="label" translatable="yes">update</property>
                 <property name="stock_id">gtk-refresh</property>
               </widget>
               <packing>

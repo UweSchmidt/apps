@@ -404,6 +404,7 @@ buildButtons gm
 		 , ("clearLogWindow", 	Nothing			)
 		 , ("align",		Just "tbalign"		)
 		 , ("sort",		Just "tbsort"		)
+		 , ("update",           Just "tbupdate"         )
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
 		 , ("test",	 	Just "tbtest"		)
@@ -463,6 +464,7 @@ installGUIControls g
 	  onActivateBP clearlog "clear log" 	clearLogWindow
 	  onActivateBP align    "align"         resizeLightboxTable
 	  onActivateBP sort     "sort"          sortSelected
+          onActivateBP update   "update"        updateAlbum
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
 	  onActivateBP test     "test"          testOP2
@@ -471,7 +473,7 @@ installGUIControls g
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
 	  newalbum, newpic,
-	  log, clearlog, align, sort, invert, deselect, test] = cs
+	  log, clearlog, align, sort, update, invert, deselect, test] = cs
 
     showLogWindow
 	= do
@@ -551,6 +553,7 @@ showOnStatusbar sb msgRef msg
       mid <- statusbarPush sb cid msg
 
       writeIORef msgRef $ Just (cid, mid)		-- remember message id
+      widgetShowAll sb
       return ()
 
 installStatusbarLogger	:: Logger -> IO Logger
@@ -1172,8 +1175,14 @@ openClipboard path
       cb  <- case res of
 		      [_,_,w] -> return w
 		      _       -> do
-				 execCmdL ["newalbum", path, defaultClipboard]
-				 return $ path </> defaultClipboard
+				 let cbp = path </> defaultClipboard
+				 existsClipboard <- isAlbum cbp
+				 when (not existsClipboard)
+				 	  ( do
+					    execCmdL ["newalbum", path, defaultClipboard]
+					    return ()
+					  )
+				 return cbp
       cs <- listAlbumContents cb
       withTabs ( \ tabs ->
 		 do
@@ -1246,6 +1255,42 @@ openSelectedAlbum
 
 -- ------------------------------------------------------------
 
+updateAlbum		:: IO ()
+updateAlbum
+    = do
+      lbt  <- getLightboxTable
+      path <- getCurrAlbumPath
+      sel  <- getLastSelectedPath
+      if null sel
+	 then do
+	      updateEntry path		-- update album itself and all pictures
+	      invertSelected
+	      widgetShowAll lbt
+	      updateAlbum
+	 else do
+	      withToggleButtons_ ( \ tb ->
+				   do
+				   v <- toggleButtonGetActive tb
+				   when v
+				        ( do
+					  n <- widgetGetName    tb
+                                          p <- return         $ path </> n
+					  updateEntry           p
+					  toggleButtonSetActive tb False
+					  updateToggleButton    tb (n, pathToIcon p)
+					  return ()
+					)
+				 ) lbt
+    where
+    updateEntry	:: FilePath -> IO ()
+    updateEntry p
+	= do
+	  logMsg $ "starting update: " ++ show p
+	  execCmd ["update", p]
+	  logMsg $ "update finished: " ++ show p
+
+-- ------------------------------------------------------------
+
 newSelectedAlbum	:: IO ()
 newSelectedAlbum
     = do
@@ -1266,6 +1311,8 @@ newSelectedAlbum
 			     withLightboxTable updateToggleButtons
 			     return ()
 			   )
+
+-- ------------------------------------------------------------
 
 newSelectedPic		:: IO ()
 newSelectedPic
@@ -1290,22 +1337,23 @@ newSelectedPic
 updateToggleButtons	:: Table -> IO ()
 updateToggleButtons lbt
     = do
-      path	<- widgetGetName	lbt
-      contents	<- listAlbumContents	path
-      tbs	<- getToggleButtons	lbt
-      mapM_ (uncurry updateTb)        $ zip tbs contents
-      widgetShowAll                     lbt
-    where
-    updateTb	:: ToggleButton -> (String, String) -> IO ()
-    updateTb tb (name, img)
-	= do
-	  set              tb [widgetName := Just name]
-	  [vb]	     	<- containerGetChildren (castToContainer tb)
-	  [_, i1, l1]	<- containerGetChildren (castToContainer vb)
-	  labelSetText     (castToLabel l1) name
-	  oldImg	<- get (castToImage i1) imageFile
-	  when (oldImg /= img)
-	       (imageSetFromFile (castToImage i1) img)
+      path	<- widgetGetName	   lbt
+      contents	<- listAlbumContents	   path
+      tbs	<- getToggleButtons	   lbt
+      mapM_ (uncurry updateToggleButton) $ zip tbs contents
+      -- widgetShowAll                        lbt
+
+updateToggleButton	:: ToggleButton -> (String, String) -> IO ()
+updateToggleButton tb (name, img)
+    = do
+      set              tb [widgetName := Just name]
+      [vb]	     	<- containerGetChildren (castToContainer tb)
+      [_, i1, l1]	<- containerGetChildren (castToContainer vb)
+      labelSetText     (castToLabel l1) name
+      oldImg	<- get (castToImage i1) imageFile
+      when (oldImg /= img)
+	   (imageSetFromFile (castToImage i1) img)
+      widgetShowAll    tb
 
 -- ------------------------------------------------------------
 
@@ -1410,12 +1458,12 @@ sortBySelection sns ns
 
 execCmd		:: [String] -> IO String
 execCmd ws	= do
-		  logMsg $ "exec: cmd= " ++ cmd
+		  trcMsg $ "exec cmd: " ++ cmd
 		  m0        <- getModel
 		  log       <- getLogger
 		  (res, m1) <- execModel log cmd m0
 		  setModel m1
-		  logMsg $ "exec: res= " ++ res
+		  trcMsg $ "exec res:\n" ++ res
 		  return res
 		where
 		cmd = unwords ws
