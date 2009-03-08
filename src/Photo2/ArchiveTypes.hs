@@ -30,6 +30,7 @@ data AppState           = AppState { albums      :: AlbumTree
                                    , cwd         :: Path
 				   , writeLog    :: String -> IO ()
 				   , writeRes	 :: String -> IO ()
+				   , templates   :: HtmlTemplates
                                    }
 
 type Options            = AssocList Name Value
@@ -37,6 +38,8 @@ type Options            = AssocList Name Value
 data Status             = Running Int
                         | Exc String
                           deriving (Eq, Show)
+
+type HtmlTemplates	= Map String XmlTrees
 
 -- ------------------------------------------------------------
 
@@ -181,6 +184,13 @@ selConfigAttr           :: Name -> AppSelector Value
 selConfigAttr k         = (fromMaybe "" . M.lookup (newAtom k),
                                 \ v as -> M.insert (newAtom k) v as)  `sub` selConfigAttrs
 
+selTemplates            :: AppSelector HtmlTemplates
+selTemplates            = (templates, \ x s -> s {templates = x})
+
+selTemplate             :: String -> AppSelector XmlTrees
+selTemplate k           = (fromMaybe [] . M.lookup k,
+                                \ v tm -> M.insert k v tm)  `sub` selTemplates
+
 -- ------------------------------------------------------------
 
 type PicSelector a 	= Selector Pic a
@@ -214,6 +224,7 @@ emptyAppState           = AppState { albums       = emptyAlbumTree
                                    , cwd          = []
 				   , writeLog	  = hPutStrLn stderr
 				   , writeRes	  = hPutStrLn stdout
+				   , templates    = emptyTemplates
                                    }
 
 emptyConfig             :: Config
@@ -264,6 +275,9 @@ emptyGeo                = Geo 0 0
 
 emptyAttrs              :: Attrs
 emptyAttrs              = M.empty
+
+emptyTemplates		:: HtmlTemplates
+emptyTemplates		= M.empty
 
 -- ------------------------------------------------------------
 
@@ -488,8 +502,8 @@ showPic p               = concat . intersperse "\n" . filter (not . null) $
 -- ------------------------------------------------------------
 
 instance NFData AppState where
-    rnf (AppState a n cf cfn s wd _wl _wr)
-                        = rnf a `seq` rnf n `seq` rnf cf `seq` rnf cfn `seq` rnf s `seq` rnf wd
+    rnf (AppState a n cf cfn s wd _wl _wr tm)
+                        = rnf a `seq` rnf n `seq` rnf cf `seq` rnf cfn `seq` rnf s `seq` rnf wd `seq` rnf tm
 
 instance NFData Status where
     rnf (Running i)     = rnf i

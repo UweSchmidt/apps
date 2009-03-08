@@ -94,7 +94,7 @@ genHtml rec formats conf p0
 			      (arr (fst &&& snd . snd))
 			      (errMsg ("layout type must be " ++ show "html-css2"))
 
-
+{-
     readTemplate pt	= runAction ("read template for " ++ pt ++ " page") $
 			  runInLocalURIContext $
 			  ( ( readFromDocument [ (a_validate, v_0)
@@ -109,7 +109,7 @@ genHtml rec formats conf p0
 			    `orElse`
 			    (clearErrStatus >>> none)
 			  )
-
+-}
     genAllPages		:: [(String, (XmlTree, XmlTree))] -> PathArrow AlbumTree AlbumTree
     genAllPages	[] _pp
 	= errMsg ("no layout for layout type \"html-css2\" found")
@@ -429,5 +429,39 @@ translate	:: AssocList String String -> String -> String
 translate tb	= sed ( fromJust . (flip lookup) tb ) re
 		  where
 		  re = intercalate "|" . map (("("++) . (++")") . escRE . fst) $ tb
+
+-- ------------------------------------------------------------
+
+readTemplate	:: String -> CmdArrow String XmlTree
+readTemplate pt
+    = read' $< this
+    where
+    read' url
+	= ( getUserState
+	    >>>
+	    arrL (load $ selTemplate url)
+	  )
+	  `orElse`
+	  ( cacheTemplate $< readTemplate' )
+	where
+	cacheTemplate	:: XmlTree -> CmdArrow String XmlTree
+	cacheTemplate t
+	    = constA t
+	      >>>
+	      changeUserState (\ t s -> store (selTemplate url) [t] s)
+	readTemplate'	= runAction ("read template for " ++ show url) $
+			  runInLocalURIContext $
+			  ( ( readFromDocument [ (a_validate, v_0)
+					       , (a_parse_html,v_1)
+					       , (a_preserve_comment, v_1)
+					       , (a_remove_whitespace, v_1)
+					       , (a_trace, v_0)
+					       ]
+			      >>>
+			      documentStatusOk
+			    )
+			    `orElse`
+			    (clearErrStatus >>> none)
+			  )
 
 -- ------------------------------------------------------------

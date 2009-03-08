@@ -3,6 +3,8 @@ where
 
 import           Control.Arrow
 
+-- import           Control.Concurrent
+
 import           Control.Monad       	( when )
 import           Control.Monad.Trans 	( liftIO )
 
@@ -113,6 +115,10 @@ main = do
 			, "AlbumIdDialog.glade"
 			]
   initApp 	xwins
+
+  -- timeoutAddFull (yield >> return True)
+  --                    priorityDefaultIdle 100
+
   withGUI  	installGUIControls
 
   changeLogger	installStatusbarLogger
@@ -333,8 +339,9 @@ initApp	:: [GladeXML] -> IO ()
 initApp ws
     = do
       gui <-  buildGUI ws
+      mdl <-  buildModel
       setGUI   $ gui
-      setModel $ initModel
+      setModel $ mdl
       setCtrl  $ initControl
 
 -- ------------------------------------------------------------
@@ -405,6 +412,7 @@ buildButtons gm
 		 , ("align",		Just "tbalign"		)
 		 , ("sort",		Just "tbsort"		)
 		 , ("update",           Just "tbupdate"         )
+		 , ("html",             Just "tbhtml"           )
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
 		 , ("test",	 	Just "tbtest"		)
@@ -465,6 +473,7 @@ installGUIControls g
 	  onActivateBP align    "align"         resizeLightboxTable
 	  onActivateBP sort     "sort"          sortSelected
           onActivateBP update   "update"        updateAlbum
+          onActivateBP html     "html"          htmlAlbum
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
 	  onActivateBP test     "test"          testOP2
@@ -473,7 +482,7 @@ installGUIControls g
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
 	  newalbum, newpic,
-	  log, clearlog, align, sort, update, invert, deselect, test] = cs
+	  log, clearlog, align, sort, update, html, invert, deselect, test] = cs
 
     showLogWindow
 	= do
@@ -553,8 +562,7 @@ showOnStatusbar sb msgRef msg
       mid <- statusbarPush sb cid msg
 
       writeIORef msgRef $ Just (cid, mid)		-- remember message id
-      widgetShowAll sb
-      return ()
+      updateGUI
 
 installStatusbarLogger	:: Logger -> IO Logger
 installStatusbarLogger oldLog
@@ -1255,6 +1263,17 @@ openSelectedAlbum
 
 -- ------------------------------------------------------------
 
+updateGUI	:: IO ()
+updateGUI
+    = do
+      n <- eventsPending
+      when (n > 0) ( do
+		     mainIteration
+		     updateGUI
+		   )
+
+-- ------------------------------------------------------------
+
 updateAlbum		:: IO ()
 updateAlbum
     = do
@@ -1266,6 +1285,7 @@ updateAlbum
 	      updateEntry path		-- update album itself and all pictures
 	      invertSelected
 	      widgetShowAll lbt
+	      updateGUI
 	      updateAlbum
 	 else do
 	      withToggleButtons_ ( \ tb ->
@@ -1278,6 +1298,7 @@ updateAlbum
 					  updateEntry           p
 					  toggleButtonSetActive tb False
 					  updateToggleButton    tb (n, pathToIcon p)
+					  updateGUI
 					  return ()
 					)
 				 ) lbt
@@ -1285,9 +1306,45 @@ updateAlbum
     updateEntry	:: FilePath -> IO ()
     updateEntry p
 	= do
-	  logMsg $ "starting update: " ++ show p
+	  logMsg $ "updating " ++ p
 	  execCmd ["update", p]
-	  logMsg $ "update finished: " ++ show p
+	  logMsg $ p ++ " up to date"
+
+-- ------------------------------------------------------------
+
+htmlAlbum		:: IO ()
+htmlAlbum
+    = do
+      lbt  <- getLightboxTable
+      path <- getCurrAlbumPath
+      sel  <- getLastSelectedPath
+      if null sel
+	 then do
+	      htmlEntry path		-- update album itself and all pictures
+	      invertSelected
+	      widgetShowAll lbt
+	      updateGUI
+	      htmlAlbum
+	 else do
+	      withToggleButtons_ ( \ tb ->
+				   do
+				   v <- toggleButtonGetActive tb
+				   when v
+				        ( do
+					  n <- widgetGetName    tb
+                                          p <- return         $ path </> n
+					  htmlEntry             p
+					  toggleButtonSetActive tb False
+					  updateGUI
+					)
+				 ) lbt
+    where
+    htmlEntry	:: FilePath -> IO ()
+    htmlEntry p
+	= do
+	  logMsg $ "generting HTML for " ++ p
+	  execCmd ["html", p]
+	  logMsg $ "HTML generated for " ++ p
 
 -- ------------------------------------------------------------
 
@@ -1341,7 +1398,7 @@ updateToggleButtons lbt
       contents	<- listAlbumContents	   path
       tbs	<- getToggleButtons	   lbt
       mapM_ (uncurry updateToggleButton) $ zip tbs contents
-      -- widgetShowAll                        lbt
+      widgetShowAll                        lbt
 
 updateToggleButton	:: ToggleButton -> (String, String) -> IO ()
 updateToggleButton tb (name, img)

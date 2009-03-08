@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Mar  8 14:15:56 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar  8 17:56:59 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -257,6 +257,20 @@
                       </widget>
                     </child>
                     <child>
+                      <widget class="GtkImageMenuItem" id="html">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">generate HTML page for album or selected pictures</property>
+                        <property name="label" translatable="yes">HTML</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image16">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-jump-to</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
                       <widget class="GtkImageMenuItem" id="invert">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">invert</property>
@@ -498,6 +512,17 @@
                 <property name="tooltip_text">update copies and exif from original</property>
                 <property name="label" translatable="yes">update</property>
                 <property name="stock_id">gtk-refresh</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkToolButton" id="tbhtml">
+                <property name="visible">True</property>
+                <property name="tooltip_text">generate HTML pages for album or selected pictures</property>
+                <property name="label" translatable="yes">HTML</property>
+                <property name="stock_id">gtk-jump-to</property>
               </widget>
               <packing>
                 <property name="homogeneous">True</property>

@@ -10,11 +10,12 @@ import Photo2.CmdInterpreter
 
 type Model	= AppState
 
-initModel	= emptyAppState
+buildModel	:: IO Model
+buildModel	= return emptyAppState
 
 execModel	:: (String -> IO ()) ->
 		   String ->
-		   AppState -> IO (String, AppState)
+		   Model -> IO (String, Model)
 execModel logger cmd s0
     = do
       resVar <- newIORef []
