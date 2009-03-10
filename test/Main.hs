@@ -13,6 +13,7 @@ import qualified Data.Function as F  	( on )
 import           Data.IORef
 import           Data.List	   	( delete
 					, elemIndex
+					, isPrefixOf
 					, sortBy
 					)
 import           Data.Maybe
@@ -24,6 +25,7 @@ import		 Photo2.ModelInterface
 import		 Photo2.FilePath
 
 import           System.IO
+import           System.Directory
 import           System.IO.Unsafe      	( unsafePerformIO )
 
 -- ------------------------------------------------------------
@@ -1484,9 +1486,42 @@ testOP = do
 
 testOP2
     = do
+      d  <- importDir
+      fc <- fileChooserDialogNew
+	    (Just "Import Directory Selection")
+	    Nothing
+	    FileChooserActionSelectFolder
+	    [("Cancel", ResponseCancel), ("Import", ResponseOk)]
+      ok <- fileChooserSetCurrentFolder fc d
+      when ok
+	   ( do
+	     res <- dialogRun fc
+	     fn  <- fileChooserGetFilename fc
+	     trcMsg $ "importDialog " ++ show res ++ " " ++ show fn ++ " " ++ show d
+	     widgetDestroy fc
+	     trcMsg $ "import dir = " ++ evalRes res fn d
+	     return ()
+	   )
+    where
+    evalRes ResponseOk (Just fn) d
+	| d `isPrefixOf` fn		= drop (length d + 1) fn
+    evalRes _          _         _	= ""
+
+    importDir
+	= do
+	  cwd  <- getCurrentDirectory
+	  idir <- do
+		  d0 <- execCmd1 ["options", "import-base"]
+		  return . concat . drop 2 . words $ d0
+	  dir  <- canonicalizePath $ cwd </> idir
+	  return dir
+	  
+
+testOP3
+    = do
       cmd <- albumDialog
       execCmd $ words cmd
-      return ()
+      return ()          
 
 -- ------------------------------------------------------------
 --
