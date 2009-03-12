@@ -1503,6 +1503,16 @@ testOP2
 	     return ()
 	   )
     where
+    importPics ""
+	= return ()
+    importPics idir
+	= do
+	  execCmd ["set",   "import-dir",    idir]
+	  execCmd ["set",   "import-dialog", "0" ]
+	  execCmd ["unset", "import-pattern"     ]
+	  execCmd ["unset", "import-since"       ]
+	  return ()
+
     evalRes ResponseOk (Just fn) d
 	| d `isPrefixOf` fn		= drop (length d + 1) fn
     evalRes _          _         _	= ""

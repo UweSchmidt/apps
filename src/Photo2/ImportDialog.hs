@@ -80,10 +80,15 @@ type PicList    = [PicDescr]
 
 importDialog    :: Config -> [(String, String, String)] -> IOE PicList
 importDialog cnf pics
-    = do
-      viewPics
-      liftIO $ dialog emptyAttrs [] [] pics'
+    | dia
+	= do
+	  viewPics
+	  liftIO $ dialog emptyAttrs [] [] pics'
+    | otherwise
+	=  return pics'
     where
+    dia	= not . optOFF optImportDialog $ cnf
+
     imgBase     = normPath . getImportBase $ cnf
     pics'       = map (\ (x1, x2, x3) -> (x1, x2, x3, emptyAttrs)) pics
 

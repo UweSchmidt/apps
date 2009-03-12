@@ -69,6 +69,9 @@ optForceCopy            = "copy-copy"
 optForceExif            :: String
 optForceExif            = "copy-exif"
 
+optImportDialog		:: String
+optImportDialog		= "import-dialog"
+
 getImportBase           :: Config -> String
 getImportBase           = getDefOpt "../Diakaesten" "import-base"
 
