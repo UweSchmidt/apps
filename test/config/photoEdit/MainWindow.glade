@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Mar 15 17:44:25 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar 15 17:56:24 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -141,10 +141,8 @@
                       </widget>
                     </child>
                     <child>
-                      <widget class="GtkSeparatorMenuItem" id="menuitem5">
+                      <widget class="GtkSeparatorMenuItem" id="separatormenuitem5">
                         <property name="visible">True</property>
-                        <property name="label" translatable="yes">menuitem5</property>
-                        <property name="use_underline">True</property>
                       </widget>
                     </child>
                     <child>
@@ -175,10 +173,8 @@
                       </widget>
                     </child>
                     <child>
-                      <widget class="GtkSeparatorMenuItem" id="menuitem6">
+                      <widget class="GtkSeparatorMenuItem" id="separatormenuitem66">
                         <property name="visible">True</property>
-                        <property name="label" translatable="yes">menuitem6</property>
-                        <property name="use_underline">True</property>
                       </widget>
                     </child>
                     <child>
@@ -489,36 +485,6 @@
               </packing>
             </child>
             <child>
-              <widget class="GtkToolButton" id="tbnewalbum">
-                <property name="visible">True</property>
-                <property name="tooltip_text">convert a picture into an empty album</property>
-                <property name="label" translatable="yes">pic-&gt;alb</property>
-                <property name="stock_id">gtk-add</property>
-              </widget>
-              <packing>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkToolButton" id="tbnewpic">
-                <property name="visible">True</property>
-                <property name="tooltip_text">convert an empty album into a picture</property>
-                <property name="label" translatable="yes">alb-&gt;pic</property>
-                <property name="stock_id">gtk-remove</property>
-              </widget>
-              <packing>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkSeparatorToolItem" id="toolbutton1">
-                <property name="visible">True</property>
-              </widget>
-              <packing>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
               <widget class="GtkToolButton" id="tbalign">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">align</property>
@@ -535,28 +501,6 @@
                 <property name="tooltip_text">reorder selected images</property>
                 <property name="label" translatable="yes">sort</property>
                 <property name="stock_id">gtk-media-rewind</property>
-              </widget>
-              <packing>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkToolButton" id="tbupdate">
-                <property name="visible">True</property>
-                <property name="tooltip_text">update copies and exif from original</property>
-                <property name="label" translatable="yes">update</property>
-                <property name="stock_id">gtk-refresh</property>
-              </widget>
-              <packing>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkToolButton" id="tbhtml">
-                <property name="visible">True</property>
-                <property name="tooltip_text">generate HTML pages for album or selected pictures</property>
-                <property name="label" translatable="yes">HTML</property>
-                <property name="stock_id">gtk-jump-to</property>
               </widget>
               <packing>
                 <property name="homogeneous">True</property>

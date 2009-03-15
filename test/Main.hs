@@ -406,8 +406,8 @@ buildButtons gm
 		 , ("cbcopy",		Just "tbcbcopy"		)
 		 , ("cbdelete",		Just "tbcbdelete"	)
 
-		 , ("newalbum",		Just "tbnewalbum"	)
-		 , ("newpic",		Just "tbnewpic"		)
+		 , ("newalbum",		Nothing			)
+		 , ("newpic",		Nothing			)
 
 		 , ("import",		Nothing			)
 
@@ -415,10 +415,11 @@ buildButtons gm
 		 , ("clearLogWindow", 	Nothing			)
 		 , ("align",		Just "tbalign"		)
 		 , ("sort",		Just "tbsort"		)
-		 , ("update",           Just "tbupdate"         )
-		 , ("html",             Just "tbhtml"           )
+		 , ("update",           Nothing			)
+		 , ("html",             Nothing			)
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
+
 		 , ("test",	 	Just "tbtest"		)
 		 , ("test2",	 	Nothing			)
 		 ]
