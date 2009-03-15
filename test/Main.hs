@@ -409,6 +409,8 @@ buildButtons gm
 		 , ("newalbum",		Just "tbnewalbum"	)
 		 , ("newpic",		Just "tbnewpic"		)
 
+		 , ("import",		Nothing			)
+
 		 , ("showLogWindow", 	Nothing			)      	-- view menu
 		 , ("clearLogWindow", 	Nothing			)
 		 , ("align",		Just "tbalign"		)
@@ -418,6 +420,7 @@ buildButtons gm
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
 		 , ("test",	 	Just "tbtest"		)
+		 , ("test2",	 	Nothing			)
 		 ]
       return buttons
 
@@ -469,6 +472,7 @@ installGUIControls g
 
 	  onActivateBP newalbum	"make pic to album"     $ newSelectedAlbum
 	  onActivateBP newpic	"make album to pic"     $ newSelectedPic
+	  onActivateBP import'	"import pictures"       $ importPics
 
 	  onActivateBP log  	"show log"  	showLogWindow
 	  onActivateBP clearlog "clear log" 	clearLogWindow
@@ -478,13 +482,15 @@ installGUIControls g
           onActivateBP html     "html"          htmlAlbum
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
-	  onActivateBP test     "test"          testOP2
+	  onActivateBP test     "test"          testOP
+	  onActivateBP test2    "test2"         testOP2
 	  return ()
 	where
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
-	  newalbum, newpic,
-	  log, clearlog, align, sort, update, html, invert, deselect, test] = cs
+	  newalbum, newpic, import',
+	  log, clearlog, align, sort, update, html, invert, deselect,
+	  test, test2] = cs
 
     showLogWindow
 	= do
@@ -1198,7 +1204,7 @@ openClipboard path
 		 do
 		 notebookSetCurrentPage tabs 0	-- fill clipboard tab	
 		 loadLightbox cb cs
-		 widgetShowAll tabs
+		 -- widgetShowAll tabs
 		 notebookSetCurrentPage tabs 0
 		 return ()
 	       )
@@ -1245,7 +1251,7 @@ openTab path cs	= withTabs $ open
 	  i <- addTab (fileName path) tabs
 	  notebookSetCurrentPage tabs i
 	  loadLightbox path cs
-	  widgetShowAll tabs
+	  -- widgetShowAll tabs
 	  notebookSetCurrentPage tabs i
 
 -- ------------------------------------------------------------
@@ -1393,6 +1399,59 @@ newSelectedPic
 
 -- ------------------------------------------------------------
 
+importPics		:: IO ()
+importPics
+    = do
+      withTabs (flip notebookSetCurrentPage 0)	-- switch to clipboard
+      updateGUI
+      d  <- importDir
+      fc <- fileChooserDialogNew
+	    (Just "Import Directory Selection")
+	    Nothing
+	    FileChooserActionSelectFolder
+	    [("Cancel", ResponseCancel), ("Import", ResponseOk)]
+      ok <- fileChooserSetCurrentFolder fc d
+      when ok
+	   ( do
+	     res <- dialogRun fc
+	     fn  <- fileChooserGetFilename fc
+	     trcMsg $ "importDialog " ++ show res ++ " " ++ show fn ++ " " ++ show d
+	     widgetDestroy fc
+	     trcMsg $ "import dir = " ++ evalRes res fn d
+
+	     cbPath	<- getCurrAlbumPath
+	     importPics (evalRes res fn d) cbPath
+	     cbContents	<- listAlbumContents cbPath
+	     loadLightbox cbPath cbContents
+	     return ()
+	   )
+    where
+    importPics "" _
+	= return ()
+    importPics idir path
+	= do
+	  execCmd ["set",	"import-dir",		idir		]
+	  execCmd ["set",	"import-since",		"1970-01-01"	]
+	  execCmd ["set",	"import-dialog",	"0"	]
+	  execCmd ["set",	"import-pattern",	".*"	]
+	  execCmd ["import",	path				]
+	  return ()
+
+    evalRes ResponseOk (Just fn) d
+	| d `isPrefixOf` fn		= drop (length d + 1) fn
+    evalRes _          _         _	= ""
+
+    importDir
+	= do
+	  cwd  <- getCurrentDirectory
+	  idir <- do
+		  d0 <- execCmd1 ["options", "import-base"]
+		  return . concat . drop 2 . words $ d0
+	  dir  <- canonicalizePath $ cwd </> idir
+	  return dir
+
+-- ------------------------------------------------------------
+
 updateToggleButtons	:: Table -> IO ()
 updateToggleButtons lbt
     = do
@@ -1485,49 +1544,6 @@ testOP = do
 	 withCurrTab  $ logMsg . ("currTab=   " ++) . show
 
 testOP2
-    = do
-      d  <- importDir
-      fc <- fileChooserDialogNew
-	    (Just "Import Directory Selection")
-	    Nothing
-	    FileChooserActionSelectFolder
-	    [("Cancel", ResponseCancel), ("Import", ResponseOk)]
-      ok <- fileChooserSetCurrentFolder fc d
-      when ok
-	   ( do
-	     res <- dialogRun fc
-	     fn  <- fileChooserGetFilename fc
-	     trcMsg $ "importDialog " ++ show res ++ " " ++ show fn ++ " " ++ show d
-	     widgetDestroy fc
-	     trcMsg $ "import dir = " ++ evalRes res fn d
-	     return ()
-	   )
-    where
-    importPics ""
-	= return ()
-    importPics idir
-	= do
-	  execCmd ["set",   "import-dir",    idir]
-	  execCmd ["set",   "import-dialog", "0" ]
-	  execCmd ["unset", "import-pattern"     ]
-	  execCmd ["unset", "import-since"       ]
-	  return ()
-
-    evalRes ResponseOk (Just fn) d
-	| d `isPrefixOf` fn		= drop (length d + 1) fn
-    evalRes _          _         _	= ""
-
-    importDir
-	= do
-	  cwd  <- getCurrentDirectory
-	  idir <- do
-		  d0 <- execCmd1 ["options", "import-base"]
-		  return . concat . drop 2 . words $ d0
-	  dir  <- canonicalizePath $ cwd </> idir
-	  return dir
-	  
-
-testOP3
     = do
       cmd <- albumDialog
       execCmd $ words cmd

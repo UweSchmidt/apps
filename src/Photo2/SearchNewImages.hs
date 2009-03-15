@@ -29,7 +29,7 @@ import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
 scanForNewImages :: Config -> IOE [(String, String, String)]
 scanForNewImages c
     = do
-      -- liftIO $ print [imgBase,imgBase',imgDir,imgDir',searchDir,newerThan0,filterEx]
+      liftIO $ print [imgBase,imgBase',imgDir,imgDir',searchDir,newerThan0,filterEx]
       newerThan <- ( if null newerThan0
                      then ( do
                             currTime <- liftIO $ getTimeStamp
@@ -62,7 +62,7 @@ scanForNewImages c
 
     imgBase             = getImportBase                              c
     imgDir              = getDefOpt "."             "import-dir"     c
-    newerThan0          = getDefOpt "2008-01-01"    "import-since"   c
+    newerThan0          = getDefOpt "1970-01-01"    "import-since"   c
     filterEx            = getDefOpt ".*"            "import-pattern" c
     sortByShot          = optON                     "import-by-date" c
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Tue Mar 10 20:42:04 2009 -->
+<!--Generated with glade3 3.4.5 on Sun Mar 15 17:44:25 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -174,6 +174,55 @@
                         </child>
                       </widget>
                     </child>
+                    <child>
+                      <widget class="GtkSeparatorMenuItem" id="menuitem6">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">menuitem6</property>
+                        <property name="use_underline">True</property>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="import">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">import new pictures to clipboard</property>
+                        <property name="label" translatable="yes">import</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image18">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-goto-bottom</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="update">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">update copies and exif data from original</property>
+                        <property name="label" translatable="yes">update</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image15">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-refresh</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="html">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">generate HTML page for album or selected pictures</property>
+                        <property name="label" translatable="yes">HTML</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image16">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-jump-to</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
                   </widget>
                 </child>
               </widget>
@@ -243,34 +292,6 @@
                       </widget>
                     </child>
                     <child>
-                      <widget class="GtkImageMenuItem" id="update">
-                        <property name="visible">True</property>
-                        <property name="tooltip" translatable="yes">update copies and exif data from original</property>
-                        <property name="label" translatable="yes">update</property>
-                        <property name="use_underline">True</property>
-                        <child internal-child="image">
-                          <widget class="GtkImage" id="menu-item-image15">
-                            <property name="visible">True</property>
-                            <property name="stock">gtk-refresh</property>
-                          </widget>
-                        </child>
-                      </widget>
-                    </child>
-                    <child>
-                      <widget class="GtkImageMenuItem" id="html">
-                        <property name="visible">True</property>
-                        <property name="tooltip" translatable="yes">generate HTML page for album or selected pictures</property>
-                        <property name="label" translatable="yes">HTML</property>
-                        <property name="use_underline">True</property>
-                        <child internal-child="image">
-                          <widget class="GtkImage" id="menu-item-image16">
-                            <property name="visible">True</property>
-                            <property name="stock">gtk-jump-to</property>
-                          </widget>
-                        </child>
-                      </widget>
-                    </child>
-                    <child>
                       <widget class="GtkImageMenuItem" id="invert">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">invert</property>
@@ -308,6 +329,19 @@
                         <property name="use_underline">True</property>
                         <child internal-child="image">
                           <widget class="GtkImage" id="menu-item-image4">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-media-record</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="test2">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">exec</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image17">
                             <property name="visible">True</property>
                             <property name="stock">gtk-media-record</property>
                           </widget>
