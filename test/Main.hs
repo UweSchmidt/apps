@@ -1223,7 +1223,7 @@ openAlbumOrPic path
 	      maybe (openAlbum path)				-- not yet loaded
 		    (withTabs . flip notebookSetCurrentPage)	-- already loaded
 		    $ elemIndex path allPaths
-	 else return ()						-- not yet done: open image in extra window
+	 else openPic path
     where
     openAlbum	:: String -> IO ()
     openAlbum path
@@ -1232,6 +1232,18 @@ openAlbumOrPic path
 	  cs <- listAlbumContents path
 	  openTab path cs
 
+openPic	:: String -> IO ()
+openPic path
+    = do
+      trcMsg $ "openPic " ++ path
+      im		<- imageNewFromFile ipath
+      iw		<- windowNew
+      containerAdd	iw im
+      windowSetTitle	iw ("Picture: " ++ ipath)
+      widgetShowAll	iw
+      windowPresent	iw
+    where
+    ipath	= pathToImg path
 
 listAlbumContents	:: String -> IO [(String, String)]
 listAlbumContents path
@@ -1533,6 +1545,9 @@ listTab lbt
 
 pathToIcon	:: String -> String
 pathToIcon	= ("160x120" ++) . (++ ".jpg")
+
+pathToImg	:: String -> String
+pathToImg	= ("1400x1050" ++) . (++ ".jpg")
 
 -- ------------------------------------------------------------
 
