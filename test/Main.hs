@@ -1239,7 +1239,7 @@ openPic path
       im		<- imageNewFromFile ipath
       iw		<- windowNew
       containerAdd	iw im
-      windowSetTitle	iw ("Picture: " ++ ipath)
+      windowSetTitle	iw path
       widgetShowAll	iw
       windowPresent	iw
     where
@@ -1249,7 +1249,7 @@ listAlbumContents	:: String -> IO [(String, String)]
 listAlbumContents path
     = do
       contents <- execCmdL ["ls", path]
-      names    <- return $ map fileName contents
+      names    <- return $ map fileName   contents
       paths    <- return $ map pathToIcon contents
       trcMsg $ "listAlbumContents: " ++ show (path, names)
       return (zip names paths)
@@ -1383,8 +1383,8 @@ newSelectedAlbum
 		      newName <- albumDialog
 		      when (not . null $ newName)
 			   ( do
-			     execCmd ["makealbum", path]
-			     execCmd ["rename",    path, newName]
+			     execCmd ["makealbum", path, ";",
+			              "rename",    path, newName]
 			     clearSelected
 			     withLightboxTable updateToggleButtons
 			     return ()
@@ -1443,11 +1443,11 @@ importPics
 	= return ()
     importPics idir path
 	= do
-	  execCmd ["set",	"import-dir",		idir		]
-	  execCmd ["set",	"import-since",		"1970-01-01"	]
-	  execCmd ["set",	"import-dialog",	"0"	]
-	  execCmd ["set",	"import-pattern",	".*"	]
-	  execCmd ["import",	path				]
+	  execCmd ["set",	"import-dir",		idir,		";",
+	           "set",	"import-since",		"1970-01-01",	";",
+		   "set",	"import-dialog",	"0",		";",
+	           "set",	"import-pattern",	".*",		";",
+	           "import",	path					]
 	  return ()
 
     evalRes ResponseOk (Just fn) d
