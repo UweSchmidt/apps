@@ -115,6 +115,7 @@ main = do
 			, "LogWindow.glade"
 			, "QuitDialog.glade"
 			, "AlbumIdDialog.glade"
+			, "AttributeDialog.glade"
 			]
   initApp 	xwins
 
@@ -162,11 +163,13 @@ data GUI = GUI { window    :: Window
 	       , logarea   :: TextView
 	       , quitdlg   :: Dialog
 	       , albumdlg  :: EDialog 
+	       , attrdlg   :: ADialog
 	       }
 
 type Lightbox	= (ScrolledWindow, Table)
 type Buttons	= [ButtonPair]
 type EDialog    = (Dialog, Entry)
+type ADialog    = (Dialog, Table)
 
 -- ------------------------------------------------------------
 
@@ -183,6 +186,7 @@ theLogWindow	= (logwindow, \ w g -> g {logwindow = w})
 theLogArea	= (logarea,   \ a g -> g {logarea   = a})
 theQuitDlg	= (quitdlg,   \ d g -> g {quitdlg   = d})
 theAlbumDlg     = (albumdlg,  \ d g -> g {albumdlg  = d})
+theAttrDlg      = (attrdlg,   \ d g -> g {attrdlg   = d})
 
 -- ------------------------------------------------------------
 
@@ -275,6 +279,7 @@ withLightbox            = withComp (theLightbox       `sub` theGUI)
 withLightboxTable       = withComp (theLightboxTable  `sub` theGUI)
 withLightboxWindow      = withComp (theLightboxWindow `sub` theGUI)
 withAlbumDialog         = withComp (theAlbumDlg       `sub` theGUI)
+withAttrDialog          = withComp (theAttrDlg        `sub` theGUI)
 
 withLogger              = withComp (theLogger         `sub` theCtrl)
 withSelected            = withComp (theSelected       `sub` theCtrl)
@@ -293,6 +298,7 @@ getCurrSelected         = withCurrSelected	return
 getClipboardSelected	= withClipboardSelected	return
 getClipboard		= withClipboard		return
 getAlbumDialog          = withAlbumDialog       return
+getAttrDialog           = withAttrDialog        return
 
 getLogger               = withLogger		return
 
@@ -372,7 +378,7 @@ warnMsg		= logMsg . ("Warning: " ++)
 -- ------------------------------------------------------------
 
 buildGUI	:: [GladeXML] -> IO GUI
-buildGUI [gm, gl, qd, ad]
+buildGUI [gm, gl, qd, ad, at]
     = do
       window    <- xmlGetWidget gm castToWindow         "main"
       statusbar <- xmlGetWidget gm castToStatusbar      "statusbar"
@@ -386,10 +392,12 @@ buildGUI [gm, gl, qd, ad]
       quitDlg   <- xmlGetWidget qd castToDialog         "quitDialog"
       albumDlg  <- xmlGetWidget ad castToDialog         "albumDialog"
       albumEnt  <- xmlGetWidget ad castToEntry          "albumId"
+      attrDlg   <- xmlGetWidget at castToDialog         "attrDialog"
+      attrTbl   <- xmlGetWidget at castToTable          "attrTable"
 
       return $ GUI window statusbar tabs (lightbox, lbxtable)
 	           controls logwindow logarea
-		   quitDlg (albumDlg, albumEnt)
+		   quitDlg (albumDlg, albumEnt) (attrDlg, attrTbl)
 
 buildButtons	:: GladeXML -> IO Buttons
 buildButtons gm
@@ -483,7 +491,7 @@ installGUIControls g
           onActivateBP html     "html"          htmlAlbum
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
-	  onActivateBP test     "test"          testOP
+	  onActivateBP test     "test"          testOP1
 	  onActivateBP test2    "test2"         testOP2
 	  return ()
 	where
@@ -540,6 +548,23 @@ albumDialog
     where
     evalRes ResponseOk s        = s
     evalRes _		_	= ""
+
+-- ------------------------------------------------------------
+
+attrDialog	:: IO [(String, String)]
+attrDialog
+    = do
+      (ad, at)	<- getAttrDialog
+      res	<- dialogRun	ad
+      widgetHide		ad
+      el	<- tableGetAttr at
+      return $ evalRes res el
+    where
+    evalRes ResponseOk es	= es
+    evalRes _	       _	= []
+
+    tableGetAttr tbl
+	= return [("descr:dummy", "emil")]
 
 -- ------------------------------------------------------------
 
@@ -1564,6 +1589,12 @@ testOP2
       cmd <- albumDialog
       execCmd $ words cmd
       return ()          
+
+testOP1
+    = do
+      attrs <- attrDialog
+      trcMsg $ "attribute dialog, result: " ++ show attrs
+      return ()
 
 -- ------------------------------------------------------------
 --
