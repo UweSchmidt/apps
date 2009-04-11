@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Mar 15 17:56:24 2009 -->
+<!--Generated with glade3 3.4.5 on Sat Apr 11 17:20:03 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -143,6 +143,19 @@
                     <child>
                       <widget class="GtkSeparatorMenuItem" id="separatormenuitem5">
                         <property name="visible">True</property>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="edit">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">Edit album and picture attributes</property>
+                        <property name="label" translatable="yes">edit attributes</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image19">
+                            <property name="stock">gtk-edit</property>
+                          </widget>
+                        </child>
                       </widget>
                     </child>
                     <child>
@@ -478,6 +491,24 @@
             </child>
             <child>
               <widget class="GtkSeparatorToolItem" id="separatorbutton27">
+                <property name="visible">True</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkToolButton" id="tbedit">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">attr</property>
+                <property name="stock_id">gtk-edit</property>
+              </widget>
+              <packing>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkSeparatorToolItem" id="separatorbutton28">
                 <property name="visible">True</property>
               </widget>
               <packing>

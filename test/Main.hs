@@ -5,7 +5,9 @@ import           Control.Arrow
 
 -- import           Control.Concurrent
 
-import           Control.Monad       	( when )
+import           Control.Monad       	( filterM
+					, when
+					)
 import           Control.Monad.Trans 	( liftIO )
 
 import           Data.Either
@@ -16,17 +18,22 @@ import           Data.List	   	( delete
 					, isPrefixOf
 					, sortBy
 					)
+import qualified Data.Map as M
 import           Data.Maybe
 
 import           Graphics.UI.Gtk
 import           Graphics.UI.Gtk.Glade
 
+import qualified Photo2.ArchiveTypes as AT
 import		 Photo2.ModelInterface
 import		 Photo2.FilePath
 
 import           System.IO
 import           System.Directory
 import           System.IO.Unsafe      	( unsafePerformIO )
+
+import qualified Text.XML.HXT.Arrow   as T
+import qualified Text.XML.HXT.RelaxNG as NG
 
 -- ------------------------------------------------------------
 
@@ -65,6 +72,10 @@ map12M f g (x, y)	= do
 				      (\ v -> g v >>= return . Just )
                                       $ y
 			  return (x1, y1)
+
+-- ------------------------------------------------------------
+
+type Attrs		= [(String, String)]
 
 -- ------------------------------------------------------------
 
@@ -418,6 +429,7 @@ buildButtons gm
 		 , ("newpic",		Nothing			)
 
 		 , ("import",		Nothing			)
+		 , ("edit",             Just "tbedit"           )
 
 		 , ("showLogWindow", 	Nothing			)      	-- view menu
 		 , ("clearLogWindow", 	Nothing			)
@@ -482,6 +494,7 @@ installGUIControls g
 	  onActivateBP newalbum	"make pic to album"     $ newSelectedAlbum
 	  onActivateBP newpic	"make album to pic"     $ newSelectedPic
 	  onActivateBP import'	"import pictures"       $ importPics
+	  onActivateBP editAttr "edit attributes"       $ editAttributes
 
 	  onActivateBP log  	"show log"  	showLogWindow
 	  onActivateBP clearlog "clear log" 	clearLogWindow
@@ -497,7 +510,7 @@ installGUIControls g
 	where
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
-	  newalbum, newpic, import',
+	  newalbum, newpic, import', editAttr,
 	  log, clearlog, align, sort, update, html, invert, deselect,
 	  test, test2] = cs
 
@@ -551,10 +564,11 @@ albumDialog
 
 -- ------------------------------------------------------------
 
-attrDialog	:: IO [(String, String)]
-attrDialog
+attrDialog	:: Attrs -> IO Attrs
+attrDialog as
     = do
       (ad, at)	<- getAttrDialog
+      tableSetAttr              at
       res	<- dialogRun	ad
       widgetHide		ad
       el	<- tableGetAttr at
@@ -563,8 +577,42 @@ attrDialog
     evalRes ResponseOk es	= es
     evalRes _	       _	= []
 
+    tableSetAttr tbl
+	= do
+	  el <- tableGetEntries tbl
+	  mapM_ setDefaultAttr el
+	where
+	setDefaultAttr e
+	    = do
+	      n <- widgetGetName e
+	      maybe (return ())
+		    ( \ v1 ->
+		      do
+		      when (not . null $ v1)
+		           (entrySetText e v1)
+		    ) $ lookup n as
+
     tableGetAttr tbl
-	= return [("descr:dummy", "emil")]
+	= do
+	  el <- tableGetEntries tbl
+	  al <- mapM ( \ c ->
+		       do
+		       n <- widgetGetName c
+		       v <- entryGetText c
+		       return (n, v)
+		     ) el
+	  return $ filter (not . null . snd) al
+
+tableGetEntries	:: Table -> IO [Entry]
+tableGetEntries tbl
+    = do
+      cells   <- containerGetChildren tbl
+      entries <- filterM ( \ c ->
+			   do
+			   n <- widgetGetName c
+			   return $ NG.match ".*:.*" n
+			 ) cells
+      return $ map castToEntry entries
 
 -- ------------------------------------------------------------
 
@@ -1591,10 +1639,88 @@ testOP2
       return ()          
 
 testOP1
+    = testOP2
+
+-- ------------------------------------------------------------
+
+editAttributes	:: IO ()
+editAttributes
     = do
-      attrs <- attrDialog
+      as    <- getSelectedAttrs
+      trcMsg $ "attribute dialog, default: " ++ show as
+      attrs <- attrDialog as
       trcMsg $ "attribute dialog, result: " ++ show attrs
+      setSelectedAttrs as attrs
       return ()
+
+setSelectedAttrs	:: Attrs -> Attrs -> IO ()
+setSelectedAttrs asOld as
+    = do
+      lbt  <- getLightboxTable
+      path <- getCurrAlbumPath
+      withToggleButtons_
+        ( \ tb ->
+	  do
+	  v <- toggleButtonGetActive tb
+	  when v
+	    ( do
+	      n <- widgetGetName    tb
+              p <- return         $ path </> n
+	      updateAttrs           p
+	      toggleButtonSetActive tb False
+	      updateGUI
+	    )
+	) lbt
+    where
+    updateAttrs p
+	= mapM_ (uncurry update1Attr) as
+	where
+	update1Attr k v
+	    | null v
+		= return ()
+	    | v == (fromMaybe "" . lookup k $ asOld)
+		= return ()
+	    | v == "\"\""
+		= do
+		  logMsg $ unwords ["delete attr", show k, "for entry", show p]
+	          execCmd ["attr",p, k]
+		  logMsg $ unwords ["delete attr finished for", show p]
+	    | otherwise
+		= do
+		  logMsg $ unwords ["update attr", show k, "with value", show v, "for entry", show p]
+	          execCmd ["attr",p, k, v]
+		  logMsg $ unwords ["update attr finished for", show p]
+	  
+getSelectedAttrs	:: IO Attrs
+getSelectedAttrs
+    = do
+      path <- getLastSelectedPath
+      if null path
+	 then return []
+	 else do
+	      es <- execCmd ["cat", path]
+	      er <- readXmlVal AT.xpAlbumEntry es
+	      return $ toAttrs er
+    where
+    toAttrs
+	= maybe AT.emptyAttrs (AT.picAttrs . snd)
+	  >>>
+	  M.toList
+          >>>
+	  map (first show)
+	  
+-- ------------------------------------------------------------
+
+readXmlVal	:: T.PU a -> String -> IO (Maybe a)
+readXmlVal pk inp
+    = do
+      s <- T.runX ( T.readString [(T.a_remove_whitespace, T.v_1)
+				 ,(T.a_validate,          T.v_0)
+				 ] inp
+		  >>>
+		  T.xunpickleVal pk
+		)
+      return $ listToMaybe s
 
 -- ------------------------------------------------------------
 --

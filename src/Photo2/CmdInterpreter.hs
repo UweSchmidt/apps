@@ -395,6 +395,19 @@ findEntries ld gt out p
         arrIO out
       ) `withDefault` ()
 
+showXmlVal	:: PU a -> PathArrow a ()
+showXmlVal pk
+    = const $
+      ( xpickleVal pk
+	>>>
+	writeDocumentToString [ (a_indent, v_1)
+                              , (a_no_xml_pi, v_1)
+                              , (a_output_encoding, usAscii)
+                              ]
+	>>>
+	putRes
+      )
+
 -- ------------------------------------------------------------
 
 parseLs'                        :: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
@@ -448,22 +461,14 @@ parseCat c                      = parseWdCmd' cat c
                                   where
                                   cat = (getTreeAndProcess (\ p -> constA p &&& getNode))
                                         />>>/
-                                        const (xpickleDocument xpAlbumEntry [ (a_indent, v_1)
-                                                                            , (a_no_xml_pi, v_1)
-                                                                            , (a_output_encoding, usAscii)
-                                                                            ] ""
-                                              )
+					showXmlVal xpAlbumEntry
 
 parseDump                       :: String -> [String] -> [Cmd]
 parseDump c                     = parseWdCmd' dump c
                                   where
                                   dump = getTree
                                          />>>/
-                                         const (xpickleDocument xpAlbumTree [ (a_indent, v_1)
-                                                                            , (a_no_xml_pi, v_1)
-                                                                            , (a_output_encoding, usAscii)
-                                                                            ] ""
-                                               )
+					 showXmlVal xpAlbumTree
 
 parseRelatives          :: [String] -> [Cmd]
 parseRelatives          = parseWdCmd' relatives "relatives"
