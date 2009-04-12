@@ -124,7 +124,6 @@ main = do
   xwins      <- mapM loadGladeModel $
 		map ("config/photoEdit/" ++) $
 			[ "MainWindow.glade"
-			, "LogWindow.glade"
 			, "QuitDialog.glade"
 			, "AlbumIdDialog.glade"
 			, "AttributeDialog.glade"
@@ -137,7 +136,6 @@ main = do
   withGUI  	installGUIControls
 
   changeLogger	installStatusbarLogger
-  changeLogger	installLogWindowLogger
 
   withWindow  	widgetShowAll
   openArchive
@@ -171,8 +169,6 @@ data GUI = GUI { window    :: Window
 	       , tabs      :: Notebook
 	       , lightbox  :: Lightbox
 	       , controls  :: Buttons
-	       , logwindow :: Window
-	       , logarea   :: TextView
 	       , quitdlg   :: Dialog
 	       , albumdlg  :: EDialog 
 	       , attrdlg   :: ADialog
@@ -194,8 +190,6 @@ theLightboxWindow       = sel1 `sub` theLightbox
 theLightboxTable	= sel2 `sub` theLightbox
 
 theButtons      = (controls,  \ b g -> g {controls  = b})
-theLogWindow	= (logwindow, \ w g -> g {logwindow = w})
-theLogArea	= (logarea,   \ a g -> g {logarea   = a})
 theQuitDlg	= (quitdlg,   \ d g -> g {quitdlg   = d})
 theAlbumDlg     = (albumdlg,  \ d g -> g {albumdlg  = d})
 theAttrDlg      = (attrdlg,   \ d g -> g {attrdlg   = d})
@@ -283,8 +277,6 @@ withCtrl                = withComp theCtrl
 
 withWindow		= withComp (theWindow    `sub` theGUI)
 withStatusbar		= withComp (theStatusbar `sub` theGUI)
-withLogWindow		= withComp (theLogWindow `sub` theGUI)
-withLogArea		= withComp (theLogArea   `sub` theGUI)
 withTabs                = withComp (theTabs      `sub` theGUI)
 
 withLightbox            = withComp (theLightbox       `sub` theGUI)
@@ -390,7 +382,7 @@ warnMsg		= logMsg . ("Warning: " ++)
 -- ------------------------------------------------------------
 
 buildGUI	:: [GladeXML] -> IO GUI
-buildGUI [gm, gl, qd, ad, at]
+buildGUI [gm, {- gl, -} qd, ad, at]
     = do
       window    <- xmlGetWidget gm castToWindow         "main"
       statusbar <- xmlGetWidget gm castToStatusbar      "statusbar"
@@ -399,8 +391,6 @@ buildGUI [gm, gl, qd, ad, at]
       lbxtable  <- xmlGetWidget gm castToTable          clipboard
       controls  <- buildButtons gm
 
-      logwindow <- xmlGetWidget gl castToWindow         "logwindow"
-      logarea   <- xmlGetWidget gl castToTextView       "loggingarea"
       quitDlg   <- xmlGetWidget qd castToDialog         "quitDialog"
       albumDlg  <- xmlGetWidget ad castToDialog         "albumDialog"
       albumEnt  <- xmlGetWidget ad castToEntry          "albumId"
@@ -408,7 +398,7 @@ buildGUI [gm, gl, qd, ad, at]
       attrTbl   <- xmlGetWidget at castToTable          "attrTable"
 
       return $ GUI window statusbar tabs (lightbox, lbxtable)
-	           controls logwindow logarea
+	           controls
 		   quitDlg (albumDlg, albumEnt) (attrDlg, attrTbl)
 
 buildButtons	:: GladeXML -> IO Buttons
@@ -432,8 +422,6 @@ buildButtons gm
 		 , ("import",		Nothing			)
 		 , ("edit",             Just "tbedit"           )
 
-		 , ("showLogWindow", 	Nothing			)      	-- view menu
-		 , ("clearLogWindow", 	Nothing			)
 		 , ("align",		Just "tbalign"		)
 		 , ("sort",		Just "tbsort"		)
 		 , ("update",           Nothing			)
@@ -465,12 +453,10 @@ installGUIControls g
       ts `onSwitchPage` switchTab
 
       installButtonControls
-      configureLogWindow
     where
     mw = window    g
     ts = tabs      g
     bx = lightbox  g
-    lw = logwindow g
     cs = controls  g
     qd = quitdlg   g
 
@@ -497,8 +483,6 @@ installGUIControls g
 	  onActivateBP import'	"import pictures"       $ importPictures
 	  onActivateBP editAttr "edit attributes"       $ editAttributes
 
-	  onActivateBP log  	"show log"  	showLogWindow
-	  onActivateBP clearlog "clear log" 	clearLogWindow
 	  onActivateBP align    "align"         resizeLightboxTable
 	  onActivateBP sort     "sort"          sortSelected
           onActivateBP update   "update"        updateAlbum
@@ -512,14 +496,8 @@ installGUIControls g
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
 	  newalbum, newpic, import', editAttr,
-	  log, clearlog, align, sort, update, html, invert, deselect,
+	  align, sort, update, html, invert, deselect,
 	  test, test2] = cs
-
-    showLogWindow
-	= do
-	  widgetShowAll lw
-	  windowMoveNorthEast lw
-	  windowPresent lw
 
     quitDialog
 	= do
@@ -531,22 +509,6 @@ installGUIControls g
 		  quitApp res
 	     else do
 		  quitApp ResponseNo
-
-    configureLogWindow		:: IO ()
-    configureLogWindow
-	= do
-	  windowSetTransientFor      lw mw
-	  windowSetDestroyWithParent lw True
-	  -- windowSetGravity           lw GravityNorthEast
-	  windowIconify              lw
-	  widgetShowAll              lw
-	  lw `onDelete` (const $ do
-			         trcMsg "delete received for log window: iconify log window"
-			         widgetHideAll lw
-			         windowIconify lw
-			         return True
-			)
-	  return ()
 
 -- ------------------------------------------------------------
 
@@ -656,22 +618,6 @@ installStatusbarLogger oldLog
                                  oldLog msg			-- old logger remains unchanged
                                  showOnStatusbar sb msgRef msg	-- new logger is added
 		       )
-
--- ------------------------------------------------------------
-
-installLogWindowLogger	:: Logger -> IO Logger
-installLogWindowLogger	oldLog
-    = withLogArea $
-      \ la -> do
-	      tb <- textBufferNew Nothing
-	      textViewSetBuffer la tb
-	      return (\ msg -> do
-		               oldLog msg
-                               textBufferInsertAtCursor tb (msg ++ "\n")
-		               it <- textBufferGetEndIter tb
-		               textViewScrollToIter la it 0.0 Nothing
-		               return ()
-		     )
 
 -- ------------------------------------------------------------
 --
@@ -1051,16 +997,6 @@ resizeLightboxTable
       -- trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
       withLightboxTable (resizeTable (picCols w))
       withLightboxTable widgetShowAll
-
--- ------------------------------------------------------------
-
-clearLogWindow	:: IO ()
-clearLogWindow
-    = withLogArea $
-      \ la -> do
-	      trcMsg "log window cleared"
-	      tb <- textViewGetBuffer la
-	      textBufferSetText tb ""
 
 -- ------------------------------------------------------------
 
