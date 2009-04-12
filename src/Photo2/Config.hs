@@ -31,6 +31,9 @@ keyAlbumDir             = newAtom "album-dir"
 keyCreateDate           :: Atom
 keyCreateDate           = newAtom "exif:CreateDate"
 
+keyKeywords             :: Atom
+keyKeywords             = newAtom "descr:Keywords"
+
 -- ------------------------------------------------------------
 
 albumDir                :: Config -> FilePath

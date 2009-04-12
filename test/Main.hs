@@ -16,6 +16,8 @@ import           Data.IORef
 import           Data.List	   	( delete
 					, elemIndex
 					, isPrefixOf
+					, nub
+					, sort
 					, sortBy
 					)
 import qualified Data.Map as M
@@ -26,6 +28,7 @@ import           Graphics.UI.Gtk.Glade
 
 import           Photo2.ArchiveTypes	( nats )
 import qualified Photo2.ArchiveTypes as AT
+import           Photo2.Config		( keyKeywords )
 import		 Photo2.ModelInterface
 import		 Photo2.FilePath
 
@@ -1587,7 +1590,8 @@ testOP1
 editAttributes	:: IO ()
 editAttributes
     = do
-      as    <- getSelectedAttrs
+      path  <- getLastSelectedPath
+      as    <- getAttributes path
       -- trcMsg $ "attribute dialog, default: " ++ show as
       attrs <- attrDialog as
       trcMsg $ "attribute dialog, result: " ++ show attrs
@@ -1616,24 +1620,29 @@ setSelectedAttrs asOld as
     updateAttrs p
 	= mapM_ (uncurry update1Attr) as
 	where
+	setAttr k v
+	    = do
+	      execCmd $ ["attr", p, k] ++ (if null v then [] else [v])
+	      return ()
 	update1Attr k v
 	    | null v
 		= return ()
-	    | v == (fromMaybe "" . lookup k $ asOld)
-		= return ()
-	    | v == "\"\""				-- delete an attribute
+	    | v == "\"\""					-- delete an attribute
+		= setAttr k ""
+	    | k == show keyKeywords && ("+" `isPrefixOf` v)	-- merge keywords
 		= do
-	          execCmd ["attr",p, k]
-		  return ()
-	    | otherwise					-- set an Attribute
-		= do
-	          execCmd ["attr",p, k, v]
-		  return ()
-	  
-getSelectedAttrs	:: IO Attrs
-getSelectedAttrs
+		  oldAs <- getAttributes p
+		  setAttr k $ mergeAttrs (tail v) (fromMaybe "" . lookup k $ oldAs)
+	    | otherwise						-- set an Attribute
+		= setAttr k v
+	mergeAttrs as
+	    = unwords . sort . nub . (words as ++) . words
+
+-- ------------------------------------------------------------
+
+getAttributes	:: String -> IO Attrs
+getAttributes path
     = do
-      path <- getLastSelectedPath
       if null path
 	 then return []
 	 else do
