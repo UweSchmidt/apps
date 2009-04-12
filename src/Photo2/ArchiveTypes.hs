@@ -472,6 +472,11 @@ showAspect Crop         = "crop"
 
 -- ----------------------------------------
 
+nats	:: [Int]
+nats	= [1..]
+
+-- ----------------------------------------
+
 readGeo                 :: String -> Geo
 readGeo s               = Geo (read w) (read h)
                           where

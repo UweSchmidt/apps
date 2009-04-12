@@ -190,15 +190,17 @@ importOrig c p pic
       when (not ex)
            ( throwError $ "importOrig: original file " ++ show src ++ " does not exist" )
       up <- upToDate
-      if not up
+      if (not up || not existsCpy)
          then do
               mkDirectoryPath dst
               copy
               geo <- getImageSize dst
-              let pic' = change theCopies (M.insert (newAtom dir) (Copy geo)) pic
+              let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
               return (rnf pic' `seq` pic')
          else return pic
     where
+    cpyKey      = newAtom dir
+    existsCpy   = M.member cpyKey . load theCopies $ pic
     existsSrc   = liftIO $ doesFileExist src
 
     copy
@@ -241,14 +243,16 @@ createCopy c p s pic
            ( throwError $ "createCopy: original file " ++ show src ++ " does not exist" )
       mkDirectoryPath dst
       up <- upToDate
-      if not up
+      if (not up || not existsCpy)
          then do
               resize
               geo <- getImageSize dst
-              let pic' = change theCopies (M.insert (newAtom . sizeDir $ s) (Copy geo)) pic
+              let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
               return (rnf pic' `seq` pic')
          else return pic
     where
+    cpyKey      = newAtom . sizeDir $ s
+    existsCpy   = M.member cpyKey . load theCopies $ pic
     existsSrc   = liftIO $ doesFileExist src
 
     resize

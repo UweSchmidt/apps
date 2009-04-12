@@ -34,6 +34,8 @@ importPics c p
       ( checkEntryLoaded
         >>>
         (ins $< (importScan >>> importSelection))
+	>>>
+	setEdited
       )
     where
     importScan
@@ -60,7 +62,7 @@ importPics c p
             = zipWith newPic newIds nps
             where
             newIds      :: [String]
-            newIds      = filter (`notElem` used) . map picnr $ [1..]
+            newIds      = filter (`notElem` used) . map picnr $ nats
 
             newPic      :: String -> PicDescr -> AlbumTree
             newPic pid (o,r,x,al)
@@ -70,6 +72,7 @@ importPics c p
                                    , picRaw     = r
                                    , picXmp     = x
                                    , picAttrs   = al
+				   , picEdited  = True
                                    }
 
 

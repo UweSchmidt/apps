@@ -301,7 +301,7 @@ genHtml rec formats conf p0
 				      >>>
 				      hasName "td"
 				      >>>
-				      catA (zipWith insertChild [1..] cs)
+				      catA (zipWith insertChild nats cs)
 				    )
 				    >>.
 				    part

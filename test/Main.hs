@@ -24,6 +24,7 @@ import           Data.Maybe
 import           Graphics.UI.Gtk
 import           Graphics.UI.Gtk.Glade
 
+import           Photo2.ArchiveTypes	( nats )
 import qualified Photo2.ArchiveTypes as AT
 import		 Photo2.ModelInterface
 import		 Photo2.FilePath
@@ -493,7 +494,7 @@ installGUIControls g
 
 	  onActivateBP newalbum	"make pic to album"     $ newSelectedAlbum
 	  onActivateBP newpic	"make album to pic"     $ newSelectedPic
-	  onActivateBP import'	"import pictures"       $ importPics
+	  onActivateBP import'	"import pictures"       $ importPictures
 	  onActivateBP editAttr "edit attributes"       $ editAttributes
 
 	  onActivateBP log  	"show log"  	showLogWindow
@@ -734,6 +735,7 @@ addTab lab tabs
 
 -- ------------------------------------------------------------
 
+mkToggleButton :: String -> FilePath -> IO ToggleButton
 mkToggleButton tbId tbImg
     = do
       tb <- toggleButtonNew
@@ -848,7 +850,7 @@ storeTab
 invertSelected	:: IO ()
 invertSelected
     = do
-      trcMsg $ "invert selection"
+      -- trcMsg $ "invert selection"
       withLightboxTable $
         withToggleButtons_ ( \ tb ->
 			     do
@@ -862,7 +864,7 @@ invertSelected
 clearSelected	:: IO ()
 clearSelected
     = do
-      trcMsg $ "clear selections"
+      -- trcMsg $ "clear selections"
       withLightboxTable $ withToggleButtons_ (flip toggleButtonSetActive False)
       withCurrSelected updateSelected
 
@@ -933,11 +935,12 @@ getButtonNames		= withToggleButtons widgetGetName
 
 -- ------------------------------------------------------------
 
+imgButtonToggled	:: ToggleButton -> IO ()
 imgButtonToggled tb
     = do
       Just n <- get tb widgetName
       s      <- toggleButtonGetActive tb
-      trcMsg $ "imgage button toggled: " ++ show n ++ " state is: " ++ show s
+      -- trcMsg $ "image button toggled: " ++ show n ++ " state is: " ++ show s
       changeCurrSelected ( (if s
 			    then addSelected
 			    else remSelected) n)
@@ -956,11 +959,11 @@ imgButtonToggled tb
 updateSelected		:: [String] -> IO ()
 updateSelected sl
     = do
-      trcMsg $ "images selected: " ++ unwords sl
+      -- trcMsg $ "images selected: " ++ unwords sl
       withLightboxTable $ withToggleButtons_ (setLabel (labels sl))
     where
     labels []	= []
-    labels (x:xs)	= (x, "*") : zip (reverse sl) (map show [1..])
+    labels (x:xs)	= (x, "*") : zip (reverse sl) (map show nats)
 
     setLabel ll tb
 	= do
@@ -978,7 +981,7 @@ fillTable tab ws
       rows <- get tab tableNRows
       cols <- get tab tableNColumns
       mapM_ (uncurry addWidget) $ zip (coords rows cols) ws
-      trcMsg $ "fillTable" ++ show (rows,cols)
+      -- trcMsg $ "fillTable" ++ show (rows,cols)
     where
     addWidget (i, j) w
 	= tableAttach tab w j (j+1) i (i+1) [] [] 2 2
@@ -1120,8 +1123,7 @@ copySelectionFromClipboard mv
 				  withClipboardDo invertSelected
 				  getClipboardSelected
 			     else return cbs1
-		   c   <- return (clipboard, cbs)
-		   copySelected c cb lb
+		   copySelected (clipboard, reverse cbs) cb lb
 		   when mv $
 			withClipboardDo deleteSelectedFromClipboard
 		   withClipboardDo clearSelected
@@ -1485,8 +1487,8 @@ newSelectedPic
 
 -- ------------------------------------------------------------
 
-importPics		:: IO ()
-importPics
+importPictures		:: IO ()
+importPictures
     = do
       withTabs (flip notebookSetCurrentPage 0)	-- switch to clipboard
       updateGUI
@@ -1506,15 +1508,15 @@ importPics
 	     trcMsg $ "import dir = " ++ evalRes res fn d
 
 	     cbPath	<- getCurrAlbumPath
-	     importPics (evalRes res fn d) cbPath
+	     importPictures' (evalRes res fn d) cbPath
 	     cbContents	<- listAlbumContents cbPath
 	     loadLightbox cbPath cbContents
 	     return ()
 	   )
     where
-    importPics "" _
+    importPictures' "" _
 	= return ()
-    importPics idir path
+    importPictures' idir path
 	= do
 	  execCmd ["set",	"import-dir",		idir,		";",
 	           "set",	"import-since",		"1970-01-01",	";",
@@ -1577,7 +1579,7 @@ imageDescr	= zip imgNames ( map imgFile $ imgNames )
 -- ------------------------------------------------------------
 
 nameGen		:: [String] -> [String]
-nameGen inUse	= filter (`notElem` inUse) . names $ [1..]
+nameGen inUse	= filter (`notElem` inUse) . names $ nats
 		  where
 		  names = map ( ("pic-" ++)
 				   . reverse . take 4 . reverse
@@ -1624,8 +1626,11 @@ pathToImg	= ("1400x1050" ++) . (++ ".jpg")
 
 -- ------------------------------------------------------------
 
+listLightboxContents 	:: IO ()
 listLightboxContents	= withTabs $ (\ lbt -> lightboxContents lbt >>= logMsg . show )
-listSelectedContents     = selectedContents >>= logMsg . show
+
+listSelectedContents :: IO ()
+listSelectedContents    = selectedContents >>= logMsg . show
 
 testOP = do
 	 listLightboxContents
@@ -1647,7 +1652,7 @@ editAttributes	:: IO ()
 editAttributes
     = do
       as    <- getSelectedAttrs
-      trcMsg $ "attribute dialog, default: " ++ show as
+      -- trcMsg $ "attribute dialog, default: " ++ show as
       attrs <- attrDialog as
       trcMsg $ "attribute dialog, result: " ++ show attrs
       setSelectedAttrs as attrs
@@ -1680,16 +1685,14 @@ setSelectedAttrs asOld as
 		= return ()
 	    | v == (fromMaybe "" . lookup k $ asOld)
 		= return ()
-	    | v == "\"\""
+	    | v == "\"\""				-- delete an attribute
 		= do
-		  logMsg $ unwords ["delete attr", show k, "for entry", show p]
 	          execCmd ["attr",p, k]
-		  logMsg $ unwords ["delete attr finished for", show p]
-	    | otherwise
+		  return ()
+	    | otherwise					-- set an Attribute
 		= do
-		  logMsg $ unwords ["update attr", show k, "with value", show v, "for entry", show p]
 	          execCmd ["attr",p, k, v]
-		  logMsg $ unwords ["update attr finished for", show p]
+		  return ()
 	  
 getSelectedAttrs	:: IO Attrs
 getSelectedAttrs
@@ -1740,7 +1743,7 @@ sortBySelection 	:: (Eq a) => [a] -> [a] -> [b] -> [b]
 sortBySelection sns ns
     = map snd . sortBy (compare `F.on` fst) . zip ixseq
     where
-    ixmap = zip sns [1..]
+    ixmap = zip sns nats
     ixseq = map (fromJust . flip lookup ixmap) ns
 
 -- ------------------------------------------------------------
@@ -1775,7 +1778,10 @@ isPicture path	= do
 		  t <- execCmd1 ["isalbum", path]
 		  return (t == "False")
 
+quitM		:: IO String
 quitM		= execCmd ["exit"]
+
+saveAndQuitM	:: IO String
 saveAndQuitM	= execCmd ["close", ";", "exit"]
 
 -- ------------------------------------------------------------
