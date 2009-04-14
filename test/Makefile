@@ -10,7 +10,7 @@ all	: $(progs)
 $(prog)	: A.hs $(SRC)
 	ghc --make -Wall -O2 -i../src -o $@ A.hs
 
-$(prog2)	: Main.hs
+$(prog2): Main.hs $(SRC)
 	ghc --make -Wall -O2 -i../src -o $@ Main.hs
 
 install		: $(progs)

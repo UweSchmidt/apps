@@ -82,7 +82,10 @@ genHtml rec formats conf p0
 			  . M.lookup dictId
 			  . confDict
 			  $ conf
-
+    translateGM		= ("<a href='" ++) . (++ "'>google maps</a>")
+    translateWikipedia  = ("<a href='" ++) . (++ "'>Wikipedia</a>")
+    translateWeb url    = ("<a href='" ++ url ++ "'>" ++ url ++ "</a>")
+    translateWeb'       = ("<a href='" ++) . (++ "'>Web</a>")
     formats'		:: [String]
     formats'
 	| null fs	= words . fromMaybe "html-1024x768" . M.lookup layoutKey . confAttrs $ conf
@@ -142,6 +145,9 @@ genHtml rec formats conf p0
 		, insertText "[theTitle]"       theTitle
 		, insertText "[theSubTitle]"    theSubTitle
 		, insertText "[theResources]"   theResources
+		, insertText "[theGoogleMaps]"  theGoogleMaps
+		, insertText "[theWeb]"         theWeb
+		, insertText "[theWikipedia]"   theWikipedia
 		, insertText "[theHeadTitle]"   theHeadTitle'
 		, insertDate "[theDate]"
 
@@ -222,6 +228,12 @@ genHtml rec formats conf p0
 	    theTitle		= valOf        titleKey
 	    theSubTitle		= valOf        subTitleKey
 	    theResources	= valOf        resourceKey
+	    theGoogleMaps       = translateGM .
+				  valOf $      googleMapsKey
+            theWeb              = translateWeb' .
+				  valOf $      webKey
+            theWikipedia        = translateWikipedia .
+				  valOf $      wikipediaKey
 	    theDuration         = valOf' "1.0" durationKey
 	    theHeadTitle	= removeMarkup theTitle
             theHeadTitle'
@@ -267,6 +279,9 @@ genHtml rec formats conf p0
 				  tr	| "exif:" `isPrefixOf` item
 					  ||
 					  "cam:"  `isPrefixOf` item	= translateExif
+					| item == show googleMapsKey	= translateGM
+					| item == show webKey           = translateWeb
+					| item == show wikipediaKey     = translateWikipedia
 					| otherwise			= id
 
             insertChild		:: Int -> AlbumTree -> CmdArrow XmlTree XmlTree

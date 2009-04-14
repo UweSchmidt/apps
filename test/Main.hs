@@ -376,7 +376,7 @@ trcMsg		:: String -> IO ()
 {-
 trcMsg		= logMsg . ("Trace:   " ++)
 -}
-trcMsg		= hPutStrLn stderr . ("Trace:   " ++)
+trcMsg		= hPutStrLn stderr . ("-- (t)   " ++)
 
 warnMsg		:: String -> IO ()
 warnMsg		= logMsg . ("Warning: " ++)
@@ -1353,7 +1353,7 @@ htmlAlbum
       lbt  <- getLightboxTable
       path <- getCurrAlbumPath
       sel  <- getLastSelectedPath
-      if null sel
+      if False -- null sel
 	 then do
 	      htmlEntry path		-- update album itself and all pictures
 	      invertSelected
@@ -1592,7 +1592,6 @@ editAttributes
     = do
       path  <- getLastSelectedPath
       as    <- getAttributes path
-      -- trcMsg $ "attribute dialog, default: " ++ show as
       attrs <- attrDialog as
       trcMsg $ "attribute dialog, result: " ++ show attrs
       setSelectedAttrs as attrs
@@ -1648,7 +1647,9 @@ getAttributes path
 	 else do
 	      es <- execCmd ["cat", path]
 	      er <- readXmlVal AT.xpAlbumEntry es
-	      return $ toAttrs er
+	      let res = toAttrs er
+	      trcMsg $ "getAttributes: " ++ show res
+	      return res
     where
     toAttrs
 	= maybe AT.emptyAttrs (AT.picAttrs . snd)
@@ -1656,6 +1657,8 @@ getAttributes path
 	  M.toList
           >>>
 	  map (first show)
+	  >>>
+	  map (second (concat . T.runLA (T.xshow T.xread)))
 	  
 -- ------------------------------------------------------------
 

@@ -17,11 +17,14 @@ import           Text.XML.HXT.DOM.Util ( stringTrim )
 
 -- ------------------------------------------------------------
 
-titleKey, subTitleKey, resourceKey, durationKey, fileModificationKey :: Atom
+titleKey, subTitleKey, resourceKey, googleMapsKey, webKey, wikipediaKey, durationKey, fileModificationKey :: Atom
 
 titleKey			= newAtom "descr:Title"
 subTitleKey			= newAtom "descr:Subtitle"
 resourceKey			= newAtom "descr:Resource"
+googleMapsKey			= newAtom "descr:GoogleMaps"
+webKey                          = newAtom "descr:Web"
+wikipediaKey                    = newAtom "descr:Wikipedia"
 durationKey			= newAtom "show:Duration"
 fileModificationKey             = newAtom fileModificationDateTime
 
