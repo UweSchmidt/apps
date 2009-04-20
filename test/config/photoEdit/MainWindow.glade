@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Apr 13 12:54:35 2009 -->
+<!--Generated with glade3 3.4.5 on Mon Apr 20 20:14:57 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
     <property name="title" translatable="yes">Photo2 Album Editor</property>
@@ -221,13 +221,27 @@
                     <child>
                       <widget class="GtkImageMenuItem" id="html">
                         <property name="visible">True</property>
-                        <property name="tooltip" translatable="yes">generate HTML page for album or selected pictures</property>
-                        <property name="label" translatable="yes">HTML</property>
+                        <property name="tooltip" translatable="yes">generate HTML page for selected pictures</property>
+                        <property name="label" translatable="yes">HTML (selected)</property>
                         <property name="use_underline">True</property>
                         <child internal-child="image">
                           <widget class="GtkImage" id="menu-item-image16">
                             <property name="visible">True</property>
                             <property name="stock">gtk-jump-to</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="htmlalbum">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">Generate HTML page for current album</property>
+                        <property name="label" translatable="yes">HTML (album)</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image20">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-goto-last</property>
                           </widget>
                         </child>
                       </widget>

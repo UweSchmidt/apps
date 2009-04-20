@@ -429,6 +429,7 @@ buildButtons gm
 		 , ("sort",		Just "tbsort"		)
 		 , ("update",           Nothing			)
 		 , ("html",             Nothing			)
+		 , ("htmlalbum",        Nothing			)
 		 , ("invert",		Just "tbinvert"		)
 		 , ("deselect",		Just "tbdeselect"	)
 
@@ -489,7 +490,8 @@ installGUIControls g
 	  onActivateBP align    "align"         resizeLightboxTable
 	  onActivateBP sort     "sort"          sortSelected
           onActivateBP update   "update"        updateAlbum
-          onActivateBP html     "html"          htmlAlbum
+          onActivateBP html     "html selected" htmlSelectedEntries
+          onActivateBP htmlA    "html album"    htmlAlbum
 	  onActivateBP invert   "invert"        invertSelected
 	  onActivateBP deselect "deselect"      clearSelected
 	  onActivateBP test     "test"          testOP1
@@ -499,7 +501,7 @@ installGUIControls g
 	[ open, save, close, quit,
 	  movecb, copycb, cbmove, cbcopy, cbdelete,
 	  newalbum, newpic, import', editAttr,
-	  align, sort, update, html, invert, deselect,
+	  align, sort, update, html, htmlA, invert, deselect,
 	  test, test2] = cs
 
     quitDialog
@@ -1347,39 +1349,37 @@ updateAlbum
 
 -- ------------------------------------------------------------
 
-htmlAlbum		:: IO ()
-htmlAlbum
+htmlSelectedEntries		:: IO ()
+htmlSelectedEntries
     = do
       lbt  <- getLightboxTable
       path <- getCurrAlbumPath
-      sel  <- getLastSelectedPath
-      if False -- null sel
-	 then do
-	      htmlEntry path		-- update album itself and all pictures
-	      invertSelected
-	      widgetShowAll lbt
-	      updateGUI
-	      htmlAlbum
-	 else do
-	      withToggleButtons_ ( \ tb ->
-				   do
-				   v <- toggleButtonGetActive tb
-				   when v
-				        ( do
-					  n <- widgetGetName    tb
-                                          p <- return         $ path </> n
-					  htmlEntry             p
-					  toggleButtonSetActive tb False
-					  updateGUI
-					)
-				 ) lbt
-    where
-    htmlEntry	:: FilePath -> IO ()
-    htmlEntry p
-	= do
-	  logMsg $ "generting HTML for " ++ p
-	  execCmd ["html", p]
-	  logMsg $ "HTML generated for " ++ p
+      sel  <- getLastSelectedPath			-- update selected entries
+      withToggleButtons_ ( \ tb ->
+			   do
+			   v <- toggleButtonGetActive tb
+			   when v
+			        ( do
+				  n <- widgetGetName    tb
+                                  p <- return         $ path </> n
+				  htmlEntry             p
+				  toggleButtonSetActive tb False
+				  updateGUI
+				)
+			 ) lbt
+
+htmlAlbum		:: IO ()
+htmlAlbum
+    = do
+      path <- getCurrAlbumPath
+      htmlEntry path			-- update album itself
+
+htmlEntry	:: FilePath -> IO ()
+htmlEntry p
+    = do
+      logMsg $ "generting HTML for " ++ p
+      execCmd ["html", p]
+      logMsg $ "HTML generated for " ++ p
 
 -- ------------------------------------------------------------
 
