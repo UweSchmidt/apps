@@ -34,6 +34,12 @@ keyCreateDate           = newAtom "exif:CreateDate"
 keyKeywords             :: Atom
 keyKeywords             = newAtom "descr:Keywords"
 
+keyGoogleMaps		:: Atom
+keyGoogleMaps		= newAtom "descr:GoogleMaps"
+
+keyGeoCode		:: Atom
+keyGeoCode		= newAtom "descr:GeoCode"
+
 -- ------------------------------------------------------------
 
 albumDir                :: Config -> FilePath

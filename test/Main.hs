@@ -26,9 +26,9 @@ import           Data.Maybe
 import           Graphics.UI.Gtk
 import           Graphics.UI.Gtk.Glade
 
-import           Photo2.ArchiveTypes	( nats )
-import qualified Photo2.ArchiveTypes as AT
-import           Photo2.Config		( keyKeywords )
+import           Photo2.ArchiveTypes		( nats )
+import qualified Photo2.ArchiveTypes 		as AT
+import           Photo2.Config			( keyKeywords )
 import		 Photo2.ModelInterface
 import		 Photo2.FilePath
 
@@ -36,8 +36,8 @@ import           System.IO
 import           System.Directory
 import           System.IO.Unsafe      	( unsafePerformIO )
 
-import qualified Text.XML.HXT.Arrow   as T
-import qualified Text.XML.HXT.RelaxNG as NG
+import qualified Text.XML.HXT.Arrow   		as T
+import qualified Text.Regex.XMLSchema.String	as RE
 
 -- ------------------------------------------------------------
 
@@ -571,6 +571,27 @@ attrDialog as
 		     ) el
 	  return $ filter (not . null . snd) al
 
+{- old: done in ImageOperations
+
+tableNormalizeAttrs	:: Attrs -> Attrs
+tableNormalizeAttrs
+    = concatMap (uncurry normAttr)
+    where
+    normAttr k v
+	| k == "descr:GoogleMaps"	= normGoogleMaps k v	-- normalize google maps URL
+	| null v			= []			-- remove empty fields
+	| otherwise			= [(k,v)]		-- id
+
+    normGoogleMaps k v
+	| null r'	= []
+	| otherwise	= [(k,v'),("descr:GeoCode", fromMaybe "" . lookup "ll" $ r')]
+			  where
+			  v' = "http://maps.google.com/maps?"
+			       ++
+			       intercalate "&" (map (\ (x,y) -> x ++ "=" ++ y) r')
+			  r' = RE.matchSubex ".*[?&]ll=({ll}[-,.0-9]+)&.*&z=({z}[0-9]+)([^0-9].*)?" v
+-}
+    
 tableGetEntries	:: Table -> IO [Entry]
 tableGetEntries tbl
     = do
@@ -578,7 +599,7 @@ tableGetEntries tbl
       entries <- filterM ( \ c ->
 			   do
 			   n <- widgetGetName c
-			   return $ NG.match ".*:.*" n
+			   return $ RE.match ".*:.*" n
 			 ) cells
       return $ map castToEntry entries
 
@@ -1621,21 +1642,13 @@ setSelectedAttrs asOld as
 	where
 	setAttr k v
 	    = do
-	      execCmd $ ["attr", p, k] ++ (if null v then [] else [v])
+	      execCmd $ ["attr", p, k, v]
 	      return ()
 	update1Attr k v
 	    | null v
 		= return ()
-	    | v == "\"\""					-- delete an attribute
-		= setAttr k ""
-	    | k == show keyKeywords && ("+" `isPrefixOf` v)	-- merge keywords
-		= do
-		  oldAs <- getAttributes p
-		  setAttr k $ mergeAttrs (tail v) (fromMaybe "" . lookup k $ oldAs)
 	    | otherwise						-- set an Attribute
 		= setAttr k v
-	mergeAttrs as
-	    = unwords . sort . nub . (words as ++) . words
 
 -- ------------------------------------------------------------
 

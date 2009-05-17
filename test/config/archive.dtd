@@ -9,7 +9,7 @@
 
 <!-- general info for various tags for a arbitrary key-value pairs -->
 <!ELEMENT attr		ANY				>
-<!ATTLIST attr		name	NMTOKEN	#REQUIRED
+<!ATTLIST attr		name	CDATA	#REQUIRED
 			entity	CDATA  	#IMPLIED	>
 
 <!-- a collection of pictures and sub albums -->
@@ -48,7 +48,7 @@
 <!ELEMENT error		ANY				>
 
 <!-- representation configuration data -->
-<!ELEMENT config	(attr*, picture-attributes?, layout*, size*)		>
+<!ELEMENT config	(attr*, picture-attributes?, layout*, dictionary*, size*)		>
 <!ATTLIST config	entity	CDATA  	#IMPLIED
 			config	CDATA	#IMPLIED	>
 
@@ -60,6 +60,10 @@
 			type	CDATA	#REQUIRED
 			entity	CDATA  	#IMPLIED
 			config	CDATA	#IMPLIED	>
+
+<!-- dictionary for language translation layout -->
+<!ELEMENT dictionary	(attr*)			>
+<!ATTLIST dictionary	id	NMTOKEN	#REQUIRED	>
 
 <!-- layout info about album or picture pages -->
 <!ELEMENT page		(attr*)				>

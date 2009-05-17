@@ -36,9 +36,10 @@ import           System.Time    ( ClockTime
                                 )
 import           System.Locale  ( defaultTimeLocale )
 
-import           Text.Regex
-
-import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
+import		 Text.Regex.XMLSchema.String
+				( match
+				, matchSubex
+				)
 
 -- ------------------------------------------------------------
 
@@ -74,20 +75,49 @@ dryCmd False _msg   cmd = cmd
 
 -- ------------------------------------------------------------
 
-mergeAttrs      :: Attrs -> Attrs -> Attrs
-mergeAttrs n o  = M.foldWithKey mergeAttr o n
+mergeAttrs      	:: Attrs -> Attrs -> Attrs
+mergeAttrs n o  	= M.foldWithKey mergeAttr o n
 
-mergeAttr       :: Atom -> Value -> Attrs -> Attrs
+mergeAttr       	:: Atom -> Value -> Attrs -> Attrs
 mergeAttr k v
-    | null v    = M.delete k
-    | otherwise = M.insert k v
+    | v == "-"		= M.delete k			-- "-" indicates delete attribute
+    | k == keyKeywords	= mergeKeywords (words v)
+    | k == keyGoogleMaps= mergeGeoTags v
+    | null v    	= M.delete k
+    | otherwise 	= M.insert k v
 
-remAttrs        :: String -> Attrs -> Attrs
-remAttrs kp     = M.foldWithKey remK M.empty
-                  where
-                  remK k a m
-                      | match kp (show k)       = m
-                      | otherwise               = M.insert k a m
+remAttrs        	:: String -> Attrs -> Attrs
+remAttrs kp     	= M.foldWithKey remK M.empty
+    where
+    remK k a m
+        | match kp (show k)       = m
+        | otherwise               = M.insert k a m
+
+mergeKeywords		:: [String] -> Attrs -> Attrs
+mergeKeywords ws a
+    | null nws		= M.delete keyKeywords               a
+    | otherwise		= M.insert keyKeywords (unwords nws) a
+    where
+    ows			= nub . sort . words . fromMaybe "" . M.lookup keyKeywords $ a
+    nws			= foldl insertKeyw ows ws
+    insertKeyw ws' ('-':w')	= delete w'  ws'
+    insertKeyw ws' ('+':w')	= union [w'] ws'
+    insertKeyw ws' ""		=            ws'
+    insertKeyw ws'      w'	= union [w'] ws'
+
+mergeGeoTags		:: String -> Attrs -> Attrs
+mergeGeoTags url a	= merge (matchSubex "http://maps.google.*[?&]ll=({ll}[-,.0-9]+)&(.*&)?z=({z}[0-9]+)([^0-9].*)?" url)
+    where
+    merge p@[("ll",pos),("z",_zoom)]	= M.insert keyGoogleMaps ( "http://maps.google.com/maps?"
+								   ++
+								   intercalate "&" (map (\ (x,y) -> x ++ "=" ++ y) p)
+								   ++
+								   "&t=k"				-- map type is satelite
+								 )
+					  .
+					  M.insert keyGeoCode    pos
+					  $ a
+    merge _				= a
 
 -- ------------------------------------------------------------
 
@@ -360,6 +390,9 @@ getImageSize f
       res <- execFct False ["identify", "-ping", f]
              `catchError`
              const (return "")
+      return $ parseGeoFromIdentify res
+
+{- old
       return ( maybe (Geo 0 0) (readGeo . head) (matchRegex geometryRE res) )
     where
     geometryRE  :: Regex
@@ -368,6 +401,13 @@ getImageSize f
           where
           digit0 = "[0-9]"
           digit1 = "[1-9]"
+-}
+
+parseGeoFromIdentify	:: String -> Geo
+parseGeoFromIdentify s	= build (matchSubex ".*[ ]({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[ ].*" s)
+    where
+    build [("w",w),("h",h)]	= Geo (read w) (read h)
+    build _                     = Geo 0 0
 
 -- ------------------------------------------------------------
 --

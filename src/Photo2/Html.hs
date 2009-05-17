@@ -228,17 +228,20 @@ genHtml rec formats conf p0
 	    theTitle		= valOf        titleKey
 	    theSubTitle		= valOf        subTitleKey
 	    theResources	= valOf        resourceKey
-	    theGoogleMaps       = translateGM .
+	    theGoogleMaps       = checkSet translateGM .
 				  valOf $      googleMapsKey
-            theWeb              = translateWeb' .
+            theWeb              = checkSet translateWeb' .
 				  valOf $      webKey
-            theWikipedia        = translateWikipedia .
+            theWikipedia        = checkSet translateWikipedia .
 				  valOf $      wikipediaKey
 	    theDuration         = valOf' "1.0" durationKey
 	    theHeadTitle	= removeMarkup theTitle
             theHeadTitle'
 		| null theHeadTitle	= "\160"
 		| otherwise		= theHeadTitle
+
+            checkSet _ ""	= ""
+	    checkSet f s	= f s
 
             removeMarkup	= stringTrim . concat . runLA (xread >>> deep isText >>> getText)
 
