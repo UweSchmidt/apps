@@ -224,9 +224,12 @@ importOrig c p pic
          then do
               mkDirectoryPath dst
               copy
-              geo <- getImageSize dst
-              let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-              return (rnf pic' `seq` pic')
+              geo@(Geo x y) <- getImageSize dst
+	      if (x == 0 && y == 0)
+		 then return pic
+		 else do
+		      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
+		      return (rnf pic' `seq` pic')
          else return pic
     where
     cpyKey      = newAtom dir
@@ -276,9 +279,12 @@ createCopy c p s pic
       if (not up || not existsCpy)
          then do
               resize
-              geo <- getImageSize dst
-              let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-              return (rnf pic' `seq` pic')
+              geo@(Geo x y) <- getImageSize dst
+	      if (x == 0 && y == 0)
+		 then return pic
+		 else do
+		      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
+		      return (rnf pic' `seq` pic')
          else return pic
     where
     cpyKey      = newAtom . sizeDir $ s
@@ -404,7 +410,7 @@ getImageSize f
 -}
 
 parseGeoFromIdentify	:: String -> Geo
-parseGeoFromIdentify s	= build (matchSubex ".*[ ]({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[ ].*" s)
+parseGeoFromIdentify s	= build (matchSubex "\\A[ ]({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[ ]\\A" s)
     where
     build [("w",w),("h",h)]	= Geo (read w) (read h)
     build _                     = Geo 0 0
