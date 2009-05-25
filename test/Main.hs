@@ -595,13 +595,33 @@ tableNormalizeAttrs
 tableGetEntries	:: Table -> IO [Entry]
 tableGetEntries tbl
     = do
-      cells   <- containerGetChildren tbl
-      entries <- filterM ( \ c ->
-			   do
-			   n <- widgetGetName c
-			   return $ RE.match ".*:.*" n
-			 ) cells
+      disabled	<- tableGetDisabled tbl
+      cells   	<- containerGetChildren tbl
+      entries 	<- filterM ( \ c ->
+			     do
+			     n <- widgetGetName c
+			     return $ RE.match ".*:.*" n && n `notElem` disabled
+			   ) cells
       return $ map castToEntry entries
+
+tableGetDisabled	:: Table -> IO [String]
+tableGetDisabled tbl
+    = do
+      cells	<- containerGetChildren tbl
+      entries 	<- mapM disabled cells
+      return	(concat entries)
+    where
+    disabled c
+	= do
+	  n <- widgetGetName c
+	  if RE.match ".*=.*" n
+	     then do
+		  s <- toggleButtonGetActive (castToToggleButton c)
+		  return ( if not s
+			   then [map (\ x -> if x == '=' then ':' else x) n]
+			   else []
+			 )
+	     else return []
 
 -- ------------------------------------------------------------
 
