@@ -123,9 +123,9 @@ loadGladeModel fn
 
 main = do
   initGUI
-
+  gladeDir   <- getGladeDir
   xwins      <- mapM loadGladeModel $
-		map ("config/photoEdit/" ++) $
+		map (gladeDir </>) $
 			[ "MainWindow.glade"
 			, "QuitDialog.glade"
 			, "AlbumIdDialog.glade"
@@ -143,6 +143,21 @@ main = do
   withWindow  	widgetShowAll
   openArchive
   mainGUI
+
+getGladeDir
+    = do
+      ex <- doesDirectoryExist localDir
+      if ex
+	 then return localDir
+	 else do
+	      home <- getHomeDirectory
+	      conf <- return (home </> ".photoEdit")
+	      ex   <- doesDirectoryExist conf
+	      if ex
+		 then return conf
+		 else return "."
+    where
+    localDir	= "./config/photoEdit"
 
 -- ------------------------------------------------------------
 
