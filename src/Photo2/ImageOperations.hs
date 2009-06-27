@@ -1,6 +1,7 @@
 module Photo2.ImageOperations
 where
 
+import           Control.Arrow
 import qualified Control.Exception as CE
 
 import           Control.Monad.Error hiding ( liftIO )
@@ -27,8 +28,8 @@ import           System.Directory
 import           System.Exit
 import           System.IO
 import           System.Posix   ( createLink
-				, getProcessID
-				)
+                                , getProcessID
+                                )
 import           System.Time    ( ClockTime
                                 , toCalendarTime
                                 , formatCalendarTime
@@ -36,10 +37,11 @@ import           System.Time    ( ClockTime
                                 )
 import           System.Locale  ( defaultTimeLocale )
 
-import		 Text.Regex.XMLSchema.String
-				( match
-				, matchSubex
-				)
+import           Text.Regex.XMLSchema.String
+                                ( match
+                                , matchSubex
+                                , sed
+                                )
 
 -- ------------------------------------------------------------
 
@@ -75,49 +77,49 @@ dryCmd False _msg   cmd = cmd
 
 -- ------------------------------------------------------------
 
-mergeAttrs      	:: Attrs -> Attrs -> Attrs
-mergeAttrs n o  	= M.foldWithKey mergeAttr o n
+mergeAttrs              :: Attrs -> Attrs -> Attrs
+mergeAttrs n o          = M.foldWithKey mergeAttr o n
 
-mergeAttr       	:: Atom -> Value -> Attrs -> Attrs
+mergeAttr               :: Atom -> Value -> Attrs -> Attrs
 mergeAttr k v
-    | v == "-"		= M.delete k			-- "-" indicates delete attribute
-    | k == keyKeywords	= mergeKeywords (words v)
+    | v == "-"          = M.delete k                    -- "-" indicates delete attribute
+    | k == keyKeywords  = mergeKeywords (words v)
     | k == keyGoogleMaps= mergeGeoTags v
-    | null v    	= M.delete k
-    | otherwise 	= M.insert k v
+    | null v            = M.delete k
+    | otherwise         = M.insert k v
 
-remAttrs        	:: String -> Attrs -> Attrs
-remAttrs kp     	= M.foldWithKey remK M.empty
+remAttrs                :: String -> Attrs -> Attrs
+remAttrs kp             = M.foldWithKey remK M.empty
     where
     remK k a m
         | match kp (show k)       = m
         | otherwise               = M.insert k a m
 
-mergeKeywords		:: [String] -> Attrs -> Attrs
+mergeKeywords           :: [String] -> Attrs -> Attrs
 mergeKeywords ws a
-    | null nws		= M.delete keyKeywords               a
-    | otherwise		= M.insert keyKeywords (unwords nws) a
+    | null nws          = M.delete keyKeywords               a
+    | otherwise         = M.insert keyKeywords (unwords nws) a
     where
-    ows			= nub . sort . words . fromMaybe "" . M.lookup keyKeywords $ a
-    nws			= foldl insertKeyw ows ws
-    insertKeyw ws' ('-':w')	= delete w'  ws'
-    insertKeyw ws' ('+':w')	= union [w'] ws'
-    insertKeyw ws' ""		=            ws'
-    insertKeyw ws'      w'	= union [w'] ws'
+    ows                 = nub . sort . words . fromMaybe "" . M.lookup keyKeywords $ a
+    nws                 = foldl insertKeyw ows ws
+    insertKeyw ws' ('-':w')     = delete w'  ws'
+    insertKeyw ws' ('+':w')     = union [w'] ws'
+    insertKeyw ws' ""           =            ws'
+    insertKeyw ws'      w'      = union [w'] ws'
 
-mergeGeoTags		:: String -> Attrs -> Attrs
-mergeGeoTags url a	= merge (matchSubex "http://maps.google.*[?&]ll=({ll}[-,.0-9]+)&(.*&)?z=({z}[0-9]+)([^0-9].*)?" url)
+mergeGeoTags            :: String -> Attrs -> Attrs
+mergeGeoTags url a      = merge (matchSubex "http://maps.google.*[?&]ll=({ll}[-,.0-9]+)&(.*&)?z=({z}[0-9]+)([^0-9].*)?" url)
     where
-    merge p@[("ll",pos),("z",_zoom)]	= M.insert keyGoogleMaps ( "http://maps.google.com/maps?"
-								   ++
-								   intercalate "&" (map (\ (x,y) -> x ++ "=" ++ y) p)
-								   ++
-								   "&t=k"				-- map type is satelite
-								 )
-					  .
-					  M.insert keyGeoCode    pos
-					  $ a
-    merge _				= a
+    merge p@[("ll",pos),("z",_zoom)]    = M.insert keyGoogleMaps ( "http://maps.google.com/maps?"
+                                                                   ++
+                                                                   intercalate "&" (map (\ (x,y) -> x ++ "=" ++ y) p)
+                                                                   ++
+                                                                   "&t=k"                               -- map type is satelite
+                                                                 )
+                                          .
+                                          M.insert keyGeoCode    pos
+                                          $ a
+    merge _                             = a
 
 -- ------------------------------------------------------------
 
@@ -144,20 +146,27 @@ mvPic newName c p pic
 importExifAttrs :: Config -> Path -> Pic -> IOE Pic
 importExifAttrs c _p pic
     = do
-      ex <- liftIO $ doesFileExist orig
-      when (not ex)
-           ( throwError $ "importExifAttrs: original image " ++ show orig ++ " not found" )
-      up <- upToDate
+      orig <- findOrig base orig'
+      when (null orig)
+           ( throwError $ "importExifAttrs: original image " ++ show orig'' ++ " not found" )
+      up <- upToDate orig''
       if up
          then return pic
          else do
-              newData <- allImgAttrs [] c orig raw xmp
-              let pic' = change theAttrs (mergeAttrs newData) pic
-              return (rnf pic' `seq` pic')
+              raw <- findRaw base orig
+              xmp <- findXmp base orig
+              newData <- allImgAttrs [] c base orig raw xmp
+              let pic' = change theAttrs (mergeAttrs newData)
+                         >>>
+                         store theRaw raw
+                         >>>
+                         store theXmp xmp
+                         $ pic
+              rnf pic' `seq` return pic'
     where
-    orig        = base </-> picOrig pic
-    raw         = base </-> picRaw  pic
-    xmp         = base </-> picXmp  pic
+    orig'       = picOrig pic
+    orig''      = base </-> orig'
+
     modified    = fromMaybe "" . M.lookup fileModificationKey . picAttrs $ pic
 
     base        = getImportBase c
@@ -165,19 +174,19 @@ importExifAttrs c _p pic
     force       = optON  optForceExif c
     dry         = optOFF optForceExif c
 
-    upToDate
+    upToDate f
         | dry           = return True
         | force         = return False
-        | otherwise     = liftIO $ fileNewerThanDate modified orig
+        | otherwise     = liftIO $ fileNewerThanDate modified f
 
 -- ------------------------------------------------------------
 
-allImgAttrs     :: [String] -> Config -> String -> String -> String -> IOE Attrs
-allImgAttrs opts c orig raw xmp
+allImgAttrs     :: [String] -> Config -> String -> String -> String -> String -> IOE Attrs
+allImgAttrs opts c base orig raw xmp
     = do
-      exifDataOrig <- imgAttrs orig
-      exifDataRaw  <- imgAttrs raw
-      xmpData      <- imgAttrsXmp xmp
+      exifDataOrig <- imgAttrs    (base </-> orig)
+      exifDataRaw  <- imgAttrs    (base </-> raw)
+      xmpData      <- imgAttrsXmp (base </-> xmp)
       return ( ( ( exifDataOrig
                    `M.union` exifDataRaw
                  )
@@ -225,11 +234,11 @@ importOrig c p pic
               mkDirectoryPath dst
               copy
               geo@(Geo x y) <- getImageSize dst
-	      if (x == 0 && y == 0)
-		 then return pic
-		 else do
-		      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-		      return (rnf pic' `seq` pic')
+              if (x == 0 && y == 0)
+                 then return pic
+                 else do
+                      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
+                      return (rnf pic' `seq` pic')
          else return pic
     where
     cpyKey      = newAtom dir
@@ -280,11 +289,11 @@ createCopy c p s pic
          then do
               resize
               geo@(Geo x y) <- getImageSize dst
-	      if (x == 0 && y == 0)
-		 then return pic
-		 else do
-		      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-		      return (rnf pic' `seq` pic')
+              if (x == 0 && y == 0)
+                 then return pic
+                 else do
+                      let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
+                      return (rnf pic' `seq` pic')
          else return pic
     where
     cpyKey      = newAtom . sizeDir $ s
@@ -409,10 +418,10 @@ getImageSize f
           digit1 = "[1-9]"
 -}
 
-parseGeoFromIdentify	:: String -> Geo
-parseGeoFromIdentify s	= build (matchSubex "\\A[ ]({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[ ]\\A" s)
+parseGeoFromIdentify    :: String -> Geo
+parseGeoFromIdentify s  = build (matchSubex "\\A[ ]({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[ ]\\A" s)
     where
-    build [("w",w),("h",h)]	= Geo (read w) (read h)
+    build [("w",w),("h",h)]     = Geo (read w) (read h)
     build _                     = Geo 0 0
 
 -- ------------------------------------------------------------
@@ -502,11 +511,11 @@ rmFile f
 
 -- ------------------------------------------------------------
 
-lnFile		:: String -> String -> IOE ()
+lnFile          :: String -> String -> IOE ()
 lnFile src dst
     = ( do
-	ex <- liftIO $ doesFileExist src
-	when ex (liftIO $ createLink src dst)
+        ex <- liftIO $ doesFileExist src
+        when ex (liftIO $ createLink src dst)
       )
       `mapError` ((unwords ["link file", show src, show dst, "failed: "]) ++)
 
@@ -656,18 +665,51 @@ cleanupDir execute dir ext fl
 
 -- ------------------------------------------------------------
 
-cpCopies 	:: String -> Path -> Path -> [String] -> IOE ()
+cpCopies        :: String -> Path -> Path -> [String] -> IOE ()
 cpCopies ext dst src copies
     = do
       mapM_ link copies
     where
     link dir
-	= do
-	  liftIO $ putStrLn $ unwords ["ln", srcFile, dstFile]
-	  mkDirectoryPath dstFile
-	  lnFile srcFile  dstFile
-	where
-	srcFile = dir </> listToPath src `addExtension` ext
-	dstFile = dir </> listToPath dst `addExtension` ext
+        = do
+          liftIO $ putStrLn $ unwords ["ln", srcFile, dstFile]
+          mkDirectoryPath dstFile
+          lnFile srcFile  dstFile
+        where
+        srcFile = dir </> listToPath src `addExtension` ext
+        dstFile = dir </> listToPath dst `addExtension` ext
+
+-- ------------------------------------------------------------
+
+findRelFile :: (String -> String) -> (String -> String -> String) -> String -> String -> IOE String
+findRelFile cBaseName cRelName base f
+    = liftIO $
+      do
+      ex <- doesFileExist fname'
+      return ( if ex then fname else "")
+    where
+    fname0 = cBaseName f
+    fname  = cRelName  fname0 f
+    fname' = base </-> fname
+
+
+findOrig        :: String -> String -> IOE String
+findOrig        = findRelFile id const
+
+findRaw         :: String -> String -> IOE String
+findRaw         = findRelFile
+                  ( (`addExtension` "nef") . removeRawVersion . removeExtension . baseName )
+                  ( \ fn -> (</> fn) . dirPath . dirPath )
+
+findXmp         :: String -> String -> IOE String
+findXmp         = findRelFile
+                  ( (`addExtension` "xmp") . removeExtension . baseName )
+                  ( \ fn -> (</> fn) . dirPath . dirPath )
+
+removeRawVersion :: String -> String
+removeRawVersion                                    -- remove raw conversion version 
+                = sed remSubNo "([_a-zA-Z]+[0-9]+)-[0-9]+"
+                  where
+                  remSubNo = takeWhile (/= '-')
 
 -- ------------------------------------------------------------

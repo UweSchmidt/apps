@@ -17,10 +17,6 @@ import           Photo2.ImageOperations
 import           System.FindGrepSed  ( FindExpr(..) )
 import qualified System.FindGrepSed as F
 
-import           System.Directory
-
-import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
-
 -- ------------------------------------------------------------
 
 -- scans imgBase/imgDir for new pictures,
@@ -44,10 +40,10 @@ scanForNewImages c
       filesFound    <- liftIO $ F.find searchDir (findExpr newerThan)
 
       -- search for raw files in the parent dir
-      rawFilesFound <- mapM findRaw filesFound
+      rawFilesFound <- mapM (findRaw imgBase') filesFound
 
       -- search for raw files in the parent dir
-      xmpFilesFound <- mapM findXmp filesFound
+      xmpFilesFound <- mapM (findXmp imgBase') filesFound
 
       -- lookup date when image was shot
       imagesShot    <- CM.zipWithM findShot filesFound rawFilesFound
@@ -55,8 +51,8 @@ scanForNewImages c
       -- sort files by shooting time and return
       return . map snd {- . sort -} . zip imagesShot
                  $ zip3 ( map normFn filesFound    )
-                        ( map normFn rawFilesFound )
-                        ( map normFn xmpFilesFound )
+                        ( rawFilesFound )
+                        ( xmpFilesFound )
     where
     keyDateAndTime      = newAtom "exif:CreateDate"
 
@@ -92,33 +88,10 @@ scanForNewImages c
                   , findExprTimeStamp ts
                   ]
 
-    findRaw f
-        = liftIO $
-          do
-          ex <- doesFileExist fraw
-          return ( if ex then fraw else "")
-        where
-        fn   = (`addExtension` "nef") . removeRawVersion . removeExtension . baseName $ f
-        fraw = (</> fn) . dirPath . dirPath $ f
-
-    findXmp f
-        = liftIO $
-          do
-          ex <- doesFileExist fxmp
-          return ( if ex then fxmp else "")
-        where
-        fn   = (`addExtension` "xmp") . removeExtension . baseName $ f
-        fxmp = (</> fn) . dirPath . dirPath $ f
-
-    removeRawVersion                                    -- remove raw conversion version 
-        = sed remSubNo "([_a-zA-Z]+[0-9]+)-[0-9]+"
-          where
-          remSubNo = takeWhile (/= '-')
-
     findShot f r
         | sortByShot
             = do
-              imgAttrl <- allImgAttrs ["-CreateDate"] c f r ""
+              imgAttrl <- allImgAttrs ["-CreateDate"] c imgBase f r ""
               return . fromMaybe "" . M.lookup keyDateAndTime $ imgAttrl
         | otherwise
             = return ""

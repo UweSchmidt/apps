@@ -202,7 +202,13 @@ theCopies               :: PicSelector Copies
 theCopies               = ( picCopies, \ c x -> x { picCopies = c } )
 
 theOrig                 :: PicSelector Href
-theOrig                 = ( picOrig,   \ o x -> x { picOrig   = o } )
+theOrig                 = ( picOrig,   \ r x -> x { picOrig   = r } )
+
+theRaw                  :: PicSelector Href
+theRaw                  = ( picRaw,   \ r x -> x { picRaw     = r } )
+
+theXmp                  :: PicSelector Href
+theXmp                  = ( picXmp,   \ r x -> x { picXmp     = r } )
 
 theEdited               :: PicSelector Bool
 theEdited               = ( picEdited, \ e x -> x { picEdited = e } )
