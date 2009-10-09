@@ -22,47 +22,50 @@ import System.FindGrepSed
 
 -- ------------------------------
 
-actions	:: [(String, FilePath -> IO () )]
+actions :: [(String, FilePath -> IO () )]
 actions
-    = [ ("-h",		usage	)
-      , ("--help",	usage	)
+    = [ ("-h",          usage   )
+      , ("--help",      usage   )
 
-      , ("findAscii",			findFiles asciiFiles		)
-      , ("findBadFilenames",		findFiles badNames		)
-      , ("findNonAsciiPaths",		findFiles nonAsciiFilePath	)
-      , ("findBinaryFiles",		findFiles binaryFiles		)
-      , ("findBoringFiles",		findFiles boringFiles		)
-      , ("findCvsFiles",		findFiles cvsFiles		)
-      , ("findExecutables",		findFiles executableFiles	)
-      , ("findExtensions",		findExts fileExtensions		)
-      , ("findHtmlLatin1",		findFiles htmlLatin1Files	)
-      , ("findHtmlUtf8",		findFiles htmlUtf8Files		)
-      , ("findNoneAsciiProgs",		findFiles noneAsciiProgFiles	)
-      , ("findTclLatin1",		findFiles tclLatin1Files	)
+      , ("findAscii",                   findFiles asciiFiles            )
+      , ("findBadFilenames",            findFiles badNames              )
+      , ("findNonAsciiPaths",           findFiles nonAsciiFilePath      )
+      , ("findBinaryFiles",             findFiles binaryFiles           )
+      , ("findBoringFiles",             findFiles boringFiles           )
+      , ("findCvsFiles",                findFiles cvsFiles              )
+      , ("findExecutables",             findFiles executableFiles       )
+      , ("findExtensions",              findExts fileExtensions         )
+      , ("findHtmlLatin1",              findFiles htmlLatin1Files       )
+      , ("findHtmlUtf8",                findFiles htmlUtf8Files         )
+      , ("findNoneAsciiProgs",          findFiles noneAsciiProgFiles    )
+      , ("findTclLatin1",               findFiles tclLatin1Files        )
+      , ("findTexLatin1",               findFiles texLatin1Files        )
       , ("findTrailingSpace",           findFiles trailingBlankFiles    )
-      , ("findUnknownFiles",		findFiles unknownFiles		)
-      , ("findUppercaseImgFiles",	findFiles uppercaseImgFiles	)
-      , ("findUnusedAlbumFiles",	processUnusedAlbumFiles printFiles	)
+      , ("findUnknownFiles",            findFiles unknownFiles          )
+      , ("findUppercaseImgFiles",       findFiles uppercaseImgFiles     )
+      , ("findUnusedAlbumFiles",        processUnusedAlbumFiles printFiles      )
 
-      , ("grepHtmlLatin1",		grepFiles isUmlaut      htmlLatin1Files		)
-      , ("grepHtmlUtf8",		grepFiles isUtf         htmlUtf8Files		)
-      , ("grepNoneAsciiProgs",		grepFiles isUmlaut      noneAsciiProgFiles	)
-      , ("grepTclLatin1",		grepFiles isUmlaut      tclLatin1Files		)
-      , ("grepTrailingSpace",           grepFiles hasTrailingWS textFiles		)
+      , ("grepHtmlLatin1",              grepFiles isUmlaut      htmlLatin1Files         )
+      , ("grepHtmlUtf8",                grepFiles isUtf         htmlUtf8Files           )
+      , ("grepNoneAsciiProgs",          grepFiles isUmlaut      noneAsciiProgFiles      )
+      , ("grepTclLatin1",               grepFiles isUmlaut      tclLatin1Files          )
+      , ("grepTexLatin1",               grepFiles isUmlaut      texLatin1Files          )
+      , ("grepTrailingSpace",           grepFiles hasTrailingWS textFiles               )
 
-      , ("sedHtmlLatin1",		sedFiles substXhtmlChars htmlLatin1Files	)
-      , ("sedHtmlUtf8",			sedFiles substXhtmlUtf8Chars htmlUtf8Files	)
-      , ("sedHaskellLatin1",		sedFiles substLatin1Haskell noneAsciiHaskellFiles	)
-      , ("sedNoneAsciiProgs",		sedFiles substUmlauts noneAsciiProgFiles	)
-      , ("sedTclLatin1",		sedFiles substLatin1Tcl tclLatin1Files		)
-      , ("sedTrailingSpace",		sedFiles removeTrailingWS textFiles		)
+      , ("sedHtmlLatin1",               sedFiles substXhtmlChars htmlLatin1Files        )
+      , ("sedHtmlUtf8",                 sedFiles substXhtmlUtf8Chars htmlUtf8Files      )
+      , ("sedHaskellLatin1",            sedFiles substLatin1Haskell noneAsciiHaskellFiles       )
+      , ("sedNoneAsciiProgs",           sedFiles substUmlauts noneAsciiProgFiles        )
+      , ("sedTclLatin1",                sedFiles substLatin1Tcl tclLatin1Files          )
+      , ("sedTexLatin1",                sedFiles substLatin1Tex texLatin1Files          )
+      , ("sedTrailingSpace",            sedFiles removeTrailingWS textFiles             )
 
-      , ("renameUppercaseImgFiles",	moveFiles uppercaseImgFiles	)
+      , ("renameUppercaseImgFiles",     moveFiles uppercaseImgFiles     )
 
-      , ("removeBoringFiles",		remFiles boringFiles	)
-      , ("removeUnusedAlbumFiles",	processUnusedAlbumFiles removeFiles	)
+      , ("removeBoringFiles",           remFiles boringFiles    )
+      , ("removeUnusedAlbumFiles",      processUnusedAlbumFiles removeFiles     )
 
-      , ("hunitTest",			hunitTest	)
+      , ("hunitTest",                   hunitTest       )
       ]
 
 main :: IO ()
@@ -75,7 +78,7 @@ main
       return ()
 
 
-usage	:: FilePath -> IO ()
+usage   :: FilePath -> IO ()
 usage _dir
     = do
       pn <- getProgName
@@ -87,48 +90,48 @@ usage _dir
 
 -- a few hunit tests
 
-findTests	:: Test
+findTests       :: Test
 findTests
     = TestLabel "find tests" .
       TestList .
       map (uncurry findF)
       $
       [ ( noneAsciiProgFiles,
-	  [ "Umlaut.tcl" ] )
+          [ "Umlaut.tcl" ] )
       , ( AndExpr [progFiles, NotExpr noneAsciiProgFiles],
-	  [ "Ascii.tcl" ] )
+          [ "Ascii.tcl" ] )
       , ( boringFiles,
-	  [ "Umlaut.bak" ] )
+          [ "Umlaut.bak" ] )
       , ( htmlLatin1Files,
-	  [ "Latin1.html", "Utf8.html" ] )
+          [ "Latin1.html", "Utf8.html" ] )
       , ( htmlUtf8Files,
-	  [ "Utf8.html" ] )
+          [ "Utf8.html" ] )
       , ( tclLatin1Files,
-	  [ "Umlaut.tcl" ] )
+          [ "Umlaut.tcl" ] )
       ]
     where
     findF expr expected
-	= TestCase $
-	  do
-	  res <- find "Tests" expr
-	  assertEqual "find" (map (joinFile "Tests") expected) res
+        = TestCase $
+          do
+          res <- find "Tests" expr
+          assertEqual "find" (map (joinFile "Tests") expected) res
 
-allTests	:: Test
+allTests        :: Test
 allTests
     = TestList
       [ findTests
       ]
 
-hunitTest	:: FilePath -> IO ()
+hunitTest       :: FilePath -> IO ()
 hunitTest _
     = do
       c <- runTestTT allTests
       putStrLn $ show c
       let errs = errors c
-	  fails = failures c
+          fails = failures c
       System.exitWith (codeGet errs fails)
 
-codeGet	:: Int -> Int -> ExitCode
+codeGet :: Int -> Int -> ExitCode
 codeGet errs fails
     | fails > 0       = ExitFailure 2
     | errs > 0        = ExitFailure 1
