@@ -730,7 +730,7 @@ trailingBlankFiles
 
 uppercaseImgFiles       :: FindExpr
 uppercaseImgFiles
-    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|((NEF|nef)[.](RWS|rws)))"
+    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|RW2|rw2|((NEF|nef)[.](RWS|rws)))"
 
 nonAsciiFilePath        :: FindExpr
 nonAsciiFilePath
