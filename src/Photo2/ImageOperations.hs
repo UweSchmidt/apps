@@ -696,10 +696,19 @@ findRelFile cBaseName cRelName base f
 findOrig        :: String -> String -> IOE String
 findOrig        = findRelFile id const
 
-findRaw         :: String -> String -> IOE String
-findRaw         = findRelFile
-                  ( (`addExtension` "nef") . removeRawVersion . removeExtension . baseName )
+findRaw'        :: String -> String -> String -> IOE String
+findRaw' ext    = findRelFile
+                  ( (`addExtension` ext) . removeRawVersion . removeExtension . baseName )
                   ( \ fn -> (</> fn) . dirPath . dirPath )
+
+findRaws'	:: [String] -> String -> String -> IOE String
+findRaws' exts	base f
+                = do
+                  fns <- sequence . map (\ e -> findRaw' e base f) $ exts
+                  return . head . (++ [""]) . filter (not . null) $ fns
+
+findRaw         :: String -> String -> IOE String
+findRaw		= findRaws' ["nef", "rw2", "jpg"]
 
 findXmp         :: String -> String -> IOE String
 findXmp         = findRelFile
