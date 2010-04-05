@@ -47,10 +47,10 @@ fe2T (Name f1) f
     = return (f1 == basename f)
 
 fe2T (FileName f1) f
-    = fe2T (RE $ "(.*/)?" ++ f1) f
+    = fe2T (RE f1) (basename f)
 
 fe2T (DirName f1) f
-    = fe2T (RE $ "(.*/)?" ++ f1 ++ "(/.*)?") f
+    = fe2T (RE f1) (dirname f)
 
 fe2T (RE re) f
     = return . isJust . matchRegex (mkRegex ("^(" ++ re ++ ")$")) $ f
@@ -730,7 +730,9 @@ trailingBlankFiles
 
 uppercaseImgFiles       :: FindExpr
 uppercaseImgFiles
-    = FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|RW2|rw2|((NEF|nef)[.](RWS|rws)))"
+    = AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|RW2|rw2|((NEF|nef)[.](RWS|rws)))"
+              , FileName ".*[A-Z].*"		-- at least 1 uppercase char
+              ]
 
 nonAsciiFilePath        :: FindExpr
 nonAsciiFilePath
