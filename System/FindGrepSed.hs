@@ -1,6 +1,7 @@
 module System.FindGrepSed
 where
 
+import           Control.Arrow
 import           Control.Monad
 
 import           Data.Char                              ( isSpace, toLower )
@@ -12,7 +13,7 @@ import qualified Data.Set                            as S
 import           Text.Regex
 import           Text.XML.HXT.Parser.XhtmlEntities      ( xhtmlEntities )
 import           Text.XML.HXT.DOM.Unicode               ( utf8ToUnicode
-                                                        -- , unicodeToUtf8
+                                                        , unicodeToUtf8
                                                         )
 
 import System.IO
@@ -133,7 +134,10 @@ isLatin1                :: String -> Bool
 isLatin1                = all isLatin1Char
 
 isUmlaut                :: String -> Bool
-isUmlaut s              = isLatin1 s && not (isAscii s)
+isUmlaut s              = not (isUtf8 s) && isLatin1 s && not (isAscii s)
+
+isUtfUmlaut             :: String -> Bool
+isUtfUmlaut		= utf8ToUnicode >>> fst >>> isUmlaut
 
 isUtf                   :: String -> Bool
 isUtf s                 = not (isAscii s) && isUtf8 s
@@ -158,6 +162,9 @@ isUtf82 _               = False
 
 hasTrailingWS           :: String -> Bool
 hasTrailingWS           = not . null . takeWhile isSpace . reverse
+
+hasTabs			:: String -> Bool
+hasTabs			= any (== '\t')
 
 -- ------------------------------------------------------------
 
@@ -348,6 +355,15 @@ substLatin1Tcl
 substLatin1Tex  :: String -> String
 substLatin1Tex  = substUmlautsTex
 
+substUtf8Tex	:: String -> String
+substUtf8Tex	= utf8ToUnicode
+                  >>>
+                  fst
+                  >>>
+                  substUmlautsTex
+                  >>>
+                  unicodeToUtf8
+
 hexDigits       :: Int -> Int -> String
 hexDigits n
     = reverse . take n . (++ (replicate n '0')) . reverse . toHx
@@ -362,6 +378,16 @@ hexDigits n
 removeTrailingWS        :: String -> String
 removeTrailingWS
     = unlines . map (reverse . dropWhile isSpace . reverse) . lines
+
+removeTabs		:: String -> String
+removeTabs
+    = lines >>> map (mapAccumL rmTab 0 >>> snd >>> concat) >>> unlines
+    where
+    rmTab		:: Int -> Char -> (Int, String)
+    rmTab i '\t'	= (i', replicate (i' - i) ' ')
+                          where
+                          i' = ((i + 8) `div` 8) * 8
+    rmTab i ch		= (i+1, [ch])
 
 -- ------------------------------
 
@@ -450,17 +476,20 @@ contentGrep p f
 contentEdit     :: (String -> String) -> FilePath -> IO ()
 contentEdit ef f
     = do
-      hPutStrLn stderr ( "contentEdit: " ++ f )
       h <- openFile f ReadMode
       c <- hGetContents h
-      b <- openFile (f ++ "~") WriteMode        -- make backup file
-      hPutStr b c
-      hClose b
-      hClose h
-      h' <- openFile f WriteMode
-      hPutStr h' (ef c)
-      hClose h'
-
+      let c' = ef c
+      if c' == c
+         then hClose h
+         else do
+              hPutStrLn stderr ( "contentEdit: " ++ f )
+              b <- openFile (f ++ "~") WriteMode        -- make backup file
+              hPutStr b c
+              hClose b
+              hClose h
+              h' <- openFile f WriteMode
+              hPutStr h' c'
+              hClose h'
 
 -- ------------------------------
 
@@ -608,10 +637,21 @@ htmlFiles
              , RE ".*/automata/.*[.]tab"        -- CB first and follow tables
              ]
 
-progFiles       :: FindExpr
-progFiles
+makeFiles	:: FindExpr
+makeFiles
     = OrExpr [ Name "Makefile"
              , Name "makefile"
+             ]
+
+progFiles'      :: FindExpr
+progFiles'
+    = AndExpr [ NotExpr makeFiles
+              , progFiles
+              ]
+
+progFiles       :: FindExpr
+progFiles
+    = OrExpr [ makeFiles
              , Ext ".ass"       -- ppl assembler
              , Ext ".c"
              , Ext ".cc"
@@ -718,6 +758,13 @@ texLatin1Files  :: FindExpr
 texLatin1Files
     = AndExpr [ texFiles
               , HasCont isUmlaut
+              ]
+
+texUtf8Files  :: FindExpr
+texUtf8Files
+    = AndExpr [ texFiles
+              , HasCont isUtf
+              , HasCont isUtfUmlaut
               ]
 
 trailingBlankFiles      :: FindExpr

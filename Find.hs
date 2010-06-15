@@ -40,6 +40,7 @@ actions
       , ("findNoneAsciiProgs",          findFiles noneAsciiProgFiles    )
       , ("findTclLatin1",               findFiles tclLatin1Files        )
       , ("findTexLatin1",               findFiles texLatin1Files        )
+      , ("findTexUtf8",                 findFiles texUtf8Files          )
       , ("findTrailingSpace",           findFiles trailingBlankFiles    )
       , ("findUnknownFiles",            findFiles unknownFiles          )
       , ("findUppercaseImgFiles",       findFiles uppercaseImgFiles     )
@@ -50,15 +51,19 @@ actions
       , ("grepNoneAsciiProgs",          grepFiles isUmlaut      noneAsciiProgFiles      )
       , ("grepTclLatin1",               grepFiles isUmlaut      tclLatin1Files          )
       , ("grepTexLatin1",               grepFiles isUmlaut      texLatin1Files          )
-      , ("grepTrailingSpace",           grepFiles hasTrailingWS textFiles               )
+      , ("grepTexUtf8",                 grepFiles isUtfUmlaut   texUtf8Files            )
+      , ("grepTrailingSpace",           grepFiles hasTrailingWS progFiles               )
+      , ("grepTabs",			grepFiles hasTabs       progFiles'              )
 
-      , ("sedHtmlLatin1",               sedFiles substXhtmlChars htmlLatin1Files        )
-      , ("sedHtmlUtf8",                 sedFiles substXhtmlUtf8Chars htmlUtf8Files      )
-      , ("sedHaskellLatin1",            sedFiles substLatin1Haskell noneAsciiHaskellFiles       )
-      , ("sedNoneAsciiProgs",           sedFiles substUmlauts noneAsciiProgFiles        )
-      , ("sedTclLatin1",                sedFiles substLatin1Tcl tclLatin1Files          )
-      , ("sedTexLatin1",                sedFiles substLatin1Tex texLatin1Files          )
-      , ("sedTrailingSpace",            sedFiles removeTrailingWS textFiles             )
+      , ("sedHtmlLatin1",               sedFiles substXhtmlChars     htmlLatin1Files       )
+      , ("sedHtmlUtf8",                 sedFiles substXhtmlUtf8Chars htmlUtf8Files         )
+      , ("sedHaskellLatin1",            sedFiles substLatin1Haskell  noneAsciiHaskellFiles )
+      , ("sedNoneAsciiProgs",           sedFiles substUmlauts        noneAsciiProgFiles    )
+      , ("sedTclLatin1",                sedFiles substLatin1Tcl      tclLatin1Files        )
+      , ("sedTexLatin1",                sedFiles substLatin1Tex      texLatin1Files        )
+      , ("sedTexUtf8",                  sedFiles substUtf8Tex        texUtf8Files          )
+      , ("sedTrailingSpace",            sedFiles removeTrailingWS    textFiles             )
+      , ("sedTabs",			sedFiles removeTabs	     progFiles'		   )
 
       , ("renameUppercaseImgFiles",     moveFiles uppercaseImgFiles     )
 
@@ -82,7 +87,7 @@ usage   :: FilePath -> IO ()
 usage _dir
     = do
       pn <- getProgName
-      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.1)\n" )
+      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.5)\n" )
     where
     cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
 
