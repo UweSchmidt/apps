@@ -1,0 +1,134 @@
+begin
+  var
+   i, j, k : int
+           := 1, 2, 3;
+   
+   -- simple integer arithmetic
+   
+   i := -i +j -1 + j * k div (i mod 3);
+   i, j := i max j max k, i min j min k;
+
+   -- simple floating point arithmetic
+   
+   begin
+     var
+      x, y, z : float
+              := 1.0, -2.0, +3.0;
+      
+      x := -x * y + (z - y) / x * y
+   end;
+
+   -- boolean and relational operators
+   
+   begin
+     var
+      a, b, c : boolean
+              := true, false, false;
+
+      a := (i < j) and (j <= k) or b or not c;
+      a := b => c;
+      a := b <=> a and c
+   end;
+
+   -- string expressions
+   
+   begin
+     var
+      s1, s2 : string
+             := "hello", "world";
+
+      s1 := s1 + s2 + "\"" + i.toString + "\"";
+
+      write(s1);
+      writeln(s2)
+   end;
+
+   -- list operations
+   
+   begin
+     var
+      l1, l2 : list of int
+             := [0, 1, 1, 2, 3, 5, 8, 13], [];
+
+      l2 := l2.append(42)
+              .append(43);
+
+      if l2.empty
+      then
+	 l2 := [1, 2, 3]
+      endif;
+      
+      l1 := l1.cons(41);
+      
+      l1 := l1 + l2 + l1;
+      
+      l1 := l1.tail
+              .cons(l1.head)
+              .cons(l1[i])
+              .append(l1[l1.length -1])
+   end;
+
+   -- picture operations
+   
+   begin
+     var
+      p1, p2, p3  : picture;
+
+      -- new pictures
+      
+      p1 := white(100,200);
+      p2 := grey(0.5, p1.width, p1.height);
+      p3 := black(100,200);
+
+      -- flip and gamma corrections
+      
+      p2 := p2.flipVertical
+              .flipHorizontal
+              .gamma(1.5);
+
+      -- same as above with funtional syntax
+      
+      p2 := gamma(flipHorizontal(flipVertical(p2)),
+		  1.5);
+
+      -- load a picture
+      
+      p2 := load("t.pgm");
+
+      -- make negative picture
+      
+      p1 := p2.invert;
+
+      -- combine 2 pictures
+      
+      p2 := above(sideBySide(p1,p2),
+		  sideBySide(p2,p1));
+
+      -- pixelwise arithmetic mean of grey values
+      
+      p2 := p1 + p2;
+
+      -- pixelwise difference of grey values
+      
+      p2 := p1 - p2;
+
+      -- pixelwise min and max operations
+      
+      p1 := p1 max p2 min p3;
+
+      -- store pictures
+
+      store(p1,"p1.pgm");
+      
+      p2.store("p2.pgm")
+      
+   end;
+
+   -- get command line  arguments
+   begin
+     var
+      ls1 : list of string
+      -- not yet implemented: ls1 := getargs()
+   end
+   
+end

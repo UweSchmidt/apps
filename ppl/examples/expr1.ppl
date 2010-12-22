@@ -1,0 +1,14 @@
+-- Klausur SS09
+
+begin
+  var
+   x, y : int;
+  var b : boolean;
+
+  if ( not (x = y) and y > 0 ) or not b
+  then
+    x, b := x * y, true
+  else
+    x, y := y, 0 - x
+  endif
+end

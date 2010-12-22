@@ -1,0 +1,72 @@
+-- $Id: branch.ppl,v 1.4 2007-01-11 21:29:59 uwe Exp $
+
+begin
+ var
+  i, j, s : int := 1, 2, 0;
+
+ var
+  a, b, c : boolean := false, true, false;
+
+  if a and b and c
+  then
+    i := 42;
+    a := a => b;
+    i := 43;
+    b := a <=> b;
+    i := 44;
+    c := (i /= 0)
+         and (j /= 0)
+         and (i >= 0 <=> j >= 0)
+  endif;
+
+  while true
+  do
+  endwhile;
+
+  i := 45;
+
+  while false
+  do
+  endwhile;
+
+  i := 46;
+
+  while a and b and c
+  do
+    a, i, b, j, c := a and b, 27, a or b, 28, not c
+  endwhile;
+
+  i := 47;
+
+  begin
+   var
+    s : int := 0;
+
+    while i > 0
+    do
+      i, j := i - 1, i;
+      while j > 0
+      do
+        j,s := j - 1, s + 1
+      endwhile
+    endwhile   
+  end;
+
+  i := 48;
+
+  repeat
+  until false;
+
+  i := 49;
+
+  repeat
+  until true;
+
+  i := 50;
+
+  repeat
+    i, j := i + 1, j - 1
+  until i > j
+
+end
+  

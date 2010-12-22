@@ -1,0 +1,45 @@
+-- $Id: stmt.ppl,v 1.5 2007-01-11 21:29:59 uwe Exp $
+
+begin
+ var
+  i,j : int := 7, 3;
+
+  -- if statement
+
+  if i < j
+  then
+    i, j := j, i
+  elseif i = j
+  then
+    i, j := i - 1, j + 1
+  else
+    i := i+1
+  endif;
+
+  -- while loop
+
+  while i < j
+  do
+    i, j := i + 1, j - 1
+  endwhile;
+
+  -- repeat loop
+
+  repeat
+    i := i + 1
+  until i > j;
+
+  -- block
+
+  begin
+   var
+   k : int := i;
+   var
+   j : int := k;
+
+   j := i;
+   k := j
+
+  end
+
+end

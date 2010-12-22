@@ -1,0 +1,9 @@
+begin
+  var
+   i, j, k : int
+           := 1, 2, 3;
+   
+   -- simple integer arithmetic example
+   
+   i := -i + j -1 + j * k div (i mod 3)
+end

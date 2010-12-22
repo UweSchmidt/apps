@@ -1,0 +1,28 @@
+begin
+  var i,j : int := 1,2
+  ;
+  if i = 1 or j = 2
+  then
+    while i /= 0 do
+      i := i-1
+    endwhile
+  endif
+  ;
+  while i > 1 do
+    while j > i do
+      j := j - 1
+    endwhile
+    ;
+    i := i - 1
+  endwhile
+  ;
+  if 1 /= 0
+  then
+    i := i + 1
+  endif
+  ;
+  if 1 = 0
+  then
+    i := i - 1
+  endif
+end

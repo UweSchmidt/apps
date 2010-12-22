@@ -1,0 +1,5 @@
+-- $Id: hello.ppl,v 1.3 2007-01-11 21:29:59 uwe Exp $
+
+begin
+ writeln("hello world")
+end

@@ -1,0 +1,17 @@
+begin
+ p : picture;
+ f  : string := "lena.pgm";
+
+ writeln("hello world");
+
+ writeln("reading " + f);
+ p := load(f);
+
+ writeln("storing picture");
+ p.store("original.pgm");
+
+ writeln("flip horizontal");
+ p.flipHorizontal.store("flipHorizontal.pgm");
+
+ writeln("good bye")
+end

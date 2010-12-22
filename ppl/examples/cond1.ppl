@@ -1,0 +1,13 @@
+begin
+ var
+ x, y : int := 0, 0;
+ var
+ a, b, c : boolean := false, false, false;
+
+ if (not a and b) or not c
+ then
+   x := x - y
+ else
+   x := 0
+ endif
+end

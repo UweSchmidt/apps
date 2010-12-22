@@ -1,0 +1,23 @@
+-- $Id: ggt.ppl,v 1.4 2007-01-11 21:29:59 uwe Exp $
+
+function ggt(x,y : int) : int
+  if x = y
+  then x
+  else if x > y
+  then ggt(x - y, y)
+  else ggt(y, x)
+;
+
+procedure test(i,j : int)
+  writeln("ggt("
+           + i.toString
+           + ","
+           + j.toString
+           + ") = "
+           + ggt(i,j).toString
+          )
+;
+ 
+begin
+ test(13,8)
+end

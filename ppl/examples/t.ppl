@@ -1,0 +1,14 @@
+function f(x, y : int) : boolean
+  x = y
+;
+begin
+ var
+  i, j : int := 0,0;
+ var b : boolean := false;
+
+  while not (i = j) and b
+  do
+    i,j,b := i-1,j+1,f(i,j)
+  endwhile
+end
+  

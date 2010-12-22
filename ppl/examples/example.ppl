@@ -1,0 +1,261 @@
+------------------------------------------------------------
+--
+-- demo program for all builtin picture manipulation functions
+--
+------------------------------------------------------------
+
+begin
+ var p : picture
+ ; var args : list of string
+       := getArgs()
+
+ ; var f : string
+       := if args.empty
+          then "lena"		-- default: THE test picture
+          else args.head
+ ; var f1 : string
+       := f + "-"
+
+ ; writeln("hello world")
+
+ ; writeln("reading " + f)
+ ; p := load(f)
+
+ ; writeln("width  = " + p.width.toString)
+ ; writeln("height = " + p.height.toString)
+
+ ; dump()
+
+ ; writeln("storing picture")
+ ; p.store(f1 + "original")
+
+ ; writeln("mirror: side by side and above")
+ ; begin
+     var p2 : picture
+         := p.sideBySide(p.flipVertical)
+
+     ; p2.above(p2.flipHorizontal)
+         .store(f1 + "mirror")
+   end
+
+ ; writeln("split vertical and concat horizontal")
+ ; begin
+    var l : list of picture
+        := p.splitVertical(4)
+
+    ; var rl : list of picture
+          := [l[3], l[2], l[1], l[0]]
+
+    ; rl.concatHorizontal
+         .store(f1 + "splitV")
+   end
+
+ ; writeln("split horizontal and concat vertical")
+ ; begin
+    var l : list of picture
+        := p.splitHorizontal(4)
+
+    ; var rl : list of picture
+          := [l[3], l[2], l[1], l[0]]
+
+    ; rl.concatVertical
+         .store(f1 + "splitH")
+   end
+
+ ; writeln("flip horizontal")
+ ; p.flipHorizontal.store(f1 + "flipHorizontal")
+
+ ; writeln("flip vertical")
+ ; p.flipVertical.store(f1 + "flipVertical")
+
+ ; writeln("flip diagonal")
+ ; p.flipDiagonal.store(f1 + "flipDiagonal")
+
+ ; writeln("rotate")
+ ; p.rotate.store(f1 + "rotate")
+
+ ; writeln("shift")
+ ; p.shift( p.width  div 4,
+            p.height div 4)
+    .store(f1 + "shift")
+
+ ; writeln("gamma 0.5")
+ ; p.gamma(0.5)
+    .store(f1 + "gamma0.5")
+
+ ; writeln("gamma 2.0")
+ ; p.gamma(2.0)
+    .store(f1 + "gamma2.0")
+
+ ; writeln("invert")
+ ; p.invert.store(f1 + "invert")
+
+ -- map picture to black and white by summing up grey values
+ ; writeln("bitmap")
+ ; p.bitmap.store(f1 + "bitmap")
+
+ ; writeln("black and white")
+ ; p.blackAndWhite.store(f1 + "blackAndWhite")
+
+ ; begin
+     var i : int
+         := 2
+
+     ; while i < 8 do
+         writeln("reduce # of colors to " + i.toString)
+         ; p.reduceColor(i)
+            .store(f1 + "reduce" + i.toString + "")
+         ; i := i + 1
+       endwhile
+   end
+
+ ; writeln("cut")
+ ; p.cut( p.width  div 4
+        , p.height div 4
+        , p.width  div 2
+        , p.height div 2
+        )
+    .store(f1 + "cut")
+
+ ; writeln("paste")
+ ; p.paste( p.resize( p.width  div 2
+                    , p.height div 2
+                    )
+             .invert
+          , p.width  div 4
+          , p.height div 4
+          )
+    .store(f1 + "paste")
+
+ ; writeln("scale 2x2")
+ ; p.scale(2,2)
+    .store(f1 + "scale2x2")
+
+ ; writeln("scale 2x1")
+ ; p.scale(2,1)
+    .store(f1 + "scale2x1")
+
+ ; writeln("scale 1x2")
+ ; p.scale(1,2)
+    .store(f1 + "scale1x2")
+
+ ; writeln("replicate 2x2")
+ ; p.replicate(2,2)
+    .store(f1 + "replicate2x2")
+
+ ; writeln("replicate 2x1")
+ ; p.replicate(2,1)
+    .store(f1 + "replicate2x1")
+
+ ; writeln("replicate 1x2")
+ ; p.replicate(1,2)
+    .store(f1 + "replicate1x2")
+
+ ; writeln("double size")
+
+ ; p.resize( 2 * p.width
+           , 2 * p.height
+           )
+    .store(f1 + "doublesize")
+
+ ; writeln("half size")
+ ; p.resize( p.width  div 2
+           , p.height div 2
+           )
+    .store(f1 + "halfsize")
+
+ ; writeln("blur 8x8 with resize")
+ ; p.resize( (p.width  + 7) div 8
+           , (p.height + 7) div 8
+           )
+    .scale(8,8)
+    .store(f1 + "blurResize8x8")
+
+ ; writeln("blur 8x8")
+ ; p.shrink(8,8)
+    .scale(8,8)
+    .store(f1 + "blur8x8")
+
+ ; writeln("blur whole image")
+ ; p.shrink(p.width,p.height)
+    .scale(p.width,p.height)
+    .store(f1 + "blurAll")
+
+ ; writeln("sideBySide")
+ ; p.sideBySide(p.flipVertical)
+    .store(f1 + "sideBySide")
+
+ ; writeln("sideBySide")
+ ; p.sideBySide(p.flipVertical)
+    .store(f1 + "sideBySide")
+
+ ; writeln("above")
+ ; p.above(p.flipVertical)
+    .store(f1 + "above")
+
+ ; writeln("select all even/odd columns")
+ ; begin
+    var l : list of picture
+        := p.partitionVertical(2)
+    ; var p1, p2 : picture
+          := l[0], l[1]
+
+    ; p1.store(f1 + "evencols")
+    ; p2.store(f1 + "oddrcols")
+
+    ; writeln("1 step vertical wavelet transformation")
+    ; (p1 + p1).sideBySide(p1 - p2)
+               .store(f1 + "waveV")
+   end
+
+ ; writeln("select all even/odd rows")
+ ; begin
+    var l : list of picture
+        := p.partitionHorizontal(2)
+    ; var p1, p2 : picture
+          := l[0], l[1]
+
+    ; p1.store(f1 + "evenrows")
+    ; p2.store(f1 + "oddrrows")
+
+    ; writeln("1 step horizontal wavelet transformation")
+    ; (p1 + p1).above(p1 - p2)
+               .store(f1 + "waveH")
+   end
+
+ ; writeln("add 2 pictures")
+ ; (p + p.flipVertical).store(f1 + "add")
+
+ ; writeln("add mean arithmetic mean: + is equivalent to mean")
+ ; p.mean(p.flipVertical).store(f1 + "mean")	-- same as add
+
+ ; writeln("inverse operation for mean is inverseMean")
+ ; p.mean(p.flipVertical)
+    .inverseMean(p.flipVertical)
+    .store(f1 + "meanInvMean")			-- same as p
+
+ ; writeln("subtract 2 pictures")
+ ; (p - p.flipVertical).store(f1 + "sub")
+
+ ; writeln("- is same as diff")
+ ; p.diff(p.flipVertical).store(f1 + "diff")
+
+ ; writeln("inverseDiff is inverse Function to - or diff")
+ ; p.diff(p.flipVertical)
+    .inverseDiff(p.flipVertical)
+    .store(f1 + "diffInvDiff")			-- same as p
+
+ ; writeln("multiply 2 pictures")
+ ; (p * p.flipVertical).store(f1 + "mul")
+
+ ; writeln("minimum of 2 pictures")
+ ; (p min p.flipVertical).store(f1 + "min")
+
+ ; writeln("maximum of 2 pictures")
+ ; (p max p.flipVertical).store(f1 + "max")
+
+ ; writeln("good bye")
+
+end
+
+------------------------------------------------------------

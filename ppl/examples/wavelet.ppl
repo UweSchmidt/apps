@@ -1,0 +1,236 @@
+------------------------------------------------------------
+--
+-- simple wavelet transformations
+--
+
+------------------------------------------------------------
+--
+-- wavelet picture combinations
+
+function meanAndDiff(pl : list of picture)
+  : list of picture
+
+  [ pl[0] + pl[1]
+  , pl[0] - pl[1]
+  ]
+;
+
+function inverseMeanAndDiff(pl : list of picture)
+  : list of picture
+
+  [ pl[0].inverseDiff(pl[1])
+  , pl[0].inverseMean(pl[1])
+  ]
+;
+
+function meanAndDiff4(pl : list of picture)
+  : list of picture
+
+  begin
+    var
+    p0pp1, p2pp3, p0mp1, p2mp3 : picture
+          := pl[0] + pl[1]
+           , pl[2] + pl[3]
+           , pl[0] - pl[1]
+           , pl[2] - pl[3]
+
+    ; return
+        [ p0pp1 + p2pp3, p0mp1 + p2mp3
+        , p0pp1 - p2pp3, p0mp1 - p2mp3
+        ]
+  end
+;
+
+------------------------------------------------------------
+--
+-- partition pictures
+
+function partitionSquare(p : picture) : list of picture
+  begin
+  var pl : list of picture
+      := p.partitionHorizontal(2)
+
+  ; return pl[0].partitionVertical(2)
+         + pl[1].partitionVertical(2)
+  end
+;
+
+------------------------------------------------------------
+--
+-- paste pictures
+
+function pasteVertical(pl : list of picture) : picture
+  sideBySide(pl[0],pl[1])
+;
+
+function pasteHorizontal(pl : list of picture) : picture
+  above(pl[0],pl[1])
+;
+
+function pasteSquare(pl : list of picture) : picture
+  above(sideBySide(pl[0], pl[1])
+       ,sideBySide(pl[2], pl[3])
+       )
+;
+
+------------------------------------------------------------
+--
+-- wavelet transformations
+
+function waveHorizontal1Step(p : picture) : picture
+  p.partitionHorizontal(2)
+   .meanAndDiff
+   .pasteHorizontal
+;
+
+function waveHorizontalHead(pl : list of picture)
+  : list of picture
+
+  pl.tail
+    .cons(pl.head.waveHorizontalRecursive)
+;
+
+function waveHorizontalRecursive(p : picture) : picture
+  if p.height <= 1
+  then
+    p
+  else
+    p.partitionHorizontal(2)
+     .meanAndDiff
+     .waveHorizontalHead
+     .pasteHorizontal
+;
+
+function inverseWaveHorizontal1Step(p : picture) : picture
+  begin
+  var pl : list of picture
+      := p.splitHorizontal(2)
+          .inverseMeanAndDiff
+  ; return pl[0].mergeHorizontal(pl[1])
+  end
+;
+
+function inverseWaveHorizontalHead(pl : list of picture)
+  : list of picture
+
+  pl.tail
+    .cons(pl.head.inverseWaveHorizontalRecursive)
+;
+
+function inverseWaveHorizontalRecursive(p : picture) : picture
+  if p.height <= 1
+  then
+    p
+  else
+    begin
+    var pl : list of picture
+        := p.splitHorizontal(2)
+            .inverseWaveHorizontalHead
+            .inverseMeanAndDiff
+    ; return pl[0].mergeHorizontal(pl[1])
+    end
+;
+
+------------------------------------------------------------
+
+function waveVertical1Step(p : picture) : picture
+  p.partitionVertical(2)
+   .meanAndDiff
+   .pasteVertical
+;
+
+function waveVerticalHead(pl : list of picture) : list of picture
+  pl.tail
+    .cons(pl.head.waveVerticalRecursive)
+;
+
+function waveVerticalRecursive(p : picture) : picture
+  if p.width <= 1
+  then
+    p
+  else
+    p.partitionVertical(2)
+     .meanAndDiff
+     .waveVerticalHead
+     .pasteVertical
+;
+
+------------------------------------------------------------
+
+function waveSquare1Step(p : picture) : picture
+  p.partitionSquare
+   .meanAndDiff4
+   .pasteSquare
+;
+
+function waveSquareHead(pl : list of picture) : list of picture
+  pl.tail
+    .cons(pl.head.waveSquareRecursive)
+;
+
+function waveSquareRecursive(p : picture) : picture
+  if p.width <= 1
+    or
+     p.height <= 1
+  then
+    p
+  else
+    p.partitionSquare
+     .meanAndDiff4
+     .waveSquareHead
+     .pasteSquare
+;
+
+------------------------------------------------------------
+
+function storePic( p : picture
+                 ; n : string
+                 ) : picture
+  begin
+    store(p,n)
+    ; return p
+  end
+;
+
+------------------------------------------------------------
+--
+-- the main program
+
+begin
+  var fn : string
+      := getArgs().head
+
+  ; var p : picture
+      := load(fn)
+
+  ; writeln("1 step horizontal wavelet transformation")
+  ; p.waveHorizontal1Step
+     .storePic(fn + "-wave.H1")
+     .inverseWaveHorizontal1Step
+     .store(fn + "-wave.H1.inverse")
+
+  ; writeln("recursive horizontal wavelet transformation")
+  ; p.waveHorizontalRecursive
+     .storePic(fn + "-wave.HR")
+     .inverseWaveHorizontalRecursive
+     .store(fn + "-wave.HR.inverse")
+
+  ; writeln("1 step vertical wavelet transformation")
+  ; p.waveVertical1Step
+     .store(fn + "-wave.V1")
+
+  ; writeln("recursive vertical wavelet transformation")
+  ; p.waveVerticalRecursive
+     .store(fn + "-wave.VR")
+
+  ; writeln("1 step symmetric wavelet transformation")
+  ; p.waveSquare1Step
+     .store(fn + "-wave.S1")
+
+  ; writeln("recursive symmetric wavelet transformation")
+  ; p.waveSquareRecursive
+     .store(fn + "-wave.SR")
+end
+
+------------------------------------------------------------
+   

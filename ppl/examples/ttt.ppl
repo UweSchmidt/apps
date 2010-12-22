@@ -1,0 +1,14 @@
+begin
+ var
+  i1, i2 : int;
+
+ var
+  a, b, c : boolean;
+
+  while (i1 = i2) or ( b and not c)
+  do
+    a := b
+  endwhile
+end
+
+  
