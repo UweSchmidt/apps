@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <base href="[rootPath]"/>
+    <title>[theHeadTitle]</title>
+    <meta name="description" content="Web Photo Album"/>
+    <meta name="author"      content="Uwe Schmidt"/>
+    <meta name="generator"   content="HXT Arrow based Photo2 Album Generator"/>
+    <link rel="stylesheet"   type="text/css" href="[theUpPath]/config/album-1024x768.css"/>
+    <script type="text/javascript">
+      [theJavaScriptCode]
+      var duration = 7000 * [theDuration];
+      var nextp    = '[html-1024x768/[theNextPath].html]';
+      var prevp    = '[html-1024x768/[thePrevPath].html]';
+      var parentp  = '[html-1024x768/[theParentPath].html]';
+      var childp   = '[html-1024x768/[the1ChildPath].html]';
+      var nextimg  = '[1024x768/[theNextPath].jpg]';
+      var previmg  = '[1024x768/[thePrevPath].jpg]';
+      [theJavaScriptCode]
+    </script>
+    <script type="text/javascript" src="[theUpPath]/config/album.js" charset="ISO-8859-1"/>
+  </head>
+  <body onload="initAlbum();"
+        class="album"
+        id="theAlbumBody">
+    <table class="head">
+      <tr>
+        <td class="head1">
+          <img src="[100x75/[thePath].jpg]"
+               class="icon"
+               title="[theHeadTitle]"
+               alt="[theHeadTitle]"/>
+        </td>
+        <td class="head2">
+          <div class="title">[theTitle]</div>
+          <div class="subtitle">[theSubTitle]</div>
+          <div class="resources">[theResources]</div>
+        </td>
+        <td class="head3">
+          <table class="nav" align="right">
+            <tr>
+              <td class="icon2">&nbsp;</td>
+              <td class="icon2" id="theParentNav">
+                <a href="javascript:parentPage();"
+                   title="Album[theParentTitle]">
+                  <img src="[100x75/[theParentPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="Album[theParentTitle]"/>
+                </a>
+              </td>
+              <td class="icon2">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="icon2" id="thePrevNav">
+                <a href="javascript:prevPage();"
+                   title="zur&uuml;ck[thePrevTitle]">
+                  <img src="[100x75/[thePrevPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="zur&uuml;ck[thePrevTitle]"/>
+                </a>
+              </td>
+              <td class="icon2" id="the1ChildNav">
+                <a href="javascript:childPage(&apos;[html-1024x748/[the1ChildPath].html]&apos;);"
+                   title="1.Bild[the1ChildTitle]"
+                   id="the1ChildNav">
+                  <img src="[100x75/[the1ChildPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="1.Bild[the1ChildTitle]"/>
+                </a>
+              </td>
+              <td class="icon2" id="theNextNav">
+                <a href="javascript:nextPage();"
+                   title="weiter[theNextTitle]">
+                  <img src="[100x75/[theNextPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="weiter[theNextTitle]"/>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <div class="ruler"/>
+    <div class="album-content">
+      <table>
+        <tr id="theAlbumRow" size="9">
+          <td class="icon"
+              id="theAlbumCell">
+            <a href="javascript:childPage(&apos;[html-1024x768/[theChildPath].html]&apos;);"
+               title="[theChildTitle]">
+              <img src="[100x75/[theChildPath].jpg]"
+                   width="100"
+                   height="75"
+                   class="icon"
+                   alt="[theChildTitle]"/>
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="ruler"/>
+    <table class="head">
+      <tr>
+        <td class="head1"/>
+        <td class="head2"/>
+        <td class="head3">
+          <table class="nav" align="right">
+            <tr>
+              <td class="icon2">&nbsp;</td>
+              <td class="icon2" id="theParentNav">
+                <a href="javascript:parentPage();"
+                   title="Album[theParentTitle]">
+                  <img src="[100x75/[theParentPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="Album[theParentTitle]"/>
+                </a>
+              </td>
+              <td class="icon2">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="icon2" id="thePrevNav">
+                <a href="javascript:prevPage();"
+                   title="zur&uuml;ck[thePrevTitle]">
+                  <img src="[100x75/[thePrevPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="zur&uuml;ck[thePrevTitle]"/>
+                </a>
+              </td>
+              <td class="icon2" id="the1ChildNav">
+                <a href="javascript:childPage(&apos;[html-1024x748/[the1ChildPath].html]&apos;);"
+                   title="1.Bild[the1ChildTitle]"
+                   id="the1ChildNav">
+                  <img src="[100x75/[the1ChildPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="1.Bild[the1ChildPath]"/>
+                </a>
+              </td>
+              <td class="icon2" id="theNextNav">
+                <a href="javascript:nextPage();"
+                   title="weiter[theNextTitle]">
+                  <img src="[100x75/[theNextPath].jpg]"
+                       width="50"
+                       height="37"
+                       class="icon2"
+                       alt="weiter[theNextTitle]"/>
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+
