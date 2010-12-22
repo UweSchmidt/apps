@@ -4,41 +4,41 @@ module PPL.ShowCode where
 
 import PPL.Instructions
 
-showExecutable	:: Executable -> String
+showExecutable  :: Executable -> String
 showExecutable (is, ds)
     = ".text\n" ++ showCode is ++ "\n" ++ showDS ds
 
-showExecutable1	:: Executable -> String
+showExecutable1 :: Executable -> String
 showExecutable1 (is, ds)
     = "        .text\n" ++ showCode1 is ++ "\n        " ++ showDS ds
 
-showDS		:: DataSeg -> String
+showDS          :: DataSeg -> String
 showDS ds
     = ".data\t" ++ show ds ++ "\n"
 
-showCode	:: Code -> String
-showCode	= concat . map showInstr
+showCode        :: Code -> String
+showCode        = concat . map showInstr
 
-showCode1	:: Code -> String
-showCode1	= concat . zipWith showInstrCnt [0..]
+showCode1       :: Code -> String
+showCode1       = concat . zipWith showInstrCnt [0..]
 
-showInstrCnt	:: Int -> Instr -> String
-showInstrCnt cnt ins
+showInstrCnt    :: Int -> Instr -> String
+showInstrCnt cnt ins'
     = reverse (take 8 (reverse ("       " ++ show cnt ++ ":")))
-      ++ showInstr' ins
+      ++ showInstr' ins'
     where
     showTarget d
-	= "\t\t--> " ++ show (cnt + d) ++ "\n"
+        = "\t\t--> " ++ show (cnt + d) ++ "\n"
     showInstr' ins@(Branch _ (Disp d))
-	= init (showInstr ins) ++ showTarget d
+        = init (showInstr ins) ++ showTarget d
     showInstr' ins@(Jump (Disp d))
-	= init (showInstr ins) ++ showTarget d
+        = init (showInstr ins) ++ showTarget d
     showInstr' ins@(PushJ (Disp d))
-	= init (showInstr ins) ++ showTarget d
+        = init (showInstr ins) ++ showTarget d
     showInstr' ins
-	= showInstr ins
+        = showInstr ins
 
-showInstr	:: Instr -> String
+showInstr       :: Instr -> String
 showInstr (LoadI i)
     = "\tloadi\t" ++ show i ++ "\n"
 
@@ -96,21 +96,21 @@ showInstr (IllegalInstr s)
 showInstr (Label l)
     = showLabel l ++ ":\n"
 
-showComment	:: String -> String
-showComment ""	= ""
-showComment s	= "\t\t-- " ++ s
+showComment     :: String -> String
+showComment ""  = ""
+showComment s   = "\t\t-- " ++ s
 
-showDest	:: Dest -> String
-showDest (Symb l)	= showLabel l
-showDest (Disp d)	= show d
+showDest        :: Dest -> String
+showDest (Symb l)       = showLabel l
+showDest (Disp d)       = show d
 
-showLabel	:: Label -> String
+showLabel       :: Label -> String
 showLabel l = l
 
-showAddr	:: Address -> String
-showAddr (LocA a)	= "l[" ++ show a ++ "]"
-showAddr (AbsA a)	= "m[" ++ show a ++ "]"
+showAddr        :: Address -> String
+showAddr (LocA a)       = "l[" ++ show a ++ "]"
+showAddr (AbsA a)       = "m[" ++ show a ++ "]"
 
-showOpCode	:: Opcode -> String
+showOpCode      :: Opcode -> String
 showOpCode op
     = drop 2 (show op)

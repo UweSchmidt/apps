@@ -1,0 +1,9 @@
+*.ass
+*.check
+*.diffcode
+*.gencode
+*.optcode
+*.scan
+*.parse
+*.trc
+gen

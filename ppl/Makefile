@@ -26,14 +26,6 @@ profile	:
 	$(MAKE) -C src profile
 
 ##
-##pull
-##	pull all changes from development dir ~/haskell/ppl/curr
-##
-pull	:
-	[ -d _darcs ] || darcs init
-	darcs pull -a ~/haskell/ppl/curr
-
-##
 ##dist
 ##	make all, ex, all pictures and tar archive
 

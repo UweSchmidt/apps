@@ -93,10 +93,13 @@ showJInstr _
     = "illegalInstr(\"unknown instruction\")"
 -}
 
+showJDest               :: Dest -> String
 showJDest (Symb l)	= showJLabel l
 showJDest (Disp d)	= show d
 
-showJLabel l = "label not resolved: " ++ l
+showJLabel              :: String -> String
+showJLabel l            = "label not resolved: " ++ l
 
+showJAddr               :: Address -> String
 showJAddr (LocA a)	= "locAddr," ++ show a
 showJAddr (AbsA a)	= "absAddr," ++ show a

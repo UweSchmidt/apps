@@ -1,5 +1,3 @@
--- $Id: ControlUnit.hs,v 1.7 2001/12/27 15:59:32 uwe Exp $
-
 module PPL.ControlUnit
     (execProg) where
 
@@ -8,70 +6,67 @@ import PPL.MachineArchitecture
 import PPL.MicroCode
 import PPL.OPCode
 
-import PPL.Error
 import PPL.ShowCode
 import PPL.ShowMS
-
-import System.IO
 
 -- -------------------------------------------------------------------
 -- exec program
 
-execProg	:: MS -> IO ()
+execProg        :: MS -> IO ()
 execProg
     = runProg startProg
 
-runProg	:: MST () -> MS -> IO ()
+runProg :: MST () -> MS -> IO ()
 runProg (MST fct) initState
     = do
       fct initState
       return ()
 
-startProg	:: MST ()
+startProg       :: MST ()
 startProg
     = do
       trc (\_ -> "start execution\n")
       continueProg
 
-continueProg	:: MST ()
+continueProg    :: MST ()
 continueProg 
     = do
       trc showCurInstr
       succeed execInstr
       checkMStatus
 
-execInstr	:: MST ()
+execInstr       :: MST ()
 execInstr
     = do
-      instr <- loadInstr
+      instr' <- loadInstr
       incrProgCount
-      intpInstr instr
+      intpInstr instr'
 
-checkMStatus	:: MST ()
+checkMStatus    :: MST ()
 checkMStatus
     = do
       cont <- checkStateWith statusIsOk
       if cont
-	 then continueProg
-	 else do
-	      term <- checkStateWith statusIsTerminated
-	      if term
-		 then termProg
-		 else trc showMS
+         then continueProg
+         else do
+              term <- checkStateWith statusIsTerminated
+              if term
+                 then termProg
+                 else trc showMS
 
-termProg		:: MST ()
+termProg                :: MST ()
 termProg
     = trc (\_ -> "\nexecution terminated\n")
 
 -- -------------------------------------------------------------------
 
-intpInstr	:: Instr -> MST ()
+intpInstr       :: Instr -> MST ()
 
-intpInstr (LoadI i)	= pushMV (VInt i)
-intpInstr (LoadF f)	= pushMV (VFloat f)
-intpInstr (LoadS s)	= pushMV (VString s)
-intpInstr  LoadU	= pushMV  VUndef
-intpInstr  LoadEL	= pushMV (VList [])
+intpInstr (LoadI i)     = pushMV (VInt i)
+intpInstr (LoadF f)     = pushMV (VFloat f)
+intpInstr (LoadS s)     = pushMV (VString s)
+intpInstr  LoadU        = pushMV  VUndef
+intpInstr  LoadEL       = pushMV (VList [])
 
 intpInstr (Load addr)
     = do
@@ -83,12 +78,12 @@ intpInstr (Compute op)
     = case lookup op ops
       of
       Just (getArgs, eval)
-	  -> do
-	     vl  <- getArgs
-	     res <- eval vl
-	     pushMV res
+          -> do
+             vl  <- getArgs
+             res <- eval vl
+             pushMV res
       Nothing
-	  -> throw ("unimplemented op: " ++ showOpCode op)
+          -> throw ("unimplemented op: " ++ showOpCode op)
 
 intpInstr (Store addr)
     = do
@@ -97,7 +92,7 @@ intpInstr (Store addr)
 
 intpInstr  Pop
     = do
-      v <- popMV
+      _v <- popMV
       return ()
 
 intpInstr  Dup
@@ -108,29 +103,29 @@ intpInstr  Dup
 
 intpInstr (PushJ (Disp d))
     = do
-      pc <- getProgCount
-      pushMV (VCodeAddr pc)
-      setProgCount (pc - 1 + d)
+      pc' <- getProgCount
+      pushMV (VCodeAddr pc')
+      setProgCount (pc' - 1 + d)
 
 intpInstr  PopJ
     = do
-      (VCodeAddr pc) <- popRA
-      setProgCount pc
+      (VCodeAddr pc') <- popRA
+      setProgCount pc'
 
 intpInstr (Jump (Disp d))
     = do
-      pc <- getProgCount
-      setProgCount (pc - 1 + d)
+      pc' <- getProgCount
+      setProgCount (pc' - 1 + d)
 
 intpInstr (Branch cond (Disp d))
     = do
-      (VInt b)	<- popInt
+      (VInt b)  <- popInt
       if (b /= 0) == cond
         then (do
-	      pc <- getProgCount
-	      setProgCount (pc - 1 + d)
-	     )
-	else return ()
+              pc' <- getProgCount
+              setProgCount (pc' - 1 + d)
+             )
+        else return ()
 
 intpInstr (Entry len)
     = allocSF len
@@ -142,14 +137,14 @@ intpInstr (SysCall call)
     = case lookup call svcs
       of
       Just (getArgs, eval)
-	  -> do
-	     vl  <- getArgs
-	     res <- eval vl
-	     pushMV res
+          -> do
+             vl  <- getArgs
+             res <- eval vl
+             pushMV res
       Nothing
-	  -> throw ("unimplemented system call: " ++ call)
+          -> throw ("unimplemented system call: " ++ call)
 
-intpInstr instr
-    = throw ("unimplemented: " ++ show instr)
+intpInstr instr'
+    = throw ("unimplemented: " ++ show instr')
 
 -- -------------------------------------------------------------------

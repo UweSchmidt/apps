@@ -5,7 +5,7 @@ HCFLAGS		=
 
 GHCPROFILE	= -prof -auto-all
 GHCEXTRA	=
-GHCFLAGS	= -O2 $(GHCEXTRA)
+GHCFLAGS	= -Wall  -fno-warn-unused-do-bind -O2 $(GHCEXTRA)
 
 HCFLAGS		= $(GHCFLAGS)
 

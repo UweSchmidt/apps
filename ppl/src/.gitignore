@@ -1,0 +1,4 @@
+*.o
+*.hi
+Parser.inf
+Parser.info

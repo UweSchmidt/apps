@@ -1,7 +1,5 @@
-$Id: README,v 1.1 2001/04/04 16:49:18 uwe Exp $
-
-Dieses Verzeichnis enthält die Quellen und Beispiele
-für die eine Spezialsprache zur Manipulation von Bildern:
+Dieses Verzeichnis enthÃ¤lt die Quellen und Beispiele
+fÃ¼r die eine Spezialsprache zur Manipulation von Bildern:
 ppl (Picture Programming Language).
 
 Die Quellen bestehen aus Haskell Dateien *.hs im Unterverzeichnis src.
@@ -20,28 +18,28 @@ Beispiele sind *.ppl, im Verzeichnis "examples".
 Diese zeigen die Verwendung fast aller eingebauten Operationen.
 
 Um den Compiler zu testen und um trace Ausgaben der einzelnen
-Compiler-Läufe zu erhalten und alle Beispiele zu erzeugen,
+Compiler-LÃ¤ufe zu erhalten und alle Beispiele zu erzeugen,
 bitte einmal
 	make ex
-ausführen.
+ausfÃ¼hren.
 
-Die im Augenblick unterstützten
+Die im Augenblick unterstÃ¼tzten
 externe Bildformate ist .ppm (portable pixmap) und .pgm (portable grey map).
-Eingelesen werden können .pgm und .ppm files
+Eingelesen werden kÃ¶nnen .pgm und .ppm files
 sowohl im ascii als auch im raw format. Ausgegeben
 werden die Bilder im .ppm oder .pgm raw format mit 256 Farben oder Graustufen.
 
 pplc --help listet die Funktionen des pplc Compilers
-Dieser enthält auch einen eigebauten Interpretierer.
+Dieser enthÃ¤lt auch einen eigebauten Interpretierer.
 
-Mutige können
+Mutige kÃ¶nnen
 
 	make all ex
 	xv examples/gen/*.*
 
 aufrufen zum Erzeugen des Compilers, zum
-Ausführen der Beispielprogramme und zum
-Betrachten der Ergebnisse. (Anstatt xv geht natürlich auch ein anderer viewer)
+AusfÃ¼hren der Beispielprogramme und zum
+Betrachten der Ergebnisse. (Anstatt xv geht natÃ¼rlich auch ein anderer viewer)
 
 viel Spass (und wenig Frust) beim Ausprobieren
 

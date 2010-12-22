@@ -1,6 +1,6 @@
 begin
- p : picture;
- f  : string := "lena.pgm";
+ var p : picture;
+ var f  : string := "lena.pgm";
 
  writeln("hello world");
 
@@ -8,10 +8,10 @@ begin
  p := load(f);
 
  writeln("storing picture");
- p.store("original.pgm");
+ p.store("original");
 
  writeln("flip horizontal");
- p.flipHorizontal.store("flipHorizontal.pgm");
+ p.flipHorizontal.store("flipHorizontal");
 
  writeln("good bye")
 end
