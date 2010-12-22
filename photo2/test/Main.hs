@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-unused-do-bind -fno-warn-missing-signatures -fno-warn-name-shadowing #-}
+
 module Main
 where
 
@@ -16,8 +18,8 @@ import           Data.IORef
 import           Data.List	   	( delete
 					, elemIndex
 					, isPrefixOf
-					, nub
-					, sort
+					-- , nub
+					-- , sort
 					, sortBy
 					)
 import qualified Data.Map as M
@@ -28,7 +30,7 @@ import           Graphics.UI.Gtk.Glade
 
 import           Photo2.ArchiveTypes		( nats )
 import qualified Photo2.ArchiveTypes 		as AT
-import           Photo2.Config			( keyKeywords )
+-- import           Photo2.Config			( keyKeywords )
 import		 Photo2.ModelInterface
 import		 Photo2.FilePath
 
@@ -36,7 +38,7 @@ import           System.IO
 import           System.Directory
 import           System.IO.Unsafe      	( unsafePerformIO )
 
-import qualified Text.XML.HXT.Arrow   		as T
+import qualified Text.XML.HXT.Core   		as T
 import qualified Text.Regex.XMLSchema.String	as RE
 
 -- ------------------------------------------------------------
@@ -418,6 +420,7 @@ buildGUI [gm, {- gl, -} qd, ad, at]
       return $ GUI window statusbar tabs (lightbox, lbxtable)
 	           controls
 		   quitDlg (albumDlg, albumEnt) (attrDlg, attrTbl)
+buildGUI _ = error "buildGUI: wrong parameters"
 
 buildButtons	:: GladeXML -> IO Buttons
 buildButtons gm
@@ -475,7 +478,7 @@ installGUIControls g
     where
     mw = window    g
     ts = tabs      g
-    bx = lightbox  g
+    -- bx = lightbox  g
     cs = controls  g
     qd = quitdlg   g
 
@@ -651,8 +654,8 @@ windowGetScreenSize win
 windowMoveNorthEast	:: WindowClass self => self -> IO ()
 windowMoveNorthEast win
     = do
-      (sw,sh) <- windowGetScreenSize win
-      (w,h)   <- windowGetSize       win
+      (sw, _sh) <- windowGetScreenSize win
+      (w, _h)   <- windowGetSize       win
       windowMove win (sw - w) 0
 
 -- ------------------------------------------------------------
@@ -793,7 +796,7 @@ switchTab i	= withTabs switchTab
 	  setCurrTab i
 	  Just w'	<- notebookGetNthPage tabs i
 	  let w 	=  castToScrolledWindow w'
-	  n 		<- widgetGetName w
+	  _n 		<- widgetGetName w
 	  tb 		<- getLbxTable w
 	  tn   		<- widgetGetName tb
 	  trcMsg $ "current tab (" ++ show i ++ ") contains " ++ tn
@@ -807,7 +810,7 @@ switchTab i	= withTabs switchTab
 sortSelected	:: IO ()
 sortSelected	= withLightboxTable $ withCurrSelected . sortBySelected
     where
-    sortBySelected tab []
+    sortBySelected _tab []
 	= return ()
     sortBySelected tab xs@(x:xs1)
 	= do
@@ -912,7 +915,7 @@ withClipboard cbAction	= withTabs $ withCbt
 
 withClipboardTable	:: (Table -> IO a) -> IO a
 withClipboardTable cbtAction
-    = withClipboard $ \ (cbw, cbt) -> cbtAction cbt
+    = withClipboard $ \ (_cbw, cbt) -> cbtAction cbt
 
 
 withClipboardDo		:: IO () -> IO ()
@@ -970,7 +973,7 @@ updateSelected sl
       withLightboxTable $ withToggleButtons_ (setLabel (labels sl))
     where
     labels []	= []
-    labels (x:xs)	= (x, "*") : zip (reverse sl) (map show nats)
+    labels (x:_xs)	= (x, "*") : zip (reverse sl) (map show nats)
 
     setLabel ll tb
 	= do
@@ -1054,7 +1057,7 @@ resizeTable cols tab
 resizeLightboxTable	:: IO ()
 resizeLightboxTable
     = do
-      (w, h) <- withTabs widgetGetSize
+      (w, _h) <- withTabs widgetGetSize
       -- trcMsg $ "resizeLightboxTable: width of lightbox is " ++ show w
       withLightboxTable (resizeTable (picCols w))
       withLightboxTable widgetShowAll
@@ -1104,7 +1107,7 @@ copySelectionToClipboard mv
 copySelectionFromClipboard	:: Bool -> IO ()
 copySelectionFromClipboard mv
     = do
-      lb@(lbw, lbt) <- getLightbox
+      lb@(lbw, _lbt) <- getLightbox
       b <- currTabIsClipboard
       if b
 	 then warnMsg "no copy/move from clipboard to clipboard"
@@ -1129,7 +1132,7 @@ copySelectionFromClipboard mv
 deleteSelectedFromClipboard	:: IO ()
 deleteSelectedFromClipboard
     = do
-      c@(pn, ns) <- selectedContents
+      c@(_pn, _ns) <- selectedContents
       b <- currTabIsClipboard
       if not b
 	 then warnMsg "delete only allowed in clipboard"
@@ -1152,7 +1155,7 @@ copyToClipboard c
       clearSelected
 
 copySelected	:: (String, [String]) -> Lightbox -> Lightbox -> IO ()
-copySelected (pn, sns) srcLb@(srcLbw, srcLbt) dstLb@(dstLbw, dstLbt)
+copySelected (pn, sns) _srcLb@(_srcLbw, srcLbt) _dstLb@(_dstLbw, dstLbt)
     = do
       src <- widgetGetName srcLbt
       dst <- widgetGetName dstLbt
@@ -1332,7 +1335,7 @@ openTab path cs	= withTabs $ open
     open tabs
 	= do
 	  trcMsg $ "openTab: " ++ show (path, cs)
-	  n <- notebookGetNPages tabs
+	  _n <- notebookGetNPages tabs
 	  i <- addTab (fileName path) tabs
 	  notebookSetCurrentPage tabs i
 	  loadLightbox path cs
@@ -1410,7 +1413,7 @@ htmlSelectedEntries
     = do
       lbt  <- getLightboxTable
       path <- getCurrAlbumPath
-      sel  <- getLastSelectedPath			-- update selected entries
+      _sel  <- getLastSelectedPath			-- update selected entries
       withToggleButtons_ ( \ tb ->
 			   do
 			   v <- toggleButtonGetActive tb
@@ -1654,7 +1657,7 @@ editAttributes
       return ()
 
 setSelectedAttrs	:: Attrs -> Attrs -> IO ()
-setSelectedAttrs asOld as
+setSelectedAttrs _asOld as
     = do
       lbt  <- getLightboxTable
       path <- getCurrAlbumPath
@@ -1713,8 +1716,8 @@ getAttributes path
 readXmlVal	:: T.PU a -> String -> IO (Maybe a)
 readXmlVal pk inp
     = do
-      s <- T.runX ( T.readString [(T.a_remove_whitespace, T.v_1)
-				 ,(T.a_validate,          T.v_0)
+      s <- T.runX ( T.readString [ T.withRemoveWS T.yes
+				 , T.withValidate T.no
 				 ] inp
 		  >>>
 		  T.xunpickleVal pk

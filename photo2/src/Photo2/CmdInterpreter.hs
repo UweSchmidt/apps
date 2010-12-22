@@ -16,16 +16,14 @@ import           Photo2.Html
 import           Photo2.FilePath
 import           Photo2.ImportDialog
 
-import           System.IO
 import           System.Cmd
 import           System.Console.Editline.Readline
                  ( readline
                  , addHistory
                  )
 
-import           Text.XML.HXT.Arrow
--- import           Text.XML.HXT.DOM.UTF8Decoding
-import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
+import           Text.XML.HXT.Core
+import           Text.Regex.XMLSchema.String
 
 -- ------------------------------------------------------------
 
@@ -78,7 +76,7 @@ cmdLoop state
          then return state
          else do
               newState <- runCmds cmds state
-              cmdLoop (newState `demanding` rnf newState)
+              rnf newState `seq` cmdLoop newState
     where
     prompt = ("photo2@" ++) . (++ "> ") . mkAbsPath . joinPath . cwd $ state
     runCmds [] s0
@@ -113,7 +111,7 @@ mkCmd' io               = return . runCmd' io
 liftCmd                 :: Monad m => IO a -> m Cmd
 liftCmd c               = return $
                           \ s -> ( do
-                                   c
+                                   _ <- c
                                    return s )
 
 -- ------------------------------------------------------------
@@ -142,9 +140,9 @@ parseCmd   "open" [archive]                             = mkCmd ( loadArchiveAnd
                                                                 )
 parseCmd "config" []                                    = mkCmd ( get theConfig
                                                                   >>>
-                                                                  xpickleDocument xpConfig [ (a_indent, v_1)
-                                                                                           , (a_no_xml_pi, v_1)
-                                                                                           , (a_output_encoding, usAscii)
+                                                                  xpickleDocument xpConfig [ withIndent yes
+                                                                                           , withXmlPi  no
+                                                                                           , withOutputEncoding usAscii
                                                                                            ] ""
                                                                 )
 parseCmd "options" []                                  = parseCmd "options" [".*"]
@@ -155,8 +153,8 @@ parseCmd "options" [pat]                               = mkCmd ( get theConfigAt
                                                           where
                                                           dumpOptions = unlines . fmtTable " = "
                                                                         .
-									filter (match pat . fst)
-									.
+                                                                        filter (match pat . fst)
+                                                                        .
                                                                         map (first show) . M.toList
 
 parseCmd c@"set" [n]                                    = parseCmd c [n,v_1]
@@ -321,33 +319,33 @@ parseCmd "q" _          = fail ""
 
 parseCmd ('!':cmd) args = liftCmd $
                           do
-                          system (unwords $ cmd : args)
+                          _ <- system (unwords $ cmd : args)
                           return ()
 
 parseCmd c args         = illegalCmd c args
 
 -- ------------------------------------------------------------
 
-outputCmd	:: (Monad m) => String -> m Cmd
+outputCmd       :: (Monad m) => String -> m Cmd
 outputCmd msg
     = return out
       where
       out aState
-	  = do
-	    load selWriteRes aState $ msg
-	    return aState
+          = do
+            load selWriteRes aState $ msg
+            return aState
 
 illegalCmd      :: (Monad m) => String -> [String] -> m Cmd
 illegalCmd c args
     = return illegal
       where
       illegal aState
-	  = do
-	    load selWriteLog aState $
-		    "unknown command or wrong arguments: "
-		    ++ unwords (c : args) ++ "\n"
-		    ++ "try ? for help"
-	    return aState
+          = do
+            load selWriteLog aState $
+                    "unknown command or wrong arguments: "
+                    ++ unwords (c : args) ++ "\n"
+                    ++ "try ? for help"
+            return aState
 
 -- ------------------------------------------------------------
 --
@@ -395,17 +393,17 @@ findEntries ld gt out p
         arrIO out
       ) `withDefault` ()
 
-showXmlVal	:: PU a -> PathArrow a ()
+showXmlVal      :: PU a -> PathArrow a ()
 showXmlVal pk
     = const $
       ( xpickleVal pk
-	>>>
-	writeDocumentToString [ (a_indent, v_1)
-                              , (a_no_xml_pi, v_1)
-                              , (a_output_encoding, usAscii)
+        >>>
+        writeDocumentToString [ withIndent yes
+                              , withXmlPi  no
+                              , withOutputEncoding usAscii
                               ]
-	>>>
-	putRes
+        >>>
+        putRes
       )
 
 -- ------------------------------------------------------------
@@ -422,14 +420,14 @@ parseLs' pa ps                  = parseWdCmd' ls ps
 parseLs''                       :: PathArrow AlbumTree Path -> String -> [String] -> [Cmd]
 parseLs'' pa ps                 = parseWdCmd' ls ps
                                   where
-				  ls p = listA ( pa p
-						 >>>
-						 arr (mkAbsPath . joinPath)
-					       )
-					 >>>
-					 arr unwords
-					 >>>
-					 putRes
+                                  ls p = listA ( pa p
+                                                 >>>
+                                                 arr (mkAbsPath . joinPath)
+                                               )
+                                         >>>
+                                         arr unwords
+                                         >>>
+                                         putRes
 
 parseCleanup                    :: String -> Bool -> Bool -> [String] -> [Cmd]
 parseCleanup c ex rec []        = parseCleanup c ex rec ["."]
@@ -445,30 +443,30 @@ parseGenHtml c rec [p,f]        = parseWdCmd' gen c [p]
                                   gen = getTreeAndProcess (withConfig (genHtml rec f))
 parseGenHtml c rec (p:fl)       = concatMap (\ f -> parseGenHtml c rec [p,f]) fl
 
-parseIsAlbum			:: String -> [String] -> [Cmd]
+parseIsAlbum                    :: String -> [String] -> [Cmd]
 parseIsAlbum c                  = parseWdCmd' isAlbum' c
-				  where
-				  isAlbum' p = getTree p
-					      >>>
-					      getNode
-					      >>>
-					      arr (show . isAl)
-					      >>>
-					      putRes
+                                  where
+                                  isAlbum' p = getTree p
+                                              >>>
+                                              getNode
+                                              >>>
+                                              arr (show . isAl)
+                                              >>>
+                                              putRes
 
 parseCat                        :: String -> [String] -> [Cmd]
 parseCat c                      = parseWdCmd' cat c
                                   where
                                   cat = (getTreeAndProcess (\ p -> constA p &&& getNode))
                                         />>>/
-					showXmlVal xpAlbumEntry
+                                        showXmlVal xpAlbumEntry
 
 parseDump                       :: String -> [String] -> [Cmd]
 parseDump c                     = parseWdCmd' dump c
                                   where
                                   dump = getTree
                                          />>>/
-					 showXmlVal xpAlbumTree
+                                         showXmlVal xpAlbumTree
 
 parseRelatives          :: [String] -> [Cmd]
 parseRelatives          = parseWdCmd' relatives "relatives"
@@ -483,10 +481,10 @@ parseRelatives          = parseWdCmd' relatives "relatives"
                                                   "next     = " ++ fp next
                                                 )
                                               )
-					  >>>
-					  putRes
-					)
-				)
+                                          >>>
+                                          putRes
+                                        )
+                                )
                           fp [] = ""
                           fp p  = mkAbsPath . joinPath $ p
 
@@ -513,8 +511,8 @@ parseSort c             = parseWdCmd' srt c
 
 parseSortPictures       :: String -> [String] -> [Cmd]
 parseSortPictures c al  = parseWdCmd' ( changeAlbums $
-					processTree (sortPictures $ drop 1 al)
-				      ) c (take 1 al)
+                                        processTree (sortPictures $ drop 1 al)
+                                      ) c (take 1 al)
 
 parseImport             :: String -> [String] -> [Cmd]
 parseImport c           = parseWdCmd' imp c
@@ -557,13 +555,13 @@ parseModifiy c ca al    = parseWdCmd' ( changeAlbums $
                                         processTree (withConfig ca)
                                       ) c (take 1 al)
 
-parseCopyPic		:: String -> String -> String -> [Cmd]
+parseCopyPic            :: String -> String -> String -> [Cmd]
 parseCopyPic c a1 a2
-                 	= parseWdCmd' ( changeAlbums $
-					withConfig (copyPicture p2)
-				      ) c [a1]
+                        = parseWdCmd' ( changeAlbums $
+                                        withConfig (copyPicture p2)
+                                      ) c [a1]
                         where
-			p2 = drop 1 . splitPath $ a2
+                        p2 = drop 1 . splitPath $ a2
 
 parseAttr               :: String -> [String] -> [Cmd]
 parseAttr c al          = parseWdCmd' ( changeAlbums $
@@ -588,7 +586,7 @@ parseFind al            = parseWdCmd fe "find" (take 1 al)
                           rev   = concat          . drop 2 $ al
                           fe    = findEntries loadAlbums (getAllWithAttr rek rev) puts
                           puts (p, k, v)
-                              = putStrLn ( intercalate ": "			-- remove putStrLn
+                              = putStrLn ( intercalate ": "                     -- remove putStrLn
                                            [ mkAbsPath . joinPath $ p
                                            , k , v
                                            ]
@@ -618,13 +616,13 @@ parseCd ps
 parseTest               :: [String] -> [Cmd]
 parseTest ps            = parseWdCmd test "xxx" ps
                           where
-			  test p = findAlbumPath p
-				   >>>
-				   arrIO print
-			  {-
+                          test p = findAlbumPath p
+                                   >>>
+                                   arrIO print
+                          {-
                           test = changeAlbums $
                                  processTree (withConfig importPics)
-		          -}
+                          -}
                           {-
                           test = const (get theConfig >>> arrIOE  scanForNewImages >>> arrIO print)
                           -}

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE config SYSTEM "archive.dtd">
+<config>
+  <attr name="album-dir">album2</attr>
+  <attr name="base">../Diakaesten</attr>
+  <attr name="debug">1</attr>
+  <attr name="dir">org</attr>
+  <attr name="dtd">config/archive.dtd</attr>
+  <attr name="imgtype">jpg</attr>
+  <attr name="import-base">../Diakaesten</attr>
+  <attr name="import-dialog">0</attr>
+  <attr name="import-dir">2007/2007.03.11.Hagenbeck/uwe2</attr>
+  <attr name="import-pattern">.*</attr>
+  <attr name="import-since">1970-01-01</attr>
+  <attr name="layout">html-1400x1050</attr>
+  <attr name="store-format">picture</attr>
+  <picture-attributes>
+    <attr name="cam:CameraModelName">(.*:)?CameraModelName|model</attr>
+    <attr name="cam:FocalLength">(.*:)?FocalLength</attr>
+    <attr name="cam:FocalLengthIn35mmFormat">(.*:)?FocalLengthIn35mmFormat</attr>
+    <attr name="cam:Lens">(.*:)?[Ll]ens</attr>
+    <attr name="cam:LensID">(.*:)?[Ll]ensID|lens-id</attr>
+    <attr name="cam:LensSpec">(.*:)?[Ll]ensSpec|lens-spec</attr>
+    <attr name="cam:Make">(.*:)?Make|manufacturer</attr>
+    <attr name="descr:Comment">(.*:)?[Cc]omment</attr>
+    <attr name="descr:GeoCode">(.*:)?[Gg]eo[Cc]ode</attr>
+    <attr name="descr:GoogleMaps">(.*:)?[Gg]oogle[Mm]aps</attr>
+    <attr name="descr:Keywords">(.*:)?[Kk]eywords</attr>
+    <attr name="descr:Resource">(.*:)?[Rr]esource</attr>
+    <attr name="descr:Location">(.*:)?[Ll]ocation</attr>
+    <attr name="descr:Subject">(.*:)?[Ss]ubject</attr>
+    <attr name="descr:Subtitle">(.*:)?[Ss]ub[Tt]itle</attr>
+    <attr name="descr:Title">(.*:)?[Tt]itle</attr>
+    <attr name="descr:TitleEnglish">(.*:)?[Tt]itle[Ee]nglish</attr>
+    <attr name="descr:TitleLatin">(.*:)?[Tt]itle[Ll]atin</attr>
+    <attr name="descr:UserComment">(.*:)?UserComment|user-comment</attr>
+    <attr name="descr:Web">(.*:)?[Ww]eb</attr>
+    <attr name="descr:Wikipedia">(.*:)?[Ww]ikipedia</attr>
+    <attr name="exif:Aperture">(.*:)?Aperture</attr>
+    <attr name="exif:ColorSpaceData">(.*:)?ColorSpaceData|color-space</attr>
+    <attr name="exif:Contrast">(.*:)?[Cc]ontrast</attr>
+    <attr name="exif:CreateDate">(.*:)?CreateDate|date-and-time</attr>
+    <attr name="exif:DateTimeOriginal">(.*:)?DateTimeOriginal|date-and-time-original</attr>
+    <attr name="exif:DepthOfField">(.*:)?[Dd]epth[oO]f[Ff]ield|depth-of-field</attr>
+    <attr name="exif:ExposureCompensation">(.*:)?ExposureCompensation|exposure-bias|exposure-compensation</attr>
+    <attr name="exif:ExposureMode">(.*:)?ExposureMode|exposure-mode</attr>
+    <attr name="exif:ExposureProgram">(.*:)?ExposureProgram|exposure-program</attr>
+    <attr name="exif:ExposureTime">(.*:)?ExposureTime|exposure-time</attr>
+    <attr name="exif:Flash">(.*:)?[Ff]lash</attr>
+    <attr name="exif:FlashSetting">(.*:)?[Ff]lash-?[Ss]etting</attr>
+    <attr name="exif:FNumber">(.*:)?FNumber|fnumber</attr>
+    <attr name="exif:FocalLength">(.*:)?FocalLength|focal-length</attr>
+    <attr name="exif:FocalLengthIn35mmFormat">(.*:)?FocalLengthIn35mmFormat|focal-length-in-35mm</attr>
+    <attr name="exif:FocusDistance">(.*:)?FocusDistance|focus-distance</attr>
+    <attr name="exif:FocusMode">(.*:)?FocusMode|focus-mode</attr>
+    <attr name="exif:ImageSize">(.*:)?ImageSize|geometry</attr>
+    <attr name="exif:ISO">(.*:)?ISO|iso-setting</attr>
+    <attr name="exif:MeteringMode">(.*:)?MeteringMode|metering-mode</attr>
+    <attr name="exif:Quality">(.*:)?[Qq]uality</attr>
+    <attr name="exif:Saturation">(.*:)?[Ss]aturation</attr>
+    <attr name="exif:Sharpness">(.*:)?[Ss]harpness</attr>
+    <attr name="exif:ShootingMode">(.*:)?ShootingMode|shooting-mode</attr>
+    <attr name="exif:ShutterSpeed">(.*:)?ShutterSpeed|shutter-speed</attr>
+    <attr name="exif:VibrationReduction">(.*:)?VibrationReduction|vibration-reduction</attr>
+    <attr name="exif:WhiteBalance">(.*:)?WhiteBalance|white-balance</attr>
+    <attr name="file:FileModificationDateTime">(.*:)?FileModificationDateTime|modified</attr>
+    <attr name="file:FileSize">(.*:)?FileSize|file-size</attr>
+    <attr name="file:RefOrig">(.*:)?RefOrig|ref-org</attr>
+    <attr name="file:RefRaw">(.*:)?RefRaw|ref-raw</attr>
+    <attr name="file:RefXmp">(.*:)?RefXmp|ref-xmp</attr>
+    <attr name="show:Duration">(.*:)?[Dd]uration</attr>
+  </picture-attributes>
+  <layout id="html-1024x768" type="html-css2">
+    <page type="album">
+      <attr name="template">config/html-1024x768-album-template.xml</attr>
+    </page>
+    <page type="picture">
+      <attr name="template">config/html-1024x768-picture-template.xml</attr>
+    </page>
+  </layout>
+  <layout id="html-1400x1050" type="html-css2">
+    <page type="album">
+      <attr name="template">config/html-1400x1050-album-template.xml</attr>
+    </page>
+    <page type="picture">
+      <attr name="template">config/html-1400x1050-picture-template.xml</attr>
+    </page>
+  </layout>
+  <layout id="html-1600x1200" type="html-css2">
+    <page type="album">
+      <attr name="template">config/html-1600x1200-album-template.xml</attr>
+    </page>
+    <page type="picture">
+      <attr name="template">config/html-1600x1200-picture-template.xml</attr>
+    </page>
+  </layout>
+  <dictionary id="exif-german">
+    <attr name="Aperture-priority">Blendenvorwahl</attr>
+    <attr name="As Shot">Wie aufgenommen</attr>
+    <attr name="Auto">Automatik</attr>
+    <attr name="Center-weighted average">Mittenzentriert</attr>
+    <attr name="Center-weighted averaging">Mittenzentriert</attr>
+    <attr name="Cloudy">Bewölkt</attr>
+    <attr name="Continuous">Serie</attr>
+    <attr name="Custom">"Benutzerdefiniert</attr>
+    <attr name="Daylight">Tageslicht</attr>
+    <attr name="Evaluative">bewertend</attr>
+    <attr name="Exposure Bracketing">Belichtungsreihe</attr>
+    <attr name="Fine">Hoch</attr>
+    <attr name="Fired">Blitz</attr>
+    <attr name="Manual">Manuell</attr>
+    <attr name="Mode">Modus</attr>
+    <attr name="Multi-segment">Multi-Segment</attr>
+    <attr name="No Flash">Ohne Blitz</attr>
+    <attr name="None">Nichts</attr>
+    <attr name="Off">Aus</attr>
+    <attr name="On">Ein</attr>
+    <attr name="Single">Einzelbild</attr>
+    <attr name="Single-Frame">Einzelbild</attr>
+    <attr name="Spot">Punktmessung</attr>
+    <attr name="Superfine">Extra hoch</attr>
+    <attr name="Unknown">Nicht bekannt</attr>
+  </dictionary>
+  <size>
+    <attr name="dir">1600x1200</attr>
+    <attr name="geometry">1600x1200</attr>
+    <attr name="aspect-ratio">pad</attr>
+  </size>
+  <size>
+    <attr name="dir">1400x1050</attr>
+    <attr name="geometry">1400x1050</attr>
+    <attr name="aspect-ratio">pad</attr>
+  </size>
+  <size>
+    <attr name="dir">1024x768</attr>
+    <attr name="geometry">1024x768</attr>
+    <attr name="aspect-ratio">pad</attr>
+  </size>
+  <size>
+    <attr name="dir">160x120</attr>
+    <attr name="geometry">160x120</attr>
+    <attr name="aspect-ratio">fix</attr>
+  </size>
+  <size>
+    <attr name="dir">100x75</attr>
+    <attr name="geometry">100x75</attr>
+    <attr name="aspect-ratio">fix</attr>
+  </size>
+  <size>
+    <attr name="dir">100x100</attr>
+    <attr name="geometry">100x100</attr>
+    <attr name="aspect-ratio">pad</attr>
+  </size>
+</config>
+

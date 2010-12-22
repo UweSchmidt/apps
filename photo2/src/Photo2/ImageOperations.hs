@@ -13,7 +13,6 @@ import           Control.Parallel.Strategies( rnf )
 import           Data.Atom
 import qualified Data.ByteString        as B
 import qualified Data.ByteString.Char8  as C
-import           Data.Char
 import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
@@ -126,7 +125,7 @@ mergeGeoTags url a      = merge (matchSubex "http://maps.google.*[?&]ll=({ll}[-,
 mvPic   :: Name -> Config -> Path -> Pic -> IOE Pic
 mvPic newName c p pic
     = do
-      mapM renameCopy $ (map show . M.keys . load theCopies $ pic)
+      _ <- mapM renameCopy $ (map show . M.keys . load theCopies $ pic)
       return $ store theId newName pic
     where
     imgtype     = getImgType c
@@ -250,7 +249,7 @@ importOrig c p pic
             = liftIO $ copyFile src dst
         | otherwise                             -- conversion with convert command
             = do
-              execFct debug shellcmd
+              _ <- execFct debug shellcmd
               return ()
 
     upToDate
@@ -340,7 +339,7 @@ createCopy c p s pic
 resizeImage     :: Bool -> String -> String -> (Geo, Geo) -> Geo -> IOE ()
 resizeImage debug src dst (Geo cw ch, Geo xoff yoff) (Geo w h)
     = do
-      execFct debug shellCmd
+      _ <- execFct debug shellCmd
       return ()
     where
     unsharp     = [] -- ["-unsharp", "0.7x0.7+1.0+0.05"] -- sharpen option removed

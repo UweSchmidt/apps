@@ -10,7 +10,7 @@ import           Data.List                      ( isPrefixOf
                                                 )
 import           Data.Maybe                     ( fromMaybe )
 import qualified Data.Map                       as M
-import qualified Data.Tree.NTree.TypeDefs       as NT
+import qualified Data.Tree.Class                as NT
 
 import           Photo2.ArchiveTypes
 import           Photo2.Config
@@ -18,10 +18,11 @@ import           Photo2.ExifData
 import           Photo2.FilePath
 import           Photo2.ImageOperations
 
-import           System.IO
+import           Text.XML.HXT.Core
+import           Text.XML.HXT.Arrow.XmlState.RunIOStateArrow    ( initialState )
+import           Text.XML.HXT.Arrow.XmlState.TypeDefs           ( xioUserState )
 
-import           Text.XML.HXT.Arrow
-import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
+import           Text.Regex.XMLSchema.String
 
 -- ------------------------------------------------------------
 
@@ -33,7 +34,7 @@ runCmd  :: CmdArrow a b -> AppState -> IO AppState
 runCmd cmd s0
     = do
       (s1, _res) <- runIOSLA (setTraceLevel 0 >>> clear >>> cmd) (initialState s0) undefined
-      return (xio_userState s1)
+      return (xioUserState s1)
 
 runCmd' :: CmdArrow a b -> ([b] -> IO ()) -> AppState -> IO AppState
 runCmd' cmd out
@@ -56,10 +57,10 @@ errMsg  msg
       >>>
       none
 
-putRes	:: CmdArrow String ()
+putRes  :: CmdArrow String ()
 putRes  = resMsg $< this
 
-resMsg	:: String -> CmdArrow a ()
+resMsg  :: String -> CmdArrow a ()
 resMsg  msg
     = (getUserState >>^ load selWriteRes)
       >>>
@@ -260,16 +261,14 @@ runAction msg action
 
 loadDocData     :: (NFData b) => PU b -> String -> CmdArrow a b
 loadDocData p doc
-    = readDocument [ (a_remove_whitespace, v_1)
-                   , (a_validate, v_0)
-                   , (a_tagsoup, v_0)
-                     -- don't use tagsoup, it reads lasily and does not close input files, so they can't be written later on
+    = readDocument [ withRemoveWS yes
+                   , withValidate no
                    ] doc
       >>>
       documentStatusOk
       >>>
       -- runAction ("unpickle document: " ++ doc)
-      (rnfA (xunpickleVal p))
+      ( rnfA (xunpickleVal p) )
       -- >>>
       -- perform ( xpickleDocument p [ (a_indent, v_1) ] "" )   -- just for debug
       >>>
@@ -463,8 +462,8 @@ storeDocData p rootName doc conf
                   >>>
                   perform (constA doc >>> arrIOE (mkBackupFile ".bak"))
                   >>>
-                  writeDocument [ (a_indent, v_1)
-                                , (a_output_encoding, isoLatin1)
+                  writeDocument [ withIndent yes
+                                , withOutputEncoding isoLatin1
                                 ] doc
                 )
       >>>
@@ -1022,52 +1021,52 @@ sortPics _ p
 --
 -- copy a picture
 
-copyPicture	:: Path -> ConfigArrow AlbumTree AlbumTree
+copyPicture     :: Path -> ConfigArrow AlbumTree AlbumTree
 copyPicture dst conf src
     = runAction ("copy " ++ showPath src ++ " to " ++ showPath dst)
       ( loadAndCheckAlbum dstAlbum
-	>>>
-	(copyToDst $< (getTree src >>> getNode))
+        >>>
+        (copyToDst $< (getTree src >>> getNode))
       )
     where
     dstAlbum = init dst
     dstId    = last dst
     copyToDst srcPic
-	= changeAlbums (processTree insertSrc) dstAlbum
-	  where
-	  insertSrc p
-	      = runAction ("insertSrc " ++ showPath p ++ "/" ++ dstId ++ " " ++ show (picId srcPic)) $
-		( changeChildren (++ [pic'])
-		  >>>
-		  perform (arrIOE $ const (cpCopies (getImgType conf) dst src copies))
-		  >>>
-		  setEdited
-		)
-	      where
-	      copies = map show . M.keys . picCopies $ srcPic
-	      pic' = albumTree $ srcPic { picId     = dstId		-- new pic id
-					, isAl	    = False		-- it's a picture even if the source is an album
-					, picEdited = True		-- and it's modified
-					}
+        = changeAlbums (processTree insertSrc) dstAlbum
+          where
+          insertSrc p
+              = runAction ("insertSrc " ++ showPath p ++ "/" ++ dstId ++ " " ++ show (picId srcPic)) $
+                ( changeChildren (++ [pic'])
+                  >>>
+                  perform (arrIOE $ const (cpCopies (getImgType conf) dst src copies))
+                  >>>
+                  setEdited
+                )
+              where
+              copies = map show . M.keys . picCopies $ srcPic
+              pic' = albumTree $ srcPic { picId     = dstId             -- new pic id
+                                        , isAl      = False             -- it's a picture even if the source is an album
+                                        , picEdited = True              -- and it's modified
+                                        }
 
 -- ------------------------------------------------------------
 --
 -- remove a picture, albums remain unchanged
 
-removePicture	:: String -> ConfigArrow AlbumTree AlbumTree
+removePicture   :: String -> ConfigArrow AlbumTree AlbumTree
 removePicture pic conf path
     = runAction ("remove " ++ showPath picPath)
       ( processChildren ( ( deleteCopies conf picPath
-			    >>>
-			    none
-			  )
+                            >>>
+                            none
+                          )
                           `when` (neg isAlbum
-				  >>>
-				  (getPicId >>> isA (== pic))
-				 )
-			)
-	>>>
-	setEdited
+                                  >>>
+                                  (getPicId >>> isA (== pic))
+                                 )
+                        )
+        >>>
+        setEdited
       )
       `when` isAlbum
     where
@@ -1077,7 +1076,7 @@ removePicture pic conf path
 --
 -- convert a picture into an album
 
-makeAlbum	:: ConfigArrow AlbumTree AlbumTree
+makeAlbum       :: ConfigArrow AlbumTree AlbumTree
 makeAlbum _conf path
     = runAction ("make picture into album " ++ showPath path)
       ( editNode' (\ p -> p { isAl = True }) )
@@ -1087,7 +1086,7 @@ makeAlbum _conf path
 --
 -- convert an empty album into a picture
 
-makePicture	:: ConfigArrow AlbumTree AlbumTree
+makePicture     :: ConfigArrow AlbumTree AlbumTree
 makePicture _conf path
     = runAction ("make album into picture " ++ showPath path)
       ( editNode' (\ p -> p { isAl = False }) )
@@ -1097,7 +1096,7 @@ makePicture _conf path
 --
 -- sort all pictures by a given new sequence
 
-sortPictures	:: [String] -> PathArrow AlbumTree AlbumTree
+sortPictures    :: [String] -> PathArrow AlbumTree AlbumTree
 sortPictures ns p
     = runAction ("sorting " ++ showPath p ++ " by " ++ unwords ns)
       ( checkEntryLoaded
@@ -1108,10 +1107,10 @@ sortPictures ns p
       )
       `when` isAlbum
     where
-    sq	:: [Int]
-    sq	= map read ns
+    sq  :: [Int]
+    sq  = map read ns
 
-    sortBySeq	= map snd . sortBy (compare `on` fst) . zip sq
+    sortBySeq   = map snd . sortBy (compare `on` fst) . zip sq
 
 -- ------------------------------------------------------------
 --
@@ -1195,7 +1194,7 @@ cleanupImgDirs execute rec conf p0
 
 -- ------------------------------------------------------------
 
-findAlbumPath	:: PathArrow a Path
+findAlbumPath   :: PathArrow a Path
 findAlbumPath p
     = get theAlbums
       >>>
@@ -1207,65 +1206,65 @@ findAlbumPath p
       >>>
       arr fst
 
-findPath'	:: PathArrow AlbumTree (Path, AlbumTree)
-findPath' p	= -- runAction ("findpath for " ++ showPath p) $
-		  findPath p
+findPath'       :: PathArrow AlbumTree (Path, AlbumTree)
+findPath' p     = -- runAction ("findpath for " ++ showPath p) $
+                  findPath p
 
-findPath	:: PathArrow AlbumTree (Path, AlbumTree)
+findPath        :: PathArrow AlbumTree (Path, AlbumTree)
 findPath p
-    | null p	= none
-    | null p'	= ( ifA nodeMatch
-		       (getPicId >>^ return)
+    | null p    = none
+    | null p'   = ( ifA nodeMatch
+                       (getPicId >>^ return)
                        (constA [])
-		  )
-		  &&&
-		  this
-    | otherwise	= ifA nodeMatch
-		      ( checkEntryLoaded
-			>>>
-			( replaceCh $< findCh p')
-		      )
-		      (constA [] &&& this)
+                  )
+                  &&&
+                  this
+    | otherwise = ifA nodeMatch
+                      ( checkEntryLoaded
+                        >>>
+                        ( replaceCh $< findCh p')
+                      )
+                      (constA [] &&& this)
     where
     (n' : p') = p
     nodeMatch = getPicId >>> isA (wildcardMatch n')
 
     replaceCh (newp', newCh)
-	| null newp'	= none
-	| otherwise	= (getPicId >>^ (:newp'))
-			  &&&
-			  replaceChildren (constL newCh)
+        | null newp'    = none
+        | otherwise     = (getPicId >>^ (:newp'))
+                          &&&
+                          replaceChildren (constL newCh)
 
-    findCh	:: PathArrow AlbumTree (Path, [AlbumTree])
-    findCh p''	= -- runAction ("findCh with path " ++ showPath p'') $
-		  listA ( getChildren
-			  >>>
-			  findPath' p''
-			)
+    findCh      :: PathArrow AlbumTree (Path, [AlbumTree])
+    findCh p''  = -- runAction ("findCh with path " ++ showPath p'') $
+                  listA ( getChildren
+                          >>>
+                          findPath' p''
+                        )
                   -- >>>
-		  -- perform ( arr (map fst) >>> arrIO print)
-		  >>^
-		  splitPathsTrees
-		  where
-		  splitPathsTrees ps
-		      | null np				-- no path found
-			||
-			not (null (tail np))		-- 2 or more paths found: ambigious path
-			  = ([],[])
-		      | otherwise
-			  = (head np, map snd ps)
-		      where
-		      np = filter (not . null) . map fst $ ps
+                  -- perform ( arr (map fst) >>> arrIO print)
+                  >>^
+                  splitPathsTrees
+                  where
+                  splitPathsTrees ps
+                      | null np                         -- no path found
+                        ||
+                        not (null (tail np))            -- 2 or more paths found: ambigious path
+                          = ([],[])
+                      | otherwise
+                          = (head np, map snd ps)
+                      where
+                      np = filter (not . null) . map fst $ ps
 
-wildcardMatch	:: String -> String -> Bool
+wildcardMatch   :: String -> String -> Bool
 wildcardMatch p
-    | containsWCs p	= match p'
-    | otherwise		= (p ==)
+    | containsWCs p     = match p'
+    | otherwise         = (p ==)
     where
-    containsWCs	= any (`elem` "*?[]")
-    p'		= concatMap substWC p
+    containsWCs = any (`elem` "*?[]")
+    p'          = concatMap substWC p
 
-    substWC '*'	= ".*"
+    substWC '*' = ".*"
     substWC '?' = "."
     substWC c   = [c]
 

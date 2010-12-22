@@ -9,9 +9,10 @@ import           Data.List
 import           Data.Maybe
 import           Data.Map (Map)
 import qualified Data.Map as M
-import           Data.Ord
 
-import           Text.XML.HXT.Arrow hiding ( mkLeaf )
+import           Text.XML.HXT.Core hiding ( mkLeaf )
+
+import           Data.Tree.Class
 import           Data.Tree.NTree.TypeDefs
 
 import           Photo2.FilePath

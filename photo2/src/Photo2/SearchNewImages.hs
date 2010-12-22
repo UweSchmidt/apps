@@ -4,7 +4,6 @@ where
 import qualified Control.Monad as CM
 
 import           Data.Atom
-import           Data.Char
 import qualified Data.Map as M
 import           Data.Maybe
 import           Data.List

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
+<picture id="pic-0018">
+  <orig href1="2007/2007.03.11.Hagenbeck/uwe1/srgb/_uwe0165.jpg" raw1="2007/2007.03.11.Hagenbeck/uwe1/_uwe0165.nef"/>
+  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x75" geometry="100x75"/>
+  <copy base="1024x768" geometry="1024x768"/>
+  <copy base="1400x1050" geometry="1400x1050"/>
+  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="160x120" geometry="160x120"/>
+  <copy base="org" geometry="3483x2612"/>
+  <attr name="cam:CameraModelName">NIKON D200</attr>
+  <attr name="cam:FocalLength">300.0mm (35mm equivalent: 450.0mm)</attr>
+  <attr name="cam:FocalLengthIn35mmFormat">450mm</attr>
+  <attr name="cam:Lens">300mm f/2.8 G VR</attr>
+  <attr name="cam:LensID">AF-S VR Nikkor 300mm f/2.8G IF-ED</attr>
+  <attr name="cam:LensSpec">300mm f/2.8 G VR</attr>
+  <attr name="cam:Make">NIKON CORPORATION</attr>
+  <attr name="descr:Title">Rosa Löffler</attr>
+  <attr name="exif:Aperture">11.0</attr>
+  <attr name="exif:ColorSpaceData">RGB</attr>
+  <attr name="exif:Contrast">Normal</attr>
+  <attr name="exif:CreateDate">2007-03-11 16:22:55</attr>
+  <attr name="exif:DateTimeOriginal">2007-03-11 16:22:55.57</attr>
+  <attr name="exif:DepthOfField">0.07 m (3.95 - 4.02)</attr>
+  <attr name="exif:ExposureCompensation">-1/3</attr>
+  <attr name="exif:ExposureMode">Auto</attr>
+  <attr name="exif:ExposureProgram">Program AE</attr>
+  <attr name="exif:ExposureTime">1/500</attr>
+  <attr name="exif:FNumber">11.0</attr>
+  <attr name="exif:Flash">No Flash</attr>
+  <attr name="exif:FlashSetting">Normal</attr>
+  <attr name="exif:FocalLength">300.0mm</attr>
+  <attr name="exif:FocalLengthIn35mmFormat">450</attr>
+  <attr name="exif:FocusDistance">3.98 m</attr>
+  <attr name="exif:FocusMode">AF-C</attr>
+  <attr name="exif:ISO">400</attr>
+  <attr name="exif:ImageSize">3483x2612</attr>
+  <attr name="exif:MeteringMode">Multi-segment</attr>
+  <attr name="exif:Quality">Raw</attr>
+  <attr name="exif:Saturation">Normal</attr>
+  <attr name="exif:Sharpness">Normal</attr>
+  <attr name="exif:ShootingMode">Continuous</attr>
+  <attr name="exif:ShutterSpeed">1/500</attr>
+  <attr name="exif:VibrationReduction">On (1)</attr>
+  <attr name="exif:WhiteBalance">Auto</attr>
+  <attr name="file:FileModificationDateTime">2007-03-15 18:29:32</attr>
+  <attr name="file:FileSize">7 MB</attr>
+  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/uwe1/srgb/_uwe0165.jpg</attr>
+  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/uwe1/_uwe0165.nef</attr>
+</picture>
+

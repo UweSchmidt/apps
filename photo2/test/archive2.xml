@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE archive SYSTEM "config/archive.dtd">
+<archive xmlns="http://muehle.welt.all/photos.dtd" config="config/archive2.xml">
+  <album id="Hagenbeck" href="album2/Hagenbeck.xml"/>
+</archive>
+

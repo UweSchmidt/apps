@@ -6,7 +6,7 @@ import Photo2.ArchiveTypes
 
 m	:: IO ()
 m	= do
-	  cmdLoop emptyAppState
+	  _ <- cmdLoop emptyAppState
 	  return ()
 
 main	:: IO ()

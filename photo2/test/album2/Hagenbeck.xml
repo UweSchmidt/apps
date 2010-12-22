@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE album SYSTEM "../config/archive.dtd">
+<album id="Hagenbeck">
+  <orig href1="2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0048.jpg" raw1="2007/2007.03.11.Hagenbeck/petra1/_dsc0048.nef"/>
+  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x75" geometry="100x75"/>
+  <copy base="1024x768" geometry="1024x768"/>
+  <copy base="1400x1050" geometry="1400x1050"/>
+  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="160x120" geometry="160x120"/>
+  <copy base="org" geometry="3256x2442"/>
+  <attr name="cam:CameraModelName">NIKON D200</attr>
+  <attr name="cam:FocalLength">310.0mm (35mm equivalent: 465.0mm)</attr>
+  <attr name="cam:FocalLengthIn35mmFormat">465mm</attr>
+  <attr name="cam:Lens">80-400mm f/4.5-5.6</attr>
+  <attr name="cam:LensID">AF VR Zoom-Nikkor 80-400mm f/4.5-5.6D ED</attr>
+  <attr name="cam:LensSpec">80-400mm f/4.5-5.6 D VR</attr>
+  <attr name="cam:Make">NIKON CORPORATION</attr>
+  <attr name="descr:Resource">
+    <a href="http://maps.google.com/maps?f=q&amp;hl=de&amp;q=Hagenbeckstra%C3%9Fe,+Stellingen+22527+Hamburg,+Hamburg,+Hamburg,+Deutschland&amp;layer=&amp;sll=53.589366,9.941325&amp;sspn=0.021831,0.067635&amp;ie=UTF8&amp;z=16&amp;ll=53.596173,9.940567&amp;spn=0.010914,0.033817&amp;t=h&amp;om=1">google maps</a>
+  </attr>
+  <attr name="descr:Subtitle">bei herrlichem Frühlingswetter einmal durch den Tierpark</attr>
+  <attr name="descr:Title">11. März 2007: Geh'n wir mal zu Hagenbeck</attr>
+  <attr name="exif:Aperture">5.3</attr>
+  <attr name="exif:ColorSpaceData">RGB</attr>
+  <attr name="exif:Contrast">Normal</attr>
+  <attr name="exif:CreateDate">2007-03-11 14:03:28</attr>
+  <attr name="exif:DateTimeOriginal">2007-03-11 14:03:28.49</attr>
+  <attr name="exif:ExposureCompensation">-1/3</attr>
+  <attr name="exif:ExposureMode">Auto</attr>
+  <attr name="exif:ExposureProgram">Program AE</attr>
+  <attr name="exif:ExposureTime">1/350</attr>
+  <attr name="exif:FNumber">5.3</attr>
+  <attr name="exif:Flash">No Flash</attr>
+  <attr name="exif:FlashSetting">Normal</attr>
+  <attr name="exif:FocalLength">310.0mm</attr>
+  <attr name="exif:FocalLengthIn35mmFormat">465</attr>
+  <attr name="exif:FocusMode">AF-C</attr>
+  <attr name="exif:ISO">800</attr>
+  <attr name="exif:ImageSize">3256x2442</attr>
+  <attr name="exif:MeteringMode">Multi-segment</attr>
+  <attr name="exif:Quality">Raw</attr>
+  <attr name="exif:Saturation">Normal</attr>
+  <attr name="exif:Sharpness">Normal</attr>
+  <attr name="exif:ShootingMode">Continuous</attr>
+  <attr name="exif:ShutterSpeed">1/350</attr>
+  <attr name="exif:WhiteBalance">Auto</attr>
+  <attr name="file:FileModificationDateTime">2007-03-15 19:38:10</attr>
+  <attr name="file:FileSize">4 MB</attr>
+  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0048.jpg</attr>
+  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra1/_dsc0048.nef</attr>
+  <album id="QuerBeet" href="album2/Hagenbeck/QuerBeet.xml"/>
+  <album id="Gefluegel" href="album2/Hagenbeck/Gefluegel.xml"/>
+  <album id="OrangUtang" href="album2/Hagenbeck/OrangUtang.xml"/>
+  <album id="Tiger" href="album2/Hagenbeck/Tiger.xml"/>
+  <album id="PinguinEisbaerRobben" href="album2/Hagenbeck/PinguinEisbaerRobben.xml"/>
+  <album id="Enten" href="album2/Hagenbeck/Enten.xml"/>
+  <album id="Flamingos" href="album2/Hagenbeck/Flamingos.xml"/>
+  <album id="Zebras" href="album2/Hagenbeck/Zebras.xml"/>
+  <album id="pumas" href="album2/Hagenbeck/pumas.xml"/>
+  <album id="Clipboard" href="album2/Hagenbeck/Clipboard.xml"/>
+</album>
+

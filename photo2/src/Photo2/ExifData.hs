@@ -12,7 +12,7 @@ import           Data.Maybe
 
 import           Photo2.ArchiveTypes
 
-import           Text.XML.HXT.RelaxNG.XmlSchema.RegexMatch
+import           Text.Regex.XMLSchema.String
 import           Text.XML.HXT.DOM.Util ( stringTrim )
 
 -- ------------------------------------------------------------

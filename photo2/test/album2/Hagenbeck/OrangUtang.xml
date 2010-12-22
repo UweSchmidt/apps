@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE album SYSTEM "../../config/archive.dtd">
+<album id="OrangUtang">
+  <orig href1="2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0053.jpg" raw1="2007/2007.03.11.Hagenbeck/petra1/_dsc0053.nef"/>
+  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x75" geometry="100x75"/>
+  <copy base="1024x768" geometry="1024x768"/>
+  <copy base="1400x1050" geometry="1400x1050"/>
+  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="160x120" geometry="160x120"/>
+  <copy base="org" geometry="3024x2268"/>
+  <attr name="cam:CameraModelName">NIKON D200</attr>
+  <attr name="cam:FocalLength">400.0mm (35mm equivalent: 600.0mm)</attr>
+  <attr name="cam:FocalLengthIn35mmFormat">600mm</attr>
+  <attr name="cam:Lens">80-400mm f/4.5-5.6</attr>
+  <attr name="cam:LensID">AF VR Zoom-Nikkor 80-400mm f/4.5-5.6D ED</attr>
+  <attr name="cam:LensSpec">80-400mm f/4.5-5.6 D VR</attr>
+  <attr name="cam:Make">NIKON CORPORATION</attr>
+  <attr name="descr:Title">Im Orang Utang Haus</attr>
+  <attr name="exif:Aperture">5.6</attr>
+  <attr name="exif:ColorSpaceData">RGB</attr>
+  <attr name="exif:Contrast">Normal</attr>
+  <attr name="exif:CreateDate">2007-03-11 14:07:10</attr>
+  <attr name="exif:DateTimeOriginal">2007-03-11 14:07:10.24</attr>
+  <attr name="exif:ExposureCompensation">-1/3</attr>
+  <attr name="exif:ExposureMode">Auto</attr>
+  <attr name="exif:ExposureProgram">Program AE</attr>
+  <attr name="exif:ExposureTime">1/180</attr>
+  <attr name="exif:FNumber">5.6</attr>
+  <attr name="exif:Flash">No Flash</attr>
+  <attr name="exif:FlashSetting">Normal</attr>
+  <attr name="exif:FocalLength">400.0mm</attr>
+  <attr name="exif:FocalLengthIn35mmFormat">600</attr>
+  <attr name="exif:FocusMode">AF-C</attr>
+  <attr name="exif:ISO">800</attr>
+  <attr name="exif:ImageSize">3024x2268</attr>
+  <attr name="exif:MeteringMode">Multi-segment</attr>
+  <attr name="exif:Quality">Raw</attr>
+  <attr name="exif:Saturation">Normal</attr>
+  <attr name="exif:Sharpness">Normal</attr>
+  <attr name="exif:ShootingMode">Continuous</attr>
+  <attr name="exif:ShutterSpeed">1/180</attr>
+  <attr name="exif:WhiteBalance">Auto</attr>
+  <attr name="file:FileModificationDateTime">2007-03-15 19:40:24</attr>
+  <attr name="file:FileSize">4 MB</attr>
+  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0053.jpg</attr>
+  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra1/_dsc0053.nef</attr>
+  <picture id="pic-0001" href="album2/Hagenbeck/OrangUtang/pic-0001.xml"/>
+  <picture id="pic-0002" href="album2/Hagenbeck/OrangUtang/pic-0002.xml"/>
+  <picture id="pic-0003" href="album2/Hagenbeck/OrangUtang/pic-0003.xml"/>
+  <picture id="pic-0004" href="album2/Hagenbeck/OrangUtang/pic-0004.xml"/>
+  <picture id="pic-0005" href="album2/Hagenbeck/OrangUtang/pic-0005.xml"/>
+  <picture id="pic-0006" href="album2/Hagenbeck/OrangUtang/pic-0006.xml"/>
+  <picture id="pic-0007" href="album2/Hagenbeck/OrangUtang/pic-0007.xml"/>
+  <picture id="pic-0008" href="album2/Hagenbeck/OrangUtang/pic-0008.xml"/>
+  <picture id="pic-0009" href="album2/Hagenbeck/OrangUtang/pic-0009.xml"/>
+  <picture id="pic-0010" href="album2/Hagenbeck/OrangUtang/pic-0010.xml"/>
+  <picture id="pic-0011" href="album2/Hagenbeck/OrangUtang/pic-0011.xml"/>
+  <picture id="pic-0012" href="album2/Hagenbeck/OrangUtang/pic-0012.xml"/>
+  <picture id="pic-0013" href="album2/Hagenbeck/OrangUtang/pic-0013.xml"/>
+  <picture id="pic-0014" href="album2/Hagenbeck/OrangUtang/pic-0014.xml"/>
+  <picture id="pic-0015" href="album2/Hagenbeck/OrangUtang/pic-0015.xml"/>
+  <picture id="pic-0016" href="album2/Hagenbeck/OrangUtang/pic-0016.xml"/>
+  <picture id="pic-0017" href="album2/Hagenbeck/OrangUtang/pic-0017.xml"/>
+  <picture id="pic-0018" href="album2/Hagenbeck/OrangUtang/pic-0018.xml"/>
+  <picture id="pic-0019" href="album2/Hagenbeck/OrangUtang/pic-0019.xml"/>
+  <picture id="pic-0020" href="album2/Hagenbeck/OrangUtang/pic-0020.xml"/>
+  <picture id="pic-0021" href="album2/Hagenbeck/OrangUtang/pic-0021.xml"/>
+  <picture id="pic-0022" href="album2/Hagenbeck/OrangUtang/pic-0022.xml"/>
+  <picture id="pic-0023" href="album2/Hagenbeck/OrangUtang/pic-0023.xml"/>
+  <picture id="pic-0024" href="album2/Hagenbeck/OrangUtang/pic-0024.xml"/>
+  <picture id="pic-0025" href="album2/Hagenbeck/OrangUtang/pic-0025.xml"/>
+  <picture id="pic-0026" href="album2/Hagenbeck/OrangUtang/pic-0026.xml"/>
+  <picture id="pic-0027" href="album2/Hagenbeck/OrangUtang/pic-0027.xml"/>
+  <picture id="pic-0028" href="album2/Hagenbeck/OrangUtang/pic-0028.xml"/>
+  <picture id="pic-0029" href="album2/Hagenbeck/OrangUtang/pic-0029.xml"/>
+  <picture id="pic-0030" href="album2/Hagenbeck/OrangUtang/pic-0030.xml"/>
+  <picture id="pic-0031" href="album2/Hagenbeck/OrangUtang/pic-0031.xml"/>
+  <picture id="pic-0032" href="album2/Hagenbeck/OrangUtang/pic-0032.xml"/>
+  <picture id="pic-0033" href="album2/Hagenbeck/OrangUtang/pic-0033.xml"/>
+  <picture id="pic-0034" href="album2/Hagenbeck/OrangUtang/pic-0034.xml"/>
+  <picture id="pic-0035" href="album2/Hagenbeck/OrangUtang/pic-0035.xml"/>
+  <picture id="pic-0036" href="album2/Hagenbeck/OrangUtang/pic-0036.xml"/>
+  <picture id="pic-0037" href="album2/Hagenbeck/OrangUtang/pic-0037.xml"/>
+  <picture id="pic-0038" href="album2/Hagenbeck/OrangUtang/pic-0038.xml"/>
+  <picture id="pic-0039" href="album2/Hagenbeck/OrangUtang/pic-0039.xml"/>
+  <picture id="pic-0040" href="album2/Hagenbeck/OrangUtang/pic-0040.xml"/>
+  <picture id="pic-0041" href="album2/Hagenbeck/OrangUtang/pic-0041.xml"/>
+  <picture id="pic-0042" href="album2/Hagenbeck/OrangUtang/pic-0042.xml"/>
+  <picture id="pic-0043" href="album2/Hagenbeck/OrangUtang/pic-0043.xml"/>
+  <picture id="pic-0044" href="album2/Hagenbeck/OrangUtang/pic-0044.xml"/>
+  <picture id="pic-0045" href="album2/Hagenbeck/OrangUtang/pic-0045.xml"/>
+  <picture id="pic-0046" href="album2/Hagenbeck/OrangUtang/pic-0046.xml"/>
+  <picture id="pic-0047" href="album2/Hagenbeck/OrangUtang/pic-0047.xml"/>
+  <picture id="pic-0048" href="album2/Hagenbeck/OrangUtang/pic-0048.xml"/>
+  <picture id="pic-0049" href="album2/Hagenbeck/OrangUtang/pic-0049.xml"/>
+  <picture id="pic-0050" href="album2/Hagenbeck/OrangUtang/pic-0050.xml"/>
+  <picture id="pic-0051" href="album2/Hagenbeck/OrangUtang/pic-0051.xml"/>
+  <picture id="pic-0052" href="album2/Hagenbeck/OrangUtang/pic-0052.xml"/>
+  <picture id="pic-0053" href="album2/Hagenbeck/OrangUtang/pic-0053.xml"/>
+  <picture id="pic-0054" href="album2/Hagenbeck/OrangUtang/pic-0054.xml"/>
+  <picture id="pic-0055" href="album2/Hagenbeck/OrangUtang/pic-0055.xml"/>
+  <picture id="pic-0056" href="album2/Hagenbeck/OrangUtang/pic-0056.xml"/>
+  <picture id="pic-0057" href="album2/Hagenbeck/OrangUtang/pic-0057.xml"/>
+  <picture id="pic-0058" href="album2/Hagenbeck/OrangUtang/pic-0058.xml"/>
+  <picture id="pic-0059" href="album2/Hagenbeck/OrangUtang/pic-0059.xml"/>
+  <picture id="pic-0060" href="album2/Hagenbeck/OrangUtang/pic-0060.xml"/>
+  <picture id="pic-0061" href="album2/Hagenbeck/OrangUtang/pic-0061.xml"/>
+  <picture id="pic-0062" href="album2/Hagenbeck/OrangUtang/pic-0062.xml"/>
+  <picture id="pic-0063" href="album2/Hagenbeck/OrangUtang/pic-0063.xml"/>
+  <picture id="pic-0064" href="album2/Hagenbeck/OrangUtang/pic-0064.xml"/>
+  <picture id="pic-0065" href="album2/Hagenbeck/OrangUtang/pic-0065.xml"/>
+  <picture id="pic-0066" href="album2/Hagenbeck/OrangUtang/pic-0066.xml"/>
+  <picture id="pic-0067" href="album2/Hagenbeck/OrangUtang/pic-0067.xml"/>
+  <picture id="pic-0068" href="album2/Hagenbeck/OrangUtang/pic-0068.xml"/>
+</album>
+

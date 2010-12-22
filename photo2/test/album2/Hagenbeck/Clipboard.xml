@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE album SYSTEM "../../config/archive.dtd">
+<album id="Clipboard">
+  <orig href1="2007/2007.03.11.Hagenbeck/petra3/srgb/_dsc0057.jpg" raw1="2007/2007.03.11.Hagenbeck/petra3/_dsc0057.nef"/>
+  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x75" geometry="100x75"/>
+  <copy base="1024x768" geometry="1024x768"/>
+  <copy base="1400x1050" geometry="1400x1050"/>
+  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="160x120" geometry="160x120"/>
+  <copy base="org" geometry="3342x2506"/>
+  <attr name="cam:CameraModelName">NIKON D200</attr>
+  <attr name="cam:FocalLength">400.0 mm (35 mm equivalent: 600.0 mm)</attr>
+  <attr name="cam:FocalLengthIn35mmFormat">600 mm</attr>
+  <attr name="cam:Make">NIKON CORPORATION</attr>
+  <attr name="descr:Comment">Album für die Zwischenablage und für den Import neuer Bilder</attr>
+  <attr name="descr:Subtitle">Zwischenablage und Album für Importe</attr>
+  <attr name="descr:Title">Neue Bilder</attr>
+  <attr name="exif:Aperture">14.0</attr>
+  <attr name="exif:ColorSpaceData">RGB</attr>
+  <attr name="exif:Contrast">Normal</attr>
+  <attr name="exif:CreateDate">2007-03-11 17:01:08</attr>
+  <attr name="exif:DateTimeOriginal">2007-03-11 17:01:08.82</attr>
+  <attr name="exif:ExposureCompensation">-1/3</attr>
+  <attr name="exif:ExposureMode">Auto</attr>
+  <attr name="exif:ExposureProgram">Program AE</attr>
+  <attr name="exif:ExposureTime">1/750</attr>
+  <attr name="exif:FNumber">14.0</attr>
+  <attr name="exif:Flash">No Flash</attr>
+  <attr name="exif:ISO">400</attr>
+  <attr name="exif:ImageSize">3342x2506</attr>
+  <attr name="exif:MeteringMode">Multi-segment</attr>
+  <attr name="exif:Saturation">Normal</attr>
+  <attr name="exif:Sharpness">Normal</attr>
+  <attr name="exif:ShutterSpeed">1/750</attr>
+  <attr name="exif:WhiteBalance">Auto</attr>
+  <attr name="file:FileModificationDateTime">2007-03-15 21:48:10</attr>
+  <attr name="file:FileSize">5 MB</attr>
+  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/petra3/srgb/_dsc0057.jpg</attr>
+  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra3/_dsc0057.nef</attr>
+  <picture id="pic-0001" href="album2/Hagenbeck/Clipboard/pic-0001.xml"/>
+  <picture id="pic-0003" href="album2/Hagenbeck/Clipboard/pic-0003.xml"/>
+  <picture id="pic-0002" href="album2/Hagenbeck/Clipboard/pic-0002.xml"/>
+  <picture id="pic-0004" href="album2/Hagenbeck/Clipboard/pic-0004.xml"/>
+  <picture id="pic-0005" href="album2/Hagenbeck/Clipboard/pic-0005.xml"/>
+  <picture id="pic-0006" href="album2/Hagenbeck/Clipboard/pic-0006.xml"/>
+  <picture id="pic-0007" href="album2/Hagenbeck/Clipboard/pic-0007.xml"/>
+  <picture id="pic-0008" href="album2/Hagenbeck/Clipboard/pic-0008.xml"/>
+  <picture id="pic-0009" href="album2/Hagenbeck/Clipboard/pic-0009.xml"/>
+  <picture id="pic-0010" href="album2/Hagenbeck/Clipboard/pic-0010.xml"/>
+  <picture id="pic-0011" href="album2/Hagenbeck/Clipboard/pic-0011.xml"/>
+  <picture id="pic-0012" href="album2/Hagenbeck/Clipboard/pic-0012.xml"/>
+  <picture id="pic-0013" href="album2/Hagenbeck/Clipboard/pic-0013.xml"/>
+  <picture id="pic-0014" href="album2/Hagenbeck/Clipboard/pic-0014.xml"/>
+  <picture id="pic-0042" href="album2/Hagenbeck/Clipboard/pic-0042.xml"/>
+  <picture id="pic-0043" href="album2/Hagenbeck/Clipboard/pic-0043.xml"/>
+</album>
+

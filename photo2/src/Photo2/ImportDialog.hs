@@ -24,7 +24,7 @@ import           System.Console.Editline.Readline
                                          )
 import           System.IO
 
-import           Text.XML.HXT.Arrow
+import           Text.XML.HXT.Core
 
 -- ------------------------------------------------------------
 
