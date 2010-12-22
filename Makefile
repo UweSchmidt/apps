@@ -1,5 +1,5 @@
-PL	= args-parser
-PLrex	= (args-parser)
+PL	= args-parser find-grep-sed
+PLrex	= (args-parser|find-grep-sed)
 
 all	:
 	$(foreach i,$(PL), ( cd $i && cabal configure && cabal build && cabal install && cabal sdist; ); )

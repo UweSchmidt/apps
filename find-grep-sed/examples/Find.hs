@@ -1,9 +1,6 @@
 module Main
 where
 
-import Control.Monad
-
-import Data.List hiding ( find )
 import Data.Maybe
 
 import Test.HUnit
@@ -15,8 +12,6 @@ import Test.HUnit
     )
 
 import System
-import System.Environment
-import System.IO
 
 import System.FindGrepSed
 

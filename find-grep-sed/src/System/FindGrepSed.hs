@@ -10,11 +10,11 @@ import           Data.Maybe
 import qualified Data.Map                            as M
 import qualified Data.Set                            as S
 
-import           Text.Regex
-import           Text.XML.HXT.Parser.XhtmlEntities      ( xhtmlEntities )
-import           Text.XML.HXT.DOM.Unicode               ( utf8ToUnicode
+import           Data.String.Unicode                    ( utf8ToUnicode
                                                         , unicodeToUtf8
                                                         )
+import           Text.Regex.XMLSchema.String            ( match )
+import           Text.XML.HXT.Parser.XhtmlEntities      ( xhtmlEntities )
 
 import System.IO
 import System.Directory
@@ -54,7 +54,7 @@ fe2T (DirName f1) f
     = fe2T (RE f1) (dirname f)
 
 fe2T (RE re) f
-    = return . isJust . matchRegex (mkRegex ("^(" ++ re ++ ")$")) $ f
+    = return . match re $ f
 
 fe2T FT f
     = trueFct f
