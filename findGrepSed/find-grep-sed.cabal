@@ -1,0 +1,32 @@
+Cabal-Version:  >= 1.2
+Name:           find-grep-sed
+Version:        0.1.1
+Copyright:      2008, Uwe Schmidt
+Maintainer:     uwe@fh-wedel.de
+Author:         Uwe Schmidt
+Homepage:       http://www.fh-wedel.de/~si/
+-- License:        privateUseOnly
+License-file:	privateUseOnly
+Category:       Tools
+Build-type:     Simple
+Synopsis:       search, grep and sed of directories
+Description:
+    Typical search, grep and sed function
+
+Library
+    build-depends: base >= 4,
+                   parsec >= 2.0 && < 3.0,
+                   unix >= 2.0,
+                   directory >= 1.0,
+                   hxt >= 8.0,
+                   regex-compat >= 0.71,
+                   containers >= 0.1
+
+    GHC-Options: -Wall
+    Exposed-modules:
+        System.FindGrepSed
+
+Executable find-grep-sed
+    Main-Is: Find.hs
+    build-depends: haskell98 >= 0, HUnit >= 1.2
+    GHC-Options: -Wall
