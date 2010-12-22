@@ -6,7 +6,6 @@ import System.Console.ArgumentParser
 import Text.ParserCombinators.Parsec
 
 import System.Environment
-import System.IO
 import System.Exit
 
 main	:: IO ()
