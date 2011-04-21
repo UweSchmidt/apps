@@ -82,7 +82,7 @@ usage   :: FilePath -> IO ()
 usage _dir
     = do
       pn <- getProgName
-      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.5)\n" )
+      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.7)\n" )
     where
     cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
 

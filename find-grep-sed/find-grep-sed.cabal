@@ -1,6 +1,6 @@
 Cabal-Version:  >= 1.2
 Name:           find-grep-sed
-Version:        0.1.2
+Version:        0.1.7
 Copyright:      Copyright (c) 2008-2011 Uwe Schmidt
 Maintainer:     uwe@fh-wedel.de
 Author:         Uwe Schmidt
@@ -19,6 +19,7 @@ Library
                , unix                >= 2.0
                , containers          >= 0.1
                , directory           >= 1.0
+               , bytestring          >= 0.9
                , hxt-regex-xmlschema >= 9.0
                , hxt-unicode         >= 9.0
                , hxt                 >= 9.0

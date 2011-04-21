@@ -4,11 +4,14 @@ where
 import           Control.Arrow
 import           Control.Monad
 
+import qualified Data.ByteString                     	as B
+import qualified Data.ByteString.Char8               	as C
+
 import           Data.Char                              ( isSpace, toLower )
-import           Data.List                       hiding ( find )
+import           Data.List                          	hiding ( find )
 import           Data.Maybe
-import qualified Data.Map                            as M
-import qualified Data.Set                            as S
+import qualified Data.Map                            	as M
+import qualified Data.Set                            	as S
 
 import           Data.String.Unicode                    ( utf8ToUnicode
                                                         , unicodeToUtf8
@@ -117,10 +120,9 @@ contentFind p f
     = do
       -- hPutStrLn stderr ( "contentFind: " ++ f )
       h <- openFile f ReadMode
-      c <- hGetContents h
-      r <- return $! (p c)
+      b <- B.hGetContents h
       hClose h
-      return r
+      return . p . C.unpack $ b
 
 -- ------------------------------
 
@@ -281,7 +283,7 @@ substXhtmlChars
         | isAsciiChar c
             = [c]
         | otherwise
-            = ("&" ++)
+            = ("&#" ++)
               . (++ ";")
               . fromMaybe (show .fromEnum $ c)
               . M.lookup (fromEnum c)
@@ -460,8 +462,8 @@ contentGrep     :: (String -> Bool) -> FilePath -> IO ()
 contentGrep p f
     = do
       h <- openFile f ReadMode
-      c <- hGetContents h
-      putStr $ grep (lines c)
+      b <- B.hGetContents h
+      putStr $ grep (lines . C.unpack $ b)
       hClose h
     where
     grep
@@ -477,18 +479,19 @@ contentEdit     :: (String -> String) -> FilePath -> IO ()
 contentEdit ef f
     = do
       h <- openFile f ReadMode
-      c <- hGetContents h
+      b <- B.hGetContents h
+      let c  = C.unpack b
       let c' = ef c
       if c' == c
          then hClose h
          else do
               hPutStrLn stderr ( "contentEdit: " ++ f )
-              b <- openFile (f ++ "~") WriteMode        -- make backup file
-              hPutStr b c
-              hClose b
+              bak <- openFile (f ++ "~") WriteMode        -- make backup file
+              B.hPutStr bak b
+              hClose bak
               hClose h
               h' <- openFile f WriteMode
-              hPutStr h' c'
+              B.hPutStr h' (C.pack c')
               hClose h'
 
 -- ------------------------------
