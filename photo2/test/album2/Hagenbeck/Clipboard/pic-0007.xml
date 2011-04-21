@@ -2,11 +2,11 @@
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0007">
   <orig href1="2007/2007.03.11.Hagenbeck/uwe2/srgb/_uwe0002.jpg" raw1="2007/2007.03.11.Hagenbeck/uwe2/_uwe0002.nef"/>
-  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x100" geometry="67x100"/>
   <copy base="100x75" geometry="100x75"/>
-  <copy base="1024x768" geometry="1024x768"/>
-  <copy base="1400x1050" geometry="1400x1050"/>
-  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="1024x768" geometry="514x768"/>
+  <copy base="1400x1050" geometry="703x1050"/>
+  <copy base="1600x1200" geometry="804x1200"/>
   <copy base="160x120" geometry="160x120"/>
   <copy base="org" geometry="2613x3898"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>

@@ -2,7 +2,7 @@
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0041">
   <orig href1="2007/2007.03.11.Hagenbeck/petra5/srgb/_dsc0009.jpg" raw1="2007/2007.03.11.Hagenbeck/petra5/_dsc0009.nef"/>
-  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x100" geometry="100x75"/>
   <copy base="100x75" geometry="100x75"/>
   <copy base="1024x768" geometry="1024x768"/>
   <copy base="1400x1050" geometry="1400x1050"/>

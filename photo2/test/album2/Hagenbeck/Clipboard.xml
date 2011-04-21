@@ -2,11 +2,11 @@
 <!DOCTYPE album SYSTEM "../../config/archive.dtd">
 <album id="Clipboard">
   <orig href1="2007/2007.03.11.Hagenbeck/petra3/srgb/_dsc0057.jpg" raw1="2007/2007.03.11.Hagenbeck/petra3/_dsc0057.nef"/>
-  <copy base="100x100" geometry="100x100"/>
+  <copy base="100x100" geometry="100x74"/>
   <copy base="100x75" geometry="100x75"/>
-  <copy base="1024x768" geometry="1024x768"/>
-  <copy base="1400x1050" geometry="1400x1050"/>
-  <copy base="1600x1200" geometry="1600x1200"/>
+  <copy base="1024x768" geometry="1024x767"/>
+  <copy base="1400x1050" geometry="1400x1049"/>
+  <copy base="1600x1200" geometry="1600x1199"/>
   <copy base="160x120" geometry="160x120"/>
   <copy base="org" geometry="3342x2506"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
