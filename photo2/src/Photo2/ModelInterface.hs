@@ -8,29 +8,29 @@ import Photo2.CmdInterpreter
 
 -- ------------------------------------------------------------
 
-type Model	= AppState
+type Model      = AppState
 
-buildModel	:: IO Model
-buildModel	= return emptyAppState
+buildModel      :: IO Model
+buildModel      = return emptyAppState
 
-execModel	:: (String -> IO ()) ->
-		   String ->
-		   Model -> IO (String, Model)
+execModel       :: (String -> IO ()) ->
+                   String ->
+                   Model -> IO (String, Model)
 execModel logger cmd s0
     = do
       resVar <- newIORef []
       s1  <- return $
-	     s0 { writeLog = logger
-		, writeRes = addTo resVar
-		}
+             s0 { writeLog = logger
+                , writeRes = addTo resVar
+                }
       s2  <- runCmds cmds s1
       res <- readIORef resVar
       return (unlines . reverse $ res, s2)
     where
     addTo :: IORef [String] -> String -> IO ()
     addTo var val
-	= do
-	  modifyIORef var (val :)
+        = do
+          modifyIORef var (val :)
 
     cmds = parseCmdLine . tokenizeCmdLine $ cmd
 

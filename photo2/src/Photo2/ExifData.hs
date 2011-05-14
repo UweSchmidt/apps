@@ -19,13 +19,13 @@ import           Text.XML.HXT.DOM.Util ( stringTrim )
 
 titleKey, subTitleKey, resourceKey, googleMapsKey, webKey, wikipediaKey, durationKey, fileModificationKey :: Atom
 
-titleKey			= newAtom "descr:Title"
-subTitleKey			= newAtom "descr:Subtitle"
-resourceKey			= newAtom "descr:Resource"
-googleMapsKey			= newAtom "descr:GoogleMaps"
+titleKey                        = newAtom "descr:Title"
+subTitleKey                     = newAtom "descr:Subtitle"
+resourceKey                     = newAtom "descr:Resource"
+googleMapsKey                   = newAtom "descr:GoogleMaps"
 webKey                          = newAtom "descr:Web"
 wikipediaKey                    = newAtom "descr:Wikipedia"
-durationKey			= newAtom "show:Duration"
+durationKey                     = newAtom "show:Duration"
 fileModificationKey             = newAtom fileModificationDateTime
 
 fileModificationDateTime'       :: String
@@ -104,7 +104,7 @@ isDateTime
 
 normAttrs       :: PicAttrs -> Attrs -> Attrs
 normAttrs pl
-    = M.foldWithKey norm emptyAttrs
+    = M.foldrWithKey norm emptyAttrs
     where
     norm k v m
         | null . show $ k'      = m

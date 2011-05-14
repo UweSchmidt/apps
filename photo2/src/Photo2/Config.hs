@@ -34,11 +34,11 @@ keyCreateDate           = newAtom "exif:CreateDate"
 keyKeywords             :: Atom
 keyKeywords             = newAtom "descr:Keywords"
 
-keyGoogleMaps		:: Atom
-keyGoogleMaps		= newAtom "descr:GoogleMaps"
+keyGoogleMaps           :: Atom
+keyGoogleMaps           = newAtom "descr:GoogleMaps"
 
-keyGeoCode		:: Atom
-keyGeoCode		= newAtom "descr:GeoCode"
+keyGeoCode              :: Atom
+keyGeoCode              = newAtom "descr:GeoCode"
 
 -- ------------------------------------------------------------
 
@@ -78,8 +78,8 @@ optForceCopy            = "copy-copy"
 optForceExif            :: String
 optForceExif            = "copy-exif"
 
-optImportDialog		:: String
-optImportDialog		= "import-dialog"
+optImportDialog         :: String
+optImportDialog         = "import-dialog"
 
 getImportBase           :: Config -> String
 getImportBase           = getDefOpt "../Diakaesten" "import-base"

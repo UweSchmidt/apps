@@ -1,8 +1,8 @@
 module Photo2.Arrow
 where
 
+import           Control.DeepSeq
 import           Control.Monad.Error            ( runErrorT )
-import           Control.Parallel.Strategies
 
 import           Data.Function                  ( on )
 import           Data.List                      ( isPrefixOf

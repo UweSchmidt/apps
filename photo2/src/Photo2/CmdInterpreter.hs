@@ -1,8 +1,8 @@
 module Photo2.CmdInterpreter
 where
 
+import           Control.DeepSeq
 import qualified Control.Monad as CM
-import           Control.Parallel.Strategies
 
 import           Data.Atom
 import           Data.Char
@@ -312,7 +312,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.1.5 from 2009-02-15"
+    = outputCmd $ "Photo2 version 0.2.0 from 2011-05-14"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""

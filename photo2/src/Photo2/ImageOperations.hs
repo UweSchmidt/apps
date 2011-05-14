@@ -7,7 +7,7 @@ import qualified Control.Exception as CE
 import           Control.Monad.Error hiding ( liftIO )
 import qualified Control.Monad.Error as ME
 
-import           Control.Parallel.Strategies( rnf )
+import           Control.DeepSeq
 
 
 import           Data.Atom
@@ -77,7 +77,7 @@ dryCmd False _msg   cmd = cmd
 -- ------------------------------------------------------------
 
 mergeAttrs              :: Attrs -> Attrs -> Attrs
-mergeAttrs n o          = M.foldWithKey mergeAttr o n
+mergeAttrs n o          = M.foldrWithKey mergeAttr o n
 
 mergeAttr               :: Atom -> Value -> Attrs -> Attrs
 mergeAttr k v
@@ -88,7 +88,7 @@ mergeAttr k v
     | otherwise         = M.insert k v
 
 remAttrs                :: String -> Attrs -> Attrs
-remAttrs kp             = M.foldWithKey remK M.empty
+remAttrs kp             = M.foldrWithKey remK M.empty
     where
     remK k a m
         | match kp (show k)       = m
@@ -700,14 +700,14 @@ findRaw' ext    = findRelFile
                   ( (`addExtension` ext) . removeRawVersion . removeExtension . baseName )
                   ( \ fn -> (</> fn) . dirPath . dirPath )
 
-findRaws'	:: [String] -> String -> String -> IOE String
-findRaws' exts	base f
+findRaws'       :: [String] -> String -> String -> IOE String
+findRaws' exts  base f
                 = do
                   fns <- sequence . map (\ e -> findRaw' e base f) $ exts
                   return . head . (++ [""]) . filter (not . null) $ fns
 
 findRaw         :: String -> String -> IOE String
-findRaw		= findRaws' ["nef", "rw2", "jpg"]
+findRaw         = findRaws' ["nef", "rw2", "jpg"]
 
 findXmp         :: String -> String -> IOE String
 findXmp         = findRelFile

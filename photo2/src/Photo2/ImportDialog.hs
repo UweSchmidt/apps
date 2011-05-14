@@ -34,8 +34,8 @@ importPics c p
       ( checkEntryLoaded
         >>>
         (ins $< (importScan >>> importSelection))
-	>>>
-	setEdited
+        >>>
+        setEdited
       )
     where
     importScan
@@ -72,7 +72,7 @@ importPics c p
                                    , picRaw     = r
                                    , picXmp     = x
                                    , picAttrs   = al
-				   , picEdited  = True
+                                   , picEdited  = True
                                    }
 
 
@@ -84,13 +84,13 @@ type PicList    = [PicDescr]
 importDialog    :: Config -> [(String, String, String)] -> IOE PicList
 importDialog cnf pics
     | dia
-	= do
-	  viewPics
-	  liftIO $ dialog emptyAttrs [] [] pics'
+        = do
+          viewPics
+          liftIO $ dialog emptyAttrs [] [] pics'
     | otherwise
-	=  return pics'
+        =  return pics'
     where
-    dia	= not . optOFF optImportDialog $ cnf
+    dia = not . optOFF optImportDialog $ cnf
 
     imgBase     = normPath . getImportBase $ cnf
     pics'       = map (\ (x1, x2, x3) -> (x1, x2, x3, emptyAttrs)) pics

@@ -1,7 +1,7 @@
 module Photo2.ArchiveTypes
 where
 
-import           Control.Parallel.Strategies
+import           Control.DeepSeq
 
 import           Data.Atom
 import           Data.Char
@@ -29,9 +29,9 @@ data AppState           = AppState { albums      :: AlbumTree
                                    , configName  :: Href
                                    , status      :: Status
                                    , cwd         :: Path
-				   , writeLog    :: String -> IO ()
-				   , writeRes	 :: String -> IO ()
-				   , templates   :: HtmlTemplates
+                                   , writeLog    :: String -> IO ()
+                                   , writeRes    :: String -> IO ()
+                                   , templates   :: HtmlTemplates
                                    }
 
 type Options            = AssocList Name Value
@@ -40,7 +40,7 @@ data Status             = Running Int
                         | Exc String
                           deriving (Eq, Show)
 
-type HtmlTemplates	= Map String XmlTrees
+type HtmlTemplates      = Map String XmlTrees
 
 -- ------------------------------------------------------------
 
@@ -149,7 +149,7 @@ store s v               = change s (const v)
 
 -- ------------------------------------------------------------
 
-type AppSelector a 	= Selector AppState a
+type AppSelector a      = Selector AppState a
 
 selAlbums               :: AppSelector AlbumTree
 selAlbums               = (albums,      \ x s -> s {albums = x})
@@ -169,11 +169,11 @@ selStatus               = (status,      \ x s -> s {status = x})
 selWd                   :: AppSelector Path
 selWd                   = (cwd,         \ x s -> s {cwd = x})
 
-selWriteLog		:: AppSelector (String -> IO ())
-selWriteLog		= (writeLog,    \ x s -> s {writeLog = x})
+selWriteLog             :: AppSelector (String -> IO ())
+selWriteLog             = (writeLog,    \ x s -> s {writeLog = x})
 
-selWriteRes		:: AppSelector (String -> IO ())
-selWriteRes		= (writeRes,    \ x s -> s {writeRes = x})
+selWriteRes             :: AppSelector (String -> IO ())
+selWriteRes             = (writeRes,    \ x s -> s {writeRes = x})
 
 selConfigAttrs          :: AppSelector Attrs
 selConfigAttrs          = (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
@@ -194,7 +194,7 @@ selTemplate k           = (fromMaybe [] . M.lookup k,
 
 -- ------------------------------------------------------------
 
-type PicSelector a 	= Selector Pic a
+type PicSelector a      = Selector Pic a
 
 theId                   :: PicSelector Name
 theId                   = ( picId,     \ n x -> x { picId     = n } )
@@ -229,9 +229,9 @@ emptyAppState           = AppState { albums       = emptyAlbumTree
                                    , configName   = ""
                                    , status       = Running 0
                                    , cwd          = []
-				   , writeLog	  = hPutStrLn stderr
-				   , writeRes	  = hPutStrLn stdout
-				   , templates    = emptyTemplates
+                                   , writeLog     = hPutStrLn stderr
+                                   , writeRes     = hPutStrLn stdout
+                                   , templates    = emptyTemplates
                                    }
 
 emptyConfig             :: Config
@@ -283,8 +283,8 @@ emptyGeo                = Geo 0 0
 emptyAttrs              :: Attrs
 emptyAttrs              = M.empty
 
-emptyTemplates		:: HtmlTemplates
-emptyTemplates		= M.empty
+emptyTemplates          :: HtmlTemplates
+emptyTemplates          = M.empty
 
 -- ------------------------------------------------------------
 
@@ -413,7 +413,7 @@ xpPicAttrs              = xpDefault [] $
 xpHtmlText              :: PU String
 xpHtmlText              = xpWrap ( showXML, readHTML ) $ xpTrees
                           where
-                          showXML  = concat . runLA ( xshow (unlistA >>> escapeXmlDoc) )
+                          showXML  = concat . runLA ( xshowEscapeXml unlistA )
                           readHTML = runLA hread                                -- hread ignores not wellformed attributes, e.g. unescaped &s in URLs
 
 xpLayouts               :: PU Layouts
@@ -479,8 +479,8 @@ showAspect Crop         = "crop"
 
 -- ----------------------------------------
 
-nats	:: [Int]
-nats	= [1..]
+nats    :: [Int]
+nats    = [1..]
 
 -- ----------------------------------------
 
