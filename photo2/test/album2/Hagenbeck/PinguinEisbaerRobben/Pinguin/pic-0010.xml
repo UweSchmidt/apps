@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1050"/>
   <copy base="1600x1200" geometry="1600x1200"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x160" geometry="160x119"/>
   <copy base="org" geometry="3163x2372"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
   <attr name="cam:FocalLength">195.0mm (35mm equivalent: 292.0mm)</attr>

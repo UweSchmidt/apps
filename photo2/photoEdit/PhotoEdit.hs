@@ -1613,7 +1613,7 @@ listTab lbt
 -- ------------------------------------------------------------
 
 pathToIcon      :: String -> String
-pathToIcon      = ("160x120" ++) . (++ ".jpg")
+pathToIcon      = ("160x160" ++) . (++ ".jpg")
 
 pathToImg       :: String -> String
 pathToImg       = ("1400x1050" ++) . (++ ".jpg")
