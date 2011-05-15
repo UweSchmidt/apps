@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0021">
   <orig href1="2007/2007.03.11.Hagenbeck/uwe1/srgb/_uwe0234.jpg" raw1="2007/2007.03.11.Hagenbeck/uwe1/_uwe0234.nef"/>
@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1050"/>
   <copy base="1600x1200" geometry="1600x1200"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="160x106"/>
   <copy base="160x160" geometry="160x106"/>
   <copy base="org" geometry="3141x2095"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
@@ -17,7 +18,7 @@
   <attr name="cam:LensID">AF-S VR Nikkor 300mm f/2.8G IF-ED</attr>
   <attr name="cam:LensSpec">300mm f/2.8 G VR</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
-  <attr name="descr:Title">Spießente</attr>
+  <attr name="descr:Title">SpieÃŸente</attr>
   <attr name="exif:Aperture">5.6</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>
   <attr name="exif:Contrast">Normal</attr>

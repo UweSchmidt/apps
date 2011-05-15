@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0017">
   <orig href1="2007/2007.03.11.Hagenbeck/petra4/srgb/_dsc0002.jpg" raw1="2007/2007.03.11.Hagenbeck/petra4/_dsc0002.nef"/>
@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1050"/>
   <copy base="1600x1200" geometry="1600x1200"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="160x120"/>
   <copy base="160x160" geometry="160x120"/>
   <copy base="org" geometry="3084x2313"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
@@ -17,7 +18,7 @@
   <attr name="cam:LensID">AF VR Zoom-Nikkor 80-400mm f/4.5-5.6D ED</attr>
   <attr name="cam:LensSpec">80-400mm f/4.5-5.6 D VR</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
-  <attr name="descr:Title">Knäkente</attr>
+  <attr name="descr:Title">KnÃ¤kente</attr>
   <attr name="exif:Aperture">11.0</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>
   <attr name="exif:Contrast">Normal</attr>

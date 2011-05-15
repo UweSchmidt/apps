@@ -1,5 +1,5 @@
 Name:                photo2
-Version:             0.1
+Version:             0.1.1
 Synopsis:            Photo Album Editor
 Description:         Photo Album Editor
 License:             BSD3
@@ -19,7 +19,7 @@ Executable photo2
                       , containers             >= 0.4
                       , deepseq                >= 1.1
                       , directory              >= 1
-                      , editline               >= 0.2
+                      , haskeline              >= 0.6.4
                       , find-grep-sed          >= 0.1  
                       , filepath               >= 1.2
                       , haskell98              >= 1.1

@@ -30,8 +30,9 @@ import qualified Photo2.ArchiveTypes            as AT
 import           Photo2.ModelInterface
 import           Photo2.FilePath
 
-import           System.IO
 import           System.Directory
+import           System.Environment
+import           System.IO
 import           System.IO.Unsafe               ( unsafePerformIO )
 
 import qualified Text.Regex.XMLSchema.String    as RE
@@ -119,7 +120,24 @@ loadGladeModel fn
                   ]
 -- ------------------------------------------------------------
 
-main = do
+main    :: IO ()
+main 
+  = do
+    getArgs >>= changeWD
+    main1
+
+changeWD :: [String] -> IO ()
+changeWD []
+  = return ()
+changeWD (wd:_)
+  = do 
+    setCurrentDirectory wd
+    nwd <- getCurrentDirectory
+    hPutStrLn stderr $ "Working directory changed to " ++ show nwd
+
+-- ------------------------------------------------------------
+
+main1 = do
   initGUI
   gladeDir   <- getGladeDir
   xwins      <- mapM loadGladeModel $
@@ -1001,7 +1019,7 @@ lightLightRed   = Color 0xffff 0xe000 0xe000
 lightRed        = Color 0xffff 0xc000 0xc000
 darkRed         = Color 0x6000      0      0
 
-picSize         = 180
+picSize         = 200
 picPad          = 2
 picCols w       = ((w - 25) `div` (picSize + 2 * picPad)) `max` 1
 
@@ -1165,13 +1183,16 @@ copySelected (pn, sns) _srcLb@(_srcLbw, srcLbt) _dstLb@(_dstLbw, dstLbt)
 
       ns   <- mapM widgetGetName              tbs
       tbs2 <- return $ sortBySelection sns ns tbs
-
+      pti  <- pathToIconF
       news <- freshNames dstLbt
-      tbs3 <- mapM (uncurry $ copyTb src dst) . zip (zip sns news) $ tbs2
+      tbs3 <- mapM (uncurry $ copyTb pti src dst) . zip (zip sns news) $ tbs2
       appendToggleButtons (concat tbs3) dstLbt
     where
-    copyTb      :: String -> String -> (String, String) -> ToggleButton -> IO [ToggleButton]
-    copyTb src dst (sid, did) tb
+    copyTb      :: (String -> String) -> 
+                   String -> String -> 
+                   (String, String) -> 
+                   ToggleButton -> IO [ToggleButton]
+    copyTb pathToIcon src dst (sid, did) tb
         = do
           [vb]       <- containerGetChildren (castToContainer tb)
           [_, i1, _] <- containerGetChildren (castToContainer vb)
@@ -1307,19 +1328,19 @@ openPic :: String -> IO ()
 openPic path
     = do
       trcMsg $ "openPic " ++ path
-      im                <- imageNewFromFile ipath
+      pathToImg         <- pathToImgF
+      im                <- imageNewFromFile (pathToImg path)
       iw                <- windowNew
       containerAdd      iw im
       windowSetTitle    iw path
       widgetShowAll     iw
       windowPresent     iw
-    where
-    ipath       = pathToImg path
 
 listAlbumContents       :: String -> IO [(String, String)]
 listAlbumContents path
     = do
       contents <- execCmdL ["ls", path]
+      pathToIcon <- pathToIconF
       names    <- return $ map fileName   contents
       paths    <- return $ map pathToIcon contents
       trcMsg $ "listAlbumContents: " ++ show (path, names)
@@ -1372,6 +1393,7 @@ updateAlbum
       lbt  <- getLightboxTable
       path <- getCurrAlbumPath
       sel  <- getLastSelectedPath
+      pathToIcon <- pathToIconF
       if null sel
          then do
               updateEntry path          -- update album itself and all pictures
@@ -1612,11 +1634,23 @@ listTab lbt
 
 -- ------------------------------------------------------------
 
-pathToIcon      :: String -> String
-pathToIcon      = ("160x160" ++) . (++ ".jpg")
+pathToImg'      :: String -> String -> IO (String -> String)
+pathToImg' attr defaultValue
+  = do
+    path  <- execCmd1 ["get", attr]
+    path' <- if null path
+             then 
+               do execCmd ["set", attr, defaultValue]
+                  return defaultValue
+             else
+               return path
+    return $ (path' ++) . (++ ".jpg")
 
-pathToImg       :: String -> String
-pathToImg       = ("1400x1050" ++) . (++ ".jpg")
+pathToIconF     :: IO (String -> String)
+pathToIconF     = pathToImg' "layout-icon" "160x120"
+
+pathToImgF      :: IO (String -> String)
+pathToImgF      = pathToImg' "layout-image" "1400x1050"
 
 -- ------------------------------------------------------------
 

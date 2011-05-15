@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE album SYSTEM "../config/archive.dtd">
 <album id="Hagenbeck">
   <orig href1="2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0048.jpg" raw1="2007/2007.03.11.Hagenbeck/petra1/_dsc0048.nef"/>
@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1050"/>
   <copy base="1600x1200" geometry="1600x1200"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="160x120"/>
   <copy base="160x160" geometry="160x120"/>
   <copy base="org" geometry="3256x2442"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
@@ -20,8 +21,8 @@
   <attr name="descr:Resource">
     <a href="http://maps.google.com/maps?f=q&amp;hl=de&amp;q=Hagenbeckstra%C3%9Fe,+Stellingen+22527+Hamburg,+Hamburg,+Hamburg,+Deutschland&amp;layer=&amp;sll=53.589366,9.941325&amp;sspn=0.021831,0.067635&amp;ie=UTF8&amp;z=16&amp;ll=53.596173,9.940567&amp;spn=0.010914,0.033817&amp;t=h&amp;om=1">google maps</a>
   </attr>
-  <attr name="descr:Subtitle">bei herrlichem Frühlingswetter einmal durch den Tierpark</attr>
-  <attr name="descr:Title">11. März 2007: Geh'n wir mal zu Hagenbeck</attr>
+  <attr name="descr:Subtitle">bei herrlichem FrÃ¼hlingswetter einmal durch den Tierpark</attr>
+  <attr name="descr:Title">11. MÃ¤rz 2007: Geh'n wir mal zu Hagenbeck</attr>
   <attr name="exif:Aperture">5.3</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>
   <attr name="exif:Contrast">Normal</attr>

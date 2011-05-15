@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0004">
   <orig href1="2007/2007.03.11.Hagenbeck/petra1/srgb/_dsc0004.jpg" raw1="2007/2007.03.11.Hagenbeck/petra1/_dsc0004.nef"/>
@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1049"/>
   <copy base="1600x1200" geometry="1600x1199"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="160x119"/>
   <copy base="160x160" geometry="160x119"/>
   <copy base="org" geometry="3093x2319"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
@@ -18,7 +19,7 @@
   <attr name="cam:LensSpec">24-120mm f/3.5-5.6 G VR</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
   <attr name="descr:Keywords">Hagenbeck Zoo</attr>
-  <attr name="descr:Subtitle">ungekämmt</attr>
+  <attr name="descr:Subtitle">ungekÃ¤mmt</attr>
   <attr name="descr:Title">Kamele</attr>
   <attr name="exif:Aperture">7.1</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>

@@ -2,7 +2,6 @@ module Photo2.CmdInterpreter
 where
 
 import           Control.DeepSeq
-import qualified Control.Monad as CM
 
 import           Data.Atom
 import           Data.Char
@@ -17,10 +16,6 @@ import           Photo2.FilePath
 import           Photo2.ImportDialog
 
 import           System.Cmd
-import           System.Console.Editline.Readline
-                 ( readline
-                 , addHistory
-                 )
 
 import           Text.XML.HXT.Core
 import           Text.Regex.XMLSchema.String
@@ -68,15 +63,16 @@ parseCmdLine (Right ts)         = concatMap parseCmd' . splitCmds $ ts
 
 type Cmd = AppState -> IO AppState
 
-cmdLoop :: Cmd
-cmdLoop state
+cmdLoop :: (String -> IO String) -> Cmd
+cmdLoop readCmdLine state
     = do
-      cmds  <- getCmd prompt
+      line <- readCmdLine prompt
+      let cmds = parseCmdLine . tokenizeCmdLine $ line
       if null cmds
          then return state
          else do
               newState <- runCmds cmds state
-              rnf newState `seq` cmdLoop newState
+              rnf newState `seq` cmdLoop readCmdLine newState
     where
     prompt = ("photo2@" ++) . (++ "> ") . mkAbsPath . joinPath . cwd $ state
     runCmds [] s0
@@ -85,22 +81,6 @@ cmdLoop state
         = do
           s1 <- c s0
           runCmds cs s1
-
-getCmd  :: String -> IO [Cmd]
-getCmd prompt
-    = do
-      line <- readCmdLine prompt
-      return . parseCmdLine . tokenizeCmdLine $ line
-
-readCmdLine     :: String -> IO String
-readCmdLine prompt
-    = do
-      line <- readline prompt
-      let line' = stringTrim {- . fst . decodeUtf8 -} . fromMaybe "" $ line
-      CM.when (length line' > 1) (addHistory line')
-      if null line'
-         then readCmdLine prompt
-         else return line'
 
 mkCmd                   :: CmdArrow a b -> [Cmd]
 mkCmd                   = return . runCmd
@@ -148,7 +128,9 @@ parseCmd "config" []                                    = mkCmd ( get theConfig
 parseCmd "options" []                                  = parseCmd "options" [".*"]
 parseCmd "options" [pat]                               = mkCmd ( get theConfigAttrs
                                                                   >>>
-                                                                  arr dumpOptions >>> putRes
+                                                                  arr dumpOptions 
+                                                                  >>> 
+                                                                  putRes
                                                                 )
                                                           where
                                                           dumpOptions = unlines . fmtTable " = "
@@ -157,6 +139,15 @@ parseCmd "options" [pat]                               = mkCmd ( get theConfigAt
                                                                         .
                                                                         map (first show) . M.toList
 
+parseCmd "get" [n]                                      = mkCmd ( get theConfigAttrs
+                                                                  >>>
+                                                                  arr ( M.lookup (newAtom n)
+                                                                        >>>
+                                                                        fromMaybe ""
+                                                                      )
+                                                                  >>>
+                                                                  putRes
+                                                                )
 parseCmd c@"set" [n]                                    = parseCmd c [n,v_1]
 parseCmd   "set" [n,v]                                  = mkCmd ( changeComp theConfigAttrs (M.insert (newAtom n) v) )
 parseCmd c@"set" (n:vl@(_:_))                           = parseCmd c (n : unwords vl : [])
@@ -246,14 +237,15 @@ parseCmd "?" []
             , ""
             , "  open [archive]             load a photo archive, configuration and root album, default is \"archive2.xml\""
             , "  load [path]                load all subalbums and pictures"
-            , "  store [path]               write all albums and unload subalbums, format is given by option \"store-format\""
-            , "  store-album   [path]       write all pictures and albums in album format"
-            , "  store-picture [path]       write all pictures and albums in picture format"
+            , "  store [path]...            write all albums and unload subalbums, format is given by option \"store-format\""
+            , "  store-album   [path]...    write all pictures and albums in album format"
+            , "  store-picture [path]...    write all pictures and albums in picture format"
             , "  store-config               write the config data"
             , "  close                      write the whole data, albums, config and archive"
             , "  exit,q                     exit photo2"
             , ""
             , "  options                    list options"
+            , "  get <opt>                  get the value of an option"
             , "  set <opt> [val]...         set or overwrite an option, default value is \"1\""
             , "      copy-copy              force creation of all copies in all required sizes"
             , "      copy-exif              force import of exif info from original"
@@ -284,8 +276,8 @@ parseCmd "?" []
             , "  setalbumpic path id        set the album picture from the list of pictures within the album"
             , "  sortalbum  [path]          sort pictures by date"
             , "  import     [path]          star import dialog for adding new pictures into album"
-            , "  update     [path]          copy original and update copies, if original has changed"
-            , "  update-all [path]          recursively copy originals and update copies, if originals have changed"
+            , "  update     [path]...       copy original and update copies, if original has changed"
+            , "  update-all [path]...       recursively copy originals and update copies, if originals have changed"
             , ""
             , "  html     [p] [f]...        generate single HTML page for list of formats,"
             , "                             default album is current album, default format is given by option \"layout\""
@@ -312,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.0 from 2011-05-14"
+    = outputCmd $ "Photo2 version 0.2.1 from 2011-05-15"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -349,7 +341,7 @@ illegalCmd c args
 
 -- ------------------------------------------------------------
 --
--- execute a comand with one argument, a path for addressing one node
+-- execute a command with one argument, a path for addressing one node
 -- if the path is empty, the currend working dir is taken,
 -- if it's a relative path, it's adressed via current working dir
 
@@ -379,6 +371,12 @@ parseWdCmd pa name ps
 parseWdCmd'     :: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
 parseWdCmd' pa  = parseWdCmd (loadAndCheckAlbum />>>/ pa)
 
+parseWdCmds'    :: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
+parseWdCmds' pa n [] 
+                = parseWdCmd (loadAndCheckAlbum />>>/ pa) n []
+parseWdCmds' pa n ps
+                = concatMap (\ p -> parseWdCmd' pa n [p]) ps
+                   
 -- ------------------------------------------------------------
 
 findEntries     :: PathArrow a AlbumTree ->
@@ -400,7 +398,7 @@ showXmlVal pk
         >>>
         writeDocumentToString [ withIndent yes
                               , withXmlPi  no
-                              , withOutputEncoding usAscii
+                              , withOutputEncoding utf8 -- usAscii
                               ]
         >>>
         putRes
@@ -495,7 +493,7 @@ parseLoad               = parseWdCmd' ld "load"
                                processTreeSelfAndDesc ( const $ this )
 
 parseStore              :: String -> String -> [String] -> [Cmd]
-parseStore f c          = parseWdCmd' (withConfig (storeAll f)) c
+parseStore f c          = parseWdCmds' (withConfig (storeAll f)) c
 
 parseStoreAlbums        :: String -> [String] -> [Cmd]
 parseStoreAlbums c      = parseWdCmd' storeAllChangedAlbums c
@@ -521,7 +519,7 @@ parseImport c           = parseWdCmd' imp c
                                 processTree (withConfig importPics)
 
 parseUpdate             :: Bool -> String -> [String] -> [Cmd]
-parseUpdate rec c       = parseWdCmd' (changeAlbums update) c
+parseUpdate rec c       = parseWdCmds' (changeAlbums update) c
                           where
                           update = ( if rec then processTreeSelfAndDesc else processTree )
                                    ( withConfig updatePic

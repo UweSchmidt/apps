@@ -1,8 +1,6 @@
 module Photo2.ImportDialog
 where
 
-import qualified Control.Monad as CM
-
 import           Data.Atom
 import           Data.List               ( isPrefixOf
                                          , isInfixOf
@@ -18,10 +16,15 @@ import           Photo2.FilePath
 import           Photo2.ImageOperations
 import           Photo2.SearchNewImages
 
+import System.Console.Haskeline
+import System.Console.Haskeline.IO
+
+{-
 import           System.Console.Editline.Readline
                                          ( readline
                                          , addHistory
                                          )
+-}
 import           System.IO
 
 import           Text.XML.HXT.Core
@@ -108,7 +111,11 @@ importDialog cnf pics
     dialog _env ss _ns []
         = return $ reverse ss
     dialog env ss ns rs@(p@(n, _r, _x, _al) : rs1)
-        = readCmd
+        = do 
+          is0   <- initializeInput defaultSettings
+          res   <- readCmd is0
+          closeInput is0
+          return res
         where
         fn = imgBase </> n
         usage
@@ -127,15 +134,14 @@ importDialog cnf pics
               , "r <resource>\tgive further resources, \"r\" clears resource"
               , "h,?\t\tthis message"
               ]
-        readCmd
+        readCmd is0
             = do
-              line <- readline ("import " ++ fn ++ " [+-><aq?tskch] : ")
+              line <- queryInput is0 (getInputLine ("import " ++ fn ++ " [+-><aq?tskch] : "))
               let line' = stringTrim . fromMaybe "q" $ line
-              CM.when (length line' > 1) (addHistory line')
               if null line'
-                 then readCmd
-                 else evalCmd line'
-        evalCmd cmd
+                 then readCmd is0
+                 else evalCmd is0 line'
+        evalCmd is0 cmd
             | c == 'q'
                 = dialog env ss ns []
             | c == '-'
@@ -159,12 +165,12 @@ importDialog cnf pics
             | c `elem` "h?"
                 = do
                   hPutStrLn stdout usage
-                  readCmd
+                  readCmd is0
             | otherwise
                 = do
                   hPutStrLn stdout ("unknown command " ++ show c)
                   hPutStrLn stdout usage
-                  readCmd
+                  readCmd is0
             where
             c   = head cmd
             v   = stringTrim $ tail cmd

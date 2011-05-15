@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE album SYSTEM "../../config/archive.dtd">
 <album id="Clipboard">
   <orig href1="2007/2007.03.11.Hagenbeck/petra3/srgb/_dsc0057.jpg" raw1="2007/2007.03.11.Hagenbeck/petra3/_dsc0057.nef"/>
@@ -8,14 +8,15 @@
   <copy base="1400x1050" geometry="1400x1049"/>
   <copy base="1600x1200" geometry="1600x1199"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="160x119"/>
   <copy base="160x160" geometry="160x119"/>
   <copy base="org" geometry="3342x2506"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
   <attr name="cam:FocalLength">400.0 mm (35 mm equivalent: 600.0 mm)</attr>
   <attr name="cam:FocalLengthIn35mmFormat">600 mm</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
-  <attr name="descr:Comment">Album für die Zwischenablage und für den Import neuer Bilder</attr>
-  <attr name="descr:Subtitle">Zwischenablage und Album für Importe</attr>
+  <attr name="descr:Comment">Album fÃ¼r die Zwischenablage und fÃ¼r den Import neuer Bilder</attr>
+  <attr name="descr:Subtitle">Zwischenablage und Album fÃ¼r Importe</attr>
   <attr name="descr:Title">Neue Bilder</attr>
   <attr name="exif:Aperture">14.0</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>

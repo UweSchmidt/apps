@@ -401,7 +401,7 @@ genHtml rec formats conf p0
                   >>>
                   writeDocument [ withIndent no
                                 , withOutputXHTML
-                                , withOutputEncoding usAscii
+                                , withOutputEncoding utf8 -- usAscii
                                 ] dst
                   >>>
                   traceStatus' ("written : " ++ show dst)

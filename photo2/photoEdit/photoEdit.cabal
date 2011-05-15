@@ -1,5 +1,5 @@
 Name:                photoEdit
-Version:             0.1
+Version:             0.2.1
 Synopsis:            Photo Album Editor with GTK
 Description:         Photo Album Editor with GTK
 License:             BSD3
@@ -18,7 +18,7 @@ Executable photoEdit
                       , containers             >= 0.4
                       , deepseq                >= 1.1
                       , directory              >= 1
-                      , editline               >= 0.2
+                      , haskeline              >= 0.6.4
                       , find-grep-sed          >= 0.1  
                       , filepath               >= 1.2
                       , glade                  >= 0.12

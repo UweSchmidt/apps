@@ -463,7 +463,7 @@ storeDocData p rootName doc conf
                   perform (constA doc >>> arrIOE (mkBackupFile ".bak"))
                   >>>
                   writeDocument [ withIndent yes
-                                , withOutputEncoding isoLatin1
+                                , withOutputEncoding utf8 -- isoLatin1
                                 ] doc
                 )
       >>>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0053">
   <orig href1="2007/2007.03.11.Hagenbeck/petra2/srgb/_dsc0018.jpg" raw1="2007/2007.03.11.Hagenbeck/petra2/_dsc0018.nef"/>
@@ -8,6 +8,7 @@
   <copy base="1400x1050" geometry="1400x1050"/>
   <copy base="1600x1200" geometry="1600x1200"/>
   <copy base="160x120" geometry="160x120"/>
+  <copy base="160x120-photoEdit" geometry="96x120"/>
   <copy base="160x160" geometry="128x160"/>
   <copy base="org" geometry="2089x2611"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
