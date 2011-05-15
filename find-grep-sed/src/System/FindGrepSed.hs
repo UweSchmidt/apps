@@ -283,9 +283,9 @@ substXhtmlChars
         | isAsciiChar c
             = [c]
         | otherwise
-            = ("&#" ++)
+            = ("&" ++)
               . (++ ";")
-              . fromMaybe (show .fromEnum $ c)
+              . fromMaybe (("#" ++) . show .fromEnum $ c)
               . M.lookup (fromEnum c)
               $ xhtmlEntityMap
 
