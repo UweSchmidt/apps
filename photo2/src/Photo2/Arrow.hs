@@ -5,6 +5,7 @@ import           Control.DeepSeq
 import           Control.Monad.Error            ( runErrorT )
 
 import           Data.Function                  ( on )
+import           Data.Function.Selector
 import           Data.List                      ( isPrefixOf
                                                 , sortBy
                                                 )
@@ -80,13 +81,13 @@ withDefaultRes f d      = \ p -> f p `withDefault` d
 
 -- ------------------------------------------------------------
 
-setField                :: Setter AppState b -> CmdArrow b b
+setField                :: (b -> AppState -> AppState) -> CmdArrow b b
 setField sf             = perform ( ( this &&& getUserState )
                                     >>> arr (uncurry sf)
                                     >>> setUserState
                                   )
 
-getField                :: Getter AppState b -> CmdArrow a b
+getField                :: (AppState -> b) -> CmdArrow a b
 getField gf             = getUserState >>^ gf
 
 data SelArrow a b       = SA { get :: CmdArrow a b
@@ -94,8 +95,8 @@ data SelArrow a b       = SA { get :: CmdArrow a b
                              }
 
 mkSelA                  :: Selector AppState b -> SelArrow a b
-mkSelA (g, s)           = SA { get = getField g
-                             , set = setField s
+mkSelA s                = SA { get = getField $ getS s
+                             , set = setField $ setS s
                              }
 
 theAlbums               :: SelArrow a AlbumTree

@@ -42,10 +42,12 @@
   <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra3/_dsc0057.nef</attr>
   <picture id="pic-0001" href="album2/Hagenbeck/Clipboard/pic-0001.xml"/>
   <picture id="pic-0003" href="album2/Hagenbeck/Clipboard/pic-0003.xml"/>
-  <picture id="pic-0002" href="album2/Hagenbeck/Clipboard/pic-0002.xml"/>
-  <picture id="pic-0004" href="album2/Hagenbeck/Clipboard/pic-0004.xml"/>
-  <picture id="pic-0005" href="album2/Hagenbeck/Clipboard/pic-0005.xml"/>
+  <picture id="pic-0042" href="album2/Hagenbeck/Clipboard/pic-0042.xml"/>
+  <picture id="pic-0043" href="album2/Hagenbeck/Clipboard/pic-0043.xml"/>
   <picture id="pic-0006" href="album2/Hagenbeck/Clipboard/pic-0006.xml"/>
+  <picture id="pic-0004" href="album2/Hagenbeck/Clipboard/pic-0004.xml"/>
+  <picture id="pic-0002" href="album2/Hagenbeck/Clipboard/pic-0002.xml"/>
+  <picture id="pic-0005" href="album2/Hagenbeck/Clipboard/pic-0005.xml"/>
   <picture id="pic-0007" href="album2/Hagenbeck/Clipboard/pic-0007.xml"/>
   <picture id="pic-0008" href="album2/Hagenbeck/Clipboard/pic-0008.xml"/>
   <picture id="pic-0009" href="album2/Hagenbeck/Clipboard/pic-0009.xml"/>
@@ -54,7 +56,5 @@
   <picture id="pic-0012" href="album2/Hagenbeck/Clipboard/pic-0012.xml"/>
   <picture id="pic-0013" href="album2/Hagenbeck/Clipboard/pic-0013.xml"/>
   <picture id="pic-0014" href="album2/Hagenbeck/Clipboard/pic-0014.xml"/>
-  <picture id="pic-0042" href="album2/Hagenbeck/Clipboard/pic-0042.xml"/>
-  <picture id="pic-0043" href="album2/Hagenbeck/Clipboard/pic-0043.xml"/>
 </album>
 

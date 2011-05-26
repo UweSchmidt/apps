@@ -5,6 +5,7 @@ import           Control.DeepSeq
 
 import           Data.Atom
 import           Data.Char
+import           Data.Function.Selector
 import           Data.List
 import           Data.Maybe
 import           Data.Map (Map)
@@ -122,12 +123,14 @@ type Href               = String
 type Errs               = [String]
 
 -- ------------------------------------------------------------
-
+{-
 type Getter s a         = s -> a
 type Setter s a         = a -> s -> s
 type Selector s a       = (Getter s a, Setter s a)
-
-sub                     :: Selector b c -> Selector a b -> Selector a c
+-}
+-- sub                     :: Selector b c -> Selector a b -> Selector a c
+-- sub                     = (<<<)
+{-
 sub (g2, s2) (g1, s1)   = ( g2 . g1
                           , s1s2
                           )
@@ -137,88 +140,96 @@ sub (g2, s2) (g1, s1)   = ( g2 . g1
                               x1  = g1 s
                               x1' = s2 x x1
                               s'  = s1 x1' s
-
+-}
 change                  :: Selector s a -> (a -> a) -> (s -> s)
+change                  = chgS
+{-
 change (g, s) f x       = s (f (g x)) x
+-}
 
 load                    :: Selector s a -> s -> a
+load                    = getS
+{-
 load (g, _s) x          = g x
+-}
 
 store                   :: Selector s a -> a -> (s -> s)
+store                   = setS
+{-
 store s v               = change s (const v)
-
+-}
 -- ------------------------------------------------------------
 
 type AppSelector a      = Selector AppState a
 
 selAlbums               :: AppSelector AlbumTree
-selAlbums               = (albums,      \ x s -> s {albums = x})
+selAlbums               = uncurry S (albums,      \ x s -> s {albums = x})
 
 selArchiveName          :: AppSelector Href
-selArchiveName          = (archiveName, \ x s -> s {archiveName = x})
+selArchiveName          = uncurry S (archiveName, \ x s -> s {archiveName = x})
 
 selConfig               :: AppSelector Config
-selConfig               = (config,      \ x s -> s {config = x})
+selConfig               = uncurry S (config,      \ x s -> s {config = x})
 
 selConfigName           :: AppSelector Href
-selConfigName           = (configName,  \ x s -> s {configName = x})
+selConfigName           = uncurry S (configName,  \ x s -> s {configName = x})
 
 selStatus               :: AppSelector Status
-selStatus               = (status,      \ x s -> s {status = x})
+selStatus               = uncurry S (status,      \ x s -> s {status = x})
 
 selWd                   :: AppSelector Path
-selWd                   = (cwd,         \ x s -> s {cwd = x})
+selWd                   = uncurry S (cwd,         \ x s -> s {cwd = x})
 
 selWriteLog             :: AppSelector (String -> IO ())
-selWriteLog             = (writeLog,    \ x s -> s {writeLog = x})
+selWriteLog             = uncurry S (writeLog,    \ x s -> s {writeLog = x})
 
 selWriteRes             :: AppSelector (String -> IO ())
-selWriteRes             = (writeRes,    \ x s -> s {writeRes = x})
+selWriteRes             = uncurry S (writeRes,    \ x s -> s {writeRes = x})
 
 selConfigAttrs          :: AppSelector Attrs
-selConfigAttrs          = (confAttrs,   \ x c -> c {confAttrs = x}) `sub` selConfig
+selConfigAttrs          = uncurry S (confAttrs,   \ x c -> c {confAttrs = x}) <<< selConfig
 
 selConfigPicAttrs       :: AppSelector PicAttrs
-selConfigPicAttrs       = (confPicAttrs,   \ x c -> c {confPicAttrs = x}) `sub` selConfig
+selConfigPicAttrs       = uncurry S (confPicAttrs,   \ x c -> c {confPicAttrs = x}) <<< selConfig
 
 selConfigAttr           :: Name -> AppSelector Value
-selConfigAttr k         = (fromMaybe "" . M.lookup (newAtom k),
-                                \ v as -> M.insert (newAtom k) v as)  `sub` selConfigAttrs
+selConfigAttr k         = uncurry S (fromMaybe "" . M.lookup (newAtom k),
+                                \ v as -> M.insert (newAtom k) v as)  <<< selConfigAttrs
 
 selTemplates            :: AppSelector HtmlTemplates
-selTemplates            = (templates, \ x s -> s {templates = x})
+selTemplates            = uncurry S (templates, \ x s -> s {templates = x})
 
 selTemplate             :: String -> AppSelector XmlTrees
-selTemplate k           = (fromMaybe [] . M.lookup k,
-                                \ v tm -> M.insert k v tm)  `sub` selTemplates
+selTemplate k           = uncurry S (fromMaybe [] . M.lookup k,
+                                \ v tm -> M.insert k v tm)  <<< selTemplates
 
 -- ------------------------------------------------------------
 
 type PicSelector a      = Selector Pic a
 
 theId                   :: PicSelector Name
-theId                   = ( picId,     \ n x -> x { picId     = n } )
+theId                   = uncurry S ( picId,     \ n x -> x { picId     = n } )
 
 theCopies               :: PicSelector Copies
-theCopies               = ( picCopies, \ c x -> x { picCopies = c } )
+theCopies               = uncurry S ( picCopies, \ c x -> x { picCopies = c } )
 
 theOrig                 :: PicSelector Href
-theOrig                 = ( picOrig,   \ r x -> x { picOrig   = r } )
+theOrig                 = uncurry S ( picOrig,   \ r x -> x { picOrig   = r } )
 
 theRaw                  :: PicSelector Href
-theRaw                  = ( picRaw,   \ r x -> x { picRaw     = r } )
+theRaw                  = uncurry S ( picRaw,   \ r x -> x { picRaw     = r } )
 
 theXmp                  :: PicSelector Href
-theXmp                  = ( picXmp,   \ r x -> x { picXmp     = r } )
+theXmp                  = uncurry S ( picXmp,   \ r x -> x { picXmp     = r } )
 
 theEdited               :: PicSelector Bool
-theEdited               = ( picEdited, \ e x -> x { picEdited = e } )
+theEdited               = uncurry S ( picEdited, \ e x -> x { picEdited = e } )
 
 theAttrs                :: PicSelector Attrs
-theAttrs                = ( picAttrs,  \ a x -> x { picAttrs  = a } )
+theAttrs                = uncurry S ( picAttrs,  \ a x -> x { picAttrs  = a } )
 
 theRef                  :: PicSelector Href
-theRef                  = ( picRef,    \ r x -> x { picRef    = r } )
+theRef                  = uncurry S ( picRef,    \ r x -> x { picRef    = r } )
 
 -- ------------------------------------------------------------
 
