@@ -5,6 +5,7 @@
 module Control.Monad.ReaderStateIOError
     ( module Control.Monad.ReaderStateIOError
     , mzero, mplus
+    , liftIO
     , ask, asks, local
     , get, gets, put, modify
     , throwError, catchError
