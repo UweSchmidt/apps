@@ -1,23 +1,27 @@
 module Main where
 
 import Control.Monad.ReaderStateIOError
-import Control.Monad.Trans
 
+import DSL.Base
 import DSL.CommandLoop
 import DSL.ReadLineLoop
-import DSL.SimpleLineLoop
 
 -- ------------------------------------------------------------
 --
 -- this one works with standard getLine for input
 
 main :: IO ()
-main = readSimpleLoop greetings prompt1 parseLine evalInstr
+main
+    = runApp $
+      commandLoop greetings prompt1 parseLine evalInstr
 
 -- works with Haskeline line input, history and line editing
 
 main1 :: IO ()
-main1 = readLineLoop greetings prompt1 parseLine evalInstr
+main1
+    = runApp $
+      withHaskeline $
+      commandLoop greetings prompt1 parseLine evalInstr
 
 -- ------------------------------------------------------------
 --
@@ -47,6 +51,8 @@ instance IsIncompleteInstr  Instr where
                             = Just part
     isIncomplete _          = Nothing
 
+instance IsInstr            Instr where
+
 -- ------------------------------------------------------------
 --
 -- semantic domains
@@ -55,10 +61,14 @@ type Cmd res   = ReaderStateIOError Env State Err res
 
 -- ------------------------------------------------------------
 
-newtype Env    = Env ()
+newtype Env    = Env { _readLine :: String -> IO String }
 
-instance InitialValue Env where
-    initValue = Env ()
+instance InitialValue  Env where
+    initValue        = Env { _readLine = readLineSimple }
+
+instance ReadLine      Env where
+    getReadLine      = _readLine
+    setReadLine c e  = e { _readLine = c }
 
 -- ------------------------------------------------------------
 
@@ -72,8 +82,9 @@ instance InitialValue State where
 data Err          = Err String
 
 instance Show          Err where show (Err err)  = err
-instance ToError       Err where toError         = Err
+instance StringToError Err where stringToError   = Err
 instance IOExcToError  Err where ioExcToError    = Err . show
+instance ToError       Err where
 
 -- ------------------------------------------------------------
 

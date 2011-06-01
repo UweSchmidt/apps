@@ -23,10 +23,11 @@ import          Control.Monad.State
 -- |
 -- reader state io monad implemented directly without any monad transformers
 
-newtype ReaderStateIOError env state err res = RSIOE { unRSIOE :: env -> state -> IO (Either err res, state) }
+newtype ReaderStateIOError env state err res
+    = RSIOE { runReaderStateIOError :: env -> state -> IO (Either err res, state) }
 
 instance
-    (ToError err) =>
+    (StringToError err) =>
     Monad (ReaderStateIOError env state err)
     where
     return v
@@ -35,7 +36,7 @@ instance
 
     fail msg
         = RSIOE $
-          \ _e s -> return (Left $ toError msg, s)
+          \ _e s -> return (Left $ stringToError msg, s)
 
     RSIOE cmd >>= f
         = RSIOE $
@@ -49,7 +50,7 @@ instance
                                  cmd2 e $! s'
 
 instance
-    (ToError err) =>
+    (StringToError err) =>
     MonadPlus (ReaderStateIOError env state err)
     where
     mzero
@@ -64,7 +65,7 @@ instance
                    
 
 instance
-    (ToError err, IOExcToError err) =>
+    (StringToError err, IOExcToError err) =>
     MonadIO (ReaderStateIOError env state err)
     where
     liftIO a
@@ -76,7 +77,7 @@ instance
                       Right v' -> return (Right v',                s)
 
 instance
-    (ToError err) =>
+    (StringToError err) =>
     MonadState state (ReaderStateIOError env state err)
     where
     get
@@ -88,7 +89,7 @@ instance
           \ _e _s -> return (Right (), s)
 
 instance
-    (ToError err) =>
+    (StringToError err) =>
     MonadReader env (ReaderStateIOError env state err)
     where
     ask
@@ -100,7 +101,7 @@ instance
           \ e  s -> cmd (f e) s
 
 instance
-    (ToError err) =>
+    (StringToError err) =>
     MonadError err (ReaderStateIOError env state err)
     where
     throwError er
@@ -117,29 +118,30 @@ instance
 
 -- ------------------------------------------------------------
 
-modifyIO                :: (ToError err, IOExcToError err) =>
+modifyIO                :: (ToError err) =>
                            (state -> IO state) -> ReaderStateIOError env state err ()
 modifyIO f              = do
                           s0 <- get
                           s1 <- liftIO (f s0)
                           put s1
 
-runReaderStateIOError   :: ReaderStateIOError env state err res -> env -> state -> IO (Either err res, state)
-runReaderStateIOError (RSIOE cmd)
-    = cmd
-  
 -- ------------------------------------------------------------
 
-class ToError err where
-    toError :: String -> err
+class StringToError err where
+    stringToError :: String -> err
 
-instance ToError String where
-    toError = id
+instance StringToError String where
+    stringToError = id
 
 class IOExcToError err where
     ioExcToError :: IOException -> err
 
 instance IOExcToError String where
     ioExcToError = show
+
+class ( StringToError err
+      , IOExcToError err
+      ) =>
+    ToError err where
 
 -- ------------------------------------------------------------

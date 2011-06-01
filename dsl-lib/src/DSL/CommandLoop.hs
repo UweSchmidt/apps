@@ -6,65 +6,43 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.ReaderStateIOError
 
+import DSL.Base
+
 import System.IO
 import System.Exit
 
 -- ------------------------------------------------------------
 
-class IsQuitInstr a where
-    isQuit :: a -> Maybe String
-    isQuit _ = Nothing
-
-class IsIllegalInstr a where
-    isIllegal :: a -> Maybe String
-    isIllegal _ = Nothing
-
-class IsUsageInstr a where
-    isUsage :: a -> Maybe String
-    isUsage _ = Nothing
-
-class IsIncompleteInstr a where
-    isIncomplete :: a -> Maybe String
-    isIncomplete _ = Nothing
-
--- ------------------------------------------------------------
-
-class InitialValue a where
-    initValue :: a
-
--- ------------------------------------------------------------
-
-runLoop :: ( InitialValue env
-           , InitialValue state
-           , Show err
-           ) => ReaderStateIOError env state err res -> IO ()
-runLoop cmdLoop'
-    = do (res, _state) <- runReaderStateIOError cmdLoop' initValue initValue
+runApp :: ( InitialValue state
+          , InitialValue env
+          , Show err
+          ) => ReaderStateIOError env state err res -> IO ()
+runApp cmdLoop
+    = do (res, _state) <- runReaderStateIOError cmdLoop initValue initValue
          either ( \ e -> hPutStrLn stderr (show $ e) >> exitFailure )
                 (const exitSuccess)
                 res
              
 -- ------------------------------------------------------------
 
-commandLoop	:: ( MonadIO           m
-                   , IsQuitInstr       instr
-                   , IsIncompleteInstr instr
-                   , IsIllegalInstr    instr
-                   , IsUsageInstr      instr
+commandLoop	:: ( ReadLine   env
+                   , IsInstr    instr
+                   , ToError err
                    ) =>
-                   (          m String) -> 
-                   (          m String) ->
-                   (String -> m String) ->
-                   (String -> m instr)  ->
-                   (instr  -> m res)    ->
-                   m res
-commandLoop greeting prompt readL parseL evalI
+                   (          ReaderStateIOError env state err String) ->
+                   (          ReaderStateIOError env state err String) ->
+                   (String -> ReaderStateIOError env state err instr)  ->
+                   (instr  -> ReaderStateIOError env state err res)    ->
+                   ReaderStateIOError env state err res
+
+commandLoop greeting prompt parseL evalI
     = do greeting >>= message
          loop
     where
        loop
           = do p <- prompt
-               l <- readL p
+               e <- ask
+               l <- liftIO $ getReadLine e p
                i <- parseL l
                eval0 i
        eval0 i
@@ -80,10 +58,10 @@ commandLoop greeting prompt readL parseL evalI
                                 return r
                            ) (isQuit i)
        readMore part
-           = do
-             l <- readL " > "
-             i <- parseL (part ++ "\n" ++ l)
-             eval0 i
+           = do e <- ask
+                l <- liftIO $ getReadLine e " > "
+                i <- parseL (part ++ "\n" ++ l)
+                eval0 i
 
        messageAndLoop msg
            = message msg >> loop
