@@ -36,22 +36,19 @@ class InitialValue a where
 -- ------------------------------------------------------------
 
 class ReadLine a where
-    getReadLine :: a -> (String -> IO String)
-    setReadLine :: (String -> IO String) -> a -> a
+    getReadLine :: a -> (String -> IO (Maybe String))
+    setReadLine :: (String -> IO (Maybe String)) -> a -> a
 
     getReadLine = const readLineSimple
     setReadLine = const id
 
-readLineSimple :: String -> IO String
+readLineSimple :: String -> IO (Maybe String)
 readLineSimple p
-    = do l <- readLine'
-         if null l
-            then readLineSimple p
-            else return l
-    where
-      readLine'
-          = do hPutStr stdout p
-               hFlush stdout
-               getLine
+    = do hPutStr stdout p
+	 hFlush stdout
+	 eof <- isEOF
+	 if eof
+	    then return Nothing
+	    else getLine >>= return . Just
 
 -- ------------------------------------------------------------

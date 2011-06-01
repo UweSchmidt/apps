@@ -17,7 +17,7 @@ executable testDSL
 
   Other-Modules:       DSL.CommandLoop
                      , DSL.ReadlineLoop
-                     , DSL.SimpleLine
+                     , DSL.Base
   
   Hs-Source-Dirs:    ./src
 

@@ -43,8 +43,12 @@ commandLoop greeting prompt parseL evalI
           = do p <- prompt
                e <- ask
                l <- liftIO $ getReadLine e p
-               i <- parseL l
-               eval0 i
+	       parse0 l
+       parse0 l
+	   = maybe (fail "EOF on input file") parse1 l
+       parse1 l
+	   = do i <- parseL l
+		eval0 i
        eval0 i
            = maybe (eval1 i) readMore (isIncomplete i)
        eval1 i
@@ -60,7 +64,8 @@ commandLoop greeting prompt parseL evalI
        readMore part
            = do e <- ask
                 l <- liftIO $ getReadLine e " > "
-                i <- parseL (part ++ "\n" ++ l)
+		s <- maybe (fail "EOF on input file") return l
+                i <- parseL (part ++ "\n" ++ s)
                 eval0 i
 
        messageAndLoop msg

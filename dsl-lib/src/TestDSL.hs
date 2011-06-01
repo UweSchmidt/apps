@@ -31,6 +31,7 @@ data Instr = Quit
            | Usage
            | Incomplete  String
            | Illegal     String
+	   | Noop
            | Ins        [String]
              deriving (Show)
 
@@ -61,7 +62,7 @@ type Cmd res   = ReaderStateIOError Env State Err res
 
 -- ------------------------------------------------------------
 
-newtype Env    = Env { _readLine :: String -> IO String }
+newtype Env    = Env { _readLine :: String -> IO (Maybe String) }
 
 instance InitialValue  Env where
     initValue        = Env { _readLine = readLineSimple }
@@ -100,6 +101,7 @@ parseLine :: (Monad m) => String -> m Instr
 parseLine l
     = return . parse . words $ l
     where
+      parse []            = Noop
       parse ["quit"]      = Quit
       parse ("quit" : _)  = Illegal "quit has no parameters"
       parse ws

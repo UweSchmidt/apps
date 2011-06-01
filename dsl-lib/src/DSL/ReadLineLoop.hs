@@ -36,9 +36,6 @@ withHaskeline cmd
                 = runReaderStateIOError cmd (setReadLine readHaskeline e) s
                 where
                   readHaskeline p
-                      = do l <- queryInput hd (getInputLine p)
-                           case l of
-                             Nothing -> return ""
-                             Just x  -> return x
+                      = queryInput hd (getInputLine p)
 
 -- ------------------------------------------------------------
