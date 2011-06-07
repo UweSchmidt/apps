@@ -12,6 +12,7 @@ module Control.Monad.ReaderStateIOError
     )
 where
 
+import          Control.Applicative
 import          Control.Exception   (IOException)
 import          Control.Monad
 import          Control.Monad.Error
@@ -124,6 +125,21 @@ modifyIO f              = do
                           s0 <- get
                           s1 <- liftIO (f s0)
                           put s1
+
+-- ------------------------------------------------------------
+
+instance
+    (StringToError err) =>
+    Functor (ReaderStateIOError env state err)
+    where
+    fmap f xs = xs >>= return . f
+
+instance
+    (StringToError err) =>
+    Applicative (ReaderStateIOError env state err)
+    where
+    pure = return
+    (<*>) = ap
 
 -- ------------------------------------------------------------
 
