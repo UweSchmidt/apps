@@ -13,7 +13,6 @@ module Control.Monad.ReaderStateIOError
 where
 
 import          Control.Applicative
-import          Control.Exception   (IOException)
 import          Control.Monad
 import          Control.Monad.Error
 import          Control.Monad.Reader
@@ -24,12 +23,11 @@ import          Control.Monad.State
 -- |
 -- reader state io monad implemented directly without any monad transformers
 
-newtype ReaderStateIOError env state err res
-    = RSIOE { runReaderStateIOError :: env -> state -> IO (Either err res, state) }
+newtype ReaderStateIOError env state res
+    = RSIOE { runReaderStateIOError :: env -> state -> IO (Either String res, state) }
 
 instance
-    (StringToError err) =>
-    Monad (ReaderStateIOError env state err)
+    Monad (ReaderStateIOError env state)
     where
     return v
         = RSIOE $
@@ -37,7 +35,7 @@ instance
 
     fail msg
         = RSIOE $
-          \ _e s -> return (Left $ stringToError msg, s)
+          \ _e s -> return (Left $ "fail: " ++ msg, s)
 
     RSIOE cmd >>= f
         = RSIOE $
@@ -51,8 +49,7 @@ instance
                                  cmd2 e $! s'
 
 instance
-    (StringToError err) =>
-    MonadPlus (ReaderStateIOError env state err)
+    MonadPlus (ReaderStateIOError env state)
     where
     mzero
         = fail "mzero"
@@ -66,20 +63,18 @@ instance
                    
 
 instance
-    (StringToError err, IOExcToError err) =>
-    MonadIO (ReaderStateIOError env state err)
+    MonadIO (ReaderStateIOError env state)
     where
     liftIO a
         = RSIOE $
           \ _e s -> do
                     r <- ( a >>= return . Right) `catchError` (\ e -> return (Left e))
                     case r of
-                      Left msg -> return (Left $ ioExcToError msg, s)
-                      Right v' -> return (Right v',                s)
+                      Left msg -> return (Left $ "ioexc: " ++ show msg, s)
+                      Right v' -> return (Right v',                     s)
 
 instance
-    (StringToError err) =>
-    MonadState state (ReaderStateIOError env state err)
+    MonadState state (ReaderStateIOError env state)
     where
     get
         = RSIOE $
@@ -90,8 +85,7 @@ instance
           \ _e _s -> return (Right (), s)
 
 instance
-    (StringToError err) =>
-    MonadReader env (ReaderStateIOError env state err)
+    MonadReader env (ReaderStateIOError env state)
     where
     ask
         = RSIOE $
@@ -102,8 +96,7 @@ instance
           \ e  s -> cmd (f e) s
 
 instance
-    (StringToError err) =>
-    MonadError err (ReaderStateIOError env state err)
+    MonadError String (ReaderStateIOError env state)
     where
     throwError er
         = RSIOE $
@@ -119,8 +112,7 @@ instance
 
 -- ------------------------------------------------------------
 
-modifyIO                :: (ToError err) =>
-                           (state -> IO state) -> ReaderStateIOError env state err ()
+modifyIO                :: (state -> IO state) -> ReaderStateIOError env state ()
 modifyIO f              = do
                           s0 <- get
                           s1 <- liftIO (f s0)
@@ -129,35 +121,14 @@ modifyIO f              = do
 -- ------------------------------------------------------------
 
 instance
-    (StringToError err) =>
-    Functor (ReaderStateIOError env state err)
+    Functor (ReaderStateIOError env state)
     where
     fmap f xs = xs >>= return . f
 
 instance
-    (StringToError err) =>
-    Applicative (ReaderStateIOError env state err)
+    Applicative (ReaderStateIOError env state)
     where
     pure = return
     (<*>) = ap
-
--- ------------------------------------------------------------
-
-class StringToError err where
-    stringToError :: String -> err
-
-instance StringToError String where
-    stringToError = id
-
-class IOExcToError err where
-    ioExcToError :: IOException -> err
-
-instance IOExcToError String where
-    ioExcToError = show
-
-class ( StringToError err
-      , IOExcToError err
-      ) =>
-    ToError err where
 
 -- ------------------------------------------------------------
