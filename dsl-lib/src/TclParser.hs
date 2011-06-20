@@ -2,7 +2,8 @@ module TclParser
 where
 
 import Data.Char
-import Data.Monoid
+import Data.List
+-- import Data.Monoid
 
 import Text.Parsec
 
@@ -11,15 +12,19 @@ import Text.Parsec
 type TclParser = Parsec String ()
 
 newtype TclProg
-    = TclProg [TclCmd]
+    = TclProg { _tclProg :: [TclCmd]}
       deriving (Show)
 
-data TclCmd
-    = TclCmd [TclArg]	-- list contains at least 1 arg
+newtype TclCmd
+    = TclCmd { _tclCmd :: [TclArg]}	-- list contains at least 1 arg
+      deriving (Show)
+
+newtype TclList
+    = TclList { _tclList :: [TclArg]}  -- all args do contain only TLit's
       deriving (Show)
 
 newtype TclArg
-    = TclArg [TclSubst]
+    = TclArg { _tclArg :: [TclSubst]}
       deriving (Show)
 
 data TclSubst
@@ -58,9 +63,85 @@ instance Show TclSubst where
 	      | otherwise
 		  = "{" ++ s ++ "}"
 
-    show (TEval p)
+    Show (TEval p)
 	= "[" ++ show p ++ "]"
 -}
+
+-- ------------------------------------------------------------
+
+showTclList	:: TclList -> String
+showTclList
+    = showTclArgs . _tclList
+
+showTclArgs	:: [TclArg] -> String
+showTclArgs
+    = intercalate " " . map showTclArg 
+
+showTclArg	:: TclArg -> String
+showTclArg (TclArg a)
+    | null s       = inBraces  s
+    | isCharArg  s =           s	-- try to avoid escapes and braces
+    | isBraceArg s = inBraces  s	-- try to avoid escapes
+    | otherwise    = escapeArg s	-- some chars must be escaped
+    where
+      s = concatMap showTclSubst a
+
+showTclSubst	:: TclSubst -> String
+showTclSubst (TLit s)
+    = s
+showTclSubst (TVar n)
+    = "$" ++ n
+showTclSubst (TEval _pg)
+    = error "showTclSubst for TEval not implemented"
+
+isCharArg	:: String -> Bool
+isCharArg s
+    = case parse (eofP lchars) "" s of
+        Left _ -> False
+        Right _ -> True
+      where
+        lchars :: TclParser String
+        lchars
+            = do c1 <-        noneOf $ br ++ esc ++ ws ++ nl
+                 cs <- many $ noneOf $       esc ++ ws ++ nl
+                 return $ c1 : cs
+
+
+isBraceArg	:: String -> Bool
+isBraceArg s
+    = case parse (eofP braceContent) "" s of
+        Left _ -> False
+        Right _ -> True
+
+
+escapeArg	:: String -> String
+escapeArg
+    = concatMap esc'
+      where
+        esc' c
+            | c `elem` (ws ++ nl ++ esc ++ br ++ dq ++ "}")
+                = '\\' : c : ""
+            | otherwise
+                =        c : ""
+
+inBraces :: String -> String
+inBraces
+    = ("{" ++) . (++ "}")
+
+-- ------------------------------------------------------------
+--
+-- the main Tcl parsers
+
+tclProg :: TclParser TclProg
+tclProg
+    = tprog
+
+tclList :: TclParser TclList
+tclList
+    = do
+      l <- largs
+      return $ TclList l
+
 -- ------------------------------------------------------------
 
 tprog :: TclParser TclProg
@@ -91,16 +172,28 @@ tcmd na
 		  return $ [TclCmd (c : al)]
 
 targs :: String -> TclParser [TclArg]
-targs na
+targs
+    = targs' ws1 (tvar <|> tbracket) vc
+
+largs :: TclParser [TclArg]
+largs
+    = targs' wsnl1 parserZero "" ""
+
+targs' :: TclParser () ->		-- ^ whitespace parser, newline is included for list parser
+          TclParser TclSubst ->         -- ^ variable and command substituion parser, mzero for list parser
+          String ->                     -- ^ variable and command chars $ and [, or "" for list parser
+          String ->                     -- ^ command follow chars
+          TclParser [TclArg]
+targs' tws tsubst vc' na
     = option [] $
       do
-      ws1
+      tws
       ( targs1 <|> return [] )
     where
     targs1
 	= do
-	  a  <- targ  na
-	  as <- targs na
+	  a  <- targ'      tsubst vc' na
+	  as <- targs' tws tsubst vc' na
 	  return $ a : as
 
 -- ------------------------------------------------------------
@@ -111,37 +204,48 @@ targs na
 -- .3 text within braces
 -- .4 commands within brackets
 
+ws, nl, nls, vc, esc, br, dq :: String
 ws  = " \t"
-nl  = "\n\r;"
-vce ="$[\\"	-- variable, command, escape
+nl  = "\n\r"
+nls  = nl ++ ";"
+vc  = "$["	-- variable, command, escape
+esc = "\\"
 br  = "{"
 dq  = "\""
 
 targ :: String -> TclParser TclArg
-targ na
+targ
+    = targ' (tvar <|> tbracket) vc
+
+larg :: String -> TclParser TclArg
+larg
+    = targ' parserZero ""
+
+targ' :: TclParser TclSubst -> String -> String -> TclParser TclArg
+targ' tsubst vc' na
     = do
-      xs <- tcharsArg na <|> tdquoteArg na <|> tbraceArg na
+      xs <- tcharsArg tsubst vc' na <|> tdquoteArg tsubst vc' na <|> tbraceArg na
       return $ TclArg xs
 
-tcharsArg :: String -> TclParser [TclSubst]
-tcharsArg na
+tcharsArg :: TclParser TclSubst -> String -> String -> TclParser [TclSubst]
+tcharsArg tsubst vc' na
     = do
-      s1 <- (tchar1 <|> tesc <|> tvar <|> tbracket)
-      xs <- many (tchar (na ++ vce ++ ws ++ nl) <|> tesc <|> tvar <|> tbracket)
+      s1 <- (tchar1 <|> tesc <|> tsubst)
+      xs <- many (tchar (na ++ vc' ++ esc ++ ws ++ nls) <|> tesc <|> tsubst)
       return $ s1 : xs
     where
     tchar1
 	= do
-	  c <-        noneOf $ na ++ br ++ vce ++ ws ++ nl
-	  s <- many $ noneOf $ na ++       vce ++ ws ++ nl
+	  c <-        noneOf $ na ++ br ++ vc' ++ esc ++ ws ++ nls
+	  s <- many $ noneOf $ na ++       vc' ++ esc ++ ws ++ nls
 	  return $ TLit (c : s)
 
-tdquoteArg :: String -> TclParser [TclSubst]
-tdquoteArg na
+tdquoteArg :: TclParser TclSubst -> String -> String -> TclParser [TclSubst]
+tdquoteArg tsubst vc' na
     = do
       s <- between (char '\"') (char '\"') $
 	   many $
-	   tchar (dq ++ vce) <|> tesc <|> tvar <|> tbracket
+	   tchar (dq ++ vc' ++ esc) <|> tesc <|> tsubst
       noExtraChar na
       return s
 
@@ -167,6 +271,11 @@ tesc
       ( do
 	c <- escChar
         return $ TLit [c] )
+        <|>
+        ( do					-- 1 to 3 digit octal number
+          od <- mToN (oneOf "01234567") 1 3
+          return $ TLit $ toEnum (((read $ "0o" ++ od) :: Int) `mod` 256) : ""
+        )
 	<|>
 	( do
 	  c <- anyChar
@@ -234,12 +343,13 @@ braceContent
 	  s <- between (char '{') (char '}') braceContent
 	  return $ "{" ++ s ++ "}"
 
+-- ------------------------------------------------------------
+
 bescNL :: TclParser Char
 bescNL
-    = do
-      try (string "\\\n")
-      many (oneOf " \t\r")
-      return ' '
+    = try (string "\\\n")
+      >> many (oneOf " \t\r")
+      >> return ' '
 
 bescCH :: TclParser String
 bescCH
@@ -250,43 +360,73 @@ bescCH
 
 bescchar :: TclParser String
 bescchar
-    = ( do
-	bescNL
-        return " "
-      )
+    = ( bescNL >> return " " )
       <|>
       bescCH
 
+toN :: TclParser r -> Int -> TclParser [r]
+toN p n
+    | n == 0
+        = return []
+    | n > 0
+        = option [] $
+          do r1 <- p
+             rs <- toN p $ n - 1
+             return $ r1 : rs
+    | otherwise -- n < 0
+        = parserZero
+          
+mToN :: TclParser r -> Int -> Int -> TclParser [r]
+mToN p n m
+    | n == 0
+        = toN p m
+    | otherwise
+        = do r1 <- p
+             rs <- mToN p (n-1) (m-1)
+             return $ r1 : rs
+
+-- ------------------------------------------------------------
+
 noExtraChar :: String -> TclParser ()
 noExtraChar na
-    = notFollowedBy $ noneOf $ na ++ ws ++ nl
+    = notFollowedBy $ noneOf $ na ++ ws ++ nls
 
 ws1 ::  TclParser ()
-ws1 = do
-      many1 (oneOf " \t\r" <|> bescNL)
-      return ()
+ws1 = many1 (oneOf " \t\r" <|> bescNL)
+      >> return ()
 
 ws0 ::  TclParser ()
 ws0 = option () ws1
 
+wsnl1 ::  TclParser ()
+wsnl1
+    = do
+      many1 $ ( oneOf " \t\r" >> return () )
+              <|>
+              nl'
+              <|>
+              ( bescNL >> return () )
+      return ()
+
+nl' :: TclParser ()
+nl' = char '\n'
+      >> option ' ' (char '\r')
+      >> return ()
+
 nl1 :: TclParser ()
-nl1 = ( do
-	char '\n'
-        option ' ' $ char '\r'
-        return ()
-      )
+nl1 = nl'
       <|>
-      ( do
-        char ';'
-        return ()
-      )
+      ( char ';' >> return () )
 
 nl0 ::  TclParser ()
 nl0 = option () nl1
 
+eofP :: TclParser r -> TclParser r
+eofP ps
+    = do r <- ps
+	 eof
+	 return r
+
 -- ------------------------------------------------------------
 
-p ps s = parse (do r <- ps
-	           eof
-	           return r
-	       ) "" s
+p ps s = parse (eofP ps) "" s
