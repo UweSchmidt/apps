@@ -1,20 +1,18 @@
 module Language.Tcl.Core
 where
 
-import Control.Monad.Error
-import Control.Monad.RWS
+import           Control.Monad.Error
+import           Control.Monad.RWS
 
-import Data.Map		     		( Map )
-import qualified
-       Data.Map               		as M
+import           Data.Map    		( Map )
+import qualified Data.Map      		as M
 
-import Language.Common.Eval
+import           Language.Common.Eval
 
-import Language.Tcl.AbstractSyntax
-import qualified
-       Language.Tcl.Parser              as P
+import           Language.Tcl.AbstractSyntax
+import qualified Language.Tcl.Parser    as P
 
-import System.IO
+import           System.IO
 
 -- ------------------------------------------------------------
 
@@ -198,20 +196,6 @@ evalTclList :: String -> TclEval e s [String]
 evalTclList s
     = parseTclList s >>= evalTclL
  
--- ------------------------------------------------------------
-
-evalTclE :: String -> TclEval e s String
-evalTclE e
-    = return e		-- this is a dummy
-
-parseTclExpr :: String -> TclEval e s String
-parseTclExpr
-    = return . unwords . words	-- this is another dummy for normalizing whitespace
-
-evalTclExpr :: String -> TclEval e s String
-evalTclExpr s
-    = parseTclExpr s >>= evalTclE
-
 -- ------------------------------------------------------------
 
 lookupCmd	:: String -> TclState e s -> TclEval e s (TclCommand e s)

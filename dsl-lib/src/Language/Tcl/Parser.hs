@@ -22,8 +22,7 @@ parseTclProg
 parseTclList :: String -> Either ParseError TclList
 parseTclList
     = parse ( eofP $
-              do l <- largs
-                 return $ TclList l
+              largs >>= return . TclList
             ) ""
 
 -- ------------------------------------------------------------

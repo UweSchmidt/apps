@@ -10,7 +10,7 @@ import Language.Common.Eval
 
 import Language.Tcl.Core
 import Language.Tcl.CheckArgs
-
+import Language.Tcl.Expr.Eval           ( evalTclExpr )
 import System.IO
 
 -- ------------------------------------------------------------
