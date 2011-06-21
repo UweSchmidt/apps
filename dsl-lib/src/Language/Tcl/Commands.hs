@@ -11,6 +11,7 @@ import Language.Common.Eval
 import Language.Tcl.Core
 import Language.Tcl.CheckArgs
 import Language.Tcl.Expr.Eval           ( evalTclExpr )
+
 import System.IO
 
 -- ------------------------------------------------------------
@@ -23,6 +24,7 @@ buildInTclCommands
       , ("expr",        tclExpr)
       , ("foreach",     tclForeach)
       , ("if",          tclIf)
+      , ("incr",        tclIncr)
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)
@@ -122,15 +124,17 @@ tclElse' _
 
 -- ------------------------------------------------------------
 
-tclSet	:: TclCommand e s
-tclSet [n]
-    = get >>= lookupVar n
-
-tclSet [n, v]
-    = get >>= setVar n v
-
-tclSet _
-    = tclWrongArgs "set varName ?newValue?"
+tclIncr :: TclCommand e s
+tclIncr [var]
+    = tclIncr [var, "1"]
+tclIncr [var, incr]
+    = do v1 <- get >>= lookupVar var >>=
+               tclCheckIntegerArg
+         v2 <- tclCheckIntegerArg incr
+         get >>= setVar var (show $ v1 + v2)
+         
+tclIncr _
+    = tclWrongArgs "incr varName ?increment?"
 
 -- ------------------------------------------------------------
 
@@ -187,5 +191,17 @@ tclReturnCodeVal v
               `mplus`
               toInt v
             )
+
+-- ------------------------------------------------------------
+
+tclSet	:: TclCommand e s
+tclSet [n]
+    = get >>= lookupVar n
+
+tclSet [n, v]
+    = get >>= setVar n v
+
+tclSet _
+    = tclWrongArgs "set varName ?newValue?"
 
 -- ------------------------------------------------------------

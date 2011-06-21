@@ -30,6 +30,10 @@ natural :: ExprParser Integer
 natural
     = P.natural lexer
 
+integer :: ExprParser Integer
+integer
+    = P.integer lexer
+
 float :: ExprParser Double
 float
     = P.float lexer
@@ -153,6 +157,10 @@ call
 parseTclExpr :: String -> Either ParseError TclExpr
 parseTclExpr
     = parse (eofP $ whiteSpace >> expr) ""
+
+parseTclInteger :: String -> Either ParseError Integer
+parseTclInteger
+    = parse (eofP $ whiteSpace >> integer) ""
 
 -- ------------------------------------------------------------
 

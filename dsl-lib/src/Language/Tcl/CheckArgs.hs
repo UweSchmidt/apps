@@ -6,6 +6,7 @@ import Control.Monad.Error
 import Data.Char                        ( isDigit )
 
 import Language.Tcl.Core
+import Language.Tcl.Expr.Parser         ( parseTclInteger )
 
 -- ------------------------------------------------------------
 
@@ -22,6 +23,10 @@ tclCheckBooleanArg :: String -> TclEval e s Bool
 tclCheckBooleanArg
     = tclCheckArg tclBooleanVal
 
+tclCheckIntegerArg :: String -> TclEval e s Integer
+tclCheckIntegerArg
+    = tclCheckArg tclIntegerVal
+
 -- ------------------------------------------------------------
 
 tclBooleanVal :: CheckArg Bool
@@ -35,6 +40,17 @@ tclBooleanVal v
               `mplus`
               fmap (/= 0) (toInt v)
             )
+
+-- ------------------------------------------------------------
+
+tclIntegerVal :: CheckArg Integer
+tclIntegerVal v
+    = either ( const $
+               Left $
+               "expected integer but got " ++ show v
+             )
+            Right
+      . parseTclInteger $ v
 
 -- ------------------------------------------------------------
 
