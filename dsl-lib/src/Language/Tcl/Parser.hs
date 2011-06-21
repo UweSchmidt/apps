@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
 module Language.Tcl.Parser
 where
 
@@ -15,13 +17,13 @@ type TclParser = Parsec String ()
 
 parseTclProg :: String -> Either ParseError TclProg
 parseTclProg
-    = parse tprog ""
+    = parse (eofP tprog) ""
 
 parseTclList :: String -> Either ParseError TclList
 parseTclList
-    = parse ( do
-              l <- largs
-              return $ TclList l
+    = parse ( eofP $
+              do l <- largs
+                 return $ TclList l
             ) ""
 
 -- ------------------------------------------------------------
@@ -67,10 +69,8 @@ targs' :: TclParser () ->		-- ^ whitespace parser, newline is included for list 
           String ->                     -- ^ command follow chars
           TclParser [TclArg]
 targs' tws tsubst vc' na
-    = option [] $
-      do
-      tws
-      ( targs1 <|> return [] )
+    = do option () tws
+         ( targs1 <|> return [] )
     where
     targs1
 	= do
