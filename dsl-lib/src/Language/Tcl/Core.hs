@@ -1,6 +1,7 @@
 module Language.Tcl.Core
 where
 
+import           Control.Arrow
 import           Control.Monad.Error
 import           Control.Monad.RWS
 
@@ -9,6 +10,7 @@ import qualified Data.Map      		as M
 
 import           Language.Common.Eval
 
+import           Language.Tcl.Value
 import           Language.Tcl.AbstractSyntax
 import qualified Language.Tcl.Parser    as P
 
@@ -34,7 +36,7 @@ instance (Show s) => Show (TclState e s) where
     show (TclState v c ch as)
         = "TclState "
           ++ "{ _tvars = "
-          ++ (show . M.toList $ v)
+          ++ (show . map (second v2s) . M.toList $ v)
           ++ ", _tcmds = "
           ++ (show . M.keys $ c)
           ++ ", _tChans = "
@@ -47,13 +49,13 @@ type TclWrt		-- not really used
     = String
 
 type TclVars		-- global variables
-    = Map String String
+    = Map String Value
 
 type TclCommands e s	-- commands
     = Map String (TclCommand e s)
 
 type TclCommand e s
-    = [String] -> TclEval e s String
+    = [Value] -> TclEval e s Value
 
 type TclChannels	-- open channels
     = Map String Handle
@@ -102,35 +104,35 @@ tclWrongArgs :: String -> TclEval e s r
 tclWrongArgs
     = tclThrowError . ("wrong # args: should be " ++) . show
 
-tclCatch :: (Int -> Bool) -> TclEval e s String -> TclEval e s String
+tclCatch :: (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
 tclCatch p cmd
     = cmd
       `catchError`
       (\ err@(TclError lev msg)
            -> if p lev
-              then return msg
+              then return $ mkS msg
               else throwError err
       )
 
-tclCatchError :: TclEval e s String -> TclEval e s String
+tclCatchError :: TclEval e s Value -> TclEval e s Value
 tclCatchError
     = tclCatch (== 1)
 
-tclCatchReturnExc :: TclEval e s String -> TclEval e s String
+tclCatchReturnExc :: TclEval e s Value -> TclEval e s Value
 tclCatchReturnExc
     = tclCatch (== 2)
 
-tclCatchBreakExc :: TclEval e s String -> TclEval e s String
+tclCatchBreakExc :: TclEval e s Value -> TclEval e s Value
 tclCatchBreakExc
     = tclCatch (== 3)
 
-tclCatchContinueExc :: TclEval e s String -> TclEval e s String
+tclCatchContinueExc :: TclEval e s Value -> TclEval e s Value
 tclCatchContinueExc
     = tclCatch (== 4)
 
 -- ------------------------------------------------------------
 
-interpreteTcl	:: String -> TclEval e s String
+interpreteTcl	:: String -> TclEval e s Value
 interpreteTcl s
     = parseTclProg s >>= evalTclProg
 
@@ -142,35 +144,35 @@ parseTclProg s
         Right p
             -> return p
 
-evalTclProg	:: TclProg -> TclEval e s String
+evalTclProg	:: TclProg -> TclEval e s Value
 evalTclProg (TclProg tp)
     | null tp
-        = return ""
+        = return value_empty
     | otherwise
         = do l <- mapM evalTclCmd tp
              return (last l)
 
 -- ------------------------------------------------------------
 
-evalTclCmd	:: TclCmd -> TclEval e s String
+evalTclCmd	:: TclCmd -> TclEval e s Value
 evalTclCmd (TclCmd al)
     = mapM evalTclArg al >>= evalTcl
     where
-      evalTcl :: [String] -> TclEval e s String
+      evalTcl :: [Value] -> TclEval e s Value
       evalTcl (cn : args)
           = do s <- get
-               c <- lookupCmd cn s
+               c <- lookupCmd (v2s cn) s
                c args
       evalTcl []
           = tclThrowError "empty command"
 
-evalTclArg	:: TclArg -> TclEval e s String
+evalTclArg	:: TclArg -> TclEval e s Value
 evalTclArg (TclArg xs)
-    = mapM evalTclSubst xs >>= return . concat
+    = mapM evalTclSubst xs >>= return . mconcat
 
-evalTclSubst	:: TclSubst -> TclEval e s String
+evalTclSubst	:: TclSubst -> TclEval e s Value
 evalTclSubst (TLit s)
-    = return s
+    = return $ mkS s
 
 evalTclSubst (TVar n)
     = get >>= lookupVar n
@@ -188,11 +190,11 @@ parseTclList s
         Right l
             -> return l
 
-evalTclL :: TclList -> TclEval e s [String]
+evalTclL :: TclList -> TclEval e s [Value]
 evalTclL (TclList al)
     = mapM evalTclArg al
 
-evalTclList :: String -> TclEval e s [String]
+evalTclList :: String -> TclEval e s [Value]
 evalTclList s
     = parseTclList s >>= evalTclL
  
@@ -206,7 +208,7 @@ lookupCmd n s
         Just c
             -> return c
 
-lookupVar	:: String -> TclState e s -> TclEval e s String
+lookupVar	:: String -> TclState e s -> TclEval e s Value
 lookupVar n s
     = case M.lookup n $ _tvars s of
         Nothing
@@ -214,7 +216,7 @@ lookupVar n s
         Just c
             -> return c
 
-setVar		:: String -> String -> TclState e s -> TclEval e s String
+setVar		:: String -> Value -> TclState e s -> TclEval e s Value
 setVar n v s
     = do put $ s { _tvars = M.insert n v (_tvars s) }
          return v

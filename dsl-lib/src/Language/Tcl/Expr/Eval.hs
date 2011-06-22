@@ -2,22 +2,22 @@ module Language.Tcl.Expr.Eval
 where
 
 import Control.Monad
-import Control.Applicative
 
 import Data.Char        ( isLetter )
 import Data.Maybe      	( isJust )
 
 import           Language.Tcl.Core
 import           Language.Tcl.Value
-import           Language.Tcl.CheckArgs          	( checkBooleanValue
-							, checkBooleanString
-                                                        )
+import           Language.Tcl.CheckArgs          	( checkBooleanValue )
 import           Language.Tcl.Expr.AbstractSyntax
 import qualified Language.Tcl.Expr.Parser               as P
 
 -- ------------------------------------------------------------
 
+trueExpr :: TclExpr
 trueExpr  = TConst . mkI $ 1
+
+falseExpr :: TclExpr
 falseExpr = TConst . mkI $ 0
 
 eval :: TclExpr -> TclEval e s Value
@@ -93,11 +93,12 @@ fct1D
     neg1D    = mkb . (== 0)
     absD   x = mkd $ if x < 0 then (0 - x) else x 
 
+app1Err :: String -> Value -> TclEval e s r
 app1Err op v
     | isLetter . head $ op
-        = tclSyn $ op ++ "(" ++ show v ++ ")"
+        = tclSyn $ op ++ "(" ++ v2s v ++ ")"
     | otherwise
-        = tclSyn $ unwords [op, show v]
+        = tclSyn $ unwords [op, v2s v]
 
 app1 :: String -> Value -> TclEval e s Value
 app1 op v1
@@ -139,6 +140,8 @@ fct2I
       , (">=", geI)
       , ("<",  ltI)
       , ("<=", leI)
+      , ("max", maxI)
+      , ("min", minI)
       ]
     where
     mki = return . mkI
@@ -146,19 +149,21 @@ fct2I
 
     db0 = tclThrowError "divide by zero"
 
-    plusI  x1 x2 = mki $ x1 + x2
-    minusI x1 x2 = mki $ x1 - x2
-    multI  x1 x2 = mki $ x1 * x2
+    plusI        = (mki .) . (+)
+    minusI       = (mki .) . (-)
+    multI        = (mki .) . (*)
     divI  _x1 0  = db0
     divI   x1 x2 = mki $ x1 `div` x2
     modI  _x1 0  = db0
     modI   x1 x2 = mki $ x1 `mod` x2
-    eqI    x1 x2 = mkb $ x1 == x2
-    neI    x1 x2 = mkb $ x1 == x2
-    grI    x1 x2 = mkb $ x1 >  x2
-    geI    x1 x2 = mkb $ x1 >= x2
-    ltI    x1 x2 = mkb $ x1 <  x2
-    leI    x1 x2 = mkb $ x1 <= x2
+    eqI          = (mkb .) . (==)
+    neI          = (mkb .) . (==)
+    grI          = (mkb .) . (> )
+    geI          = (mkb .) . (>=)
+    ltI          = (mkb .) . (< )
+    leI          = (mkb .) . (<=)
+    maxI         = (mki .) . max
+    minI         = (mki .) . min
 
 fct2D :: [(String, Double -> Double -> TclEval e s Value)]
 fct2D
@@ -172,6 +177,8 @@ fct2D
       , (">=", geD)
       , ("<",  ltD)
       , ("<=", leD)
+      , ("max", maxD)
+      , ("min", minD)
       ]
     where
     mkd = return . mkD
@@ -179,17 +186,19 @@ fct2D
 
     db0 = tclThrowError "divide by zero with floats"
 
-    plusD  x1 x2 = mkd $ x1 +  x2
-    minusD x1 x2 = mkd $ x1 -  x2
-    multD  x1 x2 = mkd $ x1 *  x2
+    plusD        = (mkd .) . (+)
+    minusD       = (mkd .) . (-)
+    multD        = (mkd .) . (*)
     divD  _x1 0  = db0
     divD   x1 x2 = mkd $ x1 /  x2
-    eqD    x1 x2 = mkb $ x1 == x2
-    neD    x1 x2 = mkb $ x1 == x2
-    grD    x1 x2 = mkb $ x1 >  x2
-    geD    x1 x2 = mkb $ x1 >= x2
-    ltD    x1 x2 = mkb $ x1 <  x2
-    leD    x1 x2 = mkb $ x1 <= x2
+    eqD          = (mkb .) . (==)
+    neD          = (mkb .) . (/=)
+    grD          = (mkb .) . (>)
+    geD          = (mkb .) . (>=)
+    ltD          = (mkb .) . (< )
+    leD          = (mkb .) . (<=)
+    maxD         = (mkd .) . max
+    minD         = (mkd .) . min
 
 
 fct2S :: [(String, String -> String -> TclEval e s Value)]
@@ -216,19 +225,19 @@ app2 op v1 v2
     | isI v1 && isI v2 = do
 			 x1 <- selI v1
 			 x2 <- selI v2
-			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for integers")
+			 maybe (notSupported "integer")
 			       (\ f -> f x1 x2)
 			       $ lookup op fct2I
     | isD v1 && isD v2 = do
 			 x1 <- selD v1
 			 x2 <- selD v2
-			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for floats")
+			 maybe (notSupported "double")
 			       (\ f -> f x1 x2)
 			       $ lookup op fct2D
     | isS v1 && isS v2 = do
 			 x1 <- selS v1
 			 x2 <- selS v2
-			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for floats")
+			 maybe (notSupported "string")
 			       (\ f -> f x1 x2)
 			       $ lookup op fct2S
     | otherwise        = case castArgs v1 v2 of
@@ -236,7 +245,9 @@ app2 op v1 v2
 			     -> app2Syn op v1 v2	-- no casts possible: issue error
 			 Just (y1, y2)
 			     -> app2 op y1 y2		-- try again with one arg implicitly casted
-
+    where
+      notSupported t
+          = tclThrowError $ "binary operator/function " ++ show op ++ " not supported for type " ++ t
 
 castArgs :: Value -> Value -> Maybe (Value, Value)
 castArgs x y
@@ -266,12 +277,12 @@ app2Syn, app2Type :: String -> Value -> Value -> TclEval e s r
 app2Syn    = app2Err tclSyn
 app2Type   = app2Err tclType
 
-app2Err :: (Show a1, Show a) => (String -> t) -> String -> a -> a1 -> t
+app2Err :: (String -> t) -> String -> Value -> Value -> t
 app2Err err op v1 v2
     | isLetter . head $ op
-        = err $ op ++ "(" ++ show v1 ++ "," ++ show v2 ++ ")"
+        = err $ op ++ "(" ++ v2s v1 ++ "," ++ v2s v2 ++ ")"
     | otherwise
-        = err $ unwords [show v1, op, show v2]
+        = err $ unwords [v2s v1, op, v2s v2]
 
 tclSyn, tclType :: String -> TclEval e s r
 

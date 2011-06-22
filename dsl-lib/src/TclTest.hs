@@ -8,6 +8,7 @@ import Language.Tcl.AbstractSyntax
 import qualified Language.Tcl.Parser as P
 import Language.Tcl.Show
 import Language.Tcl.Eval
+import Language.Tcl.Value
 
 import Text.Parsec
 
