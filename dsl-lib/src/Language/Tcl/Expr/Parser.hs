@@ -3,6 +3,7 @@
 module Language.Tcl.Expr.Parser
 where
 
+import Language.Tcl.Value               ( mkI, mkD, mkS )
 import Language.Tcl.Expr.AbstractSyntax
 
 import           Text.Parsec
@@ -131,18 +132,18 @@ term :: ExprParser TclExpr
 term
     = parens expr
       <|>
-      ( try float     >>= return . TFConst )
+      ( try float     >>= return . TConst . mkD )
       <|>
-      ( natural       >>= return . TIConst )
+      ( natural       >>= return . TConst . mkI )
       <|>
-      ( stringLiteral >>= return . TSConst )
+      ( stringLiteral >>= return . TConst . mkS )
       <|>
       call
 
 call :: ExprParser TclExpr
 call
     = do n <- name
-         option (TSConst n) $
+         option (TConst . mkS $ n) $
            parens exprList >>= return . TExpr n
     where
       exprList

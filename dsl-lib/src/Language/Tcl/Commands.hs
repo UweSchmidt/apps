@@ -74,7 +74,7 @@ tclError _
 
 tclExpr :: TclCommand e s
 tclExpr al@(_ : _)
-    = evalTclExpr $ intercalate " " al
+    = evalTclExpr (intercalate " " al) >>= return . show
 
 tclExpr _
     = tclWrongArgs "expr arg ?arg ...?"
@@ -114,10 +114,10 @@ tclIf _
 
 tclIf' :: String -> String -> TclCommand e s
 tclIf' cond thn els
-    = do b <- evalTclExpr cond >>= tclCheckArg tclBooleanVal
+    = do b <- evalTclExpr cond >>= checkBooleanValue
          if b
             then interpreteTcl thn
-            else tclElse els
+            else tclElse       els
 
 tclElse :: TclCommand e s
 tclElse ("elseif" : ifcmd)
@@ -141,9 +141,9 @@ tclIncr :: TclCommand e s
 tclIncr [var]
     = tclIncr [var, "1"]
 tclIncr [var, incr]
-    = do v1 <- get >>= lookupVar var >>=
-               tclCheckIntegerArg
-         v2 <- tclCheckIntegerArg incr
+    = do v1 <- get >>= lookupVar var
+	       >>= checkIntegerString
+         v2 <- checkIntegerString incr
          get >>= setVar var (show $ v1 + v2)
          
 tclIncr _
@@ -173,7 +173,7 @@ tclPuts l
 
 tclReturn :: TclCommand e s
 tclReturn l
-    = do (rc, l1) <- tclOption2 "-code" 2 tclReturnCodeVal l
+    = do (rc, l1) <- tclOption2 "-code" 2 checkReturnCode l
          tclReturn' rc l1
     where
       tclReturn' rc []
@@ -192,18 +192,17 @@ tclReturn l
       tclReturn' _ _
           = tclWrongArgs "return ?-code code? ?result?"
 
-tclReturnCodeVal :: CheckArg Int
-tclReturnCodeVal v
-    = maybe ( Left $
-              "bad completion code "
-              ++ show v
-              ++ ": must be ok, error, return, break, continue, or an integer"
-            )
-            Right
-            ( lookup v (zip ["ok", "error", "return", "break", "continue"] [0..])
-              `mplus`
-              toInt v
-            )
+checkReturnCode :: String -> TclEval e s Int
+checkReturnCode s
+    = checkArg ("bad completion code "
+		++ show s
+		++ ": must be ok, error, return, break, continue, or an integer"
+	       ) rc2i s
+    where
+    rc2i v
+	= lookup v (zip ["ok", "error", "return", "break", "continue"] [0..])
+          `mplus`
+          toInt v
 
 -- ------------------------------------------------------------
 

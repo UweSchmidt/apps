@@ -1,12 +1,12 @@
 module Language.Tcl.Expr.AbstractSyntax
 where
 
+import Language.Tcl.Value
+
 -- ------------------------------------------------------------
 
 data TclExpr
-    = TIConst Integer
-    | TFConst Double
-    | TSConst String
+    = TConst Value
     | TExpr String [TclExpr]
       deriving (Show)
 

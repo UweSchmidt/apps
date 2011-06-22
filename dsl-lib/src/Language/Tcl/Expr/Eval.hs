@@ -2,47 +2,46 @@ module Language.Tcl.Expr.Eval
 where
 
 import Control.Monad
+import Control.Applicative
 
 import Data.Char        ( isLetter )
 import Data.Maybe      	( isJust )
 
 import           Language.Tcl.Core
-import           Language.Tcl.CheckArgs          	( tclCheckBooleanArg
-                                                        , tclBooleanVal
+import           Language.Tcl.Value
+import           Language.Tcl.CheckArgs          	( checkBooleanValue
+							, checkBooleanString
                                                         )
 import           Language.Tcl.Expr.AbstractSyntax
 import qualified Language.Tcl.Expr.Parser               as P
 
 -- ------------------------------------------------------------
 
-data Val
-    = I Integer
-    | D Double
-    | S String
+trueExpr  = TConst . mkI $ 1
+falseExpr = TConst . mkI $ 0
 
-instance Show Val where
-    show (I i) = show i
-    show (D d) = show d
-    show (S s) = s
-
-eval :: TclExpr -> TclEval e s Val
-eval (TIConst i)
-    = return $ I i
-
-eval (TFConst f)
-    = return $ D f
-
-eval (TSConst s)
-    = return $ S s
+eval :: TclExpr -> TclEval e s Value
+eval (TConst v)
+    = return v
 
 eval (TExpr op [e1])
     = eval e1 >>= app1 op
 
 eval (TExpr "&&" [e1, e2])
-    = eval (TExpr "?:" [e1, e2, TIConst 0])
+    = do b <- eval e1 >>=  checkBooleanValue
+	 if b
+	    then eval e2
+		     >>= checkBooleanValue
+		     >>= return . b2i
+	    else return . mkI $ 0
 
 eval (TExpr "||" [e1, e2])
-    = eval (TExpr "?:" [e1, TIConst 1, e2])
+    = do b <- eval e1 >>=  checkBooleanValue
+	 if b
+	    then return . mkI $ 1
+	    else eval e2
+		     >>= checkBooleanValue
+		     >>= return . b2i
 
 eval (TExpr op [e1, e2])
     = do v1 <- eval e1
@@ -50,8 +49,7 @@ eval (TExpr op [e1, e2])
          app2 op v1 v2
 
 eval (TExpr "?:" [e1, e2, e3])
-    = do v1 <- eval e1
-         b  <- tclCheckBooleanArg $ show v1
+    = do b <- eval e1 >>= checkBooleanValue
          if b
             then eval e2
             else eval e3
@@ -63,62 +61,184 @@ eval (TExpr op _el)
 --
 -- unary expr evaluation
 
-app1 :: String -> Val -> TclEval e s Val
-app1 "+" x@(I _)    = return x
-app1 "+" x@(D _)    = return x
+fct1I :: [(String, Integer -> TclEval e s Value)]
+fct1I
+    = [ ("+",   plus1I)
+      , ("-",   minus1I)
+      , ("!",   neg1I)
+      , ("abs", absI)
+      ]
+    where
+    mki = return . mkI
+    mkb = return . b2i
 
-app1 "-"   (I x)    = return . I $ 0 - x
-app1 "-"   (D x)    = return . D $ 0 - x
+    plus1I   = mki
+    minus1I  = mki . (0 - )
+    neg1I    = mkb . (== 0)
+    absI   x = mki $ if x < 0 then (0 - x) else x 
 
-app1 "!"   (I x)    = return . b2i $ x /= 0
-app1 "!"   (D x)    = return . b2i $ x /= 0
+fct1D :: [(String, Double -> TclEval e s Value)]
+fct1D
+    = [ ("+",   plus1D)
+      , ("-",   minus1D)
+      , ("!",   neg1D)
+      , ("abs", absD)
+      ]
+    where
+    mkd = return . mkD
+    mkb = return . b2i
 
-app1 op v
+    plus1D   = mkd
+    minus1D  = mkd . (0 - )
+    neg1D    = mkb . (== 0)
+    absD   x = mkd $ if x < 0 then (0 - x) else x 
+
+app1Err op v
     | isLetter . head $ op
         = tclSyn $ op ++ "(" ++ show v ++ ")"
     | otherwise
         = tclSyn $ unwords [op, show v]
 
+app1 :: String -> Value -> TclEval e s Value
+app1 op v1
+    | isI v1 = do
+	       x1 <- selI v1
+	       maybe (tclThrowError $ "unary operator/function " ++ show op ++ " not supported for integers")
+		     ($ x1)
+		     $ lookup op fct1I
+
+    | isD v1 = do
+	       x1 <- selD v1
+	       maybe (tclThrowError $ "unary operator/function " ++ show op ++ " not supported for integers")
+		     ($ x1)
+		     $ lookup op fct1D
+    | otherwise = case castArg v1 of
+		  Nothing
+		      -> app1Err op v1
+		  Just y1
+		      -> app1 op y1
+
+castArg :: Value -> Maybe Value
+castArg x
+    = s2i x	-- only implicit cast from string booleans to integers are performed
+
 -- ------------------------------------------------------------
 --
 -- binary expr evaluation
 
-app2 :: String -> Val -> Val -> TclEval e s Val
-app2 "+" (I x1) (I x2)  = return . I $ x1 + x2
-app2 "+" (D x1) (D x2)  = return . D $ x1 + x2
+fct2I :: [(String, Integer -> Integer -> TclEval e s Value)]
+fct2I
+    = [ ("+",  plusI)
+      , ("-",  minusI)
+      , ("*",  multI)
+      , ("/",  divI)
+      , ("%",  modI)
+      , ("==", eqI)
+      , ("!=", neI)
+      , (">",  grI)
+      , (">=", geI)
+      , ("<",  ltI)
+      , ("<=", leI)
+      ]
+    where
+    mki = return . mkI
+    mkb = return . b2i
 
-app2 "-" (I x1) (I x2)  = return . I $ x1 - x2
-app2 "-" (D x1) (D x2)  = return . D $ x1 - x2
+    db0 = tclThrowError "divide by zero"
 
-app2 "*" (I x1) (I x2)  = return . I $ x1 * x2
-app2 "*" (D x1) (D x2)  = return . D $ x1 * x2
+    plusI  x1 x2 = mki $ x1 + x2
+    minusI x1 x2 = mki $ x1 - x2
+    multI  x1 x2 = mki $ x1 * x2
+    divI  _x1 0  = db0
+    divI   x1 x2 = mki $ x1 `div` x2
+    modI  _x1 0  = db0
+    modI   x1 x2 = mki $ x1 `mod` x2
+    eqI    x1 x2 = mkb $ x1 == x2
+    neI    x1 x2 = mkb $ x1 == x2
+    grI    x1 x2 = mkb $ x1 >  x2
+    geI    x1 x2 = mkb $ x1 >= x2
+    ltI    x1 x2 = mkb $ x1 <  x2
+    leI    x1 x2 = mkb $ x1 <= x2
 
-app2 "/" (I x1) (I x2)
-    | x2 == 0           = tclThrowError "divide by zero"
-    | otherwise         = return . I $ x1 * x2
-app2 "/" (D x1) (D x2)
-    | x2 == 0           = tclThrowError "divide by zero"
-    | otherwise         = return . D $ x1 * x2
+fct2D :: [(String, Double -> Double -> TclEval e s Value)]
+fct2D
+    = [ ("+",  plusD)
+      , ("-",  minusD)
+      , ("*",  multD)
+      , ("/",  divD)
+      , ("==", eqD)
+      , ("!=", neD)
+      , (">",  grD)
+      , (">=", geD)
+      , ("<",  ltD)
+      , ("<=", leD)
+      ]
+    where
+    mkd = return . mkD
+    mkb = return . b2i
 
-app2 "%" (I x1) (I x2)
-    | x2 == 0           = tclThrowError "modulo by zero"
-    | otherwise         = return . I $ x1 * x2
-app2 "%" x1 x2          = app2Type "%" x1 x2
+    db0 = tclThrowError "divide by zero with floats"
 
-app2 "==" (I x1) (I x2)  = return . b2i $ x1 == x2
-app2 "==" (D x1) (D x2)  = return . b2i $ x1 == x2
-app2 "==" (S x1) (S x2)  = return . b2i $ x1 == x2
+    plusD  x1 x2 = mkd $ x1 +  x2
+    minusD x1 x2 = mkd $ x1 -  x2
+    multD  x1 x2 = mkd $ x1 *  x2
+    divD  _x1 0  = db0
+    divD   x1 x2 = mkd $ x1 /  x2
+    eqD    x1 x2 = mkb $ x1 == x2
+    neD    x1 x2 = mkb $ x1 == x2
+    grD    x1 x2 = mkb $ x1 >  x2
+    geD    x1 x2 = mkb $ x1 >= x2
+    ltD    x1 x2 = mkb $ x1 <  x2
+    leD    x1 x2 = mkb $ x1 <= x2
 
-app2 "!=" x1 x2          = app2 "==" x1 x2 >>= app2 "-" (I 1)
 
-app2 op x1 x2
-    = case castArgs x1 x2 of
-        Nothing
-            -> app2Syn op x1 x2		-- no casts possible: issue error
-        Just (y1, y2)
-            -> app2 op y1 y2		-- try again with one arg implicitly casted
+fct2S :: [(String, String -> String -> TclEval e s Value)]
+fct2S
+    = [ ("==", eqS)
+      , ("!=", neS)
+      , (">",  grS)
+      , (">=", geS)
+      , ("<",  ltS)
+      , ("<=", leS)
+      ]
+    where
+    mkb = return . b2i
 
-castArgs :: Val -> Val -> Maybe (Val, Val)
+    eqS    x1 x2 = mkb $ x1 == x2
+    neS    x1 x2 = mkb $ x1 == x2
+    grS    x1 x2 = mkb $ x1 >  x2
+    geS    x1 x2 = mkb $ x1 >= x2
+    ltS    x1 x2 = mkb $ x1 <  x2
+    leS    x1 x2 = mkb $ x1 <= x2
+
+app2 :: String -> Value -> Value -> TclEval e s Value
+app2 op v1 v2
+    | isI v1 && isI v2 = do
+			 x1 <- selI v1
+			 x2 <- selI v2
+			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for integers")
+			       (\ f -> f x1 x2)
+			       $ lookup op fct2I
+    | isD v1 && isD v2 = do
+			 x1 <- selD v1
+			 x2 <- selD v2
+			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for floats")
+			       (\ f -> f x1 x2)
+			       $ lookup op fct2D
+    | isS v1 && isS v2 = do
+			 x1 <- selS v1
+			 x2 <- selS v2
+			 maybe (tclThrowError $ "binary operator " ++ show op ++ " not supported for floats")
+			       (\ f -> f x1 x2)
+			       $ lookup op fct2S
+    | otherwise        = case castArgs v1 v2 of
+			 Nothing
+			     -> app2Syn op v1 v2	-- no casts possible: issue error
+			 Just (y1, y2)
+			     -> app2 op y1 y2		-- try again with one arg implicitly casted
+
+
+castArgs :: Value -> Value -> Maybe (Value, Value)
 castArgs x y
     | isJust r		= mzero
     | otherwise		= ( s2i y >>= eqarg x )		-- try string to int cast for y
@@ -139,34 +259,9 @@ castArgs x y
     where
       r = eqarg x y
 
-eqarg :: Val -> Val -> Maybe (Val, Val)
-eqarg x@(I _) y@(I _) = return (x, y)
-eqarg x@(D _) y@(D _) = return (x, y)
-eqarg x@(S _) y@(S _) = return (x, y)
-eqarg _       _       = mzero
-
-s2i :: Val -> Maybe Val
-s2i (S s) = fmap (I . toInteger . fromEnum) . either (const mzero) return . tclBooleanVal $ s
-s2i _     = mzero
-
-i2d :: Val -> Maybe Val
-i2d (I i) = return . D . fromIntegral $ i
-i2d _     = mzero
-
-i2s :: Val -> Maybe Val
-i2s (I i) = return . S . show $ i
-i2s _     = mzero
-
-d2s :: Val -> Maybe Val
-d2s (D x) = return . S . show $ x
-d2s _     = mzero
-
-b2i :: Bool -> Val
-b2i =  I . toInteger . fromEnum
-
 -- ------------------------------------------------------------
 
-app2Syn, app2Type :: String -> Val -> Val -> TclEval e s r
+app2Syn, app2Type :: String -> Value -> Value -> TclEval e s r
 
 app2Syn    = app2Err tclSyn
 app2Type   = app2Err tclType
@@ -197,8 +292,8 @@ parseTclExpr s
         Right l
             -> return l
 
-evalTclExpr :: String -> TclEval e s String
+evalTclExpr :: String -> TclEval e s Value
 evalTclExpr s
-    = parseTclExpr s >>= eval >>= return . show
+    = parseTclExpr s >>= eval
 
 -- ------------------------------------------------------------

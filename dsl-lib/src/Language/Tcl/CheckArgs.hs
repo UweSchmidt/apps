@@ -6,6 +6,7 @@ import Control.Monad.Error
 import Data.Char                        ( isDigit )
 
 import Language.Tcl.Core
+import Language.Tcl.Value
 import Language.Tcl.Expr.Parser         ( parseTclInteger )
 
 -- ------------------------------------------------------------
@@ -15,42 +16,23 @@ type CheckArg a
 
 -- ------------------------------------------------------------
 
-tclCheckArg :: CheckArg a -> String -> TclEval e s a
-tclCheckArg f x
-    = either tclThrowError return $ f x
+checkArg :: String -> (a -> Maybe b) -> a -> TclEval e s b
+checkArg msg check = maybe (tclThrowError msg) return . check
 
-tclCheckBooleanArg :: String -> TclEval e s Bool
-tclCheckBooleanArg
-    = tclCheckArg tclBooleanVal
+checkBoolean :: (Show a) => (a -> Maybe Bool) -> a -> TclEval e s Bool
+checkBoolean c v = checkArg ("expected boolean value but got " ++ show v) c v
 
-tclCheckIntegerArg :: String -> TclEval e s Integer
-tclCheckIntegerArg
-    = tclCheckArg tclIntegerVal
+checkBooleanString :: String -> TclEval e s Bool
+checkBooleanString = checkBoolean s2b 
 
--- ------------------------------------------------------------
+checkBooleanValue :: Value -> TclEval e s Bool
+checkBooleanValue = checkBoolean v2b 
 
-tclBooleanVal :: CheckArg Bool
-tclBooleanVal v
-    = maybe ( Left $
-              "expected boolean value but got"
-              ++ show v
-            )
-            Right
-            ( lookup v (zip ["true", "false", "yes", "no"] [True, False, True, False])
-              `mplus`
-              fmap (/= 0) (toInt v)
-            )
+checkInteger :: (Show a) => (a -> Maybe Integer) -> a -> TclEval e s Integer
+checkInteger c v = checkArg ("expected integer but got" ++ show v) c v
 
--- ------------------------------------------------------------
-
-tclIntegerVal :: CheckArg Integer
-tclIntegerVal v
-    = either ( const $
-               Left $
-               "expected integer but got " ++ show v
-             )
-            Right
-      . parseTclInteger $ v
+checkIntegerString :: String -> TclEval e s Integer
+checkIntegerString = checkInteger (either (const Nothing) Just . parseTclInteger)
 
 -- ------------------------------------------------------------
 
@@ -80,10 +62,10 @@ tclOption1 n _d v (x : xs)
 tclOption1 _ d _ xs
     = return (d, xs)
 
-tclOption2 :: String -> a -> CheckArg a -> [String] -> TclEval e s (a, [String])
-tclOption2 n _d f (x1 : x2 : xs)
+tclOption2 :: String -> a -> (String -> TclEval e s a) -> [String] -> TclEval e s (a, [String])
+tclOption2 n _d check (x1 : x2 : xs)
     | n == x1
-        = do v <- tclCheckArg f x2
+        = do v <- check x2
              return (v, xs)
 
 tclOption2 _ d _ xs
