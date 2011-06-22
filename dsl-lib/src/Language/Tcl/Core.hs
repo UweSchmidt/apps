@@ -34,7 +34,7 @@ instance (Show s) => Show (TclState e s) where
     show (TclState v c ch as)
         = "TclState "
           ++ "{ _tvars = "
-          ++ show v
+          ++ (show . M.toList $ v)
           ++ ", _tcmds = "
           ++ (show . M.keys $ c)
           ++ ", _tChans = "

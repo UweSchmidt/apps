@@ -18,7 +18,8 @@ import System.IO
 
 buildInTclCommands :: [(String, TclCommand e s)]
 buildInTclCommands
-    = [ ("break",       tclBreak)
+    = [ ("append",      tclAppend)
+      , ("break",       tclBreak)
       , ("continue",    tclContinue)
       , ("error",       tclError)
       , ("expr",        tclExpr)
@@ -29,6 +30,18 @@ buildInTclCommands
       , ("return",      tclReturn)
       , ("set",		tclSet)
       ]
+
+-- ------------------------------------------------------------
+
+tclAppend :: TclCommand e s
+tclAppend (varName : values)
+    = do val <- (get >>= lookupVar varName)
+                `mplus`
+                return ""
+         get >>= setVar varName (concat $ val : values)
+
+tclAppend _
+    = tclWrongArgs "append varName ?value value value ...?"
 
 -- ------------------------------------------------------------
 
