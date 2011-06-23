@@ -159,10 +159,6 @@ parseTclExpr :: String -> Either ParseError TclExpr
 parseTclExpr
     = parse (eofP $ whiteSpace >> expr) ""
 
-parseTclInteger :: String -> Either ParseError Integer
-parseTclInteger
-    = parse (eofP $ whiteSpace >> integer) ""
-
 -- ------------------------------------------------------------
 
 eofP :: ExprParser r -> ExprParser r

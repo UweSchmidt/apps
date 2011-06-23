@@ -8,9 +8,11 @@ module Language.Tcl.Value
     , i2d, i2s
     , d2s
     , s2i, s2b
-    , v2b, v2s
+    , v2b, v2s, v2i, v2l
 
     , eqarg
+
+    , readValue
 
     , value_empty, value_0, value_1, value_42, value_true, value_false
     )
@@ -19,21 +21,31 @@ where
 import Control.Monad
 import Control.Applicative
 
+import Data.Char                    ( isSpace )
+import Data.Function       	    ( on )
 import Data.Monoid
+
+import Language.Tcl.QuoteListValue
 
 -- ------------------------------------------------------------
 
 data Value
     = I Integer
     | D Double
-    | S String
+    | S String	-- a candidate for: String -> String, to speed up ++ and concat
 
 instance Show Value where
     show = v2s
 
+instance Eq Value where
+    (==) = (==) `on` v2s
+
+instance Ord Value where
+    compare = compare `on` v2s
+
 instance Monoid Value where
     mempty        = value_empty
-    mappend x1 x2 = mkS $ v2s x1 ++ v2s x2	-- this can be optimized
+    mappend x1 x2 = mkS $ v2s x1 ++ v2s x2	-- this can be optimized with String -> String
  
 -- ------------------------------------------------------------
 
@@ -131,5 +143,31 @@ v2s :: Value -> String
 v2s (S s) = s
 v2s (I i) = show i
 v2s (D d) = show d
+
+v2i :: Value -> Maybe Integer
+v2i (I i) = return i
+v2i (D d) = return . toInteger . fromEnum $ d
+v2i (S s) = readValue s
+
+readValue :: (Read a) => String -> Maybe a
+readValue s
+    = case reads s of
+        [] -> mzero
+        (v, rest) : _
+            -> if all isSpace rest
+               then return v
+               else mzero
+
+-- add extra backslashes or braces to build a list value
+-- only strings must be quoted
+
+v2l :: Value -> Value
+v2l v@(S s)
+    | null       s = mkS "{}"
+    | isCharArg  s = v
+    | isBraceArg s = mkS $ inBraces s
+    | otherwise    = mkS $ escapeArg s
+v2l v
+    = v
 
 -- ------------------------------------------------------------

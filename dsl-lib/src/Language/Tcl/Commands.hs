@@ -216,7 +216,7 @@ checkReturnCode s
     rc2i v
 	= lookup v (zip ["ok", "error", "return", "break", "continue"] [0..])
           `mplus`
-          toInt v
+          readValue v
 
 -- ------------------------------------------------------------
 

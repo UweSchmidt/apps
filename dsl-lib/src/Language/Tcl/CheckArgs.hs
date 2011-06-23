@@ -8,13 +8,7 @@ import Data.Char                        ( isDigit )
 
 import Language.Tcl.Core
 import Language.Tcl.Value
-import Language.Tcl.Expr.Parser         ( parseTclInteger )
 
--- ------------------------------------------------------------
-{-
-type CheckArg a
-    = String -> Either String a
--}
 -- ------------------------------------------------------------
 
 checkArg :: String -> (a -> Maybe b) -> a -> TclEval e s b
@@ -33,24 +27,15 @@ checkInteger :: (a -> Maybe Integer) -> String -> a -> TclEval e s Integer
 checkInteger c s v = checkArg ("expected integer but got " ++ show s) c v
 
 checkIntegerString :: String -> TclEval e s Integer
-checkIntegerString s = checkInteger (either (const Nothing) Just . parseTclInteger) s s
+checkIntegerString s = checkInteger readValue s s
 
 checkIntegerValue :: Value -> TclEval e s Integer
 checkIntegerValue v0 = checkInteger check (v2s v0) v0
     where
       check v
           | isI v     = selI v
-          | isS v     = selS v >>= (either (const Nothing) Just . parseTclInteger)
+          | isS v     = selS >=> readValue $ v
           | otherwise = mzero
-
--- ------------------------------------------------------------
-
-toInt :: String -> Maybe Int
-toInt s
-    | not (null s) && all isDigit s
-        = Just $ read s
-    | otherwise
-        = Nothing
 
 -- ------------------------------------------------------------
 
