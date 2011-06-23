@@ -33,6 +33,7 @@ data Value
     = I Integer
     | D Double
     | S String	-- a candidate for: String -> String, to speed up ++ and concat
+    | E
 
 instance Show Value where
     show = v2s
@@ -44,48 +45,52 @@ instance Ord Value where
     compare = compare `on` v2s
 
 instance Monoid Value where
-    mempty        = value_empty
-    mappend x1 x2 = mkS $ v2s x1 ++ v2s x2	-- this can be optimized with String -> String
- 
+    mempty   = value_empty
+    mappend  = (.++.)
+
 -- ------------------------------------------------------------
 
-mkI         :: Integer -> Value
-mkI         = I
+mkI              :: Integer -> Value
+mkI              = I
 
-mkD         :: Double -> Value
-mkD         = D
+mkD              :: Double -> Value
+mkD              = D
 
-mkS         :: String -> Value
-mkS         = S
+mkS              :: String -> Value
+mkS s
+    | null s     = E
+    | otherwise  = S s
 
-isI         :: Value -> Bool
-isI (I _)   = True
-isI _       = False
+isI              :: Value -> Bool
+isI (I _)        = True
+isI _            = False
 
-isD         :: Value -> Bool
-isD (D _)   = True
-isD _       = False
+isD              :: Value -> Bool
+isD (D _)        = True
+isD _            = False
 
-isS         :: Value -> Bool
-isS (S _)   = True
-isS _       = False
+isS              :: Value -> Bool
+isS (S _)        = True
+isS E            = True
+isS _            = False
 
-selI        :: MonadPlus m => Value -> m Integer
-selI (I x)  = return x
-selI _      = mzero
+selI             :: MonadPlus m => Value -> m Integer
+selI (I x)       = return x
+selI _           = mzero
 
-selD        :: MonadPlus m => Value -> m Double
-selD (D x)  = return x
-selD _      = mzero
+selD             :: MonadPlus m => Value -> m Double
+selD (D x)       = return x
+selD _           = mzero
 
-selS        :: MonadPlus m => Value -> m String
-selS (S x)  = return x
-selS _      = mzero
+selS             :: MonadPlus m => Value -> m String
+selS (S x)       = return x
+selS E           = return ""
+selS _           = mzero
 
 -- ------------------------------------------------------------
 
 value_empty  :: Value
-value_empty  = mkS ""
+value_empty  = E
 
 value_1      :: Value
 value_1      = mkI 1
@@ -108,6 +113,11 @@ eqarg :: Value -> Value -> Maybe (Value, Value)
 eqarg x@(I _) y@(I _) = return (x, y)
 eqarg x@(D _) y@(D _) = return (x, y)
 eqarg x@(S _) y@(S _) = return (x, y)
+eqarg x@(E  ) y@(E  ) = return (x, y)
+
+eqarg x@(S _) y@(E  ) = return (x, y)
+eqarg x@(E  ) y@(S _) = return (x, y)
+
 eqarg _       _       = mzero
 
 s2i :: Value -> Maybe Value
@@ -143,11 +153,13 @@ v2s :: Value -> String
 v2s (S s) = s
 v2s (I i) = show i
 v2s (D d) = show d
+v2s  E    = ""
 
 v2i :: Value -> Maybe Integer
 v2i (I i) = return i
 v2i (D d) = return . toInteger . fromEnum $ d
 v2i (S s) = readValue s
+v2i  E    = mzero
 
 readValue :: (Read a) => String -> Maybe a
 readValue s
@@ -163,11 +175,19 @@ readValue s
 
 v2l :: Value -> Value
 v2l v@(S s)
-    | null       s = mkS "{}"
+--  | null       s = mkS "{}"	    -- does not longer occur, empty string is E
     | isCharArg  s = v
     | isBraceArg s = mkS $ inBraces s
     | otherwise    = mkS $ escapeArg s
-v2l v
-    = v
+v2l E              = mkS $ "{}"
+v2l v              = v
 
+-- value concatenation
+
+(.++.)               :: Value -> Value -> Value
+E       .++. v2      = v2
+v1      .++. E       = v1
+(S s1)  .++. (S s2)  = mkS $     s1 ++     s2
+v1      .++. v2      = mkS $ v2s v1 ++ v2s v2
+ 
 -- ------------------------------------------------------------
