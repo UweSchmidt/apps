@@ -4,6 +4,7 @@ where
 import Control.Monad
 
 import Data.Char        ( isLetter )
+import Data.List        ( intercalate )
 import Data.Maybe      	( isJust )
 
 import           Language.Tcl.Core
@@ -306,5 +307,11 @@ parseTclExpr s
 evalTclExpr :: String -> TclEval e s Value
 evalTclExpr s
     = parseTclExpr s >>= eval
+
+substAndEvalTclExpr :: String -> TclEval e s Value
+substAndEvalTclExpr s
+    = evalTclArgs s
+      >>= return . intercalate " " . map v2s
+      >>= evalTclExpr
 
 -- ------------------------------------------------------------

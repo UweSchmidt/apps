@@ -6,7 +6,9 @@ import Control.Monad.RWS
 import Language.Tcl.Core
 import Language.Tcl.Value
 import Language.Tcl.CheckArgs
-import Language.Tcl.Expr.Eval           ( evalTclExpr )
+import Language.Tcl.Expr.Eval           ( evalTclExpr
+                                        , substAndEvalTclExpr
+                                        )
 
 -- ------------------------------------------------------------
 
@@ -72,5 +74,26 @@ tclElse' [els]
     = interpreteTcl (v2s els)
 tclElse' _
     = tclIf []
+
+-- ------------------------------------------------------------
+
+tclWhile :: TclCommand e s
+tclWhile (c' : b' : [])
+    = do cond <- return . v2s $ c' -- parseTclArgs (v2s c')	-- TODO
+         body <- parseTclProg (v2s b')
+         tclCatchBreakExc $
+           whileLoop cond body
+    where
+      whileLoop cond body
+          = do b <- substAndEvalTclExpr cond >>= checkBooleanValue
+               if b
+                  then ( tclCatchContinueExc $
+                           evalTclProg body )
+                       >>
+                       whileLoop cond body
+                  else return mempty
+
+tclWhile _
+    = tclWrongArgs "while test command"
 
 -- ------------------------------------------------------------

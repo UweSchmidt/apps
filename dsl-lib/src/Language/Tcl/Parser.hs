@@ -15,10 +15,19 @@ type TclParser = Parsec String ()
 --
 -- the main Tcl parsers
 
+-- parse a string as a sequence of commands
 parseTclProg :: String -> Either ParseError TclProg
 parseTclProg
     = parse (eofP tprog) ""
 
+-- parse a string as a sequence of args, newline and ; are normal chars
+parseTclArgs :: String -> Either ParseError TclCmd
+parseTclArgs
+    = parse ( eofP $
+              cargs >>= return . TclCmd
+            ) ""
+
+-- parse a string as a sequence of list elements, newline, ;, $ and [ are normal chars
 parseTclList :: String -> Either ParseError TclList
 parseTclList
     = parse ( eofP $
@@ -57,6 +66,10 @@ tcmd na
 targs :: String -> TclParser [TclArg]
 targs
     = targs' ws1 (tvar <|> tbracket) vc
+
+cargs :: TclParser [TclArg]
+cargs
+    = targs' wsnl1 (tvar <|> tbracket <|> tsemi) vc ""
 
 largs :: TclParser [TclArg]
 largs
@@ -97,6 +110,10 @@ dq  = "\""
 targ :: String -> TclParser TclArg
 targ
     = targ' (tvar <|> tbracket) vc
+
+carg :: String -> TclParser TclArg
+carg
+    = targ' (tvar <|> tbracket <|> tsemi) vc
 
 larg :: String -> TclParser TclArg
 larg
@@ -217,6 +234,9 @@ tbrace
       do
       s <- braceContent
       return $ TLit s
+
+tsemi :: TclParser TclSubst
+tsemi = char ';' >> (return . TLit $ ";")
 
 -- ------------------------------------------------------------
 

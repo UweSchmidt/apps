@@ -200,6 +200,24 @@ evalTclList s
  
 -- ------------------------------------------------------------
 
+parseTclArgs	:: String -> TclEval e s TclCmd
+parseTclArgs s
+    = case (P.parseTclArgs s) of
+        Left err
+            -> tclThrowError $ show err
+        Right l
+            -> return l
+
+substTclArgs :: TclCmd -> TclEval e s [Value]
+substTclArgs (TclCmd al)
+    = mapM evalTclArg al
+
+evalTclArgs :: String -> TclEval e s [Value]
+evalTclArgs s
+    = parseTclArgs s >>= substTclArgs
+ 
+-- ------------------------------------------------------------
+
 lookupCmd	:: String -> TclState e s -> TclEval e s (TclCommand e s)
 lookupCmd n s
     = case M.lookup n $ _tcmds s of

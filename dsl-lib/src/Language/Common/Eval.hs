@@ -7,12 +7,6 @@ import Control.Exception       	( SomeException, try )
 import Control.Monad.Error
 import Control.Monad.RWS.Lazy
 
-{-
-import Control.Monad            ( )
-import Control.Monad.Reader
-import Control.Monad.State.Lazy
--}
-
 -- ------------------------------------------------------------
 --
 -- | Evaluation of an expression/command runs in an
