@@ -1,12 +1,15 @@
 module Language.Tcl.QuoteListValue
+    ( stringToList
+    , escapeArg
+    , inBraces
+    , isBraceArg
+    , isCharArg
+    )
 where
 
-import Language.Tcl.Parser
-
-import Text.Parsec	( parse
-                        , noneOf
-                        , many
-                        )
+import Language.Tcl.Parser	( isBraceArg
+                                , isCharArg
+                                )
 
 -- ------------------------------------------------------------
 
@@ -17,32 +20,12 @@ stringToList s
     | isBraceArg s = inBraces  s	-- try to avoid escapes
     | otherwise    = escapeArg s	-- some chars must be escaped
 
-isCharArg	:: String -> Bool
-isCharArg s
-    = case parse (eofP lchars) "" s of
-        Left _ -> False
-        Right _ -> True
-      where
-        lchars :: TclParser String
-        lchars
-            = do c1 <-        noneOf $ br ++ esc ++ ws ++ nl
-                 cs <- many $ noneOf $       esc ++ ws ++ nl
-                 return $ c1 : cs
-
-
-isBraceArg	:: String -> Bool
-isBraceArg s
-    = case parse (eofP braceContent) "" s of
-        Left _ -> False
-        Right _ -> True
-
-
 escapeArg	:: String -> String
 escapeArg
     = concatMap esc'
       where
         esc' c
-            | c `elem` (ws ++ nl ++ esc ++ br ++ dq ++ "}")
+            | c `elem` " \t\n\r\\{}\""
                 = '\\' : c : ""
             | otherwise
                 =        c : ""
