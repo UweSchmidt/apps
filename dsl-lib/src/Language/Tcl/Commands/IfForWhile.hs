@@ -52,7 +52,7 @@ tclIf _
 
 tclIf' :: Value -> Value -> TclCommand e s
 tclIf' cond thn els
-    = do b <- evalTclExpr (v2s cond) >>= checkBooleanValue
+    = do b <- substAndEvalTclExpr (v2s cond) >>= checkBooleanValue
          if b
             then interpreteTcl (v2s thn)
             else tclElse       els
@@ -79,13 +79,15 @@ tclElse' _
 
 tclWhile :: TclCommand e s
 tclWhile (c' : b' : [])
-    = do cond <- return . v2s $ c' -- parseTclArgs (v2s c')	-- TODO
+    = do cond <- parseTclArgs (v2s c')		-- cond and body are parsed only once
          body <- parseTclProg (v2s b')
          tclCatchBreakExc $
            whileLoop cond body
     where
       whileLoop cond body
-          = do b <- substAndEvalTclExpr cond >>= checkBooleanValue
+          = do b <- substTclArgs cond		-- subst args in every loop test
+                    >>= evalTclExpr		-- and eval to aboolean
+                    >>= checkBooleanValue
                if b
                   then ( tclCatchContinueExc $
                            evalTclProg body )

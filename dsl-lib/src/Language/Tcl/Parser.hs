@@ -3,6 +3,7 @@
 module Language.Tcl.Parser
     ( parseTclProg
     , parseTclList
+    , parseTclArgs
     , isCharArg
     , isBraceArg
     )
@@ -32,9 +33,12 @@ parseTclProg
 -- parse a string as a sequence of args, newline and ; are normal chars
 parseTclArgs :: String -> Either ParseError TclCmd
 parseTclArgs
+    = parse aTclCmd ""
+{-
     = parse ( eofP $
               cargs >>= return . TclCmd
             ) ""
+-}
 
 -- parse a string as a sequence of list elements, newline, ;, $ and [ are normal chars
 parseTclList :: String -> Either ParseError TclList
@@ -447,10 +451,16 @@ inProgWS = ("w", ws1')
            : ("n", nl1')
            : defaultNoSubst
 
+inCmdWS :: NoSubst
+inCmdWS = ("w", wsnl1')
+           : ("n", mzero)
+           : (";", defaultNoParse)
+           : defaultNoSubst
+
 inListWS :: NoSubst
 inListWS = ("w", wsnl1')
            : ("n", mzero)
-           : (";", defaultNoParse)
+           : ("$[];", defaultNoParse)
            : defaultNoSubst
 
 -- ------------------------------------------------------------
@@ -627,6 +637,11 @@ aTclProg = eofP $ aProg inProgWS
 
 aTclList :: TclParser TclList
 aTclList = TclList <$> (eofP $ anArgSeq inListWS)
+
+aTclCmd :: TclParser TclCmd
+aTclCmd = (TclCmd . concatMap _tclCmd) <$> (aCmd $ inCmdWS)
+
+-- ------------------------------------------------------------
 
 aProg :: NoSubst -> TclParser TclProg
 aProg nos

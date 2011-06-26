@@ -15,6 +15,10 @@ import qualified Language.Tcl.Expr.Parser               as P
 
 -- ------------------------------------------------------------
 
+-- evaluate a Tcl expression
+
+-- ------------------------------------------------------------
+
 trueExpr :: TclExpr
 trueExpr  = TConst . mkI $ 1
 
@@ -297,21 +301,17 @@ tclExprErr msg
 -- ------------------------------------------------------------
 
 parseTclExpr	:: String -> TclEval e s TclExpr
-parseTclExpr s
-    = case (P.parseTclExpr s) of
-        Left err
-            -> tclThrowError $ show err
-        Right l
-            -> return l
+parseTclExpr
+    = either (tclThrowError . show) return
+      . P.parseTclExpr
 
-evalTclExpr :: String -> TclEval e s Value
-evalTclExpr s
-    = parseTclExpr s >>= eval
+evalTclExpr :: [Value] -> TclEval e s Value
+evalTclExpr vs
+    = parseTclExpr (intercalate " " . map v2s $ vs) >>= eval
 
 substAndEvalTclExpr :: String -> TclEval e s Value
 substAndEvalTclExpr s
     = evalTclArgs s
-      >>= return . intercalate " " . map v2s
       >>= evalTclExpr
 
 -- ------------------------------------------------------------

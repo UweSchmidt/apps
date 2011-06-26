@@ -3,8 +3,6 @@ where
 
 import Control.Monad.RWS
 
-import Data.List                        ( intercalate )
-
 import Language.Tcl.Core
 import Language.Tcl.Value
 import Language.Tcl.CheckArgs
@@ -14,7 +12,7 @@ import Language.Tcl.Expr.Eval           ( evalTclExpr )
 
 tclExpr :: TclCommand e s
 tclExpr al@(_ : _)
-    = evalTclExpr (intercalate " " $ map v2s al)
+    = evalTclExpr al
 
 tclExpr _
     = tclWrongArgs "expr arg ?arg ...?"
