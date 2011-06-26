@@ -1,4 +1,6 @@
 module Language.Tcl.Commands.Puts
+    ( tclPuts
+    )
 where
 
 import Control.Monad.RWS

@@ -1,4 +1,7 @@
 module Language.Tcl.Commands.SetAppend
+    ( tclAppend
+    , tclSet
+    )
 where
 
 import Control.Monad.Error

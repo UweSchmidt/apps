@@ -1,4 +1,9 @@
 module Language.Tcl.Commands.IfForWhile
+    ( tclFor
+    , tclForeach
+    , tclIf
+    , tclWhile
+    )
 where
 
 import Control.Monad.RWS
@@ -86,7 +91,7 @@ tclWhile (c' : b' : [])
     where
       whileLoop cond body
           = do b <- substTclArgs cond		-- subst args in every loop test
-                    >>= evalTclExpr		-- and eval to aboolean
+                    >>= evalTclExpr		-- and eval to a boolean
                     >>= checkBooleanValue
                if b
                   then ( tclCatchContinueExc $
@@ -97,5 +102,32 @@ tclWhile (c' : b' : [])
 
 tclWhile _
     = tclWrongArgs "while test command"
+
+-- ------------------------------------------------------------
+
+tclFor :: TclCommand e s
+tclFor (s' : t' : n' : b' : [])
+    = do test <- parseTclArgs (v2s t')		-- cond and body are parsed only once
+         next <- parseTclProg (v2s n')
+         body <- parseTclProg (v2s b')
+         interpreteTcl (v2s s')
+         tclCatchBreakExc $
+           forLoop test next body
+    where
+      forLoop test next body
+          = do b <- substTclArgs test		-- subst args in every loop test
+                    >>= evalTclExpr		-- and eval to a boolean
+                    >>= checkBooleanValue
+               if b
+                  then ( tclCatchContinueExc $
+                           evalTclProg body )
+                       >>
+                       evalTclProg next
+                       >>
+                       forLoop test next body
+                  else return mempty
+
+tclFor _
+    = tclWrongArgs "for start test next body"
 
 -- ------------------------------------------------------------

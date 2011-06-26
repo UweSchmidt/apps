@@ -6,7 +6,8 @@ import Language.Tcl.Core
 import Language.Tcl.Commands.Expr       ( tclExpr
                                         , tclIncr
                                         )
-import Language.Tcl.Commands.IfForWhile ( tclForeach
+import Language.Tcl.Commands.IfForWhile ( tclFor
+                                        , tclForeach
                                         , tclIf
                                         , tclWhile
                                         )
@@ -30,6 +31,7 @@ buildInTclCommands
       , ("continue",    tclContinue)
       , ("error",       tclError)
       , ("expr",        tclExpr)
+      , ("for",         tclFor)
       , ("foreach",     tclForeach)
       , ("if",          tclIf)
       , ("incr",        tclIncr)

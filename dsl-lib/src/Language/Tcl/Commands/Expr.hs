@@ -1,4 +1,7 @@
 module Language.Tcl.Commands.Expr
+    ( tclExpr
+    , tclIncr
+    )
 where
 
 import Control.Monad.RWS

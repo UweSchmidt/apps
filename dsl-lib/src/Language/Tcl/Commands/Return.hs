@@ -1,4 +1,9 @@
 module Language.Tcl.Commands.Return
+    ( tclBreak
+    , tclContinue
+    , tclError
+    , tclReturn
+    )
 where
 
 import Control.Monad.Error
