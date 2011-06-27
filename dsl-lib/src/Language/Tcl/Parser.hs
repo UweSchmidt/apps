@@ -4,6 +4,7 @@ module Language.Tcl.Parser
     ( parseTclProg
     , parseTclList
     , parseTclArgs
+    , parseListArg
     , isCharArg
     , isBraceArg
     )
@@ -62,9 +63,16 @@ isCharArg s
                return $ c1 : cs
 
 isBraceArg	:: String -> Bool
-isBraceArg s
-    = either (const False) (const True) $
-      parse (eofP $ bracesContent $ inBraceSubst defaultNoSubst) "" s
+isBraceArg
+    = either (const False) (const True)
+      . parse (eofP $ bracesContent $ inBraceSubst defaultNoSubst) ""
+
+parseListArg	:: String -> Maybe [String]
+parseListArg
+    = either (const Nothing) (Just . map argToStr . _tclList)
+      . parseTclList
+    where
+      argToStr = concatMap _tlit . _tclArg
 
 -- ------------------------------------------------------------
 {-

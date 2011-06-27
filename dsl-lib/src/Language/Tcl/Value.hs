@@ -1,20 +1,29 @@
 module Language.Tcl.Value
     ( Value
-    , mkI, mkD, mkS
+    , mkI, mkD, mkS, mkL
     , isI, isD, isS
-    , selI, selD, selS
+    , selI, selD, selS, selL
 
     , b2i
     , i2d, i2s
     , d2s
-    , s2i, s2b
+    , s2i, s2b, s2l
     , v2b, v2s, v2i, v2l
 
     , eqarg
 
     , readValue
 
+    , stringToList
+    , parseListArg
+    , escapeArg
+    , isBraceArg
+    , isCharArg
+    , inBraces
+
     , value_empty, value_0, value_1, value_42, value_true, value_false
+
+    , lempty, lappend, lconcat
     )
 where
 
@@ -23,16 +32,24 @@ import Control.Applicative
 
 import Data.Char                    ( isSpace )
 import Data.Function       	    ( on )
+import Data.List                    ( intercalate )
 import Data.Monoid
 
-import Language.Tcl.QuoteListValue
+import Language.Tcl.Parser	    ( isBraceArg
+                                    , isCharArg
+                                    , parseListArg
+                                    )
 
 -- ------------------------------------------------------------
+
+type Values
+    = [Value]
 
 data Value
     = I Integer
     | D Double
     | S String	-- a candidate for: String -> String, to speed up ++ and concat
+--  | L Values  -- native list value support
     | E
 
 instance Show Value where
@@ -48,6 +65,15 @@ instance Monoid Value where
     mempty   = value_empty
     mappend  = (.++.)
 
+lempty :: Value
+lempty = mempty
+
+lappend :: Value -> Value -> Value
+lappend = (.**.)
+
+lconcat :: [Value] -> Value
+lconcat = foldr lappend lempty
+
 -- ------------------------------------------------------------
 
 mkI              :: Integer -> Value
@@ -61,6 +87,17 @@ mkS s
     | null s     = E
     | otherwise  = S s
 
+mkL              :: Values -> Value		-- lists are stil represented as strings
+{-
+mkL []           = E				-- empty list is E
+mkL [x]          = x                            -- single list is a single list escaped value
+mkL xs           = L xs
+-}
+mkL              = mkS . intercalate " " . map (v2s . v2l)
+
+-- these operations are used for arithmetic
+-- only for arithmetic
+
 isI              :: Value -> Bool
 isI (I _)        = True
 isI _            = False
@@ -69,10 +106,17 @@ isD              :: Value -> Bool
 isD (D _)        = True
 isD _            = False
 
-isS              :: Value -> Bool
+isS              :: Value -> Bool -- all other types in arithmetic are processed as strings
 isS (S _)        = True
 isS E            = True
+{-
+isS (L _)        = True
+-}
 isS _            = False
+
+-- ------------------------------------------------------------
+--
+-- common selector functions
 
 selI             :: MonadPlus m => Value -> m Integer
 selI (I x)       = return x
@@ -85,7 +129,18 @@ selD _           = mzero
 selS             :: MonadPlus m => Value -> m String
 selS (S x)       = return x
 selS E           = return ""
+{-
+selS x           = return . v2s $ x
+-}
 selS _           = mzero
+
+selL             :: MonadPlus m => Value -> m Values
+{-
+selL (L x)       = return x
+selL E           = return []
+selL v           = return [v]
+-}
+selL             = maybe mzero return . fmap (map mkS) . parseListArg . v2s
 
 -- ------------------------------------------------------------
 
@@ -142,6 +197,9 @@ b2i =  I . toInteger . fromEnum
 s2b :: String -> Maybe Bool
 s2b = flip lookup $ zip ["true", "false", "yes", "no"] [True, False, True, False]
 
+s2l :: String -> Maybe Value
+s2l = mkL . fmap (map mkS) . parseListArg
+
 v2b :: Value -> Maybe Bool
 v2b x = ( (/= 0  ) <$> selI x )
         `mplus`
@@ -152,6 +210,9 @@ v2b x = ( (/= 0  ) <$> selI x )
 v2s :: Value -> String
 v2s (S s) = s
 v2s (I i) = show i
+{-
+v2s (L l) = intercalate " " . map (v2s . v2l)
+-}
 v2s (D d) = show d
 v2s  E    = ""
 
@@ -182,12 +243,46 @@ v2l v@(S s)
 v2l E              = mkS $ "{}"
 v2l v              = v
 
--- value concatenation
+-- string concatenation on values
 
 (.++.)               :: Value -> Value -> Value
 E       .++. v2      = v2
 v1      .++. E       = v1
 (S s1)  .++. (S s2)  = mkS $     s1 ++     s2
 v1      .++. v2      = mkS $ v2s v1 ++ v2s v2
- 
+
+-- list concatenation on values
+
+(.**.)              :: Value -> Value -> Value
+E       .**. v2      = v2
+v1      .**. E       = v1
+{-
+(L l1)  .**. (L l2)  = mkL $     l1 ++     l2
+(L l1)  .**. v2      = mkL $     l1 ++    [v2]
+v1      .**. (L l2)  = mkL $ v1 : l2
+v1      .**. v2      = mkL $ [v1, v2]
+-}
+-- ------------------------------------------------------------
+
+stringToList :: String -> String
+stringToList s
+    | null s       = inBraces  s
+    | isCharArg  s =           s	-- try to avoid escapes and braces
+    | isBraceArg s = inBraces  s	-- try to avoid escapes
+    | otherwise    = escapeArg s	-- some chars must be escaped
+
+escapeArg	:: String -> String
+escapeArg
+    = concatMap esc'
+      where
+        esc' c
+            | c `elem` " \t\n\r\\{}\""
+                = '\\' : c : ""
+            | otherwise
+                =        c : ""
+
+inBraces :: String -> String
+inBraces
+    = ("{" ++) . (++ "}")
+
 -- ------------------------------------------------------------

@@ -11,7 +11,7 @@ where
 import Data.List	( intercalate )
 
 import Language.Tcl.AbstractSyntax
-import Language.Tcl.QuoteListValue
+import Language.Tcl.Value
 
 -- ------------------------------------------------------------
 
