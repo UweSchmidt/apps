@@ -1,20 +1,26 @@
 module Language.Tcl.Value
     ( Value
+    , Values
     , mkI, mkD, mkS, mkL
     , isI, isD, isS
-    , selI, selD, selS, selL
+    , selI, selD, selS, selL, selB
 
     , b2i
     , i2d, i2s
     , d2s
-    , s2i, s2b, s2l
-    , v2b, v2s, v2i, v2l
+    , s2i
+    , escapeList
 
     , eqarg
 
-    , readValue
+    , string2a
+    , string2bool
+    , string2double
+    , string2int
+    , string2integer
+    , string2list
+    , string2listelem
 
-    , stringToList
     , parseListArg
     , escapeArg
     , isBraceArg
@@ -49,22 +55,25 @@ data Value
     = I Integer
     | D Double
     | S String	-- a candidate for: String -> String, to speed up ++ and concat
---  | L Values  -- native list value support
+    | L Values  -- native list value support
     | E
 
 instance Show Value where
-    show = v2s
+    show = selS
 
 instance Eq Value where
-    (==) = (==) `on` v2s
+    (==) = (==) `on` selS
 
 instance Ord Value where
-    compare = compare `on` v2s
+    compare = compare `on` selS
+
+-- the monoid for string concat
 
 instance Monoid Value where
     mempty   = value_empty
     mappend  = (.++.)
 
+-- the monoid for list concat
 lempty :: Value
 lempty = mempty
 
@@ -87,60 +96,69 @@ mkS s
     | null s     = E
     | otherwise  = S s
 
-mkL              :: Values -> Value		-- lists are stil represented as strings
-{-
+mkL              :: Values -> Value
 mkL []           = E				-- empty list is E
-mkL [x]          = x                            -- single list is a single list escaped value
 mkL xs           = L xs
--}
-mkL              = mkS . intercalate " " . map (v2s . v2l)
 
--- these operations are used for arithmetic
--- only for arithmetic
+-- ------------------------------------------------------------
+-- these operations are used only for types and conversions in arithmetic
 
 isI              :: Value -> Bool
 isI (I _)        = True
-isI _            = False
+isI x            = isSingleList isI x
 
 isD              :: Value -> Bool
 isD (D _)        = True
-isD _            = False
+isD x            = isSingleList isI x
 
-isS              :: Value -> Bool -- all other types in arithmetic are processed as strings
+isS              :: Value -> Bool
 isS (S _)        = True
-isS E            = True
-{-
+isS  E           = True
 isS (L _)        = True
--}
 isS _            = False
+
+isSingleList            :: (Value -> Bool) -> Value -> Bool
+isSingleList p (L [v])  = p v
+isSingleList _ _        = False
 
 -- ------------------------------------------------------------
 --
 -- common selector functions
 
-selI             :: MonadPlus m => Value -> m Integer
-selI (I x)       = return x
-selI _           = mzero
+selI        :: MonadPlus m => Value -> m Integer
+selI (I x)  = return x
+selI (D d)  = return . toInteger . fromEnum $ d
+selI (S s)  = string2a s
+selI x      = maybeSingle selI x
 
-selD             :: MonadPlus m => Value -> m Double
-selD (D x)       = return x
-selD _           = mzero
+selD        :: MonadPlus m => Value -> m Double
+selD (D x)  = return x
+selD (I x)  = return . fromIntegral $ x
+selD (S s)  = string2a s
+selD x      = maybeSingle selD x
 
-selS             :: MonadPlus m => Value -> m String
-selS (S x)       = return x
-selS E           = return ""
-{-
-selS x           = return . v2s $ x
--}
-selS _           = mzero
+selS        :: Value -> String
+selS (S x)  = x
+selS  E     = ""
+selS (I i)  = show i
+selS (D d)  = show d
+selS (L l)  = intercalate " " . map (escapeList . selS) $ l
 
-selL             :: MonadPlus m => Value -> m Values
-{-
-selL (L x)       = return x
-selL E           = return []
-selL v           = return [v]
--}
-selL             = maybe mzero return . fmap (map mkS) . parseListArg . v2s
+selL        :: MonadPlus m => Value -> m Values
+selL (L x)  = return x
+selL E      = return []
+selL _      = mzero
+
+selB        :: (Functor m, MonadPlus m) => Value -> m Bool
+selB x      = ( (/= 0  ) <$> selI x )
+              `mplus`
+              ( (/= 0.0) <$> selD x )
+              `mplus`
+              (string2bool $ selS x)
+
+maybeSingle            :: MonadPlus m => (Value -> m a) -> Value -> m a
+maybeSingle f (L [v])  = f v
+maybeSingle _ _        = mzero
 
 -- ------------------------------------------------------------
 
@@ -164,66 +182,65 @@ value_false  = value_0
 
 -- ------------------------------------------------------------
 
-eqarg :: Value -> Value -> Maybe (Value, Value)
-eqarg x@(I _) y@(I _) = return (x, y)
-eqarg x@(D _) y@(D _) = return (x, y)
-eqarg x@(S _) y@(S _) = return (x, y)
-eqarg x@(E  ) y@(E  ) = return (x, y)
+eqarg                  :: (MonadPlus m) => Value -> Value -> m (Value, Value)
+eqarg x@(I _) y@(I _)  = return (x, y)
+eqarg x@(D _) y@(D _)  = return (x, y)
+eqarg x@(S _) y@(S _)  = return (x, y)
+eqarg x@(E  ) y@(E  )  = return (x, y)
 
-eqarg x@(S _) y@(E  ) = return (x, y)
-eqarg x@(E  ) y@(S _) = return (x, y)
+eqarg x@(S _) y@(E  )  = return (x, y)
+eqarg x@(E  ) y@(S _)  = return (x, y)
 
-eqarg _       _       = mzero
+eqarg _       _        = mzero
 
-s2i :: Value -> Maybe Value
-s2i (S s) = fmap (I . toInteger . fromEnum) . s2b $ s
-s2i _     = mzero
+-- ------------------------------------------------------------
 
-i2d :: Value -> Maybe Value
+i2d :: (MonadPlus m) => Value -> m Value
 i2d (I i) = return . D . fromIntegral $ i
 i2d _     = mzero
 
-i2s :: Value -> Maybe Value
+i2s :: (MonadPlus m) => Value -> m Value
 i2s (I i) = return . S . show $ i
 i2s _     = mzero
 
-d2s :: Value -> Maybe Value
+d2s :: (MonadPlus m) => Value -> m Value
 d2s (D x) = return . S . show $ x
 d2s _     = mzero
 
 b2i :: Bool -> Value
 b2i =  I . toInteger . fromEnum
 
-s2b :: String -> Maybe Bool
-s2b = flip lookup $ zip ["true", "false", "yes", "no"] [True, False, True, False]
+s2i :: (Functor m, MonadPlus m) => Value -> m Value
+s2i v
+    | isS v     = mkI <$> selI v
+    | otherwise = mzero
 
-s2l :: String -> Maybe Value
-s2l = mkL . fmap (map mkS) . parseListArg
+-- ------------------------------------------------------------
+--
+-- string conversions
 
-v2b :: Value -> Maybe Bool
-v2b x = ( (/= 0  ) <$> selI x )
-        `mplus`
-        ( (/= 0.0) <$> selD x )
-        `mplus`
-        ( selS x >>= s2b )
+string2bool :: (MonadPlus m) => String -> m Bool
+string2bool
+    = maybe mzero return
+      . flip lookup (zip ["true", "false", "yes", "no" ]
+                         [True,   False,   True,  False]
+                    )
 
-v2s :: Value -> String
-v2s (S s) = s
-v2s (I i) = show i
-{-
-v2s (L l) = intercalate " " . map (v2s . v2l)
--}
-v2s (D d) = show d
-v2s  E    = ""
+string2list :: (MonadPlus m) => String -> m Values
+string2list
+    = maybe mzero return . fmap (map mkS) . parseListArg
 
-v2i :: Value -> Maybe Integer
-v2i (I i) = return i
-v2i (D d) = return . toInteger . fromEnum $ d
-v2i (S s) = readValue s
-v2i  E    = mzero
+string2int      :: (MonadPlus m) => String -> m Int
+string2int      =string2a
 
-readValue :: (Read a) => String -> Maybe a
-readValue s
+string2integer  :: (MonadPlus m) => String -> m Integer
+string2integer  =string2a
+
+string2double   :: (MonadPlus m) => String -> m Double
+string2double   =string2a
+
+string2a :: (MonadPlus m, Read a) => String -> m a
+string2a s
     = case reads s of
         [] -> mzero
         (v, rest) : _
@@ -232,40 +249,38 @@ readValue s
                else mzero
 
 -- add extra backslashes or braces to build a list value
--- only strings must be quoted
 
-v2l :: Value -> Value
-v2l v@(S s)
---  | null       s = mkS "{}"	    -- does not longer occur, empty string is E
-    | isCharArg  s = v
-    | isBraceArg s = mkS $ inBraces s
-    | otherwise    = mkS $ escapeArg s
-v2l E              = mkS $ "{}"
-v2l v              = v
+escapeList :: String -> String
+escapeList s
+    | null s       = inBraces ""
+    | isCharArg  s = s
+    | isBraceArg s = inBraces s
+    | otherwise    = escapeArg s
+
+-- ------------------------------------------------------------
 
 -- string concatenation on values
 
-(.++.)               :: Value -> Value -> Value
-E       .++. v2      = v2
-v1      .++. E       = v1
-(S s1)  .++. (S s2)  = mkS $     s1 ++     s2
-v1      .++. v2      = mkS $ v2s v1 ++ v2s v2
+(.++.)                   :: Value -> Value -> Value
+E         .++. v2        = v2
+v1        .++.  E        = v1
+(S s1)    .++. (S s2)    = mkS $      s1 ++      s2
+v1        .++. v2        = mkS $ selS v1 ++ selS v2
 
 -- list concatenation on values
 
-(.**.)              :: Value -> Value -> Value
-E       .**. v2      = v2
-v1      .**. E       = v1
-{-
-(L l1)  .**. (L l2)  = mkL $     l1 ++     l2
-(L l1)  .**. v2      = mkL $     l1 ++    [v2]
-v1      .**. (L l2)  = mkL $ v1 : l2
-v1      .**. v2      = mkL $ [v1, v2]
--}
+(.**.)                   :: Value -> Value -> Value
+(L l1)    .**.    (L l2) = mkL $ l1 ++ l2
+v1@(L _)  .**.     E     = v1
+(L l1)    .**. v2        = mkL $ l1 ++ [v2]
+E         .**. v2@(L _ ) = v2
+v1        .**.    (L l2) = mkL $ v1 : l2
+v1        .**. v2        = mkL $ [v1, v2]
+
 -- ------------------------------------------------------------
 
-stringToList :: String -> String
-stringToList s
+string2listelem :: String -> String
+string2listelem s
     | null s       = inBraces  s
     | isCharArg  s =           s	-- try to avoid escapes and braces
     | isBraceArg s = inBraces  s	-- try to avoid escapes

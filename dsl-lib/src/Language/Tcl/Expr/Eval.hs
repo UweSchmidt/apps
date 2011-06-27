@@ -2,10 +2,11 @@ module Language.Tcl.Expr.Eval
 where
 
 import Control.Monad
+import Control.Applicative ( )
 
-import Data.Char        ( isLetter )
-import Data.List        ( intercalate )
-import Data.Maybe      	( isJust )
+import Data.Char           ( isLetter )
+import Data.List           ( intercalate )
+import Data.Maybe      	   ( isJust )
 
 import           Language.Tcl.Core
 import           Language.Tcl.Value
@@ -101,9 +102,9 @@ fct1D
 app1Err :: String -> Value -> TclEval e s r
 app1Err op v
     | isLetter . head $ op
-        = tclSyn $ op ++ "(" ++ v2s v ++ ")"
+        = tclSyn $ op ++ "(" ++ selS v ++ ")"
     | otherwise
-        = tclSyn $ unwords [op, v2s v]
+        = tclSyn $ unwords [op, selS v]
 
 app1 :: String -> Value -> TclEval e s Value
 app1 op v1
@@ -118,11 +119,9 @@ app1 op v1
 	       maybe (tclThrowError $ "unary operator/function " ++ show op ++ " not supported for integers")
 		     ($ x1)
 		     $ lookup op fct1D
-    | otherwise = case castArg v1 of
-		  Nothing
-		      -> app1Err op v1
-		  Just y1
-		      -> app1 op y1
+    | otherwise = maybe (app1Err op v1)
+                        (app1    op) $
+                  castArg v1
 
 castArg :: Value -> Maybe Value
 castArg x
@@ -240,8 +239,8 @@ app2 op v1 v2
 			       (\ f -> f x1 x2)
 			       $ lookup op fct2D
     | isS v1 && isS v2 = do
-			 x1 <- selS v1
-			 x2 <- selS v2
+			 x1 <- return $ selS v1
+			 x2 <- return $ selS v2
 			 maybe (notSupported "string")
 			       (\ f -> f x1 x2)
 			       $ lookup op fct2S
@@ -285,9 +284,9 @@ app2Type   = app2Err tclType
 app2Err :: (String -> t) -> String -> Value -> Value -> t
 app2Err err op v1 v2
     | isLetter . head $ op
-        = err $ op ++ "(" ++ v2s v1 ++ "," ++ v2s v2 ++ ")"
+        = err $ op ++ "(" ++ selS v1 ++ "," ++ selS v2 ++ ")"
     | otherwise
-        = err $ unwords [v2s v1, op, v2s v2]
+        = err $ unwords [selS v1, op, selS v2]
 
 tclSyn, tclType :: String -> TclEval e s r
 
@@ -305,9 +304,9 @@ parseTclExpr
     = either (tclThrowError . show) return
       . P.parseTclExpr
 
-evalTclExpr :: [Value] -> TclEval e s Value
+evalTclExpr :: Values -> TclEval e s Value
 evalTclExpr vs
-    = parseTclExpr (intercalate " " . map v2s $ vs) >>= eval
+    = parseTclExpr (intercalate " " . map selS $ vs) >>= eval
 
 substAndEvalTclExpr :: String -> TclEval e s Value
 substAndEvalTclExpr s

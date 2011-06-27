@@ -8,10 +8,10 @@ module Language.Tcl.Show
     )
 where
 
-import Data.List	( intercalate )
+import Data.List	           ( intercalate )
 
 import Language.Tcl.AbstractSyntax
-import Language.Tcl.Value
+import Language.Tcl.Value          ( string2listelem )
 
 -- ------------------------------------------------------------
 
@@ -33,7 +33,7 @@ showTclArgs
 
 showTclArg :: TclArg -> String
 showTclArg (TclArg a)
-    = stringToList . concatMap showTclSubst $ a
+    = string2listelem . concatMap showTclSubst $ a
 
 showTclSubst :: TclSubst -> String
 showTclSubst (TLit s)

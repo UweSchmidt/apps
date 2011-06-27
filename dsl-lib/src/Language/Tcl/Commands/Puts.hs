@@ -18,7 +18,7 @@ import System.IO
 tclPuts :: TclCommand e s
 tclPuts l
     = do (nnl, l1) <- tclOption1 "-nonewline" False True l
-         tclPuts' nnl (map v2s l1)
+         tclPuts' nnl (map selS l1)
          return mempty
       where
         tclPuts' nnl [s]

@@ -19,7 +19,7 @@ tclAppend (var : values)
                 return mempty
          get >>= setVar varName (val `mappend` mconcat values)
     where
-      varName = v2s var
+      varName = selS var
 
 tclAppend _
     = tclWrongArgs "append varName ?value value value ...?"
@@ -28,10 +28,10 @@ tclAppend _
 
 tclSet	:: TclCommand e s
 tclSet [n]
-    = get >>= lookupVar (v2s n)
+    = get >>= lookupVar (selS n)
 
 tclSet [n, v]
-    = get >>= setVar (v2s n) v
+    = get >>= setVar (selS n) v
 
 tclSet _
     = tclWrongArgs "set varName ?newValue?"

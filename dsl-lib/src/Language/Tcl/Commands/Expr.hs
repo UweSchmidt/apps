@@ -31,7 +31,7 @@ tclIncr [varName, incr]
          v2 <- checkIntegerValue incr
          get >>= setVar var (mkI $ v1 + v2)
     where
-      var = v2s varName
+      var = selS varName
 
 tclIncr _
     = tclWrongArgs "incr varName ?increment?"

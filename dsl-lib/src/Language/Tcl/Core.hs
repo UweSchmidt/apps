@@ -36,7 +36,7 @@ instance (Show s) => Show (TclState e s) where
     show (TclState v c ch as)
         = "TclState "
           ++ "{ _tvars = "
-          ++ (show . map (second v2s) . M.toList $ v)
+          ++ (show . map (second selS) . M.toList $ v)
           ++ ", _tcmds = "
           ++ (show . M.keys $ c)
           ++ ", _tChans = "
@@ -55,7 +55,7 @@ type TclCommands e s	-- commands
     = Map String (TclCommand e s)
 
 type TclCommand e s
-    = [Value] -> TclEval e s Value
+    = Values -> TclEval e s Value
 
 type TclChannels	-- open channels
     = Map String Handle
@@ -158,10 +158,10 @@ evalTclCmd	:: TclCmd -> TclEval e s Value
 evalTclCmd (TclCmd al)
     = mapM evalTclArg al >>= evalTcl
     where
-      evalTcl :: [Value] -> TclEval e s Value
+      evalTcl :: Values -> TclEval e s Value
       evalTcl (cn : args)
           = do s <- get
-               c <- lookupCmd (v2s cn) s
+               c <- lookupCmd (selS cn) s
                c args
       evalTcl []
           = tclThrowError "empty command"
@@ -190,11 +190,11 @@ parseTclList s
         Right l
             -> return l
 
-evalTclL :: TclList -> TclEval e s [Value]
+evalTclL :: TclList -> TclEval e s Values
 evalTclL (TclList al)
     = mapM evalTclArg al
 
-evalTclList :: String -> TclEval e s [Value]
+evalTclList :: String -> TclEval e s Values
 evalTclList s
     = parseTclList s >>= evalTclL
  
@@ -208,11 +208,11 @@ parseTclArgs s
         Right l
             -> return l
 
-substTclArgs :: TclCmd -> TclEval e s [Value]
+substTclArgs :: TclCmd -> TclEval e s Values
 substTclArgs (TclCmd al)
     = mapM evalTclArg al
 
-evalTclArgs :: String -> TclEval e s [Value]
+evalTclArgs :: String -> TclEval e s Values
 evalTclArgs s
     = parseTclArgs s >>= substTclArgs
  

@@ -1,10 +1,8 @@
 module Language.Tcl.CheckArgs
 where
 
-import Control.Monad
+import Control.Monad                    ( )
 import Control.Applicative              ( )
-
-import Data.Char                        ( isDigit )
 
 import Language.Tcl.Core
 import Language.Tcl.Value
@@ -18,38 +16,33 @@ checkBoolean :: (a -> Maybe Bool) -> String -> a -> TclEval e s Bool
 checkBoolean c s v = checkArg ("expected boolean value but got " ++ show s) c v
 
 checkBooleanString :: String -> TclEval e s Bool
-checkBooleanString s = checkBoolean s2b s s
+checkBooleanString s = checkBoolean string2bool s s
 
 checkBooleanValue :: Value -> TclEval e s Bool
-checkBooleanValue v = checkBoolean v2b (v2s v) v
+checkBooleanValue v = checkBoolean selB (selS v) v
 
 checkInteger :: (a -> Maybe Integer) -> String -> a -> TclEval e s Integer
 checkInteger c s v = checkArg ("expected integer but got " ++ show s) c v
 
 checkIntegerString :: String -> TclEval e s Integer
-checkIntegerString s = checkInteger readValue s s
+checkIntegerString s = checkInteger string2integer s s
 
 checkIntegerValue :: Value -> TclEval e s Integer
-checkIntegerValue v0 = checkInteger check (v2s v0) v0
-    where
-      check v
-          | isI v     = selI v
-          | isS v     = selS >=> readValue $ v
-          | otherwise = mzero
+checkIntegerValue v0 = checkInteger selI (selS v0) v0
 
 -- ------------------------------------------------------------
 
-tclOption1 :: String -> a -> a -> [Value] -> TclEval e s (a, [Value])
+tclOption1 :: String -> a -> a -> Values -> TclEval e s (a, Values)
 tclOption1 n _d v (x : xs)
-    | n == v2s x
+    | n == selS x
 	= return (v, xs)
 
 tclOption1 _ d _ xs
     = return (d, xs)
 
-tclOption2 :: String -> a -> (Value -> TclEval e s a) -> [Value] -> TclEval e s (a, [Value])
+tclOption2 :: String -> a -> (Value -> TclEval e s a) -> Values -> TclEval e s (a, Values)
 tclOption2 n _d check (x1 : x2 : xs)
-    | n == v2s x1
+    | n == selS x1
         = do v <- check x2
              return (v, xs)
 

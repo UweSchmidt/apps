@@ -35,7 +35,7 @@ tclContinue _
 
 tclError :: TclCommand e s
 tclError [msg]
-    = tclThrowError $ v2s msg
+    = tclThrowError $ selS msg
 
 tclError _
     = tclWrongArgs "error message"
@@ -44,7 +44,7 @@ tclError _
 
 tclReturn :: TclCommand e s
 tclReturn l
-    = do (rc, l1) <- tclOption2 "-code" 2 (checkReturnCode .v2s) l
+    = do (rc, l1) <- tclOption2 "-code" 2 (checkReturnCode .selS) l
          tclReturn' rc l1
     where
       tclReturn' rc []
@@ -53,13 +53,13 @@ tclReturn l
           | rc == 1
               = tclError l1
           | rc == 2
-              = throwError $ tclReturnExc (v2s v)
+              = throwError $ tclReturnExc (selS v)
           | rc == 3
               = tclBreak []
           | rc == 4
               = tclContinue []
           | otherwise
-              = throwError $ tclOtherExc rc (v2s v)
+              = throwError $ tclOtherExc rc (selS v)
       tclReturn' _ _
           = tclWrongArgs "return ?-code code? ?result?"
 
@@ -73,6 +73,6 @@ checkReturnCode s
     rc2i v
 	= lookup v (zip ["ok", "error", "return", "break", "continue"] [0..])
           `mplus`
-          readValue v
+          string2int v
 
 -- ------------------------------------------------------------
