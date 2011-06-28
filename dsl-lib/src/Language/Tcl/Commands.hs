@@ -16,6 +16,7 @@ import Language.Tcl.Commands.List       ( tclLappend
                                         , tclLinsert
                                         , tclList
                                         , tclLlength
+                                        , tclLrange
                                         )
 import Language.Tcl.Commands.Puts       ( tclPuts
                                         )
@@ -46,6 +47,7 @@ buildInTclCommands
       , ("linsert",     tclLinsert)
       , ("list",        tclList)
       , ("llength",     tclLlength)
+      , ("lrange",      tclLrange)
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)

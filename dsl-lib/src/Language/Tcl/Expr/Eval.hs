@@ -2,7 +2,7 @@ module Language.Tcl.Expr.Eval
 where
 
 import Control.Monad
-import Control.Applicative ( )
+import Control.Applicative ( (<$>) )
 
 import Data.Char           ( isLetter )
 import Data.List           ( intercalate )
@@ -316,6 +316,10 @@ substAndEvalTclExpr s
       >>= evalTclExpr
 
 -- ------------------------------------------------------------
+
+evalTclListIndex :: Int -> Value -> TclEval e s Int
+evalTclListIndex len val
+    = fromInteger <$> evalTclIndexExpr (toInteger (len - 1)) val
 
 evalTclIndexExpr :: Integer -> Value -> TclEval e s Integer
 evalTclIndexExpr len ix

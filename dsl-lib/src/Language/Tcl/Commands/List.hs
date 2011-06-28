@@ -4,6 +4,7 @@ module Language.Tcl.Commands.List
     , tclLindex
     , tclLinsert
     , tclLlength
+    , tclLrange
     )
 where
 
@@ -13,8 +14,7 @@ import Control.Monad.RWS
 import Language.Tcl.Core
 import Language.Tcl.Value
 import Language.Tcl.CheckArgs
-import Language.Tcl.Expr.Eval           ( evalTclIndexExpr
-                                        )
+import Language.Tcl.Expr.Eval           ( evalTclListIndex )
 
 -- ------------------------------------------------------------
 
@@ -54,8 +54,8 @@ tclLindex (list : indexList : [])
       lindex l (i : ixs)
           = do l'      <- checkListValue l
                let len = length l'
-               i'      <- fromInteger <$> evalTclIndexExpr (toInteger (len -1)) i
-               let res = if i' < 0 || i' > len
+               i'      <- evalTclListIndex len i
+               let res = if i' < 0 || i' >= len
                          then mempty
                          else l' !! i'
                lindex res ixs
@@ -65,15 +65,28 @@ tclLindex _
 
 -- ------------------------------------------------------------
 
+tclLrange :: TclCommand e s
+tclLrange (list' : first' : last' : [])
+    = do list    <- checkListValue list'
+         let len =  length list
+         first   <- (`max` 0)         <$> evalTclListIndex len first'
+         lasT    <- (`min` (len - 1)) <$> evalTclListIndex len last'
+         return . mkL . take (lasT - first + 1) . drop first $ list
+                  
+tclLrange _
+    = tclWrongArgs "lrange list first last"
+
+-- ------------------------------------------------------------
+
 tclLinsert :: TclCommand e s
 tclLinsert (list' : index' : values@(_ : _))
     = do list    <- checkListValue list'
          let len =  length list
          let val =  mkL values
-         index   <- fromInteger <$> evalTclIndexExpr (toInteger len) index'
-         case (index `max` 0) `min` len of
-           ix | ix == 0   ->     val  `lappend` mkL list
-              | ix == len -> mkL list `lappend` val
+         index   <- evalTclListIndex len index'
+         case index of
+           ix | ix <= 0   ->     val  `lappend` mkL list
+              | ix >= len -> mkL list `lappend` val
               | otherwise -> let (v1, v2) = splitAt ix list in
                              do rest <- val `lappend` mkL v2
                                 mkL v1 `lappend` rest
