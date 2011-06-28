@@ -11,6 +11,12 @@ import Language.Tcl.Commands.IfForWhile ( tclFor
                                         , tclIf
                                         , tclWhile
                                         )
+import Language.Tcl.Commands.List       ( tclLappend
+                                        , tclLindex
+                                        , tclLinsert
+                                        , tclList
+                                        , tclLlength
+                                        )
 import Language.Tcl.Commands.Puts       ( tclPuts
                                         )
 import Language.Tcl.Commands.Return     ( tclBreak
@@ -35,6 +41,11 @@ buildInTclCommands
       , ("foreach",     tclForeach)
       , ("if",          tclIf)
       , ("incr",        tclIncr)
+      , ("lappend",     tclLappend)
+      , ("lindex",      tclLindex)
+      , ("linsert",     tclLinsert)
+      , ("list",        tclList)
+      , ("llength",     tclLlength)
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)

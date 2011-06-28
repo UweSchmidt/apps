@@ -73,15 +73,15 @@ instance Monoid Value where
     mempty   = value_empty
     mappend  = (.++.)
 
--- the monoid for list concat
+-- the "monoid" for list concat
 lempty :: Value
 lempty = mempty
 
-lappend :: Value -> Value -> Value
+lappend :: (MonadPlus m) => Value -> Value -> m Value
 lappend = (.**.)
 
-lconcat :: [Value] -> Value
-lconcat = foldr lappend lempty
+lconcat :: (MonadPlus m) => [Value] -> m Value
+lconcat = foldM lappend lempty
 
 -- ------------------------------------------------------------
 
@@ -146,8 +146,9 @@ selS (L l)  = intercalate " " . map (escapeList . selS) $ l
 
 selL        :: MonadPlus m => Value -> m Values
 selL (L x)  = return x
-selL E      = return []
-selL _      = mzero
+selL  E     = return []
+selL (S x)  = string2list x
+selL x      = return [x]
 
 selB        :: (Functor m, MonadPlus m) => Value -> m Bool
 selB x      = ( (/= 0  ) <$> selI x )
@@ -269,13 +270,11 @@ v1        .++. v2        = mkS $ selS v1 ++ selS v2
 
 -- list concatenation on values
 
-(.**.)                   :: Value -> Value -> Value
-(L l1)    .**.    (L l2) = mkL $ l1 ++ l2
-v1@(L _)  .**.     E     = v1
-(L l1)    .**. v2        = mkL $ l1 ++ [v2]
-E         .**. v2@(L _ ) = v2
-v1        .**.    (L l2) = mkL $ v1 : l2
-v1        .**. v2        = mkL $ [v1, v2]
+(.**.)                   :: (MonadPlus m) => Value -> Value -> m Value
+E         .**. v2@(L _ ) = return v2
+v1@(L _)  .**.     E     = return v1
+(L l1)    .**. (L l2)    = return .           mkL $ l1 ++ l2
+v1        .**. v2        = liftM2 (\ l1 l2 -> mkL $ l1 ++ l2) (selL v1) (selL v2)
 
 -- ------------------------------------------------------------
 

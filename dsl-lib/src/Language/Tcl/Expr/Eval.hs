@@ -10,7 +10,9 @@ import Data.Maybe      	   ( isJust )
 
 import           Language.Tcl.Core
 import           Language.Tcl.Value
-import           Language.Tcl.CheckArgs          	( checkBooleanValue )
+import           Language.Tcl.CheckArgs          	( checkBooleanValue
+                                                        , checkIntegerValue
+                                                        )
 import           Language.Tcl.Expr.AbstractSyntax
 import qualified Language.Tcl.Expr.Parser               as P
 
@@ -312,5 +314,26 @@ substAndEvalTclExpr :: String -> TclEval e s Value
 substAndEvalTclExpr s
     = evalTclArgs s
       >>= evalTclExpr
+
+-- ------------------------------------------------------------
+
+evalTclIndexExpr :: Integer -> Value -> TclEval e s Integer
+evalTclIndexExpr len ix
+    | isI ix    = checkIntegerValue ix
+    | otherwise = parseTclExpr (selS ix)
+                  >>= return . substExprConst isEnd (mkI len)
+                  >>= eval
+                  >>= checkIntegerValue
+    where
+      isEnd = (== "end") . selS
+
+-- ------------------------------------------------------------
+
+substExprConst   :: (Value -> Bool) -> Value -> TclExpr -> TclExpr
+substExprConst p n c@(TConst v)
+    | p v        = TConst n
+    | otherwise  = c
+substExprConst p n (TExpr op args)
+                 = TExpr op $ map (substExprConst p n) args
 
 -- ------------------------------------------------------------

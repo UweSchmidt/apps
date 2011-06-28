@@ -30,6 +30,12 @@ checkIntegerString s = checkInteger string2integer s s
 checkIntegerValue :: Value -> TclEval e s Integer
 checkIntegerValue v0 = checkInteger selI (selS v0) v0
 
+checkList :: (a -> Maybe Values) -> String -> a -> TclEval e s Values
+checkList c s v = checkArg ("list expected but got " ++ show s) c v
+
+checkListValue :: Value -> TclEval e s Values
+checkListValue v0 = checkList selL (selS v0) v0
+
 -- ------------------------------------------------------------
 
 tclOption1 :: String -> a -> a -> Values -> TclEval e s (a, Values)
