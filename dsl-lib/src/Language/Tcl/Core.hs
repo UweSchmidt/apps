@@ -105,12 +105,20 @@ tclWrongArgs
     = tclThrowError . ("wrong # args: should be " ++) . show
 
 tclCatch :: (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
-tclCatch p cmd
+tclCatch
+    = tclTryCatch (\ (TclError _lev msg) -> return (mkS msg))
+
+tclChangeErr :: String -> (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
+tclChangeErr msg
+    = tclTryCatch (\ (TclError lev _msg) -> throwError (tclOtherExc lev msg))
+
+tclTryCatch :: (TclError -> TclEval e s Value) -> (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
+tclTryCatch handler p cmd
     = cmd
       `catchError`
-      (\ err@(TclError lev msg)
+      (\ err@(TclError lev _msg)
            -> if p lev
-              then return $ mkS msg
+              then handler    err
               else throwError err
       )
 

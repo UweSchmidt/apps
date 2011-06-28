@@ -5,6 +5,7 @@ module Language.Tcl.Commands.List
     , tclLinsert
     , tclLlength
     , tclLrange
+    , tclLreplace
     )
 where
 
@@ -75,6 +76,23 @@ tclLrange (list' : first' : last' : [])
                   
 tclLrange _
     = tclWrongArgs "lrange list first last"
+
+-- ------------------------------------------------------------
+
+tclLreplace :: TclCommand e s
+tclLreplace (list' : first' : last' : elems')
+    = do list      <- checkListValue list'
+         let elems =  mkL elems'
+         let len   =  length list
+         if null list
+            then return elems
+            else do first <- ( 0          `max`) <$> evalTclListIndex len first'
+                    lasT  <- ((first - 1) `max`) <$> evalTclListIndex len last'
+                    let (vs1, rest) = splitAt first list
+                    res1  <- elems `lappend` mkL (drop (lasT - first + 1) rest)
+                    mkL vs1 `lappend` res1
+tclLreplace _
+    = tclWrongArgs "lreplace list first last ?element element ...?"
 
 -- ------------------------------------------------------------
 
