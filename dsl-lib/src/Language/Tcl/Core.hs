@@ -138,6 +138,10 @@ tclCatchContinueExc :: TclEval e s Value -> TclEval e s Value
 tclCatchContinueExc
     = tclCatch (== 4)
 
+tclFromEither :: Either String r -> TclEval e s r
+tclFromEither
+    = either tclThrowError return
+
 -- ------------------------------------------------------------
 
 interpreteTcl	:: String -> TclEval e s Value

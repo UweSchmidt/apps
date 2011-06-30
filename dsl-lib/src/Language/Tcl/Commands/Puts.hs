@@ -6,10 +6,10 @@ where
 import Control.Monad.RWS
 
 import Language.Common.Eval
+import Language.Common.EvalOptions
 
 import Language.Tcl.Core
 import Language.Tcl.Value
-import Language.Tcl.CheckArgs
 
 import System.IO
 
@@ -17,7 +17,7 @@ import System.IO
 
 tclPuts :: TclCommand e s
 tclPuts l
-    = do (nnl, l1) <- tclOption1 "-nonewline" False True l
+    = do (nnl, l1) <- tclFromEither . evalOptions putOptions False $ l
          tclPuts' nnl (map selS l1)
          return mempty
       where
@@ -32,5 +32,9 @@ tclPuts l
 
         tclPuts' _ _
             = tclWrongArgs "puts ?-nonewline? ?channelId? string"
+
+putOptions :: OptParser [Value] Bool
+putOptions
+    = options [isOpt (== (mkS "-nonewline")) (const True)]
 
 -- ------------------------------------------------------------
