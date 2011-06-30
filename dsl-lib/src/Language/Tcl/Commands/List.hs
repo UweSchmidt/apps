@@ -6,11 +6,21 @@ module Language.Tcl.Commands.List
     , tclLlength
     , tclLrange
     , tclLreplace
+    , tclLsort
     )
 where
 
 import Control.Applicative              ( (<$>) )
+import Control.Arrow                    ( first
+                                        , second
+                                        )
 import Control.Monad.RWS
+
+import Data.Char                        ( toLower )
+import Data.Function                    ( on )
+import Data.Maybe                       ( fromJust )
+
+import Language.Common.EvalOptions
 
 import Language.Tcl.Core
 import Language.Tcl.Value
@@ -70,9 +80,9 @@ tclLrange :: TclCommand e s
 tclLrange (list' : first' : last' : [])
     = do list    <- checkListValue list'
          let len =  length list
-         first   <- (`max` 0)         <$> evalTclListIndex len first'
+         firsT   <- (`max` 0)         <$> evalTclListIndex len first'
          lasT    <- (`min` (len - 1)) <$> evalTclListIndex len last'
-         return . mkL . take (lasT - first + 1) . drop first $ list
+         return . mkL . take (lasT - firsT + 1) . drop firsT $ list
                   
 tclLrange _
     = tclWrongArgs "lrange list first last"
@@ -86,10 +96,10 @@ tclLreplace (list' : first' : last' : elems')
          let len   =  length list
          if null list
             then return elems
-            else do first <- ( 0          `max`) <$> evalTclListIndex len first'
-                    lasT  <- ((first - 1) `max`) <$> evalTclListIndex len last'
-                    let (vs1, rest) = splitAt first list
-                    res1  <- elems `lappend` mkL (drop (lasT - first + 1) rest)
+            else do firsT <- ( 0          `max`) <$> evalTclListIndex len first'
+                    lasT  <- ((firsT - 1) `max`) <$> evalTclListIndex len last'
+                    let (vs1, rest) = splitAt firsT list
+                    res1  <- elems `lappend` mkL (drop (lasT - firsT + 1) rest)
                     mkL vs1 `lappend` res1
 tclLreplace _
     = tclWrongArgs "lreplace list first last ?element element ...?"
@@ -120,5 +130,74 @@ tclLlength (list : [])
 
 tclLlength _
     = tclWrongArgs "llength list"
+
+-- ------------------------------------------------------------
+
+tclLsort :: TclCommand e s
+tclLsort l0
+    = do (so, l) <- tclFromEither . evalOptions sortOptions sortDefaults $ l0
+         lsort so l
+    where
+      lsort ( asc_desc
+            , ( ( sortby, checkValues)
+              , ( caseSensitive
+                , ( unique
+                  , ()
+                  )
+                )
+              )
+            ) (l' : [])
+          = do ls <- checkListValue l'
+               if null ls || null (tail ls)
+                  then return $ mkL ls
+                  else do checkValues ls
+                          undefined
+
+      lsort _so _
+          = tclWrongArgs "lsort ?options? list"
+
+sortDefaults = ( increasing
+               , ( sortByAscii
+                 , ( id
+                   , ( False
+                     , ()
+                     )
+                   )
+                 )
+               )
+
+nocase :: String -> String
+nocase = map toLower
+
+sortByAscii   :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
+sortByAscii   = (\ conv -> compare `on` (conv . selS), const $ return () )
+
+sortByInteger :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
+sortByInteger = (\ _ -> compare `on` (fromJust . selI), mapM_ checkIntegerValue)
+
+sortByReal :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
+sortByReal = (\ _ -> compare `on` (fromJust . selI), mapM_ checkDoubleValue)
+
+increasing :: (a -> Ordering) -> a -> Ordering
+increasing  = (id .)
+
+decreasing :: (a -> Ordering) -> a -> Ordering
+decreasing = (cmpl .)
+    where
+      cmpl LT = GT
+      cmpl GT = LT
+      cmpl x  = x
+
+-- sortOptions :: OptParser [Value] ((a -> Ordering) -> a -> Ordering, ((Value -> Value -> Ordering, Values -> TclEval e s ()), d))
+sortOptions
+    = options
+      [ isOpt (== (mkS "-increasing")) (first $ const increasing)
+      , isOpt (== (mkS "-decreasing")) (first $ const decreasing)
+      , isOpt (== (mkS "-ascii"     )) (second . first $ const sortByAscii)
+      , isOpt (== (mkS "-integer"   )) (second . first $ const sortByInteger)
+      , isOpt (== (mkS "-real"      )) (second . first $ const sortByReal)
+      , isOpt (== (mkS "-nocase"    )) (second . second . first $ const nocase)
+      , isOpt (== (mkS "-unique"    )) (second . second . second . first $ const True)
+      ]
 
 -- ------------------------------------------------------------

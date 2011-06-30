@@ -21,8 +21,6 @@ import Language.Tcl.Eval
 import Language.Tcl.Value
 
 import Text.Parsec
-import Text.Parsec.Error
-import Text.Parsec.Pos
 
 -- ------------------------------------------------------------
 
