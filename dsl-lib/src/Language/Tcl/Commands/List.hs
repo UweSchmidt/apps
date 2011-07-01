@@ -18,6 +18,9 @@ import Control.Monad.RWS
 
 import Data.Char                        ( toLower )
 import Data.Function                    ( on )
+import Data.List                        ( sortBy
+                                        , nubBy
+                                        )
 import Data.Maybe                       ( fromJust )
 
 import Language.Common.EvalOptions
@@ -139,7 +142,7 @@ tclLsort l0
          lsort so l
     where
       lsort ( asc_desc
-            , ( ( sortby, checkValues)
+            , ( (sortby, checkValues)
               , ( caseSensitive
                 , ( unique
                   , ()
@@ -151,11 +154,23 @@ tclLsort l0
                if null ls || null (tail ls)
                   then return $ mkL ls
                   else do checkValues ls
-                          undefined
+                          return . mkL . nubFct . sortBy sortFct $ ls
+          where
+            sortFct = (asc_desc .) . sortby caseSensitive
+            nubFct
+                | unique    = nubBy $ ((== EQ) .) . sortFct
+                | otherwise = id
 
       lsort _so _
           = tclWrongArgs "lsort ?options? list"
 
+sortDefaults :: ( Ordering -> Ordering
+                , ( ( (String -> String) -> Value -> Value -> Ordering
+                    , Values -> TclEval e s ()
+                    )
+                  , (a -> a, (Bool, ()))
+                  )
+                )
 sortDefaults = ( increasing
                , ( sortByAscii
                  , ( id
@@ -178,17 +193,29 @@ sortByInteger = (\ _ -> compare `on` (fromJust . selI), mapM_ checkIntegerValue)
 sortByReal :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
 sortByReal = (\ _ -> compare `on` (fromJust . selI), mapM_ checkDoubleValue)
 
-increasing :: (a -> Ordering) -> a -> Ordering
-increasing  = (id .)
+increasing :: Ordering -> Ordering
+increasing  = id
 
-decreasing :: (a -> Ordering) -> a -> Ordering
-decreasing = (cmpl .)
+decreasing :: Ordering -> Ordering
+decreasing = cmpl
     where
       cmpl LT = GT
       cmpl GT = LT
       cmpl x  = x
 
+-- not yet all Tcl 8.5 sort variants implemented,
+-- this requires a monadic version of sortBy,
+-- due to the arbitray compare functions given in the -command option
+
 -- sortOptions :: OptParser [Value] ((a -> Ordering) -> a -> Ordering, ((Value -> Value -> Ordering, Values -> TclEval e s ()), d))
+sortOptions :: OptParser [Value] ( Ordering -> Ordering
+                                 , ( ( (String -> String) -> Value -> Value -> Ordering
+                                     , Values -> TclEval e s ())
+                                   , ( String -> String
+                                     , (Bool, d)
+                                     )
+                                   )
+                                 )
 sortOptions
     = options
       [ isOpt (== (mkS "-increasing")) (first $ const increasing)
