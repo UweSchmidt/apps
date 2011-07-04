@@ -6,7 +6,6 @@ module Language.Tcl.Commands.List
     , tclLlength
     , tclLrange
     , tclLreplace
-    , tclLsort
     )
 where
 
@@ -133,98 +132,5 @@ tclLlength (list : [])
 
 tclLlength _
     = tclWrongArgs "llength list"
-
--- ------------------------------------------------------------
-
-tclLsort :: TclCommand e s
-tclLsort l0
-    = do (so, l) <- tclFromEither . evalOptions sortOptions sortDefaults $ l0
-         lsort so l
-    where
-      lsort ( asc_desc
-            , ( (sortby, checkValues)
-              , ( caseSensitive
-                , ( unique
-                  , ()
-                  )
-                )
-              )
-            ) (l' : [])
-          = do ls <- checkListValue l'
-               if null ls || null (tail ls)
-                  then return $ mkL ls
-                  else do checkValues ls
-                          return . mkL . nubFct . sortBy sortFct $ ls
-          where
-            sortFct = (asc_desc .) . sortby caseSensitive
-            nubFct
-                | unique    = nubBy $ ((== EQ) .) . sortFct
-                | otherwise = id
-
-      lsort _so _
-          = tclWrongArgs "lsort ?options? list"
-
-sortDefaults :: ( Ordering -> Ordering
-                , ( ( (String -> String) -> Value -> Value -> Ordering
-                    , Values -> TclEval e s ()
-                    )
-                  , (a -> a, (Bool, ()))
-                  )
-                )
-sortDefaults = ( increasing
-               , ( sortByAscii
-                 , ( id
-                   , ( False
-                     , ()
-                     )
-                   )
-                 )
-               )
-
-nocase :: String -> String
-nocase = map toLower
-
-sortByAscii   :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
-sortByAscii   = (\ conv -> compare `on` (conv . selS), const $ return () )
-
-sortByInteger :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
-sortByInteger = (\ _ -> compare `on` (fromJust . selI), mapM_ checkIntegerValue)
-
-sortByReal :: ((String -> String) -> Value -> Value -> Ordering, Values -> TclEval e s ())
-sortByReal = (\ _ -> compare `on` (fromJust . selI), mapM_ checkDoubleValue)
-
-increasing :: Ordering -> Ordering
-increasing  = id
-
-decreasing :: Ordering -> Ordering
-decreasing = cmpl
-    where
-      cmpl LT = GT
-      cmpl GT = LT
-      cmpl x  = x
-
--- not yet all Tcl 8.5 sort variants implemented,
--- this requires a monadic version of sortBy,
--- due to the arbitray compare functions given in the -command option
-
--- sortOptions :: OptParser [Value] ((a -> Ordering) -> a -> Ordering, ((Value -> Value -> Ordering, Values -> TclEval e s ()), d))
-sortOptions :: OptParser [Value] ( Ordering -> Ordering
-                                 , ( ( (String -> String) -> Value -> Value -> Ordering
-                                     , Values -> TclEval e s ())
-                                   , ( String -> String
-                                     , (Bool, d)
-                                     )
-                                   )
-                                 )
-sortOptions
-    = options
-      [ isOpt (== (mkS "-increasing")) (first $ const increasing)
-      , isOpt (== (mkS "-decreasing")) (first $ const decreasing)
-      , isOpt (== (mkS "-ascii"     )) (second . first $ const sortByAscii)
-      , isOpt (== (mkS "-integer"   )) (second . first $ const sortByInteger)
-      , isOpt (== (mkS "-real"      )) (second . first $ const sortByReal)
-      , isOpt (== (mkS "-nocase"    )) (second . second . first $ const nocase)
-      , isOpt (== (mkS "-unique"    )) (second . second . second . first $ const True)
-      ]
 
 -- ------------------------------------------------------------
