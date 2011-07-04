@@ -115,9 +115,12 @@ tclLsort l0
 
 evalCompareCmd :: Value -> TclEval s e (Value -> Value -> TclEval s e Ordering)
 evalCompareCmd cv
-    = do cf <- undefined cv
-         return $ \ x y -> toOrd <$> cf x y
+    = do vs <- evalTclArgs $ selS cv
+         return $ \ x y -> toOrd <$> cf (vs ++ [x, y])
     where
+      cf vs 
+          = evalTcl vs >>= checkIntegerValue
+
       toOrd i
           | i < 0     = LT
           | i > 0     = GT

@@ -169,14 +169,14 @@ evalTclProg (TclProg tp)
 evalTclCmd	:: TclCmd -> TclEval e s Value
 evalTclCmd (TclCmd al)
     = mapM evalTclArg al >>= evalTcl
-    where
-      evalTcl :: Values -> TclEval e s Value
-      evalTcl (cn : args)
-          = do s <- get
-               c <- lookupCmd (selS cn) s
-               c args
-      evalTcl []
-          = tclThrowError "empty command"
+
+evalTcl :: Values -> TclEval e s Value
+evalTcl (cn : args)
+    = do s <- get
+         c <- lookupCmd (selS cn) s
+         c args
+evalTcl []
+    = tclThrowError "empty command"
 
 evalTclArg	:: TclArg -> TclEval e s Value
 evalTclArg (TclArg xs)
