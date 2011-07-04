@@ -19,6 +19,8 @@ import Language.Tcl.Commands.List       ( tclLappend
                                         , tclLrange
                                         , tclLreplace
                                         )
+import Language.Tcl.Commands.ListSort   ( tclLsort
+                                        )
 import Language.Tcl.Commands.Puts       ( tclPuts
                                         )
 import Language.Tcl.Commands.Return     ( tclBreak
@@ -50,6 +52,7 @@ buildInTclCommands
       , ("llength",     tclLlength)
       , ("lrange",      tclLrange)
       , ("lreplace",    tclLreplace)
+      , ("lsort",       tclLsort)
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)

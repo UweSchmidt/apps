@@ -4,6 +4,7 @@ module Language.Tcl.Value
     , mkI, mkD, mkS, mkL
     , isI, isD, isS
     , selI, selD, selS, selL, selB
+    , convI, convD, convS, convL, convLE
 
     , b2i
     , i2d, i2s
@@ -160,6 +161,32 @@ selB x      = ( (/= 0  ) <$> selI x )
 maybeSingle            :: MonadPlus m => (Value -> m a) -> Value -> m a
 maybeSingle f (L [v])  = f v
 maybeSingle _ _        = mzero
+
+-- ------------------------------------------------------------
+--
+-- change the internal representation of values
+
+convI :: (Functor m, MonadPlus m) => Value -> m Value
+convI x@(I _) = return x
+convI x       = mkI <$> selI x
+
+convD :: (Functor m, MonadPlus m) => Value -> m Value
+convD x@(D _) = return x
+convD x       = mkD <$> selD x
+
+convS :: (Functor m, MonadPlus m) => Value -> m Value
+convS x@(S _) = return x
+convS x@(E  ) = return x
+convS x       = return . mkS . selS $ x
+
+convL :: (Functor m, MonadPlus m) => Value -> m Value
+convL x@(L _) = return x
+convL x@(E  ) = return x
+convL x       = mkL <$> selL x
+
+convLE  :: (Functor m, MonadPlus m) => (Value -> m Value) -> Value -> m Value
+convLE cv l
+    = convL l >>= selL >>= mapM cv >>= (return . mkL) 
 
 -- ------------------------------------------------------------
 
