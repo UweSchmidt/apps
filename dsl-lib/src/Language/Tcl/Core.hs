@@ -7,6 +7,8 @@ import           Control.Monad.RWS
 
 import           Data.Map    		( Map )
 import qualified Data.Map      		as M
+import           Data.Set    		( Set )
+import qualified Data.Set      		as S
 
 import           Language.Common.Eval
 
@@ -26,16 +28,17 @@ data TclEnv e
 
 data TclState e s
     = TclState
-      { _tvars    :: TclVars
-      , _tcmds    :: TclCommands e s
-      , _tchans   :: TclChannels
-      , _appState :: s
+      { _tglobalVars    :: TclVars
+      , _tstack         :: [TclProcFrame]
+      , _tcmds          :: TclCommands e s
+      , _tchans         :: TclChannels
+      , _appState       :: s
       }
 
 instance (Show s) => Show (TclState e s) where
-    show (TclState v c ch as)
+    show (TclState v s c ch as)
         = "TclState "
-          ++ "{ _tvars = "
+          ++ "{ _tglobalVars = "
           ++ (show . map (second selS) . M.toList $ v)
           ++ ", _tcmds = "
           ++ (show . M.keys $ c)
@@ -50,6 +53,16 @@ type TclWrt		-- not really used
 
 type TclVars		-- global variables
     = Map String Value
+
+type TclVarSet
+    = Set String
+
+data TclProcFrame
+    = TPF
+      { _tlocals  :: TclVars
+      , _tglobals :: TclVarSet
+      }
+      deriving (Show)
 
 type TclCommands e s	-- commands
     = Map String (TclCommand e s)
@@ -238,9 +251,21 @@ lookupCmd n s
         Just c
             -> return c
 
+commandNames :: TclState e s -> TclEval e s [String]
+commandNames s
+    = do let cnames = M.keys . _tcmds $ s
+         pnames <- procNames s
+         return $ cnames ++ pnames
+
+procNames :: TclState e s -> TclEval e s [String]
+procNames s
+    = return []
+
+-- ------------------------------------------------------------
+
 lookupVar	:: String -> TclState e s -> TclEval e s Value
 lookupVar n s
-    = case M.lookup n $ _tvars s of
+    = case M.lookup n $ _tglobalVars s of
         Nothing
             -> tclThrowError $ "can't read " ++ show n ++ ": no such variable"
         Just c
@@ -248,8 +273,40 @@ lookupVar n s
 
 setVar		:: String -> Value -> TclState e s -> TclEval e s Value
 setVar n v s
-    = do put $ s { _tvars = M.insert n v (_tvars s) }
+    = do put $ s { _tglobalVars = M.insert n v (_tglobalVars s) }
          return v
+
+varName :: String -> TclState e s -> TclEval e s Bool
+varName n s
+    = return $
+      ( n `M.member` vars )
+      ||
+      ( (not . null $ stack)
+        &&
+        n `M.member` (_tlocals . head $ stack)
+      )
+      where
+        vars  = _tglobalVars s
+        stack = _tstack s
+
+varNames :: TclState e s -> TclEval e s [String]
+varNames s
+    = do globals <- globalVarNames s
+         locals  <- localVarNames  s
+         return $ locals ++ globals
+
+globalVarNames :: TclState e s -> TclEval e s [String]
+globalVarNames s
+    = return . M.keys . _tglobalVars $ s
+
+localVarNames :: TclState e s -> TclEval e s [String]
+localVarNames s
+    | null stack = return []
+    | otherwise  = return . M.keys . _tlocals . head $ stack
+    where
+      stack = _tstack s
+
+-- ------------------------------------------------------------
 
 lookupChannel	:: String -> TclState e s -> TclEval e s Handle
 lookupChannel n s

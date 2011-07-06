@@ -26,10 +26,11 @@ initTclEnv e
 initTclState :: s -> TclState e s
 initTclState s
     = TclState
-      { _tvars    = M.empty
-      , _tcmds    = M.fromList buildInTclCommands
-      , _tchans   = M.fromList buildInTclChannels
-      , _appState = s
+      { _tglobalVars = M.empty
+      , _tstack      = []
+      , _tcmds       = M.fromList buildInTclCommands
+      , _tchans      = M.fromList buildInTclChannels
+      , _appState    = s
       }
 
 buildInTclChannels :: [(String, Handle)]

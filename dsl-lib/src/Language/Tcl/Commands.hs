@@ -11,6 +11,8 @@ import Language.Tcl.Commands.IfForWhile ( tclFor
                                         , tclIf
                                         , tclWhile
                                         )
+import Language.Tcl.Commands.Info       ( tclInfo
+                                        )
 import Language.Tcl.Commands.List       ( tclLappend
                                         , tclLindex
                                         , tclLinsert
@@ -45,6 +47,7 @@ buildInTclCommands
       , ("foreach",     tclForeach)
       , ("if",          tclIf)
       , ("incr",        tclIncr)
+      , ("info",        tclInfo)
       , ("lappend",     tclLappend)
       , ("lindex",      tclLindex)
       , ("linsert",     tclLinsert)

@@ -24,7 +24,7 @@ evalOptions optionParser initialState
                 return (opts, args)
             )  initialState ""
       >>>
-      either (Left . unlines . map messageString . errorMessages) Right
+      either (Left . last . map messageString . errorMessages) Right
 
 -- ------------------------------------------------------------
 
@@ -38,6 +38,24 @@ nextArgWith p
       showArg x           = show x
       testArg x           = if p x then Just x else Nothing
       nextPos pos _x _xs  = updatePosChar pos ' '	-- don't count chars but count args
+
+singleArg :: (Stream s m a, Show a) => String -> ParsecT s u m a
+singleArg msg
+    = try ( do r <- nextArg
+               eof
+               return r
+          )
+      <|>
+      parserFail msg
+
+singleOptArg :: (Stream s m a, Show a) => a -> String -> ParsecT s u m a
+singleOptArg v msg
+    = try ( do r <- option v nextArg
+               eof
+               return r
+          )
+      <|>
+      parserFail msg
 
 -- ------------------------------------------------------------
 --
@@ -62,12 +80,6 @@ isCheckedArgOpt name valueCheck optValue
       >>=
       argCheckedVal valueCheck optValue
 
-isIllegalOpt :: (Stream s m a, Show a) => (a -> Bool) -> ParsecT s u m b
-isIllegalOpt name
-    = nextArgWith name
-      >>=
-      illegalVal "unknown option"
-
 -- ------------------------------------------------------------
 
 argVal :: (Stream s m t, Show a, Show t) => (t -> u -> u) -> a -> ParsecT s u m ()
@@ -84,9 +96,20 @@ argCheckedVal (valuePred, valueError) optionValue optName
       <|>
       illegalVal "missing argument for option" optName
 
+-- ------------------------------------------------------------
+
+isIllegalOpt :: (Stream s m a, Show a) => (a -> Bool) -> ParsecT s u m b
+isIllegalOpt name
+    = nextArgWith name
+      >>=
+      illegalVal "unknown option"
+
 illegalVal :: Show a1 => String -> a1 -> ParsecT s u m a
 illegalVal msg optName
-    = parserFail (msg ++ ": " ++ show optName)
+    = illegalArgs (msg ++ ": " ++ show optName)
+
+illegalArgs :: String -> ParsecT s u m a
+illegalArgs = parserFail 
 
 -- ------------------------------------------------------------
 --
