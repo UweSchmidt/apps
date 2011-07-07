@@ -24,7 +24,7 @@ import Text.Parsec                      ( (<|>)
 
 tclInfo :: TclCommand e s
 tclInfo l0
-    = do (subCmd, _l) <- tclFromEither . evalOptions infoSubCmd (tclThrowError "mist") $ l0
+    = do (subCmd, _l) <- tclFromEither . evalOptions infoSubCmd (tclThrowError "oh shit") $ l0
          subCmd
     where
       vars = [ ("vars",     varNames      )
@@ -35,20 +35,30 @@ tclInfo l0
              ]
 
       infoSubCmd
-          = ( do c <- nextArgWith (`elem` map (mkS . fst) vars)
+          = -- parser for vars, globals, locals, procs, commands
+            ( do c <- nextArgWith (`elem` map (mkS . fst) vars)
                  p <- singleOptArg (mkS "*") ("wrong # args: should be \"info " ++ selS c ++ " ?pattern?\"")
                  setState $ infoVars (fromJust . lookup (selS c) $ vars) p
             )
             <|>
+            -- parser for exists
             ( do _ <- nextArgWith (== mkS "exists")
                  n <- singleArg "wrong # args: should be \"info exists varName\""
                  setState $ infoExists n
             )
             <|>
-            ( do c <- nextArg
-                 illegalArgs $ "unknown subcommand " ++ show (selS c) ++ " must be commands, exists, globals, locals, procs, vars"
+            -- parser for level
+            ( do _ <- nextArgWith (== mkS "level")
+                 n <- singleOptArg mempty "wrong # args: should be \"info level ?number?\""
+                 setState $ infoLevel n
             )
             <|>
+            -- parser for unknown subcommand
+            ( do c <- nextArg
+                 illegalArgs $ "unknown subcommand " ++ show (selS c) ++ " must be commands, exists, globals, level, locals, procs, vars"
+            )
+            <|>
+            -- parser for illegal arguments
             illegalArgs "wrong # args: should be \"info subcommand ?argument ...?\""
 
 infoExists :: Value -> TclEval e s Value
@@ -56,10 +66,15 @@ infoExists n
     = b2i
       <$> (get >>= varName (selS n))
 
-infoVars :: (TclState e s -> TclEval e s [String]) -> Value -> TclEval e s Value
+infoLevel :: Value -> TclEval e s Value
+infoLevel n
+    | n == mempty = mkI . toInteger <$> stackFrameLevel
+    | otherwise   = tclThrowError "\"info level num\" not yet implemented"
+
+infoVars :: TclEval e s [String] -> Value -> TclEval e s Value
 infoVars names pat
     = mkL . map mkS . sort . filter (matchPattern $ selS pat)
-      <$> (get >>= names)
+      <$> names
 
 matchPattern :: String -> String -> Bool
 matchPattern pat = const True		-- TODO implement that in string match

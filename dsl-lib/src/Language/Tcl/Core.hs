@@ -2,6 +2,7 @@ module Language.Tcl.Core
 where
 
 import           Control.Arrow
+import           Control.Applicative    ( (<$>) )
 import           Control.Monad.Error
 import           Control.Monad.RWS
 
@@ -31,12 +32,13 @@ data TclState e s
       { _tglobalVars    :: TclVars
       , _tstack         :: [TclProcFrame]
       , _tcmds          :: TclCommands e s
+      , _tprocs         :: TclProcs e s
       , _tchans         :: TclChannels
       , _appState       :: s
       }
 
 instance (Show s) => Show (TclState e s) where
-    show (TclState v s c ch as)
+    show (TclState v _s c _ps ch as)
         = "TclState "
           ++ "{ _tglobalVars = "
           ++ (show . map (second selS) . M.toList $ v)
@@ -59,8 +61,9 @@ type TclVarSet
 
 data TclProcFrame
     = TPF
-      { _tlocals  :: TclVars
-      , _tglobals :: TclVarSet
+      { _tlocals   :: TclVars
+      , _tglobals  :: TclVarSet
+      , _tprocname :: String
       }
       deriving (Show)
 
@@ -69,6 +72,17 @@ type TclCommands e s	-- commands
 
 type TclCommand e s
     = Values -> TclEval e s Value
+
+type TclProcs e s
+    = Map String (TclProc e s)
+
+data TclProc e s
+    = TclProc
+      { _fparams  :: Value	        -- the source string of the list of formal param names and default values
+      , _fbody    :: Value              -- the source string of the body
+      , _cbody    :: TclEval e s Value	-- compiled body
+      , _cpassing :: TclEval e s ()     -- compiled param passing
+      }
 
 type TclChannels	-- open channels
     = Map String Handle
@@ -251,15 +265,42 @@ lookupCmd n s
         Just c
             -> return c
 
-commandNames :: TclState e s -> TclEval e s [String]
-commandNames s
-    = do let cnames = M.keys . _tcmds $ s
-         pnames <- procNames s
+commandNames :: TclEval e s [String]
+commandNames
+    = do cnames <- M.keys . _tcmds <$> get
+         pnames <- procNames
          return $ cnames ++ pnames
 
-procNames :: TclState e s -> TclEval e s [String]
-procNames s
-    = return []
+-- ------------------------------------------------------------
+
+procNames :: TclEval e s [String]
+procNames
+    = M.keys . _tprocs <$> get
+
+-- ------------------------------------------------------------
+
+pushStackFrame :: String -> TclEval e s ()
+pushStackFrame pname
+    = modify $
+      \ s -> s { _tstack
+                     = TPF { _tlocals = M.empty
+                           , _tglobals = S.empty
+                           , _tprocname = pname
+                           }
+                       : _tstack s
+               }
+
+stackFrameLevel :: TclEval e s Int
+stackFrameLevel
+    = gets $ length . _tstack
+
+popStackFrame :: TclEval e s ()
+popStackFrame
+    = do s <- get
+         if null . _tstack $ s
+            then tclThrowError "proc stack frame underflow"
+            else put $
+                 s { _tstack = tail . _tstack $ s}
 
 -- ------------------------------------------------------------
 
@@ -289,22 +330,23 @@ varName n s
         vars  = _tglobalVars s
         stack = _tstack s
 
-varNames :: TclState e s -> TclEval e s [String]
-varNames s
-    = do globals <- globalVarNames s
-         locals  <- localVarNames  s
+varNames :: TclEval e s [String]
+varNames
+    = do globals <- globalVarNames
+         locals  <- localVarNames
          return $ locals ++ globals
 
-globalVarNames :: TclState e s -> TclEval e s [String]
-globalVarNames s
-    = return . M.keys . _tglobalVars $ s
+globalVarNames :: TclEval e s [String]
+globalVarNames
+    = M.keys . _tglobalVars <$> get
 
-localVarNames :: TclState e s -> TclEval e s [String]
-localVarNames s
-    | null stack = return []
-    | otherwise  = return . M.keys . _tlocals . head $ stack
-    where
-      stack = _tstack s
+localVarNames :: TclEval e s [String]
+localVarNames
+    = do stack <- gets _tstack
+         return $
+           case stack of
+             [] -> []
+             _  -> M.keys . _tlocals . head $ stack
 
 -- ------------------------------------------------------------
 

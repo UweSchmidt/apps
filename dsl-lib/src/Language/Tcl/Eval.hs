@@ -29,6 +29,7 @@ initTclState s
       { _tglobalVars = M.empty
       , _tstack      = []
       , _tcmds       = M.fromList buildInTclCommands
+      , _tprocs      = M.empty
       , _tchans      = M.fromList buildInTclChannels
       , _appState    = s
       }
