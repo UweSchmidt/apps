@@ -4,8 +4,6 @@ module Language.Tcl.Commands.Expr
     )
 where
 
-import Control.Monad.RWS
-
 import Language.Tcl.Core
 import Language.Tcl.Value
 import Language.Tcl.CheckArgs
@@ -25,13 +23,13 @@ tclExpr _
 tclIncr :: TclCommand e s
 tclIncr [var]
     = tclIncr [var, value_1]
-tclIncr [varName, incr]
-    = do v1 <- get >>= lookupVar var
+tclIncr [var', incr]
+    = do v1 <- lookupVar var
 	       >>= checkIntegerValue
          v2 <- checkIntegerValue incr
-         get >>= setVar var (mkI $ v1 + v2)
+         setVar var (mkI $ v1 + v2)
     where
-      var = selS varName
+      var = selS var'
 
 tclIncr _
     = tclWrongArgs "incr varName ?increment?"

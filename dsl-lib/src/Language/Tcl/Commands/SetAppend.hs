@@ -13,13 +13,13 @@ import Language.Tcl.Value
 -- ------------------------------------------------------------
 
 tclAppend :: TclCommand e s
-tclAppend (var : values)
-    = do val <- (get >>= lookupVar varName)
+tclAppend (var' : values)
+    = do val <- lookupVar var
                 `mplus`
                 return mempty
-         get >>= setVar varName (val `mappend` mconcat values)
+         setVar var (val `mappend` mconcat values)
     where
-      varName = selS var
+      var = selS var'
 
 tclAppend _
     = tclWrongArgs "append varName ?value value value ...?"
@@ -28,10 +28,10 @@ tclAppend _
 
 tclSet	:: TclCommand e s
 tclSet [n]
-    = get >>= lookupVar (selS n)
+    = lookupVar (selS n)
 
 tclSet [n, v]
-    = get >>= setVar (selS n) v
+    = setVar (selS n) v
 
 tclSet _
     = tclWrongArgs "set varName ?newValue?"

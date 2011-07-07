@@ -38,15 +38,15 @@ tclList
 -- ------------------------------------------------------------
 
 tclLappend :: TclCommand e s
-tclLappend (var : values)
-    = do val <- (get >>= lookupVar varName)
+tclLappend (var' : values)
+    = do val <- lookupVar var
                 `mplus`
                 return mempty
          list <- lconcat values
          res  <- lappend val list
-         get >>= setVar varName res
+         setVar var res
     where
-      varName = selS var
+      var = selS var'
 
 tclLappend _
     = tclWrongArgs "lappend varName ?value value value ...?"

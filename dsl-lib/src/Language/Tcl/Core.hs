@@ -214,7 +214,7 @@ evalTclSubst (TLit s)
     = return $ mkS s
 
 evalTclSubst (TVar n)
-    = get >>= lookupVar n
+    = lookupVar n
 
 evalTclSubst (TEval p)
     = evalTclProg p
@@ -304,31 +304,75 @@ popStackFrame
 
 -- ------------------------------------------------------------
 
-lookupVar	:: String -> TclState e s -> TclEval e s Value
-lookupVar n s
-    = case M.lookup n $ _tglobalVars s of
-        Nothing
-            -> tclThrowError $ "can't read " ++ show n ++ ": no such variable"
-        Just c
-            -> return c
+lookupLocalVar :: String -> TclEval e s Value
+lookupLocalVar n
+    = do stack <- _tstack <$> get
+         case stack of
+           []  -> notFound
+           (frame : _)
+               -> if n `S.member` _tglobals frame
+                  then notFound
+                  else case M.lookup n $ _tlocals frame of
+                         Nothing -> notFound
+                         Just v -> return v
+    where
+      notFound = tclThrowError $ "can't read local variable " ++ show n ++ ": no such variable"
 
-setVar		:: String -> Value -> TclState e s -> TclEval e s Value
-setVar n v s
-    = do put $ s { _tglobalVars = M.insert n v (_tglobalVars s) }
+lookupGlobalVar	:: String -> TclEval e s Value
+lookupGlobalVar n
+    = do vars <- _tglobalVars <$> get
+         case M.lookup n vars of
+           Nothing
+               -> tclThrowError $ "can't read " ++ show n ++ ": no such variable"
+           Just c
+               -> return c
+
+lookupVar	:: String -> TclEval e s Value
+lookupVar n
+    = lookupLocalVar n `mplus` lookupGlobalVar n
+
+-- ------------------------------------------------------------
+
+setLocalVar :: String -> Value -> TclEval e s Value
+setLocalVar n v
+    = do s <- get
+         let stack = _tstack s
+         case stack of
+           [] -> notFound
+           (frame : rest)
+               -> if n `S.member` _tglobals frame
+                  then notFound
+                  else do let vars'  = M.insert n v $ _tlocals frame
+                          let frame' = frame { _tlocals = vars' }
+                          let stack' = frame' : rest
+                          put $ s { _tstack = stack' }
+         return v
+    where
+      notFound = tclThrowError $ "can't write local variable " ++ show n ++ ": no such variable"
+
+setGlobalVar :: String -> Value -> TclEval e s Value
+setGlobalVar n v
+    = do modify $ \ s -> s { _tglobalVars = M.insert n v (_tglobalVars s) }
          return v
 
-varName :: String -> TclState e s -> TclEval e s Bool
-varName n s
-    = return $
-      ( n `M.member` vars )
-      ||
-      ( (not . null $ stack)
-        &&
-        n `M.member` (_tlocals . head $ stack)
-      )
-      where
-        vars  = _tglobalVars s
-        stack = _tstack s
+setVar		:: String -> Value -> TclEval e s Value
+setVar n v
+    = setLocalVar n v `mplus` setGlobalVar n v
+
+-- ------------------------------------------------------------
+
+varName :: String -> TclEval e s Bool
+varName n
+    = do s <- get
+         let vars  = _tglobalVars s
+         let stack = _tstack s
+         return $
+           ( n `M.member` vars )
+           ||
+           ( (not . null $ stack)
+             &&
+             n `M.member` (_tlocals . head $ stack)
+           )
 
 varNames :: TclEval e s [String]
 varNames

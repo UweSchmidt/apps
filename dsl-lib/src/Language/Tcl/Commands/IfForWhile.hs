@@ -33,7 +33,7 @@ tclForeach [v, l, b]
               >> return mempty
           where
             oneStep val
-                = ( get >>= setVar var val )
+                = ( setVar var val )
                   >> 
                   ( tclCatchContinueExc $
                       evalTclProg cs )
