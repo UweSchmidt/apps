@@ -38,12 +38,12 @@ data TclState e s
       }
 
 instance (Show s) => Show (TclState e s) where
-    show (TclState v _s c _ps ch as)
+    show (TclState v _s _c _ps ch as)
         = "TclState "
           ++ "{ _tglobalVars = "
           ++ (show . map (second selS) . M.toList $ v)
-          ++ ", _tcmds = "
-          ++ (show . M.keys $ c)
+          -- ++ ", _tcmds = "
+          -- ++ (show . M.keys $ c)
           ++ ", _tChans = "
           ++ (show . M.keys $ ch)
           ++ ", _appState = "
@@ -78,10 +78,10 @@ type TclProcs e s
 
 data TclProc e s
     = TclProc
-      { _fparams  :: Value	        -- the source string of the list of formal param names and default values
-      , _fbody    :: Value              -- the source string of the body
-      , _cbody    :: TclEval e s Value	-- compiled body
-      , _cpassing :: TclEval e s ()     -- compiled param passing
+      { _fparams  :: Value	                  -- the source string of the list of formal param names and default values
+      , _fbody    :: Value                        -- the source string of the body
+      , _cbody    :: TclEval e s Value	          -- compiled body
+      , _cpassing :: Values -> TclEval e s ()     -- compiled param passing
       }
 
 type TclChannels	-- open channels
@@ -199,8 +199,7 @@ evalTclCmd (TclCmd al)
 
 evalTcl :: Values -> TclEval e s Value
 evalTcl (cn : args)
-    = do s <- get
-         c <- lookupCmd (selS cn) s
+    = do c <- lookupCmd (selS cn)
          c args
 evalTcl []
     = tclThrowError "empty command"
@@ -257,13 +256,31 @@ evalTclArgs s
  
 -- ------------------------------------------------------------
 
-lookupCmd	:: String -> TclState e s -> TclEval e s (TclCommand e s)
-lookupCmd n s
-    = case M.lookup n $ _tcmds s of
-        Nothing
-            -> tclThrowError $ "invalid command name " ++ show n
-        Just c
-            -> return c
+lookupCmd	:: String -> TclEval e s (TclCommand e s)
+lookupCmd n
+    = get
+      >>=
+      maybe (tclThrowError $ "invalid command name " ++ show n) return
+                . M.lookup n
+                . _tcmds
+
+lookupProc :: String -> TclEval e s (TclProc e s)
+lookupProc n
+    = get
+      >>=
+      maybe (tclThrowError $ "invalid proc name " ++ show n) return
+                . M.lookup n
+                . _tprocs
+
+lookupProcOrCmd :: String -> TclEval e s (TclCommand e s)
+lookupProcOrCmd n
+    = ( buildProcCall <$> lookupProc n )
+      `mplus`
+      lookupCmd n
+    where
+      buildProcCall tp
+          = \ vs -> pushStackFrame n >> (_cpassing tp) vs >> _cbody tp
+
 
 commandNames :: TclEval e s [String]
 commandNames
