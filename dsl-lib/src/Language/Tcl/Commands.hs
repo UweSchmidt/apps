@@ -28,6 +28,7 @@ import Language.Tcl.Commands.Puts       ( tclPuts
 import Language.Tcl.Commands.Return     ( tclBreak
                                         , tclContinue
                                         , tclError
+                                        , tclProc
                                         , tclReturn
                                         )
 import Language.Tcl.Commands.SetAppend  ( tclAppend
@@ -56,6 +57,7 @@ buildInTclCommands
       , ("lrange",      tclLrange)
       , ("lreplace",    tclLreplace)
       , ("lsort",       tclLsort)
+      , ("proc", 	tclProc)
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)

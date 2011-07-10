@@ -31,4 +31,11 @@ liftIOE a
       try' :: IO a -> IO (Either SomeException a)
       try' = try
 
+finallyError :: (Monoid wrt, Error err) =>
+                Eval err env wrt st res -> Eval err env wrt st () -> Eval err env wrt st res
+finallyError act sequel
+    = do a <- act `catchError` (\ e -> sequel >> throwError e)
+         _ <- sequel
+         return a
+
 -- ------------------------------------------------------------

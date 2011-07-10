@@ -81,7 +81,7 @@ data TclProc e s
       { _fparams  :: Value	                  -- the source string of the list of formal param names and default values
       , _fbody    :: Value                        -- the source string of the body
       , _cbody    :: TclEval e s Value	          -- compiled body
-      , _cpassing :: Values -> TclEval e s ()     -- compiled param passing
+      , _cpassing :: Values -> TclEval e s Value  -- compiled param passing
       }
 
 type TclChannels	-- open channels
@@ -90,7 +90,7 @@ type TclChannels	-- open channels
 data TclError
     = TclError
       { _tclErrorLevel :: Int
-      , _tclErrorMsg   :: String
+      , _tclErrorMsg   :: Value
       }
       deriving (Show)
 
@@ -105,21 +105,21 @@ instance Error TclError where
 
 tclErrorExc :: String -> TclError
 tclErrorExc
-    = TclError 1
+    = TclError 1 . mkS
 
-tclReturnExc :: String -> TclError
+tclReturnExc :: Value -> TclError
 tclReturnExc
     = TclError 2
 
 tclBreakExc :: TclError
 tclBreakExc
-    = TclError 3 ""
+    = TclError 3 mempty
 
 tclContinueExc :: TclError
 tclContinueExc
-    = TclError 4 ""
+    = TclError 4 mempty
 
-tclOtherExc :: Int -> String -> TclError
+tclOtherExc :: Int -> Value -> TclError
 tclOtherExc
     = TclError
 
@@ -133,11 +133,11 @@ tclWrongArgs
 
 tclCatch :: (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
 tclCatch
-    = tclTryCatch (\ (TclError _lev msg) -> return (mkS msg))
+    = tclTryCatch (\ (TclError _lev val) -> return val)
 
-tclChangeErr :: String -> (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
-tclChangeErr msg
-    = tclTryCatch (\ (TclError lev _msg) -> throwError (tclOtherExc lev msg))
+tclChangeErr :: Value -> (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
+tclChangeErr val
+    = tclTryCatch (\ (TclError lev _val) -> throwError (tclOtherExc lev val))
 
 tclTryCatch :: (TclError -> TclEval e s Value) -> (Int -> Bool) -> TclEval e s Value -> TclEval e s Value
 tclTryCatch handler p cmd
@@ -199,7 +199,7 @@ evalTclCmd (TclCmd al)
 
 evalTcl :: Values -> TclEval e s Value
 evalTcl (cn : args)
-    = do c <- lookupCmd (selS cn)
+    = do c <- lookupProcOrCmd (selS cn)
          c args
 evalTcl []
     = tclThrowError "empty command"
@@ -272,6 +272,10 @@ lookupProc n
                 . M.lookup n
                 . _tprocs
 
+setProc :: String -> TclProc e s -> TclEval e s ()
+setProc n prc
+    = modify (\ s ->  s { _tprocs = M.insert n prc $ _tprocs s })
+
 lookupProcOrCmd :: String -> TclEval e s (TclCommand e s)
 lookupProcOrCmd n
     = ( buildProcCall <$> lookupProc n )
@@ -279,7 +283,13 @@ lookupProcOrCmd n
       lookupCmd n
     where
       buildProcCall tp
-          = \ vs -> pushStackFrame n >> (_cpassing tp) vs >> _cbody tp
+          = \ vs ->
+            ( pushStackFrame n
+              >> (_cpassing tp) vs
+              >> (tclCatchReturnExc $_cbody tp)
+            )
+            `finallyError`
+            popStackFrame       
 
 
 commandNames :: TclEval e s [String]
