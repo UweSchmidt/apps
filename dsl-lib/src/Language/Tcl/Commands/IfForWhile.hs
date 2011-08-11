@@ -7,6 +7,7 @@ module Language.Tcl.Commands.IfForWhile
     )
 where
 
+import Control.Arrow                    ( first, second )
 import Control.Monad.RWS
 
 import Data.Char                        ( toLower )
@@ -142,9 +143,9 @@ tclFor _
 tclSwitch :: TclCommand e s
 tclSwitch l
     = do let (l1, lr1) = splitAt (length l - 2) l
-         (cmp, l2) <- tclFromEither
-                      . evalOptions switchOptions (==) $ l1
-         tclSwitch1 cmp (l2 ++ lr1)
+         ((cmp, cv), l2) <- tclFromEither
+                            . evalOptions switchOptions switchOptionDefault $ l1
+         tclSwitch1 (cmp `on` cv) (l2 ++ lr1)
 
 tclSwitch1 :: (String -> String -> Bool) -> TclCommand e s
 tclSwitch1 cmp (s : pbs : [])
@@ -199,13 +200,18 @@ tclSwitchWrongArgs
               , "switch ?options? string {pattern body ?pattern body ...?}"
               ]
 
-switchOptions :: OptParser [Value] (String -> String -> Bool)
+switchOptions :: OptParser [Value] SwitchOptions
 switchOptions
     = optionsUntil (isOpt ((== "--") . selS) id)
-      [ isOpt        ((== "-exact"     ) . selS) (const (==))
-      , isOpt        ((== "-glob"      ) . selS) (const globMatch)
-      , isOpt        ((== "-nocase"    ) . selS) (\ cmp -> cmp `on` map toLower)
+      [ isOpt        ((== "-exact"     ) . selS) (first  $ const (==))
+      , isOpt        ((== "-glob"      ) . selS) (first  $ const globMatch)
+      , isOpt        ((== "-nocase"    ) . selS) (second $ const $ map toLower)
       , isIllegalOpt (("-" `isPrefixOf`) . selS)
       ]
+
+type SwitchOptions = (String -> String -> Bool, String -> String)
+
+switchOptionDefault :: SwitchOptions
+switchOptionDefault = ((==), id)
 
 -- ------------------------------------------------------------
