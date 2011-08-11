@@ -397,11 +397,11 @@ genHtml rec formats conf p0
                   >>>
                   indentDoc
                   >>>
-                  this -- eeToHtml -- not longer neccessay because of added option      -- this is a hack for firefox, it does not process empty xhtml elements, e.g. <div/>
+                  this -- eeToHtml -- not longer neccessay because of added option withOutputXHTML
                   >>>
-                  writeDocument [ withIndent no
-                                , withOutputXHTML
-                                , withOutputEncoding utf8 -- usAscii
+                  writeDocument [ withIndent yes
+                                , withOutputHTML
+                                , withOutputEncoding usAscii -- is better than utf8, works with all default encodings of all rotten browsers
                                 ] dst
                   >>>
                   traceStatus' ("written : " ++ show dst)
