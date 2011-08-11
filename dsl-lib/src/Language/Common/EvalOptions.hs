@@ -119,6 +119,12 @@ options :: [OptParser s u] -> OptParser s u
 options os
     = foldr (\ o1 os' -> (o1 >> options os) <|> os') (return ()) os
 
+-- option parser combinator for parsing all leading options until a special marker, e.g "--" is seen
+
+optionsUntil :: OptParser s u -> [OptParser s u] -> OptParser s u
+optionsUntil stop os
+    = foldr (\ o1 os' -> stop <|> (o1 >> optionsUntil stop os) <|> os') (return ()) os
+
 -- ------------------------------------------------------------
 --
 -- parsers for options as list of strings

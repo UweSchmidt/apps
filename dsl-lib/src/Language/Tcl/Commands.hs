@@ -9,6 +9,7 @@ import Language.Tcl.Commands.Expr       ( tclExpr
 import Language.Tcl.Commands.IfForWhile ( tclFor
                                         , tclForeach
                                         , tclIf
+                                        , tclSwitch
                                         , tclWhile
                                         )
 import Language.Tcl.Commands.Info       ( tclInfo
@@ -61,6 +62,7 @@ buildInTclCommands
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)
+      , ("switch",	tclSwitch)
       , ("while",       tclWhile)
       ]
 

@@ -28,6 +28,8 @@ module Language.Tcl.Value
     , isCharArg
     , inBraces
 
+    , globMatch		-- csh glob style matching
+
     , value_empty, value_0, value_1, value_42, value_true, value_false
 
     , lempty, lappend, lconcat
@@ -46,6 +48,8 @@ import Language.Tcl.Parser	    ( isBraceArg
                                     , isCharArg
                                     , parseListArg
                                     )
+
+import Text.Regex.Glob.String       ( match )
 
 -- ------------------------------------------------------------
 
@@ -325,5 +329,8 @@ escapeArg
 inBraces :: String -> String
 inBraces
     = ("{" ++) . (++ "}")
+
+globMatch :: String -> String -> Bool
+globMatch = match
 
 -- ------------------------------------------------------------

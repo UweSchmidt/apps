@@ -2,11 +2,18 @@ module Language.Tcl.Commands.IfForWhile
     ( tclFor
     , tclForeach
     , tclIf
+    , tclSwitch
     , tclWhile
     )
 where
 
 import Control.Monad.RWS
+
+import Data.Char                        ( toLower )
+import Data.List                        ( isPrefixOf )
+import Data.Function                    ( on )
+
+import Language.Common.EvalOptions
 
 import Language.Tcl.Core
 import Language.Tcl.Value
@@ -129,5 +136,76 @@ tclFor (s' : t' : n' : b' : [])
 
 tclFor _
     = tclWrongArgs "for start test next body"
+
+-- ------------------------------------------------------------
+
+tclSwitch :: TclCommand e s
+tclSwitch l
+    = do let (l1, lr1) = splitAt (length l - 2) l
+         (cmp, l2) <- tclFromEither
+                      . evalOptions switchOptions (==) $ l1
+         tclSwitch1 cmp (l2 ++ lr1)
+
+tclSwitch1 :: (String -> String -> Bool) -> TclCommand e s
+tclSwitch1 cmp (s : pbs : [])
+    = do ls <- checkListValue pbs
+         tclSwitch2 cmp (s : ls)
+tclSwitch1 cmp l
+    = tclSwitch2 cmp l
+
+tclSwitch2 :: (String -> String -> Bool) -> TclCommand e s
+tclSwitch2 cmp (s : pbs)
+    | l < 2 || l `mod` 2 == 1
+        = tclSwitchWrongArgs
+    | otherwise
+        = let (p1 : b1 : pbs1) = pbs in
+          tclSwitch3 cmp (selS s) p1 b1 pbs1 
+    where
+      l = length pbs
+
+tclSwitch2 _ _
+    = tclSwitchWrongArgs
+
+tclSwitch3 :: (String -> String -> Bool) -> String -> Value -> Value -> TclCommand e s
+tclSwitch3 cmp s p1 b1 pbs
+    | null pbs
+        = if ( not emptyBody
+               &&
+               ( found
+                 ||
+                 p1' == "default"
+               )
+             )
+          then interpreteTcl b1'
+          else return mempty
+    | not found
+        = tclSwitch3 cmp s b2 p2 pb2
+    | emptyBody
+        = tclSwitch3 (const $ const True) s b2 p2 pb2
+    | otherwise
+        = interpreteTcl b1'
+    where
+      p1'       = selS p1
+      found     = cmp p1' s
+      b1'       = selS b1
+      emptyBody = take 1 b1' == "-"
+      (b2 : p2 : pb2) = pbs
+
+tclSwitchWrongArgs :: TclEval e s r
+tclSwitchWrongArgs
+    = tclWrongArgs $
+      unlines [ "switch ?options? string pattern body ?pattern body ...?"
+              , "or"
+              , "switch ?options? string {pattern body ?pattern body ...?}"
+              ]
+
+switchOptions :: OptParser [Value] (String -> String -> Bool)
+switchOptions
+    = optionsUntil (isOpt ((== "--") . selS) id)
+      [ isOpt        ((== "-exact"     ) . selS) (const (==))
+      , isOpt        ((== "-glob"      ) . selS) (const globMatch)
+      , isOpt        ((== "-nocase"    ) . selS) (\ cmp -> cmp `on` map toLower)
+      , isIllegalOpt (("-" `isPrefixOf`) . selS)
+      ]
 
 -- ------------------------------------------------------------
