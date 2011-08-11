@@ -28,7 +28,7 @@ module Language.Tcl.Value
     , isCharArg
     , inBraces
 
-    , globMatch		-- csh glob style matching
+    , matchGlobPattern		-- csh glob style matching
 
     , value_empty, value_0, value_1, value_42, value_true, value_false
 
@@ -330,7 +330,7 @@ inBraces :: String -> String
 inBraces
     = ("{" ++) . (++ "}")
 
-globMatch :: String -> String -> Bool
-globMatch = match
+matchGlobPattern :: String -> String -> Bool
+matchGlobPattern = match
 
 -- ------------------------------------------------------------

@@ -362,6 +362,21 @@ lookupVar n
 
 setLocalVar :: String -> Value -> TclEval e s Value
 setLocalVar n v
+    = modifyLocalVar "can't write local variable" n (flip M.insert v) >> return v
+
+setGlobalVar :: String -> Value -> TclEval e s Value
+setGlobalVar n v
+    = do modifyGlobalVar n (flip M.insert v)
+         return v
+
+setVar		:: String -> Value -> TclEval e s Value
+setVar n v
+    = setLocalVar n v `mplus` setGlobalVar n v
+
+-- ------------------------------------------------------------
+
+modifyLocalVar :: String -> String -> (String -> TclVars -> TclVars) -> TclEval e s ()
+modifyLocalVar msg n cf
     = do s <- get
          let stack = _tstack s
          case stack of
@@ -369,22 +384,32 @@ setLocalVar n v
            (frame : rest)
                -> if n `S.member` _tglobals frame
                   then notFound
-                  else do let vars'  = M.insert n v $ _tlocals frame
+                  else do let vars'  = cf n $ _tlocals frame
                           let frame' = frame { _tlocals = vars' }
                           let stack' = frame' : rest
                           put $ s { _tstack = stack' }
-         return v
+         return ()
     where
-      notFound = tclThrowError $ "can't write local variable " ++ show n ++ ": no such variable"
+      notFound = tclThrowError $ msg ++ " " ++ show n ++ ": no such variable"
 
-setGlobalVar :: String -> Value -> TclEval e s Value
-setGlobalVar n v
-    = do modify $ \ s -> s { _tglobalVars = M.insert n v (_tglobalVars s) }
-         return v
+modifyGlobalVar :: String -> (String -> TclVars -> TclVars) -> TclEval e s ()
+modifyGlobalVar n cf
+    = modify $ \ s -> s { _tglobalVars = cf n (_tglobalVars s) }
 
-setVar		:: String -> Value -> TclEval e s Value
-setVar n v
-    = setLocalVar n v `mplus` setGlobalVar n v
+-- ------------------------------------------------------------
+
+unsetLocalVar	:: String -> TclEval e s Value
+unsetLocalVar n
+    = modifyLocalVar "can't unset local variable" n M.delete >> return mempty
+
+unsetGlobalVar :: String -> TclEval e s Value
+unsetGlobalVar n
+    = do modifyGlobalVar n M.delete
+         return mempty
+
+unsetVar	:: String -> TclEval e s Value
+unsetVar n
+    = unsetLocalVar n `mplus` unsetGlobalVar n
 
 -- ------------------------------------------------------------
 

@@ -34,6 +34,7 @@ import Language.Tcl.Commands.Return     ( tclBreak
                                         )
 import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclSet
+                                        , tclUnset
                                         )
 
 -- ------------------------------------------------------------
@@ -63,6 +64,7 @@ buildInTclCommands
       , ("return",      tclReturn)
       , ("set",		tclSet)
       , ("switch",	tclSwitch)
+      , ("unset",       tclUnset)
       , ("while",       tclWhile)
       ]
 

@@ -72,11 +72,8 @@ infoLevel n
 
 infoVars :: TclEval e s [String] -> Value -> TclEval e s Value
 infoVars names pat
-    = mkL . map mkS . sort . filter (matchPattern $ selS pat)
+    = mkL . map mkS . sort . filter (matchGlobPattern $ selS pat)
       <$> names
-
-matchPattern :: String -> String -> Bool
-matchPattern pat = const True		-- TODO implement that in string match
 
 {-
             , isOpt     (== (mkS "-decreasing")) (first $ const decreasing)

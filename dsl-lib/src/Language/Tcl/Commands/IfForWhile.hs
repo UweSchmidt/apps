@@ -204,7 +204,7 @@ switchOptions :: OptParser [Value] SwitchOptions
 switchOptions
     = optionsUntil (isOpt ((== "--") . selS) id)
       [ isOpt        ((== "-exact"     ) . selS) (first  $ const (==))
-      , isOpt        ((== "-glob"      ) . selS) (first  $ const globMatch)
+      , isOpt        ((== "-glob"      ) . selS) (first  $ const matchGlobPattern)
       , isOpt        ((== "-nocase"    ) . selS) (second $ const $ map toLower)
       , isIllegalOpt (("-" `isPrefixOf`) . selS)
       ]
