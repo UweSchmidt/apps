@@ -33,6 +33,7 @@ module Language.Tcl.Value
     , value_empty, value_0, value_1, value_42, value_true, value_false
 
     , lempty, lappend, lconcat
+    , mempty, mappend
     )
 where
 

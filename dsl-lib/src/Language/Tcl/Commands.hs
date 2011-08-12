@@ -1,4 +1,5 @@
 module Language.Tcl.Commands
+    ( tclCoreLib )
 where
 
 import Language.Tcl.Core
@@ -36,6 +37,27 @@ import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclSet
                                         , tclUnset
                                         )
+import Language.Tcl.Value
+
+import System.IO
+
+-- ------------------------------------------------------------
+
+tclCoreLib :: TclLib e s
+tclCoreLib = ( addBuildInChannels >> return mempty, buildInTclCommands )
+
+-- ------------------------------------------------------------
+
+buildInTclChannels :: [(String, Handle)]
+buildInTclChannels
+    = [ ("stdout", stdout)
+      , ("stdin",   stdin)
+      , ("stderr", stderr)
+      ]
+
+addBuildInChannels :: TclEval e s ()
+addBuildInChannels
+    = sequence_ $ map (uncurry setChannel) buildInTclChannels
 
 -- ------------------------------------------------------------
 

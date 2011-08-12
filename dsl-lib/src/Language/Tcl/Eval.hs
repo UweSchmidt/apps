@@ -6,14 +6,11 @@ module Language.Tcl.Eval
     )
 where
 
-import qualified
-       Data.Map               		as M
-
-import Language.Tcl.Core
-import Language.Tcl.Commands
 import Language.Tcl.CheckArgs
-
-import System.IO
+import Language.Tcl.Commands            ( tclCoreLib )
+import Language.Tcl.Commands.Env        ( tclEnvLib )
+import Language.Tcl.Core
+import Language.Tcl.Value
 
 -- ------------------------------------------------------------
 
@@ -26,19 +23,23 @@ initTclEnv e
 initTclState :: s -> TclState e s
 initTclState s
     = TclState
-      { _tglobalVars = M.empty
+      { _tglobalVars = emptyTclVars
       , _tstack      = []
-      , _tcmds       = M.fromList buildInTclCommands
-      , _tprocs      = M.empty
-      , _tchans      = M.fromList buildInTclChannels
+      , _tcmds       = emptyTclCommands
+      , _tprocs      = emptyTclProcs
+      , _tchans      = emptyTclChannels -- M.fromList buildInTclChannels
       , _appState    = s
       }
 
-buildInTclChannels :: [(String, Handle)]
-buildInTclChannels
-    = [ ("stdout", stdout)
-      , ("stdin",   stdin)
-      , ("stderr", stderr)
-      ]
+-- ------------------------------------------------------------
+
+initTcl :: TclEval e s Value
+initTcl
+    = ( sequence_ $
+        map loadTclLib
+        [ tclCoreLib
+        , tclEnvLib
+        ]
+      ) >> return mempty
 
 -- ------------------------------------------------------------

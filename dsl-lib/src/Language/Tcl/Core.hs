@@ -78,7 +78,8 @@ type TclProcs e s
 
 data TclProc e s
     = TclProc
-      { _fparams  :: Value	                  -- the source string of the list of formal param names and default values
+      { _fparams  :: Value	                  -- the source string of the list of formal param names
+                                                  -- and default values
       , _fbody    :: Value                        -- the source string of the body
       , _cbody    :: TclEval e s Value	          -- compiled body
       , _cpassing :: Values -> TclEval e s Value  -- compiled param passing
@@ -96,6 +97,23 @@ data TclError
 
 type TclEval e s
     = Eval TclError (TclEnv e) TclWrt (TclState e s)
+
+type TclLib e s
+    = (TclEval e s Value, [(String, TclCommand e s)])
+
+-- ------------------------------------------------------------
+
+emptyTclVars :: TclVars
+emptyTclVars = M.empty
+
+emptyTclCommands :: TclCommands e s
+emptyTclCommands = M.empty
+
+emptyTclProcs :: TclProcs e s
+emptyTclProcs = M.empty
+
+emptyTclChannels :: TclChannels
+emptyTclChannels = M.empty
 
 -- ------------------------------------------------------------
 
@@ -264,6 +282,10 @@ lookupCmd n
                 . M.lookup n
                 . _tcmds
 
+setCmd :: String -> TclCommand e s -> TclEval e s ()
+setCmd n cmd
+    = modify (\ s ->  s { _tcmds = M.insert n cmd $ _tcmds s })
+
 lookupProc :: String -> TclEval e s (TclProc e s)
 lookupProc n
     = get
@@ -310,7 +332,7 @@ pushStackFrame :: String -> TclEval e s ()
 pushStackFrame pname
     = modify $
       \ s -> s { _tstack
-                     = TPF { _tlocals = M.empty
+                     = TPF { _tlocals = emptyTclVars
                            , _tglobals = S.empty
                            , _tprocname = pname
                            }
@@ -454,4 +476,18 @@ lookupChannel n s
         Just c
             -> return c
 
+setChannel :: String -> Handle -> TclEval e s ()
+setChannel n h
+    = modify $
+      \ s -> s { _tchans = M.insert n h $ _tchans s }
+
 -- ------------------------------------------------------------
+
+loadTclLib :: TclLib e s -> TclEval e s Value
+loadTclLib (initLib, cmdList)
+    = ( sequence_ $ map (uncurry setCmd) cmdList )
+      >>
+      initLib
+
+-- ------------------------------------------------------------
+
