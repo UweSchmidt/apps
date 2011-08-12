@@ -10,19 +10,8 @@ module Language.Tcl.Commands.List
 where
 
 import Control.Applicative              ( (<$>) )
-import Control.Arrow                    ( first
-                                        , second
-                                        )
-import Control.Monad.RWS
 
-import Data.Char                        ( toLower )
-import Data.Function                    ( on )
-import Data.List                        ( sortBy
-                                        , nubBy
-                                        )
-import Data.Maybe                       ( fromJust )
-
-import Language.Common.EvalOptions
+import Control.Monad.RWS                ( mplus )
 
 import Language.Tcl.Core
 import Language.Tcl.Value

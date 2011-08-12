@@ -4,6 +4,8 @@ where
 
 import Language.Tcl.Core
 
+import Language.Tcl.Commands.Cd         ( tclCd
+					)
 import Language.Tcl.Commands.Expr       ( tclExpr
                                         , tclIncr
                                         )
@@ -64,6 +66,7 @@ buildInTclCommands :: [(String, TclCommand e s)]
 buildInTclCommands
     = [ ("append",      tclAppend)
       , ("break",       tclBreak)
+      , ("cd",          tclCd)
       , ("continue",    tclContinue)
       , ("error",       tclError)
       , ("expr",        tclExpr)

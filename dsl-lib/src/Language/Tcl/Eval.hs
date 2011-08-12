@@ -10,7 +10,6 @@ import Language.Tcl.CheckArgs
 import Language.Tcl.Commands            ( tclCoreLib )
 import Language.Tcl.Commands.Env        ( tclEnvLib )
 import Language.Tcl.Core
-import Language.Tcl.Value
 
 -- ------------------------------------------------------------
 

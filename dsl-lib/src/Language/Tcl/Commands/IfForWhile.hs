@@ -118,7 +118,7 @@ tclFor (s' : t' : n' : b' : [])
     = do test <- parseTclArgs (selS t')		-- cond and body are parsed only once
          next <- parseTclProg (selS n')
          body <- parseTclProg (selS b')
-         interpreteTcl (selS s')
+         _ <- interpreteTcl (selS s')
          tclCatchBreakExc $
            forLoop test next body
     where
