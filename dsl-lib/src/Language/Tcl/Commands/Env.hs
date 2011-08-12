@@ -39,9 +39,9 @@ tclEnvCommands
 
 -- ------------------------------------------------------------
 
-tclEnvInit :: TclEval e s Value
+tclEnvInit :: TclEval e s ()
 tclEnvInit
-    = interpreteTcl initScript
+    = interpreteTcl initScript >> return ()
 
 initScript :: String
 initScript

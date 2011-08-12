@@ -27,19 +27,18 @@ initTclState s
       , _tstack      = []
       , _tcmds       = emptyTclCommands
       , _tprocs      = emptyTclProcs
-      , _tchans      = emptyTclChannels -- M.fromList buildInTclChannels
+      , _tchans      = emptyTclChannels
       , _appState    = s
       }
 
 -- ------------------------------------------------------------
 
-initTcl :: TclEval e s Value
+initTcl :: TclEval e s ()
 initTcl
-    = ( sequence_ $
-        map loadTclLib
-        [ tclCoreLib
-        , tclEnvLib
-        ]
-      ) >> return mempty
+    = sequence_ $
+      map loadTclLib
+      [ tclCoreLib
+      , tclEnvLib
+      ]
 
 -- ------------------------------------------------------------

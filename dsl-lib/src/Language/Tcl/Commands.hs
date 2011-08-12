@@ -37,14 +37,13 @@ import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclSet
                                         , tclUnset
                                         )
-import Language.Tcl.Value
 
 import System.IO
 
 -- ------------------------------------------------------------
 
 tclCoreLib :: TclLib e s
-tclCoreLib = ( addBuildInChannels >> return mempty, buildInTclCommands )
+tclCoreLib = ( addBuildInChannels, buildInTclCommands )
 
 -- ------------------------------------------------------------
 

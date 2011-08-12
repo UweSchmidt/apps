@@ -99,7 +99,7 @@ type TclEval e s
     = Eval TclError (TclEnv e) TclWrt (TclState e s)
 
 type TclLib e s
-    = (TclEval e s Value, [(String, TclCommand e s)])
+    = (TclEval e s (), [(String, TclCommand e s)])
 
 -- ------------------------------------------------------------
 
@@ -483,7 +483,7 @@ setChannel n h
 
 -- ------------------------------------------------------------
 
-loadTclLib :: TclLib e s -> TclEval e s Value
+loadTclLib :: TclLib e s -> TclEval e s ()
 loadTclLib (initLib, cmdList)
     = ( sequence_ $ map (uncurry setCmd) cmdList )
       >>
