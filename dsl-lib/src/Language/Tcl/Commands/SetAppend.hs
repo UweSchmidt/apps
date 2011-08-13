@@ -1,5 +1,6 @@
 module Language.Tcl.Commands.SetAppend
     ( tclAppend
+    , tclConcat
     , tclSet
     , tclUnset
     )
@@ -28,6 +29,15 @@ tclAppend (var' : values)
 
 tclAppend _
     = tclWrongArgs "append varName ?value value value ...?"
+
+-- ------------------------------------------------------------
+
+tclConcat :: TclCommand e s
+tclConcat
+    = return
+      . mkS
+      . unwords
+      . map (trimWhiteSpace . selS)
 
 -- ------------------------------------------------------------
 

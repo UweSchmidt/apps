@@ -1,5 +1,6 @@
 module Language.Tcl.Commands.List
-    ( tclList
+    ( tclJoin
+    , tclList
     , tclLappend
     , tclLindex
     , tclLinsert
@@ -13,10 +14,25 @@ import Control.Applicative              ( (<$>) )
 
 import Control.Monad.RWS                ( mplus )
 
+import Data.List                        ( intercalate )
+
 import Language.Tcl.Core
 import Language.Tcl.Value
 import Language.Tcl.CheckArgs
 import Language.Tcl.Expr.Eval           ( evalTclListIndex )
+
+-- ------------------------------------------------------------
+
+tclJoin :: TclCommand e s
+tclJoin (l' : s' : [])
+    = do vs <- checkListValue l'
+         return . mkS . intercalate (selS s') . map selS $ vs
+
+tclJoin (l' : [])
+    = tclJoin (l' : mkS " " : [])
+
+tclJoin _
+    = tclWrongArgs "join list ?joinString?"
 
 -- ------------------------------------------------------------
 

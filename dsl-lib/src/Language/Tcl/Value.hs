@@ -29,6 +29,7 @@ module Language.Tcl.Value
     , inBraces
 
     , matchGlobPattern		-- csh glob style matching
+    , trimWhiteSpace
 
     , value_empty, value_0, value_1, value_42, value_true, value_false
 
@@ -333,5 +334,12 @@ inBraces
 
 matchGlobPattern :: String -> String -> Bool
 matchGlobPattern = match
+
+dropWhileRev :: (a -> Bool) -> [a] -> [a]
+dropWhileRev p =
+   foldr (\x xs -> if p x && null xs then [] else x:xs) []
+
+trimWhiteSpace :: String -> String
+trimWhiteSpace = dropWhileRev isSpace . dropWhile isSpace
 
 -- ------------------------------------------------------------

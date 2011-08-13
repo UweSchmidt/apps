@@ -17,7 +17,8 @@ import Language.Tcl.Commands.IfForWhile ( tclFor
                                         )
 import Language.Tcl.Commands.Info       ( tclInfo
                                         )
-import Language.Tcl.Commands.List       ( tclLappend
+import Language.Tcl.Commands.List       ( tclJoin
+                                        , tclLappend
                                         , tclLindex
                                         , tclLinsert
                                         , tclList
@@ -36,6 +37,7 @@ import Language.Tcl.Commands.Return     ( tclBreak
                                         , tclReturn
                                         )
 import Language.Tcl.Commands.SetAppend  ( tclAppend
+                                        , tclConcat
                                         , tclSet
                                         , tclUnset
                                         )
@@ -67,6 +69,7 @@ buildInTclCommands
     = [ ("append",      tclAppend)
       , ("break",       tclBreak)
       , ("cd",          tclCd)
+      , ("concat",      tclConcat)
       , ("continue",    tclContinue)
       , ("error",       tclError)
       , ("expr",        tclExpr)
@@ -75,6 +78,7 @@ buildInTclCommands
       , ("if",          tclIf)
       , ("incr",        tclIncr)
       , ("info",        tclInfo)
+      , ("join",        tclJoin)
       , ("lappend",     tclLappend)
       , ("lindex",      tclLindex)
       , ("linsert",     tclLinsert)
