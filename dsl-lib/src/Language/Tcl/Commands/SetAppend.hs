@@ -1,6 +1,7 @@
 module Language.Tcl.Commands.SetAppend
     ( tclAppend
     , tclConcat
+    , tclEval
     , tclSet
     , tclUnset
     )
@@ -38,6 +39,17 @@ tclConcat
       . mkS
       . unwords
       . map (trimWhiteSpace . selS)
+
+-- ------------------------------------------------------------
+
+tclEval :: TclCommand e s
+tclEval l@(_ : _)
+    = interpreteTcl
+      . unwords
+      . map (trimWhiteSpace . selS) $ l
+
+tclEval _
+    = tclWrongArgs "eval arg ?arg ...?"
 
 -- ------------------------------------------------------------
 

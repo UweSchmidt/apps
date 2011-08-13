@@ -38,6 +38,7 @@ import Language.Tcl.Commands.Return     ( tclBreak
                                         )
 import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclConcat
+                                        , tclEval
                                         , tclSet
                                         , tclUnset
                                         )
@@ -72,6 +73,7 @@ buildInTclCommands
       , ("concat",      tclConcat)
       , ("continue",    tclContinue)
       , ("error",       tclError)
+      , ("eval",        tclEval)
       , ("expr",        tclExpr)
       , ("for",         tclFor)
       , ("foreach",     tclForeach)
