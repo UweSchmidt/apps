@@ -1,7 +1,7 @@
 module Language.Tcl.Core
 where
 
-import           Control.Arrow
+-- import           Control.Arrow
 import           Control.Applicative    ( (<$>) )
 import           Control.Monad.Error
 import           Control.Monad.RWS
@@ -38,10 +38,10 @@ data TclState e s
       }
 
 instance (Show s) => Show (TclState e s) where
-    show (TclState v _s _c _ps ch as)
+    show (TclState _v _s _c _ps ch as)
         = "TclState "
-          ++ "{ _tglobalVars = "
-          ++ (show . map (second selS) . M.toList $ v)
+          -- ++ "{ _tglobalVars = "
+          -- ++ (show . map (second selS) . M.toList $ v)
           -- ++ ", _tcmds = "
           -- ++ (show . M.keys $ c)
           ++ ", _tChans = "
@@ -53,8 +53,12 @@ instance (Show s) => Show (TclState e s) where
 type TclWrt		-- not really used
     = String
 
-type TclVars		-- TODO: variable map, must be split into simple vars and arrays
-    = Map String Value
+data TclVars
+    = TVS
+      { _tsimple :: Map String Value
+      , _tarray  :: Map String (Map String Value)
+      }
+      deriving (Show)
 
 type TclVarSet
     = Set String
@@ -107,7 +111,10 @@ type TclVarName
 -- ------------------------------------------------------------
 
 emptyTclVars :: TclVars
-emptyTclVars = M.empty
+emptyTclVars = TVS
+               { _tsimple = M.empty
+               , _tarray  = M.empty
+               }
 
 emptyTclCommands :: TclCommands e s
 emptyTclCommands = M.empty
@@ -360,40 +367,97 @@ popStackFrame
 
 -- ------------------------------------------------------------
 
+lookupVN :: TclVarName -> TclVars -> Maybe Value
+lookupVN (n, ix) vm
+    = case ix of
+        Nothing -> M.lookup n $ _tsimple vm
+        Just i  -> M.lookup n (_tarray vm) >>= M.lookup i
+
+insertVN :: TclVarName -> Value -> TclVars -> TclVars
+insertVN (n, ix) v vm@TVS{ _tsimple = s, _tarray = a}
+    = case ix of
+        Nothing -> vm { _tsimple = M.insert n v s }
+        Just i  -> let mx = maybe M.empty (M.insert i v) $ M.lookup n a
+                   in
+                     vm { _tarray  = M.insert n mx a }
+
+deleteVN :: TclVarName -> TclVars -> TclVars
+deleteVN (n, ix) vm@TVS{ _tsimple = s, _tarray = a}
+    = case ix of
+        Nothing -> vm { _tsimple = M.delete n s
+                      , _tarray  = M.delete n a
+                      }
+        Just i  -> case M.lookup n a of
+                     Nothing -> vm
+                     Just mx -> let mx' = M.delete i mx
+                                in
+                                  vm { _tarray = M.insert n mx' a }
+
+isVN :: TclVarName -> TclVars -> Bool
+isVN (n, ix) TVS{ _tsimple = s, _tarray = a}
+    = case ix of
+        Nothing -> n `M.member` s || n `M.member` a
+        Just i  -> maybe False (i `M.member`) $ M.lookup n a
+
+isSVN :: TclVarName -> TclVars -> Bool
+isSVN (n, ix) TVS{ _tsimple = s}
+    = case ix of
+        Nothing -> n `M.member` s
+        Just _i -> False
+
+isAVN :: TclVarName -> TclVars -> Bool
+isAVN (n, ix) TVS{ _tarray = a}
+    = case ix of
+        Nothing -> n `M.member` a
+        Just _i -> False
+
+namesVN :: TclVars -> [String]
+namesVN vm
+    = namesSVN vm ++ namesAVN vm
+
+namesSVN :: TclVars -> [String]
+namesSVN
+    = M.keys . _tsimple
+
+namesAVN :: TclVars -> [String]
+namesAVN
+    = M.keys . _tarray
+
+selVN :: Value -> TclVarName
+selVN = splitVarName . selS
+
+-- ------------------------------------------------------------
+
 lookupLocalVar :: TclVarName -> TclEval e s Value
-lookupLocalVar n0
+lookupLocalVar n
     = do stack <- _tstack <$> get
          case stack of
            []  -> notFound
            (frame : _)
-               -> if n `S.member` _tglobals frame
+               -> if fst n `S.member` _tglobals frame
                   then notFound
-                  else case M.lookup n $ _tlocals frame of
+                  else case lookupVN n $ _tlocals frame of
                          Nothing -> notFound
-                         Just v -> return v
+                         Just v  -> return v
     where
-      notFound = tclThrowError $ "can't read local variable " ++ show n ++ ": no such variable"
-      n = joinVarName n0	-- TODO: remove this hack
+      notFound = tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such local variable"
 
 lookupGlobalVar	:: TclVarName -> TclEval e s Value
-lookupGlobalVar n0
-    = do vars <- _tglobalVars <$> get
-         case M.lookup n vars of
+lookupGlobalVar n
+    = do st <- get
+         case lookupVN n $ _tglobalVars st of
            Nothing
-               -> tclThrowError $ "can't read " ++ show n ++ ": no such variable"
+               -> tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such global variable"
            Just c
                -> return c
-    where
-      n = joinVarName n0	-- TODO: remove this hack
 
 lookupVar	:: TclVarName -> TclEval e s Value
 lookupVar n
-    = lookupLocalVar n `mplus` lookupGlobalVar n
+    = lookupLocalVar n
+      `mplus` lookupGlobalVar n
+      `mplus` (tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such variable")
 
 -- ------------------------------------------------------------
-
-selVN :: Value -> TclVarName
-selVN = splitVarName . selS
 
 splitVarName :: String -> TclVarName
 splitVarName n
@@ -414,12 +478,11 @@ joinVarName (vn, ix)
 
 setLocalVar :: TclVarName -> Value -> TclEval e s Value
 setLocalVar n v
-    = modifyLocalVar "can't write local variable" n (flip M.insert v) >> return v
+    = modifyLocalVar "can't write local variable" n (flip insertVN v) >> return v
 
 setGlobalVar :: TclVarName -> Value -> TclEval e s Value
 setGlobalVar n v
-    = do modifyGlobalVar n (flip M.insert v)
-         return v
+    = modifyGlobalVar n (flip insertVN v) >> return v
 
 setVar		:: TclVarName -> Value -> TclEval e s Value
 setVar n v
@@ -427,14 +490,14 @@ setVar n v
 
 -- ------------------------------------------------------------
 
-modifyLocalVar :: String -> TclVarName -> (String -> TclVars -> TclVars) -> TclEval e s ()
-modifyLocalVar msg n0 cf
+modifyLocalVar :: String -> TclVarName -> (TclVarName -> TclVars -> TclVars) -> TclEval e s ()
+modifyLocalVar msg n cf
     = do s <- get
          let stack = _tstack s
          case stack of
            [] -> notFound
            (frame : rest)
-               -> if n `S.member` _tglobals frame
+               -> if fst n `S.member` _tglobals frame
                   then notFound
                   else do let vars'  = cf n $ _tlocals frame
                           let frame' = frame { _tlocals = vars' }
@@ -442,24 +505,21 @@ modifyLocalVar msg n0 cf
                           put $ s { _tstack = stack' }
          return ()
     where
-      notFound = tclThrowError $ msg ++ " " ++ show n ++ ": no such variable"
-      n = joinVarName n0	-- TODO: remove this hack
+      notFound = tclThrowError $ msg ++ " " ++ show (joinVarName n) ++ ": no such variable"
 
-modifyGlobalVar :: TclVarName -> (String -> TclVars -> TclVars) -> TclEval e s ()
-modifyGlobalVar n0 cf
+modifyGlobalVar :: TclVarName -> (TclVarName -> TclVars -> TclVars) -> TclEval e s ()
+modifyGlobalVar n cf
     = modify $ \ s -> s { _tglobalVars = cf n (_tglobalVars s) }
-    where
-      n = joinVarName n0	-- TODO: remove this hack
 
 -- ------------------------------------------------------------
 
 unsetLocalVar	:: TclVarName -> TclEval e s Value
 unsetLocalVar n
-    = modifyLocalVar "can't unset local variable" n M.delete >> return mempty
+    = modifyLocalVar "can't unset local variable" n deleteVN >> return mempty
 
 unsetGlobalVar :: TclVarName -> TclEval e s Value
 unsetGlobalVar n
-    = do modifyGlobalVar n M.delete
+    = do modifyGlobalVar n deleteVN
          return mempty
 
 unsetVar	:: TclVarName -> TclEval e s Value
@@ -469,19 +529,17 @@ unsetVar n
 -- ------------------------------------------------------------
 
 varName :: TclVarName -> TclEval e s Bool
-varName n0
+varName n
     = do s <- get
          let vars  = _tglobalVars s
          let stack = _tstack s
          return $
-           ( n `M.member` vars )
+           isVN n vars
            ||
            ( (not . null $ stack)
              &&
-             n `M.member` (_tlocals . head $ stack)
+             isVN n (_tlocals . head $ stack)
            )
-    where
-      n = joinVarName n0	-- TODO: remove this hack
 
 varNames :: TclEval e s [String]
 varNames
@@ -491,7 +549,7 @@ varNames
 
 globalVarNames :: TclEval e s [String]
 globalVarNames
-    = M.keys . _tglobalVars <$> get
+    = namesVN . _tglobalVars <$> get
 
 localVarNames :: TclEval e s [String]
 localVarNames
@@ -499,7 +557,7 @@ localVarNames
          return $
            case stack of
              [] -> []
-             _  -> M.keys . _tlocals . head $ stack
+             _  -> namesVN . _tlocals . head $ stack
 
 -- ------------------------------------------------------------
 
