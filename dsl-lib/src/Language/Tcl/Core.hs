@@ -230,8 +230,12 @@ evalTclSubst	:: TclSubst -> TclEval e s Value
 evalTclSubst (TLit s)
     = return $ mkS s
 
-evalTclSubst (TVar n)
+evalTclSubst (TVar n Nothing)
     = lookupVar n
+
+evalTclSubst (TVar n (Just ix))
+    = do i <- selS <$> evalTclArg (TclArg ix)
+         lookupArrVar n i
 
 evalTclSubst (TEval p)
     = evalTclProg p
@@ -379,6 +383,15 @@ lookupGlobalVar n
 lookupVar	:: String -> TclEval e s Value
 lookupVar n
     = lookupLocalVar n `mplus` lookupGlobalVar n
+
+-- TODO complete impl of array variable
+-- this is a hack
+
+lookupArrVar	:: String -> String -> TclEval e s Value
+lookupArrVar n i
+    = lookupLocalVar n' `mplus` lookupGlobalVar n'
+      where
+        n' = n ++ "(" ++ i ++ ")"
 
 -- ------------------------------------------------------------
 

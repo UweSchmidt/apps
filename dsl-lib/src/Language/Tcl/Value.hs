@@ -30,6 +30,8 @@ module Language.Tcl.Value
 
     , matchGlobPattern		-- csh glob style matching
     , trimWhiteSpace
+    , isTclSpace
+    , tclSpaceChars
 
     , value_empty, value_0, value_1, value_42, value_true, value_false
 
@@ -41,7 +43,6 @@ where
 import Control.Monad
 import Control.Applicative
 
-import Data.Char                    ( isSpace )
 import Data.Function       	    ( on )
 import Data.List                    ( intercalate )
 import Data.Monoid
@@ -278,7 +279,7 @@ string2a s
     = case reads s of
         [] -> mzero
         (v, rest) : _
-            -> if all isSpace rest
+            -> if all isTclSpace rest
                then return v
                else mzero
 
@@ -340,6 +341,12 @@ dropWhileRev p =
    foldr (\x xs -> if p x && null xs then [] else x:xs) []
 
 trimWhiteSpace :: String -> String
-trimWhiteSpace = dropWhileRev isSpace . dropWhile isSpace
+trimWhiteSpace = dropWhileRev isTclSpace . dropWhile isTclSpace
+
+isTclSpace :: Char -> Bool
+isTclSpace = (`elem` tclSpaceChars)
+
+tclSpaceChars :: String
+tclSpaceChars = " \n\t\r"
 
 -- ------------------------------------------------------------

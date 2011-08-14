@@ -38,8 +38,8 @@ showTclArg (TclArg a)
 showTclSubst :: TclSubst -> String
 showTclSubst (TLit s)
     = s
-showTclSubst (TVar n)
-    = "$" ++ n
+showTclSubst (TVar n ix)
+    = "$" ++ n ++ maybe "" (("(" ++) . (++ ")") . concatMap showTclSubst) ix
 showTclSubst (TEval pg)
     = "[" ++ showTclProg pg ++ "]"
 

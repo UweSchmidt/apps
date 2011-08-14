@@ -164,7 +164,7 @@ tclSplit (s0 : chars0 : [])
                   = words' p s''
 
 tclSplit (s' : [])
-    = tclSplit [s', mkS " \t\n"]
+    = tclSplit [s', mkS tclSpaceChars]
 
 tclSplit _
     = tclWrongArgs "split string ?splitChars?"

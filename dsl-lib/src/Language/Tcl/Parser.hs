@@ -421,9 +421,9 @@ getNoExtraCharParser = getNoSubstParser 'x'
 
 defaultNoSubst :: NoSubst
 defaultNoSubst
-    = [ ("\\", toList substBackslash)
-      , ("]}", toList anyChar)
-      , ("x",  mzero)
+    = [ ("\\",  toList substBackslash)
+      , ("]})", toList anyChar)
+      , ("x",   mzero)
       ]
 
 defaultNoParse :: TclParser String
@@ -448,6 +448,13 @@ inDquoteSubst :: NoSubst -> NoSubst
 inDquoteSubst
     = noNewlineSubst
       . ((" \t{}]", defaultNoParse) :)
+
+inParSubst :: NoSubst -> NoSubst
+inParSubst
+    = noNewlineSubst
+      . ((" \t{}]", defaultNoParse) :)
+      . ((")", mzero) :)                        -- closing par must not be parsed
+      -- . (("x", toList $ char ')') :)
 
 inBracketSubst :: NoSubst -> NoSubst
 inBracketSubst = ((" \t;\n\r]", mzero) :)
@@ -478,8 +485,8 @@ inListWS = ("w", wsnl1')
 tLit :: TclParser String -> TclParser TclSubst
 tLit = (TLit <$>)
 
-tVar :: TclParser String -> TclParser TclSubst
-tVar = (TVar <$>)
+tVar :: TclParser (String, Maybe [TclSubst]) -> TclParser TclSubst
+tVar = (uncurry TVar <$>)
 
 tEval :: TclParser TclProg -> TclParser TclSubst
 tEval = (TEval <$>)
@@ -503,15 +510,21 @@ bracesContent nos
     where
       inBraces = ("{" ++) . (++ "}")
 
-variableName :: NoSubst -> TclParser String
-variableName _s
-    = ( concat <$> many1 (many1 (letter
-                                 <|> digit
-                                 <|> char '_'
-                                 <|> oneOf "()"		-- TODO: this is a hack to allow array variables, but it's incomplete, substitution must be performed within ( ... )
-                                ) <|> namespaceSep) )
+variableName :: NoSubst -> TclParser (String, Maybe [TclSubst])
+variableName nos
+    = ( do name <- concat <$> many1 (many1 (letter
+                                            <|> digit
+                                            <|> char '_'
+                                           )
+                                     <|> namespaceSep
+                                    )
+           index <- option Nothing (Just <$> parArg nos)
+           return (name, index)
+      )
       <|>
-      ( between (char '{') (char '}') $ many1 $ noneOf "}" )
+      ( do name <- between (char '{') (char '}') $ many1 $ noneOf "}"
+           return (name, Nothing)
+      )
     where
       namespaceSep
 	  = do c1 <- char ':'
@@ -525,12 +538,18 @@ chars s
       noSubstChars s
       <?> "ordinary char"
 
+parArg :: NoSubst -> TclParser [TclSubst]
+parArg nos
+    = between (char '(') (char ')') $
+      many $
+      anArg' $ inParSubst nos
+
 -- ------------------------------------------------------------
 
 litChars :: TclParser String
 litChars
     = many1 $
-      noneOf $ ws ++ nls ++ vc ++ esc ++ br ++ dq ++ "]}"
+      noneOf $ ws ++ nls ++ vc ++ esc ++ br ++ dq ++ "]})"
 
 noSubstChars :: NoSubst -> TclParser String
 noSubstChars nos

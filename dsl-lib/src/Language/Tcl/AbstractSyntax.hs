@@ -27,7 +27,9 @@ newtype TclArg
 
 data TclSubst
     = TLit  { _tlit  :: String  }
-    | TVar  { _tvar  :: String  }
+    | TVar  { _tvar  :: String
+            , _tix   :: Maybe [TclSubst]
+            }
     | TEval { _tprog :: TclProg }
       deriving (Show)
 

@@ -53,8 +53,8 @@ initScript
       , ""
       , "foreach env::kvp [env::getEnvironment] {"
       , "  lassign $env::kvp env::k env::v"
-      -- , "  eval [list set env($env::k) $env::v]"
-      , "  eval [list set [join [list env ( $env::k )] {}] $env::v]"	-- TODO: workaround for computed array index
+      , "  eval [list set env($env::k) $env::v]"
+--    , "  eval [list set [join [list env ( $env::k )] {}] $env::v]"	-- TODO: workaround for computed array index
       , "}"
       , "unset env::kvp env::k env::v"
       ]
