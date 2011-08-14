@@ -373,6 +373,12 @@ lookupVN (n, ix) vm
         Nothing -> M.lookup n $ _tsimple vm
         Just i  -> M.lookup n (_tarray vm) >>= M.lookup i
 
+lookupAVN :: TclVarName -> TclVars -> Maybe (Map String Value)
+lookupAVN (n, ix) vm
+    = case ix of
+        Nothing -> M.lookup n $ _tarray vm
+        Just _  -> Nothing
+
 insertVN :: TclVarName -> Value -> TclVars -> TclVars
 insertVN (n, ix) v vm@TVS{ _tsimple = s, _tarray = a}
     = case ix of
@@ -392,6 +398,15 @@ deleteVN (n, ix) vm@TVS{ _tsimple = s, _tarray = a}
                      Just mx -> let mx' = M.delete i mx
                                 in
                                   vm { _tarray = M.insert n mx' a }
+
+createAVN :: TclVarName -> TclVars -> TclVars
+createAVN (n, ix) vm@TVS{ _tarray = a}
+    = case ix of
+        Nothing -> vm { _tarray  = if not (n `M.member` a)
+                                   then M.insert n M.empty a
+                                   else a
+                      }
+        Just _  -> vm
 
 isVN :: TclVarName -> TclVars -> Bool
 isVN (n, ix) TVS{ _tsimple = s, _tarray = a}
@@ -428,34 +443,42 @@ selVN = splitVarName . selS
 
 -- ------------------------------------------------------------
 
-lookupLocalVar :: TclVarName -> TclEval e s Value
-lookupLocalVar n
+lookupLocalVar' :: (TclVarName -> TclVars -> Maybe a) -> TclVarName -> TclEval e s a
+lookupLocalVar' lookupVN' n
     = do stack <- _tstack <$> get
          case stack of
            []  -> notFound
            (frame : _)
                -> if fst n `S.member` _tglobals frame
                   then notFound
-                  else case lookupVN n $ _tlocals frame of
+                  else case lookupVN' n $ _tlocals frame of
                          Nothing -> notFound
                          Just v  -> return v
     where
       notFound = tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such local variable"
 
-lookupGlobalVar	:: TclVarName -> TclEval e s Value
-lookupGlobalVar n
+lookupGlobalVar' :: (TclVarName -> TclVars -> Maybe a) -> TclVarName -> TclEval e s a
+lookupGlobalVar' lookupVN' n
     = do st <- get
-         case lookupVN n $ _tglobalVars st of
+         case lookupVN' n $ _tglobalVars st of
            Nothing
                -> tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such global variable"
            Just c
                -> return c
 
-lookupVar	:: TclVarName -> TclEval e s Value
-lookupVar n
-    = lookupLocalVar n
-      `mplus` lookupGlobalVar n
+lookupVar'	:: (TclVarName -> TclVars -> Maybe a) -> TclVarName -> TclEval e s a
+lookupVar' lookupVN' n
+    = lookupLocalVar' lookupVN' n
+      `mplus` lookupGlobalVar' lookupVN' n
       `mplus` (tclThrowError $ "can't read " ++ show (joinVarName n) ++ ": no such variable")
+
+lookupVar	:: TclVarName -> TclEval e s Value
+lookupVar
+    = lookupVar' lookupVN
+
+lookupArrayVar	:: TclVarName -> TclEval e s (Map String Value)
+lookupArrayVar
+    = lookupVar' lookupAVN
 
 -- ------------------------------------------------------------
 
@@ -528,17 +551,31 @@ unsetVar n
 
 -- ------------------------------------------------------------
 
-varName :: TclVarName -> TclEval e s Bool
-varName n
+createLocalArray :: TclVarName -> TclEval e s ()
+createLocalArray n
+    = modifyLocalVar "can't create local array" n createAVN
+
+createGlobalArray :: TclVarName -> TclEval e s ()
+createGlobalArray n
+    = modifyGlobalVar n createAVN
+
+createArray	:: TclVarName -> TclEval e s ()
+createArray n
+    = createLocalArray n `mplus` createGlobalArray n
+
+-- ------------------------------------------------------------
+
+varName :: (TclVarName -> TclVars -> Bool) -> TclVarName -> TclEval e s Bool
+varName isVN' n
     = do s <- get
          let vars  = _tglobalVars s
          let stack = _tstack s
          return $
-           isVN n vars
+           isVN' n vars
            ||
            ( (not . null $ stack)
              &&
-             isVN n (_tlocals . head $ stack)
+             isVN' n (_tlocals . head $ stack)
            )
 
 varNames :: TclEval e s [String]

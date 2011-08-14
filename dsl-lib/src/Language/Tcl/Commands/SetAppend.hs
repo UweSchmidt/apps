@@ -93,7 +93,7 @@ tclUnset l0
 
 tclUnsetVariable :: Bool -> Value -> TclEval e s Value
 tclUnsetVariable complain var0
-    = do ex <- varName var
+    = do ex <- varName isVN var
          if not ex
             then when complain $ tclThrowError $ "can't unset " ++ show var ++ ": no such variable"
             else unsetVar var >> return mempty
@@ -107,4 +107,6 @@ unsetOptions
       [ isOpt        ((== "-nocomplain") . selS) (const False)
       , isIllegalOpt (("-" `isPrefixOf`) . selS)
       ]
+
+-- ------------------------------------------------------------
 

@@ -45,7 +45,8 @@ tclEnvInit
 
 initScript :: String
 initScript
-    = unlines
+    = unlines []
+{-
       [ "set argv0 [env::getProgName]"
       , ""
       , "set argv  [env::getArgs]"
@@ -58,7 +59,7 @@ initScript
       , "}"
       , "unset env::kvp env::k env::v"
       ]
-
+-}
 -- ------------------------------------------------------------
 
 tclGetArgs :: TclCommand e s

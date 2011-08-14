@@ -63,7 +63,7 @@ tclInfo l0
 
 infoExists :: Value -> TclEval e s Value
 infoExists n
-    = b2i <$> varName (selVN n)
+    = b2i <$> varName isVN (selVN n)
 
 infoLevel :: Value -> TclEval e s Value
 infoLevel n

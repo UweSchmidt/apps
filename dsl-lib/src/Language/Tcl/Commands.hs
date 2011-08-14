@@ -4,6 +4,8 @@ where
 
 import Language.Tcl.Core
 
+import Language.Tcl.Commands.Array      ( tclArray
+					)
 import Language.Tcl.Commands.Cd         ( tclCd
 					)
 import Language.Tcl.Commands.Expr       ( tclExpr
@@ -70,6 +72,7 @@ addBuildInChannels
 buildInTclCommands :: [(String, TclCommand e s)]
 buildInTclCommands
     = [ ("append",      tclAppend)
+      , ("array",       tclArray)
       , ("break",       tclBreak)
       , ("cd",          tclCd)
       , ("concat",      tclConcat)
