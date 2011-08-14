@@ -2,6 +2,7 @@ module Language.Tcl.Commands.SetAppend
     ( tclAppend
     , tclConcat
     , tclEval
+    , tclLassign
     , tclSet
     , tclUnset
     )
@@ -14,6 +15,7 @@ import Data.List                        ( isPrefixOf )
 
 import Language.Common.EvalOptions
 
+import Language.Tcl.CheckArgs
 import Language.Tcl.Core
 import Language.Tcl.Value
 
@@ -50,6 +52,23 @@ tclEval l@(_ : _)
 
 tclEval _
     = tclWrongArgs "eval arg ?arg ...?"
+
+-- ------------------------------------------------------------
+
+tclLassign :: TclCommand e s
+tclLassign (l : vars@(_ : _))
+    = do vals <- checkListValue l
+         assign vars vals
+    where
+      assign [] vs
+          = return . mkL $ vs
+      assign (n : ns) []
+          = tclSet [n, mempty] >> assign ns []
+      assign (n : ns) (v : vs)
+          = tclSet [n, v] >> assign ns vs
+
+tclLassign _
+    = tclWrongArgs "lassign list varName ?varName ...?"
 
 -- ------------------------------------------------------------
 

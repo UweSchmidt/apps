@@ -505,7 +505,11 @@ bracesContent nos
 
 variableName :: NoSubst -> TclParser String
 variableName _s
-    = ( concat <$> many1 (many1 (letter <|> digit <|> char '_') <|> namespaceSep) )
+    = ( concat <$> many1 (many1 (letter
+                                 <|> digit
+                                 <|> char '_'
+                                 <|> oneOf "()"		-- TODO: this is a hack to allow array variables, but it's incomplete, substitution must be performed within ( ... )
+                                ) <|> namespaceSep) )
       <|>
       ( between (char '{') (char '}') $ many1 $ noneOf "}" )
     where

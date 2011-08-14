@@ -7,6 +7,7 @@ module Language.Tcl.Commands.List
     , tclLlength
     , tclLrange
     , tclLreplace
+    , tclSplit
     )
 where
 
@@ -16,10 +17,10 @@ import Control.Monad.RWS                ( mplus )
 
 import Data.List                        ( intercalate )
 
-import Language.Tcl.Core
-import Language.Tcl.Value
 import Language.Tcl.CheckArgs
+import Language.Tcl.Core
 import Language.Tcl.Expr.Eval           ( evalTclListIndex )
+import Language.Tcl.Value
 
 -- ------------------------------------------------------------
 
@@ -137,5 +138,35 @@ tclLlength (list : [])
 
 tclLlength _
     = tclWrongArgs "llength list"
+
+-- ------------------------------------------------------------
+
+tclSplit :: TclCommand e s
+tclSplit (s0 : chars0 : [])
+    = return . mkL . map mkS . split $ s
+    where
+      s     = selS s0
+      chars = selS chars0
+      split
+          | null chars = map (:[])
+          | otherwise  = words' (`elem` chars)
+      words' _ []
+          = []
+      words' p s'
+          = w1 : words'' ws
+            where
+              (w1, ws) = break p s'
+              words'' []
+                  = []
+              words'' (_ : [])
+                  = "" : []
+              words'' (_ : s'')
+                  = words' p s''
+
+tclSplit (s' : [])
+    = tclSplit [s', mkS " \t\n"]
+
+tclSplit _
+    = tclWrongArgs "split string ?splitChars?"
 
 -- ------------------------------------------------------------

@@ -52,9 +52,9 @@ initScript
       , "set argc  [llength $argv]"
       , ""
       , "foreach env::kvp [env::getEnvironment] {"
-      , "  set env::k [lindex $env::kvp 0]"
-      , "  set env::v [lindex $env::kvp 1]"
-      , "  set \"env($env::k)\" $env::v"
+      , "  lassign $env::kvp env::k env::v"
+      -- , "  eval [list set env($env::k) $env::v]"
+      , "  eval [list set [join [list env ( $env::k )] {}] $env::v]"	-- TODO: workaround for computed array index
       , "}"
       , "unset env::kvp env::k env::v"
       ]

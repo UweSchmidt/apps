@@ -25,6 +25,7 @@ import Language.Tcl.Commands.List       ( tclJoin
                                         , tclLlength
                                         , tclLrange
                                         , tclLreplace
+                                        , tclSplit
                                         )
 import Language.Tcl.Commands.ListSort   ( tclLsort
                                         )
@@ -39,6 +40,7 @@ import Language.Tcl.Commands.Return     ( tclBreak
 import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclConcat
                                         , tclEval
+                                        , tclLassign
                                         , tclSet
                                         , tclUnset
                                         )
@@ -82,6 +84,7 @@ buildInTclCommands
       , ("info",        tclInfo)
       , ("join",        tclJoin)
       , ("lappend",     tclLappend)
+      , ("lassign",     tclLassign)
       , ("lindex",      tclLindex)
       , ("linsert",     tclLinsert)
       , ("list",        tclList)
@@ -93,6 +96,7 @@ buildInTclCommands
       , ("puts", 	tclPuts)
       , ("return",      tclReturn)
       , ("set",		tclSet)
+      , ("split",	tclSplit)
       , ("switch",	tclSwitch)
       , ("unset",       tclUnset)
       , ("while",       tclWhile)
