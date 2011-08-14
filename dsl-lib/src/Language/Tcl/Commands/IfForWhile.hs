@@ -32,7 +32,7 @@ tclForeach [v, l, b]
          _  <- runForeach xs cs
          return mempty
     where
-      var  = selS v
+      var  = selVN v
       list = selS l
       body = selS b
       runForeach xs cs

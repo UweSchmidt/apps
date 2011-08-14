@@ -130,10 +130,10 @@ paramPassing  use [] _				-- more actual than formal params: usage
 
 paramPassing _use [(fp : _)] apl		-- last formal param has name "args", assign whole list to "args"
     | selS fp == "args"
-        = setLocalVar "args" (mkL apl)
+        = setLocalVar ("args", Nothing) (mkL apl)
 
 paramPassing  use ((fp : def : _) : fps) [] 	-- formal param with default, actual param list empty
-    = setLocalVar (selS fp) def         	-- assign default value and process remaining formal params
+    = setLocalVar (selVN fp) def         	-- assign default value and process remaining formal params
       >>
       paramPassing use fps [] 
 
@@ -141,7 +141,7 @@ paramPassing  use ((_fp : []) : _) []		-- formal param without default, but no m
     = use					-- usage
 
 paramPassing  use ((fp : _) : fps) (ap1 : aps) 	-- formal param and actual param there
-    = setLocalVar (selS fp) ap1	         	-- assign value and process remaining formal params
+    = setLocalVar (selVN fp) ap1	         	-- assign value and process remaining formal params
       >>
       paramPassing use fps aps
 

@@ -28,7 +28,7 @@ tclAppend (var' : values)
                 return mempty
          setVar var (val `mappend` mconcat values)
     where
-      var = selS var'
+      var = selVN var'
 
 tclAppend _
     = tclWrongArgs "append varName ?value value value ...?"
@@ -74,10 +74,10 @@ tclLassign _
 
 tclSet	:: TclCommand e s
 tclSet [n]
-    = lookupVar (selS n)
+    = lookupVar . selVN $ n
 
 tclSet [n, v]
-    = setVar (selS n) v
+    = setVar (selVN n) v
 
 tclSet _
     = tclWrongArgs "set varName ?newValue?"
@@ -99,7 +99,7 @@ tclUnsetVariable complain var0
             else unsetVar var >> return mempty
          return mempty
     where
-      var = selS var0
+      var = selVN var0
 
 unsetOptions :: OptParser [Value] Bool
 unsetOptions

@@ -53,7 +53,7 @@ instance (Show s) => Show (TclState e s) where
 type TclWrt		-- not really used
     = String
 
-type TclVars		-- global variables
+type TclVars		-- TODO: variable map, must be split into simple vars and arrays
     = Map String Value
 
 type TclVarSet
@@ -100,6 +100,9 @@ type TclEval e s
 
 type TclLib e s
     = (TclEval e s (), [(String, TclCommand e s)])
+
+type TclVarName
+    = (String, Maybe String)
 
 -- ------------------------------------------------------------
 
@@ -231,11 +234,11 @@ evalTclSubst (TLit s)
     = return $ mkS s
 
 evalTclSubst (TVar n Nothing)
-    = lookupVar n
+    = lookupVar (n, Nothing)
 
 evalTclSubst (TVar n (Just ix))
     = do i <- selS <$> evalTclArg (TclArg ix)
-         lookupArrVar n i
+         lookupVar (n, Just i)
 
 evalTclSubst (TEval p)
     = evalTclProg p
@@ -357,8 +360,8 @@ popStackFrame
 
 -- ------------------------------------------------------------
 
-lookupLocalVar :: String -> TclEval e s Value
-lookupLocalVar n
+lookupLocalVar :: TclVarName -> TclEval e s Value
+lookupLocalVar n0
     = do stack <- _tstack <$> get
          case stack of
            []  -> notFound
@@ -370,48 +373,62 @@ lookupLocalVar n
                          Just v -> return v
     where
       notFound = tclThrowError $ "can't read local variable " ++ show n ++ ": no such variable"
+      n = joinVarName n0	-- TODO: remove this hack
 
-lookupGlobalVar	:: String -> TclEval e s Value
-lookupGlobalVar n
+lookupGlobalVar	:: TclVarName -> TclEval e s Value
+lookupGlobalVar n0
     = do vars <- _tglobalVars <$> get
          case M.lookup n vars of
            Nothing
                -> tclThrowError $ "can't read " ++ show n ++ ": no such variable"
            Just c
                -> return c
+    where
+      n = joinVarName n0	-- TODO: remove this hack
 
-lookupVar	:: String -> TclEval e s Value
+lookupVar	:: TclVarName -> TclEval e s Value
 lookupVar n
     = lookupLocalVar n `mplus` lookupGlobalVar n
 
--- TODO complete impl of array variable
--- this is a hack
+-- ------------------------------------------------------------
 
-lookupArrVar	:: String -> String -> TclEval e s Value
-lookupArrVar n i
-    = lookupLocalVar n' `mplus` lookupGlobalVar n'
-      where
-        n' = n ++ "(" ++ i ++ ")"
+selVN :: Value -> TclVarName
+selVN = splitVarName . selS
+
+splitVarName :: String -> TclVarName
+splitVarName n
+    | null ix
+      ||
+      last ix /= ')'
+        = (n, Nothing)
+    | otherwise
+        = (vn, Just . init . tail $ ix)
+    where
+      (vn, ix) = break (== '(') n
+
+joinVarName :: TclVarName -> String
+joinVarName (vn, ix)
+    = vn ++ maybe "" (("(" ++) . (++ ")")) ix
 
 -- ------------------------------------------------------------
 
-setLocalVar :: String -> Value -> TclEval e s Value
+setLocalVar :: TclVarName -> Value -> TclEval e s Value
 setLocalVar n v
     = modifyLocalVar "can't write local variable" n (flip M.insert v) >> return v
 
-setGlobalVar :: String -> Value -> TclEval e s Value
+setGlobalVar :: TclVarName -> Value -> TclEval e s Value
 setGlobalVar n v
     = do modifyGlobalVar n (flip M.insert v)
          return v
 
-setVar		:: String -> Value -> TclEval e s Value
+setVar		:: TclVarName -> Value -> TclEval e s Value
 setVar n v
     = setLocalVar n v `mplus` setGlobalVar n v
 
 -- ------------------------------------------------------------
 
-modifyLocalVar :: String -> String -> (String -> TclVars -> TclVars) -> TclEval e s ()
-modifyLocalVar msg n cf
+modifyLocalVar :: String -> TclVarName -> (String -> TclVars -> TclVars) -> TclEval e s ()
+modifyLocalVar msg n0 cf
     = do s <- get
          let stack = _tstack s
          case stack of
@@ -426,30 +443,33 @@ modifyLocalVar msg n cf
          return ()
     where
       notFound = tclThrowError $ msg ++ " " ++ show n ++ ": no such variable"
+      n = joinVarName n0	-- TODO: remove this hack
 
-modifyGlobalVar :: String -> (String -> TclVars -> TclVars) -> TclEval e s ()
-modifyGlobalVar n cf
+modifyGlobalVar :: TclVarName -> (String -> TclVars -> TclVars) -> TclEval e s ()
+modifyGlobalVar n0 cf
     = modify $ \ s -> s { _tglobalVars = cf n (_tglobalVars s) }
+    where
+      n = joinVarName n0	-- TODO: remove this hack
 
 -- ------------------------------------------------------------
 
-unsetLocalVar	:: String -> TclEval e s Value
+unsetLocalVar	:: TclVarName -> TclEval e s Value
 unsetLocalVar n
     = modifyLocalVar "can't unset local variable" n M.delete >> return mempty
 
-unsetGlobalVar :: String -> TclEval e s Value
+unsetGlobalVar :: TclVarName -> TclEval e s Value
 unsetGlobalVar n
     = do modifyGlobalVar n M.delete
          return mempty
 
-unsetVar	:: String -> TclEval e s Value
+unsetVar	:: TclVarName -> TclEval e s Value
 unsetVar n
     = unsetLocalVar n `mplus` unsetGlobalVar n
 
 -- ------------------------------------------------------------
 
-varName :: String -> TclEval e s Bool
-varName n
+varName :: TclVarName -> TclEval e s Bool
+varName n0
     = do s <- get
          let vars  = _tglobalVars s
          let stack = _tstack s
@@ -460,6 +480,8 @@ varName n
              &&
              n `M.member` (_tlocals . head $ stack)
            )
+    where
+      n = joinVarName n0	-- TODO: remove this hack
 
 varNames :: TclEval e s [String]
 varNames

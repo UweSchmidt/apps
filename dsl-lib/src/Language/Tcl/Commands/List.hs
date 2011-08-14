@@ -52,7 +52,7 @@ tclLappend (var' : values)
          res  <- lappend val list
          setVar var res
     where
-      var = selS var'
+      var = selVN var'
 
 tclLappend _
     = tclWrongArgs "lappend varName ?value value value ...?"
