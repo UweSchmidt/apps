@@ -28,28 +28,17 @@ type TclParser = Parsec String ()
 -- parse a string as a sequence of commands
 parseTclProg :: String -> Either ParseError TclProg
 parseTclProg
---    = parse (eofP tprog) ""
     = parse aTclProg ""
 
 -- parse a string as a sequence of args, newline and ; are normal chars
 parseTclArgs :: String -> Either ParseError TclCmd
 parseTclArgs
     = parse aTclCmd ""
-{-
-    = parse ( eofP $
-              cargs >>= return . TclCmd
-            ) ""
--}
 
 -- parse a string as a sequence of list elements, newline, ;, $ and [ are normal chars
 parseTclList :: String -> Either ParseError TclList
 parseTclList
     = parse aTclList ""
-{-
-    = parse ( eofP $
-              largs >>= return . TclList
-            ) ""
--}
 
 isCharArg	:: String -> Bool
 isCharArg s
@@ -429,14 +418,17 @@ defaultNoSubst
 defaultNoParse :: TclParser String
 defaultNoParse = toList anyChar
 
+{- not yet used
+
 noSemiSubst :: NoSubst -> NoSubst
 noSemiSubst = ((";", defaultNoParse) :)
 
-noNewlineSubst :: NoSubst -> NoSubst
-noNewlineSubst = (("\n", toList nlChar) :)
-
 noCmdSeqSubst :: NoSubst -> NoSubst
 noCmdSeqSubst = noSemiSubst . noNewlineSubst
+-}
+
+noNewlineSubst :: NoSubst -> NoSubst
+noNewlineSubst = (("\n", toList nlChar) :)
 
 inBraceSubst :: NoSubst -> NoSubst
 inBraceSubst
@@ -448,6 +440,10 @@ inDquoteSubst :: NoSubst -> NoSubst
 inDquoteSubst
     = noNewlineSubst
       . ((" \t{}]", defaultNoParse) :)
+
+inCommentSubst :: NoSubst -> NoSubst
+inCommentSubst
+    = ((" \t{}[]()$;", defaultNoParse) :)
 
 inParSubst :: NoSubst -> NoSubst
 inParSubst
@@ -690,12 +686,21 @@ aCmd nos
       >> ( option [] $
            toList $
            ( TclCmd <$>
-             ( do c1 <- TclArg <$> anArg nos
-                  al <- anArgSeq nos
-                  return (c1 : al)
+             ( aComment nos
+               <|>
+               ( do c1 <- TclArg <$> anArg nos
+                    al <- anArgSeq nos
+                    return (c1 : al)
+               )
              )
            )
          )
+
+aComment :: NoSubst -> TclParser [TclArg]
+aComment nos
+    = do h <- TclArg <$> (toList . tLit . toList $ char '#')
+         c <- TclArg <$> anArg (inCommentSubst nos)
+         return $ h : c : []
 
 anArgSeq :: NoSubst -> TclParser [TclArg]
 anArgSeq nos

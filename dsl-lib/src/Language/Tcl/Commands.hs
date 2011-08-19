@@ -7,6 +7,7 @@ import Language.Tcl.Core
 import Language.Tcl.Commands.Array      ( tclArray
 					)
 import Language.Tcl.Commands.Cd         ( tclCd
+                                        , tclPwd
 					)
 import Language.Tcl.Commands.Expr       ( tclExpr
                                         , tclIncr
@@ -46,6 +47,7 @@ import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclSet
                                         , tclUnset
                                         )
+import Language.Tcl.Value
 
 import System.IO
 
@@ -71,7 +73,8 @@ addBuildInChannels
 
 buildInTclCommands :: [(String, TclCommand e s)]
 buildInTclCommands
-    = [ ("append",      tclAppend)
+    = [ ("#",           const (return mempty))	-- throw away comments
+      , ("append",      tclAppend)
       , ("array",       tclArray)
       , ("break",       tclBreak)
       , ("cd",          tclCd)
@@ -97,6 +100,7 @@ buildInTclCommands
       , ("lsort",       tclLsort)
       , ("proc", 	tclProc)
       , ("puts", 	tclPuts)
+      , ("pwd",         tclPwd)
       , ("return",      tclReturn)
       , ("set",		tclSet)
       , ("split",	tclSplit)

@@ -55,7 +55,10 @@ tclInfo l0
             <|>
             -- parser for unknown subcommand
             ( do c <- nextArg
-                 illegalArgs $ "unknown subcommand " ++ show (selS c) ++ " must be commands, exists, globals, level, locals, procs, vars"
+                 illegalArgs ( "unknown subcommand " ++
+                               show (selS c) ++
+                               " must be commands, exists, globals, level, locals, procs, vars"
+                             )
             )
             <|>
             -- parser for illegal arguments
@@ -74,18 +77,5 @@ infoVars :: TclEval e s [String] -> Value -> TclEval e s Value
 infoVars names pat
     = mkL . map mkS . sort . filter (matchGlobPattern $ selS pat)
       <$> names
-
-{-
-            , isOpt     (== (mkS "-decreasing")) (first $ const decreasing)
-            , isOpt     (== (mkS "-unique"    )) (second . first $ const True)
-            , isOpt     (== (mkS "-indices"   )) (second . second . first $ const True)
-            , isOpt     (== (mkS "-ascii"     )) (second . second . second . first $ const (conv2ascii,   compareS))
-            , isOpt     (== (mkS "-integer"   )) (second . second . second . first $ const (conv2integer, compareI))
-            , isOpt     (== (mkS "-real"      )) (second . second . second . first $ const (conv2double,  compareD))
-            , isOpt     (== (mkS "-nocase"    )) (second . second . second . second . first $ const notCaseSensitive)
-            , isArgOpt  (== (mkS "-command"   )) (\ v ->
-                                                  second . second . second . first $ const (noconv,       compareC v))
-            ]
--}
 
 -- ------------------------------------------------------------

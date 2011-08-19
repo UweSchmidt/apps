@@ -1,13 +1,19 @@
 module Language.Tcl.Core
 where
 
--- import           Control.Arrow
+import           Control.Arrow          ( second
+                                        , (***)
+                                        )
 import           Control.Applicative    ( (<$>) )
 import           Control.Monad.Error
 import           Control.Monad.RWS
 
+import           Data.List              ( intercalate
+                                        , isPrefixOf
+                                        )
 import           Data.Map    		( Map )
 import qualified Data.Map      		as M
+import           Data.Maybe             ( fromMaybe )
 import           Data.Set    		( Set )
 import qualified Data.Set      		as S
 
@@ -38,17 +44,17 @@ data TclState e s
       }
 
 instance (Show s) => Show (TclState e s) where
-    show (TclState _v _s _c _ps ch as)
-        = "TclState "
-          -- ++ "{ _tglobalVars = "
+    show (TclState v _s _c _ps ch as)
+        = unlines
+          [ "TclState"
+          , "{ _tglobalVars = " ++ show v
           -- ++ (show . map (second selS) . M.toList $ v)
           -- ++ ", _tcmds = "
           -- ++ (show . M.keys $ c)
-          ++ ", _tChans = "
-          ++ (show . M.keys $ ch)
-          ++ ", _appState = "
-          ++ show as
-          ++ "}"
+          , ", _tChans = " ++ (show . M.keys $ ch)
+          , ", _appState = " ++ show as
+          , "}"
+          ]
 
 type TclWrt		-- not really used
     = String
@@ -58,7 +64,14 @@ data TclVars
       { _tsimple :: Map String Value
       , _tarray  :: Map String (Map String Value)
       }
-      deriving (Show)
+      -- deriving (Show)
+
+instance Show TclVars where
+    show (TVS s a)
+        = showMap s ++ ", " ++
+          (show . map (second $ show . M.toList) . M.toList) a
+        where
+          showMap = intercalate ", " . map (show . second show) . M.toList
 
 type TclVarSet
     = Set String
@@ -226,8 +239,9 @@ evalTclCmd (TclCmd al)
     = mapM evalTclArg al >>= evalTcl
 
 evalTcl :: Values -> TclEval e s Value
-evalTcl (cn : args)
-    = do c <- lookupProcOrCmd (selS cn)
+evalTcl cmd@(cn : args)
+    = do logCommand cmd
+         c <- lookupProcOrCmd (selS cn)
          c args
 evalTcl []
     = tclThrowError "empty command"
@@ -383,7 +397,7 @@ insertVN :: TclVarName -> Value -> TclVars -> TclVars
 insertVN (n, ix) v vm@TVS{ _tsimple = s, _tarray = a}
     = case ix of
         Nothing -> vm { _tsimple = M.insert n v s }
-        Just i  -> let mx = maybe M.empty (M.insert i v) $ M.lookup n a
+        Just i  -> let mx = M.insert i v . fromMaybe M.empty $ M.lookup n a
                    in
                      vm { _tarray  = M.insert n mx a }
 
@@ -619,5 +633,64 @@ loadTclLib (initLib, cmdList)
       >>
       initLib
 
+-- ------------------------------------------------------------
+
+nsp :: String
+nsp = "tcl_"
+
+-- ------------------------------------------------------------
+
+nameTraceLevel :: String
+nameTraceLevel = nsp ++ "traceLevel"
+
+traceCommands :: TclEval e s Bool
+traceCommands
+    = (>= 2) <$> getTraceLevel
+
+traceComments :: TclEval e s Bool
+traceComments
+    = (>= 1) <$> getTraceLevel
+
+getTraceLevel :: TclEval e s Integer
+getTraceLevel
+    = do st <- get
+         return
+           . fromMaybe 0
+           . selI
+           . fromMaybe value_0
+           . lookupVN (nameTraceLevel, Nothing)
+           $ _tglobalVars st
+
+logCommand :: Values -> TclEval e s ()
+logCommand cmd
+    = do l <- getTraceLevel
+         when (l == 3)			-- level == 3: all commands are traced
+                  $ liftIO $ hPutStr stderr cmdStr
+         when ( cmdName == "#"          -- level `elem` [1,2]: comments (command name is "#") are traced
+                &&                      -- level == 1: only if comments have the form "#@..."
+                ( l == 2                -- level == 2: all commands
+                  || ( l == 1
+                       &&
+                       "@" `isPrefixOf` arg1
+                     )
+                )
+              ) $ liftIO $ hPutStrLn stderr $ concatMap selS cmd
+    where
+      cmdName = concatMap selS . take 1          $ cmd
+      arg1    = concatMap selS . take 1 . drop 1 $ cmd
+      cmdStr  = unlines
+                . uncurry (++)
+                . (map ("+ " ++) *** map ("++" ++))
+                . splitAt 1
+                . lines
+                . selS
+                . mkL
+                $ cmd
+
+-- ------------------------------------------------------------
+{-
+tr :: (MonadIO m, Show a) => a -> m ()
+tr v = liftIO $ print v
+-}
 -- ------------------------------------------------------------
 

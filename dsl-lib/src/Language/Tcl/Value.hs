@@ -29,6 +29,8 @@ module Language.Tcl.Value
     , inBraces
 
     , matchGlobPattern		-- csh glob style matching
+    , matchGlobPatternNoCase
+
     , trimWhiteSpace
     , isTclSpace
     , tclSpaceChars
@@ -52,7 +54,9 @@ import Language.Tcl.Parser	    ( isBraceArg
                                     , parseListArg
                                     )
 
-import Text.Regex.Glob.String       ( match )
+import Text.Regex.Glob.String       ( match
+                                    , matchNoCase
+                                    )
 
 -- ------------------------------------------------------------
 
@@ -266,10 +270,10 @@ string2list
     = maybe mzero return . fmap (map mkS) . parseListArg
 
 string2int      :: (MonadPlus m) => String -> m Int
-string2int      =string2a
+string2int      = string2a
 
 string2integer  :: (MonadPlus m) => String -> m Integer
-string2integer  =string2a
+string2integer  = string2a
 
 string2double   :: (MonadPlus m) => String -> m Double
 string2double   =string2a
@@ -335,6 +339,9 @@ inBraces
 
 matchGlobPattern :: String -> String -> Bool
 matchGlobPattern = match
+
+matchGlobPatternNoCase :: String -> String -> Bool
+matchGlobPatternNoCase = matchNoCase
 
 dropWhileRev :: (a -> Bool) -> [a] -> [a]
 dropWhileRev p =

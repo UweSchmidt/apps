@@ -1,5 +1,6 @@
 module Language.Tcl.Commands.Cd
     ( tclCd
+    , tclPwd
     )
 where
 
@@ -10,7 +11,9 @@ import Language.Common.Eval   ( liftIOE )
 import Language.Tcl.Core
 import Language.Tcl.Value
 
-import System.Posix.Directory ( changeWorkingDirectory )
+import System.Posix.Directory ( changeWorkingDirectory
+                              , getWorkingDirectory
+                              )
 import System.Posix.User      ( getRealUserID
 			      , getUserEntryForID
 			      , getUserEntryForName
@@ -35,6 +38,18 @@ tclCd []
 
 tclCd _
     = tclWrongArgs "cd ?dirName?"
+
+-- ------------------------------------------------------------
+
+tclPwd :: TclCommand e s
+tclPwd []
+    = liftIOE getWorkingDirectory
+      >>= return . mkS
+
+tclPwd _
+    = tclWrongArgs "pwd"
+
+-- ------------------------------------------------------------
 
 changeDir :: String -> IO ()
 changeDir

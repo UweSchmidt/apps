@@ -31,7 +31,7 @@ type TestEval
 
 execTcl	:: String -> IO ()
 execTcl s
-    = do (r, _st, _w) <- runEval (initTcl >> interpreteTcl s) (initTclEnv ()) (initTclState ())
+    = do (r, st, _w) <- runEval (initTcl >> interpreteTcl s) (initTclEnv ()) (initTclState ())
          putStrLn (show r)
          -- putStrLn (show st)
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- ------------------------------------------------------------
 
 -- tcl lib for initializing global variables argv argc argv0 and env
@@ -12,26 +14,20 @@ where
 import Control.Arrow                   ( first )
 import Control.Monad.RWS
 
--- import Language.Common.Eval
--- import Language.Common.EvalOptions
-
 import Language.Tcl.Core
+import Language.Tcl.QuasiQuote
 import Language.Tcl.Value
 
--- import System.IO
 import System.Environment
 
 -- ------------------------------------------------------------
-
-namespaceEnv :: String
-namespaceEnv = "env::"
 
 tclEnvLib :: TclLib e s
 tclEnvLib = (tclEnvInit, tclEnvCommands)
 
 tclEnvCommands :: [(String, TclCommand e s)]
 tclEnvCommands
-    = map (first (namespaceEnv ++))
+    = map (first (nsp ++))
       [ ("getArgs",        tclGetArgs)
       , ("getProgName",    tclGetProgName)
       , ("getEnvironment", tclGetEnvironment)
@@ -44,21 +40,28 @@ tclEnvInit
     = interpreteTcl initScript >> return ()
 
 initScript :: String
-initScript
-    = unlines
-      [ "set argv0 [env::getProgName]"
-      , ""
-      , "set argv  [env::getArgs]"
-      , "set argc  [llength $argv]"
-      , ""
-{-
-      , "foreach env::kvp [env::getEnvironment] {"
-      , "  lassign $env::kvp env::k env::v"
-      , "  eval [list set env($env::k) $env::v]"
-      , "}"
-      , "unset env::kvp env::k env::v"
--}
-      ]
+initScript		-- edit tcl_ prefix if nsp is changed
+    = [tcl|
+       set tcl_traceLevel 1
+
+       #@tclEnvInit: tracing of "#@..." is enabled for testing, change default in "Env.hs"
+       #@tclEnvInit: init argc, argv and argv0
+
+       set argv0 [tcl_getProgName]
+
+       set argv  [tcl_getArgs]
+       set argc  [llength $argv]
+
+       #@tclEnvInit: initializing env array
+
+       foreach tcl_kvp [tcl_getEnvironment] {
+                     lassign $tcl_kvp tcl_k tcl_v
+                     eval [list set env($tcl_k) $tcl_v]
+                   }
+       unset tcl_kvp tcl_k tcl_v
+
+       #@tclEnvInit: init script finished
+       |]
 
 -- ------------------------------------------------------------
 
@@ -68,7 +71,7 @@ tclGetArgs []
          return $ mkL $ map mkS args
 
 tclGetArgs _
-    = tclWrongArgs $ namespaceEnv ++ "getArgs"
+    = tclWrongArgs $ (nsp ++) "getArgs"
 
 -- ------------------------------------------------------------
 
@@ -78,7 +81,7 @@ tclGetProgName []
          return $ mkS pn
 
 tclGetProgName _
-    = tclWrongArgs $ namespaceEnv ++ "getProgName"
+    = tclWrongArgs $ (nsp ++) "getProgName"
 
 -- ------------------------------------------------------------
 
@@ -88,6 +91,6 @@ tclGetEnvironment []
          return $ mkL $ map (\ (n, v) -> mkL [mkS n, mkS v]) env
 
 tclGetEnvironment _
-    = tclWrongArgs $ namespaceEnv ++ "getEnvironment"
+    = tclWrongArgs $ (nsp ++) "getEnvironment"
 
 -- ------------------------------------------------------------

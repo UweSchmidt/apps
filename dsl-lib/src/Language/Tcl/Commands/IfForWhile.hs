@@ -143,9 +143,15 @@ tclFor _
 tclSwitch :: TclCommand e s
 tclSwitch l
     = do let (l1, lr1) = splitAt (length l - 2) l
-         ((cmp, cv), l2) <- tclFromEither
+         (mo, l2) <- tclFromEither
                             . evalOptions switchOptions switchOptionDefault $ l1
-         tclSwitch1 (cmp `on` cv) (l2 ++ lr1)
+         tclSwitch1 (cmp mo) (l2 ++ lr1)
+    where
+      cmp (Exact, False) = (==)
+      cmp (Exact,  True) = (==) `on` map toLower
+      cmp (Glob,  False) = matchGlobPattern
+      cmp (Glob,   True) = matchGlobPatternNoCase
+      cmp (Regexp, _   ) = error "tclSwitch: -regexp option not yet implemented"
 
 tclSwitch1 :: (String -> String -> Bool) -> TclCommand e s
 tclSwitch1 cmp (s : pbs : [])
@@ -203,15 +209,20 @@ tclSwitchWrongArgs
 switchOptions :: OptParser [Value] SwitchOptions
 switchOptions
     = optionsUntil (isOpt ((== "--") . selS) id)
-      [ isOpt        ((== "-exact"     ) . selS) (first  $ const (==))
-      , isOpt        ((== "-glob"      ) . selS) (first  $ const matchGlobPattern)
-      , isOpt        ((== "-nocase"    ) . selS) (second $ const $ map toLower)
+      [ isOpt        ((== "-exact"     ) . selS) (first  $ const Exact)
+      , isOpt        ((== "-glob"      ) . selS) (first  $ const Glob)
+--    , isOpt        ((== "-regexp"    ) . selS) (first  $ const Regexp) -- TODO
+      , isOpt        ((== "-nocase"    ) . selS) (second $ const True)
       , isIllegalOpt (("-" `isPrefixOf`) . selS)
       ]
 
-type SwitchOptions = (String -> String -> Bool, String -> String)
+data Match = Exact | Glob | Regexp
+
+type NoCase = Bool
+
+type SwitchOptions = (Match, NoCase)
 
 switchOptionDefault :: SwitchOptions
-switchOptionDefault = ((==), id)
+switchOptionDefault = (Exact, False)
 
 -- ------------------------------------------------------------
