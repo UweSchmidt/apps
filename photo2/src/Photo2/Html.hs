@@ -140,9 +140,11 @@ genHtml rec formats conf p0
               >>>
               processTopDownWithAttrl
               ( choiceA
-                [ hasName "base"                :-> none        -- we do not use the base element
-                                                                -- for addressing the other docs
-                                                                -- addAttr "href" (joinPath . map (const "..") $ p)
+                [ ( hasName "base"
+                    >>>
+                    hasAttrValue "href" (== "[rootPath]")
+                  )                             :-> none
+
                 , insertText "[theTitle]"       theTitle
                 , insertText "[theSubTitle]"    theSubTitle
                 , insertText "[theResources]"   theResources
@@ -190,6 +192,12 @@ genHtml rec formats conf p0
                 , insertP    "[theNextPath]"    theNextPath
                 , insertP    "[thePrevPath]"    thePrevPath
                 , insertP    "[the1ChildPath]"  the1ChildPath
+
+                , insertAP   "[theAbsPath]"        thePath
+                , insertAP   "[theAbsParentPath]"  theParentPath
+                , insertAP   "[theAbsNextPath]"    theNextPath
+                , insertAP   "[theAbsPrevPath]"    thePrevPath
+                , insertAP   "[theAbs1ChildPath]"  the1ChildPath
 
                 , insertNavT "[theParentTitle]" par
                 , insertNavT "[thePrevTitle]"   prv
@@ -249,7 +257,8 @@ genHtml rec formats conf p0
             replace n o         = sed (const n) (escRE o)
 
             insertText temp ins = hasMark temp :-> ( (getText >>^ replace ins temp) >>> xread )
-            insertP    temp ins = hasMark temp :-> changeText (insertPath temp ins)
+            insertP    temp ins = hasMark temp :-> changeText (insertPath    temp ins)
+            insertAP   temp ins = hasMark temp :-> changeText (insertAbsPath temp ins)
 
             insertDate temp     = hasMark temp :-> ( ((getText &&& getDate) >>^ uncurry repl) >>> xread)
                                   where
@@ -263,13 +272,16 @@ genHtml rec formats conf p0
                                                   ins'
                                                      | null ins  = ins
                                                      | otherwise = ": " ++ ins
-            insertPath pt p'    = sed ins pt''
+            insertPath' rt pt p'= sed ins pt''
                                   where
                                   pt'  = escRE pt
                                   pt'' = "\\[.*" ++ pt' ++ ".*\\]"
                                   ins
                                       | null p'         = const ""
-                                      | otherwise       = tail >>> init >>> replace p' pt >>> relPath
+                                      | otherwise       = tail >>> init >>> replace p' pt >>> rt
+
+            insertPath          = insertPath' relPath
+            insertAbsPath       = insertPath' id
 
             insertInfoItem item = if null val
                                   then none
@@ -291,7 +303,8 @@ genHtml rec formats conf p0
             insertChild         :: Int -> AlbumTree -> CmdArrow XmlTree XmlTree
             insertChild num t    = processTopDownWithAttrl
                                   ( choiceA
-                                    [ insertP    "[theChildPath]"  (joinPath cp)
+                                    [ insertP    "[theChildPath]"     (joinPath cp)
+                                    , insertAP   "[theAbsChildPath]"  (joinPath cp)
                                     , let temp = "[theChildTitle]"
                                       in hasMark temp :-> changeText (replace thePlainT temp)
                                     , this :-> this
@@ -369,22 +382,6 @@ genHtml rec formats conf p0
             relPath             = (theUpPath </>)
 
             dst                 = fullPath $ thePath `addExtension` "html"
-
-{- no longer required: new option
-            eeToHtml            = processBottomUp
-                                  ( replaceChildren (cmt " firefox hack ")      -- insert a comment for preventing e.g. <div/>
-                                    `when`
-                                    ( isElem
-                                      >>>
-                                      hasNameWith (localPart
-                                                   >>>
-                                                   (`notElem` ["meta", "link", "hr", "br", "img"])
-                                                  )
-                                      >>>
-                                      neg getChildren
-                                    )
-                                  )
--}
 
             writeHtmlPage       :: CmdArrow XmlTree XmlTree
             writeHtmlPage
