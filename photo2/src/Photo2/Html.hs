@@ -2,6 +2,7 @@ module Photo2.Html
 where
 
 import           Data.Atom
+import           Data.Char ( isAlphaNum )
 import           Data.List
 import           Data.Maybe
 import qualified Data.Map as M
@@ -158,8 +159,8 @@ genHtml rec formats conf p0
                     >>>
                     hasClass "info"
                   )                             :-> ( ( insertInfoItem $< getAttrValue "id" )
-                                                      >>>
-                                                      removeAttr "id"
+                                                      -- >>>
+                                                      -- removeAttr "id"
                                                     )
                 , ( hasName "tr"
                     >>>
@@ -287,6 +288,9 @@ genHtml rec formats conf p0
                                   then none
                                   else processTopDownWithAttrl
                                        ( choiceA [ insertText ("[" ++ item ++ "]") (tr val)
+                                                              -- jquery does not like : in id values
+                                                 , ( hasAttrValue "id" (== item) )
+                                                   :-> addAttr "id" (filter isAlphaNum item)
                                                  , this :-> this
                                                  ]
                                        )
