@@ -105,7 +105,7 @@ unsetOptions :: OptParser [Value] Bool
 unsetOptions
     = optionsUntil (isOpt ((== "--") . selS) id)
       [ isOpt        ((== "-nocomplain") . selS) (const False)
-      , isIllegalOpt (("-" `isPrefixOf`) . selS)
+      , isIllegalOpt (("-" `isPrefixOf`) . selS) "must be -nocomplain or --"
       ]
 
 -- ------------------------------------------------------------

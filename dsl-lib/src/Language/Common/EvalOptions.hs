@@ -91,22 +91,27 @@ argCheckedVal (valuePred, valueError) optionValue optName
     = ( do v <- nextArg
            if valuePred v
               then modifyState (optionValue v)
-              else illegalVal valueError v
+              else illegalVal valueError "" v
       )
       <|>
-      illegalVal "missing argument for option" optName
+      illegalVal "missing argument for option" "" optName
 
 -- ------------------------------------------------------------
 
-isIllegalOpt :: (Stream s m a, Show a) => (a -> Bool) -> ParsecT s u m b
-isIllegalOpt name
+isIllegalOpt :: (Stream s m a, Show a) => (a -> Bool) -> String -> ParsecT s u m b
+isIllegalOpt name msg
     = nextArgWith name
       >>=
-      illegalVal "unknown option"
+      illegalVal "unknown option" msg
 
-illegalVal :: Show a1 => String -> a1 -> ParsecT s u m a
-illegalVal msg optName
-    = illegalArgs (msg ++ ": " ++ show optName)
+illegalVal :: Show a1 => String -> String -> a1 -> ParsecT s u m a
+illegalVal msg msg2 optName
+    = illegalArgs (msg ++ ": " ++
+                   show optName ++
+                   if null msg2
+                   then ""
+                   else ", " ++ msg2
+                  )
 
 illegalArgs :: String -> ParsecT s u m a
 illegalArgs = parserFail 

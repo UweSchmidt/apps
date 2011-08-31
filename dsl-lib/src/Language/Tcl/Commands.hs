@@ -8,6 +8,7 @@ import Language.Tcl.Commands.Array      ( tclArray
 					)
 import Language.Tcl.Commands.Cd         ( tclCd
                                         , tclPwd
+                                        , tclGlob
 					)
 import Language.Tcl.Commands.Expr       ( tclExpr
                                         , tclIncr
@@ -85,6 +86,7 @@ buildInTclCommands
       , ("expr",        tclExpr)
       , ("for",         tclFor)
       , ("foreach",     tclForeach)
+      , ("glob",        tclGlob)
       , ("if",          tclIf)
       , ("incr",        tclIncr)
       , ("info",        tclInfo)

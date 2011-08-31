@@ -213,7 +213,7 @@ switchOptions
       , isOpt        ((== "-glob"      ) . selS) (first  $ const Glob)
 --    , isOpt        ((== "-regexp"    ) . selS) (first  $ const Regexp) -- TODO
       , isOpt        ((== "-nocase"    ) . selS) (second $ const True)
-      , isIllegalOpt (("-" `isPrefixOf`) . selS)
+      , isIllegalOpt (("-" `isPrefixOf`) . selS) "must be -exact, -glob, -nocase or --"
       ]
 
 data Match = Exact | Glob | Regexp
