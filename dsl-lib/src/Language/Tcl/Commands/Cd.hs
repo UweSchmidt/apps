@@ -1,10 +1,12 @@
 module Language.Tcl.Commands.Cd
+{-
     ( tclCd
     , tclPwd
     , tclDirContents
     , tclFile
     , tclGlob
     )
+-}
 where
 
 import Control.Applicative    ( (<$>) )
@@ -85,33 +87,36 @@ tclGlob l0
       glob _ []
           = tclWrongArgs "glob ?switches? name ?name ...?"
 
-      glob (complain, join) l'
+      glob (complain, (join, (px, ()))) l'
           | join			-- build a path from the list of patterns
-              = glob1 p
+              = glob1 prefix p
                 >>= complain p
           | otherwise			-- evaluate all pattern and concat the result
-              = (concat . map (fromJust . selL) . concat) <$> sequence (map glob1 l)
+              = (concat . map (fromJust . selL) . concat) <$> sequence (map (glob1 prefix) l)
                 >>= complain p
           where
-            p = joinPath l
-            l = map selS l'
+            prefix = escapeGlobPattern px
+            p      = joinPath l
+            l      = map selS l'
 
-      glob1 pat
+      glob1 prefix pat
           = do res <- liftIOE $ dirContents base fs dir
                return (map mkS res)
             where
               base      = ""
-              (dir, fs) = pat2Filter . splitDirectories $ pat
+              (dir, fs) = pat2Filter . splitDirectories $ (prefix ++ pat)
             
-globDefaults :: (String -> TclCommand e s, Bool)
+globDefaults :: (String -> TclCommand e s, (Bool, (String, ())))
 globDefaults
-    = ( globComplain, False )
+    = (globComplain, (False, ("", ())))
 
-globOptions :: OptParser [Value] (String -> TclCommand e s, Bool)
+globOptions :: OptParser [Value] (String -> TclCommand e s, (Bool, (String, ())))
 globOptions
     = optionsUntil   (isOpt ((== "--")   . selS) id)
       [ isOpt        ((== "-nocomplain") . selS) ( first  $ const globNoComplain )
-      , isOpt        ((== "-join")       . selS) ( second $ const True           )
+      , isOpt        ((== "-join")       . selS) ( second . first $ const True   )
+      , isArgOpt     ((== "-path")       . selS) ( \ v ->
+                                                   second . second . first $ const (selS v) )
       , isIllegalOpt (("-" `isPrefixOf`) . selS) "must be -join, -nocomplain or --"
       ]
 
@@ -188,16 +193,12 @@ dirContents base [] dir
          return $ if x then [dir] else []
       
 dirContents base [prd] dir
-    = dirContent base prd dir
+    = map (dir </>) <$> dirContent base prd dir
 
 dirContents base (prd1 : prds) dir
-    = do entries    <- dirContent base prd1 dir
+    = do entries    <- map (dir </>) <$> dirContent base prd1 dir
          subdirs    <- filterM doesDirectoryExist entries
-         subentries <- sequence $ map dirSub subdirs
+         subentries <- sequence $ map (dirContents base prds) subdirs
          return $ concat subentries
-    where
-      dirSub sd
-          = do rs <- dirContents base prds sd
-               return $ map (sd </>) rs
 
 -- ------------------------------------------------------------

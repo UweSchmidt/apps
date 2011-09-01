@@ -30,6 +30,7 @@ module Language.Tcl.Value
 
     , matchGlobPattern		-- csh glob style matching
     , matchGlobPatternNoCase
+    , escapeGlobPattern
 
     , trimWhiteSpace
     , isTclSpace
@@ -336,6 +337,16 @@ escapeArg
 inBraces :: String -> String
 inBraces
     = ("{" ++) . (++ "}")
+
+escapeGlobPattern :: String -> String
+escapeGlobPattern
+    = concatMap escapeGlobChar
+    where
+      escapeGlobChar c
+          | c `elem` "[]*?\\"
+              = '\\' : c : []
+          | otherwise
+              = c : []
 
 matchGlobPattern :: String -> String -> Bool
 matchGlobPattern = match
