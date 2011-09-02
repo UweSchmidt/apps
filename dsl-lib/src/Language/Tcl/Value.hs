@@ -343,7 +343,7 @@ escapeGlobPattern
     = concatMap escapeGlobChar
     where
       escapeGlobChar c
-          | c `elem` "[]*?\\"
+          | c `elem` "{}[]*?\\"
               = '\\' : c : []
           | otherwise
               = c : []

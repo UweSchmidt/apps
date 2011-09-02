@@ -27,11 +27,24 @@ import           System.IO
 
 -- ------------------------------------------------------------
 
+data TclApp e s
+    = TclApp
+      { _theTclEnv   :: TclEnv e
+      , _theTclState :: TclState e s
+      }
+
 data TclEnv e
     = TclEnv
-      { _appEnv :: e
+      { _tclLogger :: TclLogger
+      , _appEnv :: e
       }
-      deriving (Show)
+
+instance (Show e) => Show (TclEnv e) where
+    show (TclEnv _lg ae)
+        = "TclEnv { _appEnv = " ++ show ae ++ " }"
+
+type TclLogger
+    = String -> IO ()
 
 data TclState e s
     = TclState
@@ -663,18 +676,19 @@ getTraceLevel
 
 logCommand :: Values -> TclEval e s ()
 logCommand cmd
-    = do l <- getTraceLevel
-         when (l == 3)			-- level == 3: all commands are traced
-                  $ liftIO $ hPutStr stderr cmdStr
+    = do lg <- asks _tclLogger
+         lv <- getTraceLevel
+         when (lv == 3)			-- level == 3: all commands are traced
+                  $ liftIOE $ lg cmdStr
          when ( cmdName == "#"          -- level `elem` [1,2]: comments (command name is "#") are traced
                 &&                      -- level == 1: only if comments have the form "#@..."
-                ( l == 2                -- level == 2: all commands
-                  || ( l == 1
+                ( lv == 2               -- level == 2: all commands
+                  || ( lv == 1
                        &&
                        "@" `isPrefixOf` arg1
                      )
                 )
-              ) $ liftIO $ hPutStrLn stderr $ concatMap selS cmd
+              ) $ liftIOE $ lg $ concatMap selS cmd
     where
       cmdName = concatMap selS . take 1          $ cmd
       arg1    = concatMap selS . take 1 . drop 1 $ cmd

@@ -45,15 +45,10 @@ import System.Posix.User      ( getRealUserID
 -- ------------------------------------------------------------
 
 tclCd :: TclCommand e s
-tclCd (path' : [])
-    | "~" `isPrefixOf` path
-	= do path1 <- liftIOE $ tildeSubst path
-	     tclCd [mkS path1]
-    | otherwise
-	= (liftIOE $ changeDir path) >> return mempty
-    where
-      path = selS path'
-
+tclCd (path : [])
+    = do (h, p) <- liftIOE $ tildeSubst (selS path)
+         _      <- liftIOE $ changeDir (h ++ p)
+         return mempty
 tclCd []
     = do hd <- liftIOE getHomeDir
          tclCd [mkS hd]
@@ -174,12 +169,14 @@ getHomeDir' user
     = do uen <- getUserEntryForName user
 	 return $ homeDirectory uen
 
-tildeSubst :: String -> IO String
-tildeSubst path0
+tildeSubst :: String -> IO (String, String)
+tildeSubst path0@('~' : _)
     = do hd <- if null user then getHomeDir else getHomeDir' $ user
-	 return $ hd ++ path
+	 return (hd, path)
     where
     (user, path) = break (== '/') . drop 1 $ path0
+tildeSubst path
+    = return ("", path)
 
 -- ------------------------------------------------------------
 

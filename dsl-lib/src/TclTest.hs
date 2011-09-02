@@ -5,6 +5,7 @@ where
 
 import Control.Arrow -- (first, second, (&&&), (***))
 import Control.Applicative ((<$>))
+import Control.Concurrent.MVar
 import Control.Monad.Identity
 import Control.Monad.Error
 import Control.Monad.State
@@ -24,6 +25,26 @@ import Text.Parsec
 
 -- ------------------------------------------------------------
 
+type TclAppState e s
+    = AppState (TclEnv e) (TclState e s)
+
+initTclAppState :: (TclEnv e -> TclEnv e) ->
+                   (TclState e s -> TclState e s) ->
+                   IO (Either String (TclAppState e s))
+initTclAppState configEnv configState
+    = either (Left . show) Right <$>
+      initApp (configEnv initTclEnv) (configState initTclState) initTcl
+{-
+    = do (res, state1, _wrt) <- runEval initTcl env0 state0
+         case res of
+           Left err -> return . Left $ show err
+           Right _  -> Right <$> (initAppState env0 state1)
+    where
+      env0   = configEnv   initTclEnv
+      state0 = configState initTclState
+-}
+-- ------------------------------------------------------------
+
 type TestEval
     = TclEval () ()
 
@@ -31,12 +52,18 @@ type TestEval
 
 execTcl	:: String -> IO ()
 execTcl s
-    = do (r, st, _w) <- runEval (initTcl >> interpreteTcl s) (initTclEnv ()) (initTclState ())
+    = do (r, _st, _w) <- runEval
+                        (initTcl >> interpreteTcl s)
+                        (initTclEnv { _appEnv = ()})
+                        (initTclState { _appState = ()})
          putStrLn (show r)
          -- putStrLn (show st)
 
 testTcl :: Error err => Eval err (TclEnv ()) wrt (TclState e ()) res -> IO (Either err res, TclState e (), wrt)
 testTcl s
-    = runEval s  (initTclEnv ()) (initTclState ())
+    = runEval s
+      (initTclEnv { _appEnv = ()})
+      (initTclState { _appState = ()})
+
 
 -- ------------------------------------------------------------

@@ -11,23 +11,32 @@ import Language.Tcl.Commands            ( tclCoreLib )
 import Language.Tcl.Commands.Env        ( tclEnvLib )
 import Language.Tcl.Core
 
+import System.IO                        ( hPutStrLn
+                                        , stderr
+                                        )
+
 -- ------------------------------------------------------------
 
-initTclEnv	:: e -> TclEnv e
-initTclEnv e
+initTclEnv	:: TclEnv e
+initTclEnv
     = TclEnv
-      { _appEnv = e
+      { _tclLogger = hPutStrLn stderr
+      , _appEnv = undefined	-- must be set when app is initialized
       }
 
-initTclState :: s -> TclState e s
-initTclState s
+setTclLogger	:: TclLogger -> TclEnv e -> TclEnv e
+setTclLogger l e
+    = e { _tclLogger = l }
+
+initTclState :: TclState e s
+initTclState
     = TclState
       { _tglobalVars = emptyTclVars
       , _tstack      = []
       , _tcmds       = emptyTclCommands
       , _tprocs      = emptyTclProcs
       , _tchans      = emptyTclChannels
-      , _appState    = s
+      , _appState    = undefined	-- must be set when app is initialized
       }
 
 -- ------------------------------------------------------------
