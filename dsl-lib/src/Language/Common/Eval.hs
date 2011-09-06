@@ -15,17 +15,32 @@ import Control.Monad.State
 
 -- ------------------------------------------------------------
 --
+-- | Evaluation of an expression/command runs in an
+-- error-reader-state-IO monad
+
+type Eval err env state
+    = ErrorT err (ReaderT env (StateT state IO))
+
+runEval :: (Error err) =>
+           Eval err env state res ->
+           env -> state ->
+           IO (Either err res, state)
+runEval expr e0 s0 
+    = runStateT (runReaderT (runErrorT expr) e0) s0
+
+-- ------------------------------------------------------------
+--
 -- | record for storing the env and state of a program run
 -- to enable later continuation of execution
 
-data EnvAndState env st
+data EnvAndState env state
     = EnvAndState
       { _theEnv   :: env
-      , _theState :: st
+      , _theState :: state
       }
 
-newtype AppState env st
-    = AppState (MVar (EnvAndState env st))
+newtype AppState env state
+    = AppState (MVar (EnvAndState env state))
 
 -- ------------------------------------------------------------
 --
@@ -36,7 +51,7 @@ newtype AppState env st
 -- but can be stored within an application.
 
 initApp :: Error err =>
-           env -> st -> Eval err env st res -> IO (Either err (AppState env st))
+           env -> state -> Eval err env state res -> IO (Either err (AppState env state))
 initApp e0 s0 action0
     = do (res, s1) <- runEval action0 e0 s0
          case res of
@@ -44,7 +59,7 @@ initApp e0 s0 action0
            Right _  -> do v <- newAppState e0 s1
                           return (Right v)
 
-newAppState :: env -> st -> IO (AppState env st)
+newAppState :: env -> state -> IO (AppState env state)
 newAppState e0 s0
     = AppState <$> newMVar (EnvAndState e0 s0)
 
@@ -53,7 +68,7 @@ newAppState e0 s0
 -- in the app state for further use
 
 contApp :: Error err =>
-           AppState env st -> Eval err env st res -> IO (Either err res)
+           AppState env state -> Eval err env state res -> IO (Either err res)
 contApp (AppState v) action
     = do es <- takeMVar v
          (res, s1) <- runEval action (_theEnv es) (_theState es)
@@ -67,8 +82,8 @@ contApp (AppState v) action
 -- which may be modified by an initializing action
 
 runAppScript :: (Error err) =>
-                env -> st -> Eval err env st a ->
-                (prg -> Eval err env st res) ->
+                env -> state -> Eval err env state a ->
+                (prg -> Eval err env state res) ->
                 prg ->
                 IO (Either err res)
 runAppScript e0 s0 init0 interpreter script
@@ -78,24 +93,9 @@ runAppScript e0 s0 init0 interpreter script
       action = init0 >> interpreter script
 
 -- ------------------------------------------------------------
---
--- | Evaluation of an expression/command runs in an
--- error-reader-state-writer-IO monad
-
-type Eval err env st
-    = ErrorT err (ReaderT env (StateT st IO))
-
-runEval :: (Error err) =>
-           Eval err env st res ->
-           env -> st ->
-           IO (Either err res, st)
-runEval expr env st 
-    = runStateT (runReaderT (runErrorT expr) env) st
-
--- ------------------------------------------------------------
 
 liftIOE	:: (Error err) =>
-           IO res -> Eval err env st res
+           IO res -> Eval err env state res
 liftIOE a
     = do r <- liftIO $ try' a
          case r of
@@ -108,7 +108,7 @@ liftIOE a
       try' = try
 
 finallyError :: (Error err) =>
-                Eval err env st res -> Eval err env st () -> Eval err env st res
+                Eval err env state res -> Eval err env state () -> Eval err env state res
 finallyError act sequel
     = do a <- act `catchError` (\ e -> sequel >> throwError e)
          _ <- sequel

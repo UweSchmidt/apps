@@ -38,6 +38,7 @@ import Language.Tcl.Commands.Puts       ( tclPuts
 import Language.Tcl.Commands.Return     ( tclBreak
                                         , tclContinue
                                         , tclError
+                                        , tclExit
                                         , tclProc
                                         , tclReturn
                                         )
@@ -83,6 +84,7 @@ buildInTclCommands
       , ("continue",    tclContinue)
       , ("error",       tclError)
       , ("eval",        tclEval)
+      , ("exit",        tclExit)
       , ("expr",        tclExpr)
       , ("for",         tclFor)
       , ("foreach",     tclForeach)

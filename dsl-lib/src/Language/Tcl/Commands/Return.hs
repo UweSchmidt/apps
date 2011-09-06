@@ -2,6 +2,7 @@ module Language.Tcl.Commands.Return
     ( tclBreak
     , tclContinue
     , tclError
+    , tclExit
     , tclProc
     , tclReturn
     )
@@ -43,10 +44,25 @@ tclError _
     = tclWrongArgs "error message"
 
 -- ------------------------------------------------------------
+--
+-- exit is implemented as "return -code -1 returnCode"
+ 
+tclExit :: TclCommand e s
+tclExit []
+    = tclExit [mkI 0]
+
+tclExit [rc]
+    = do n <- checkIntegerValue rc
+         throwError $ tclOtherExc (-1) (mkI n)
+
+tclExit _
+    = tclWrongArgs "exit ?returnCode?"
+
+-- ------------------------------------------------------------
 
 tclReturn :: TclCommand e s
 tclReturn l
-    = do (rc, l1) <- tclOption2 "-code" 2 (checkReturnCode .selS) l
+    = do (rc, l1) <- tclOption2 "-code" 2 (checkReturnCode . selS) l
          tclReturn' rc l1
     where
       tclReturn' rc []

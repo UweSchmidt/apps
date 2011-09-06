@@ -31,11 +31,7 @@ import System.Directory       ( setCurrentDirectory
                               , doesDirectoryExist
                               )
 import System.FilePath        -- ( (</>) )
-{-
-import System.Posix.Directory ( changeWorkingDirectory
-                              , getWorkingDirectory
-                              )
--}
+
 import System.Posix.User      ( getRealUserID
 			      , getUserEntryForID
 			      , getUserEntryForName
@@ -98,8 +94,7 @@ tclGlob l0
           = do res <- liftIOE $ dirContents base fs dir
                return (map mkS res)
             where
-              base      = ""
-              (dir, fs) = pat2Filter . splitDirectories $ (prefix ++ pat)
+              (base, dir, fs) = pat2Filter . splitDirectories $ (prefix ++ pat)
             
 globDefaults :: (String -> TclCommand e s, (Bool, (String, ())))
 globDefaults
@@ -115,11 +110,11 @@ globOptions
       , isIllegalOpt (("-" `isPrefixOf`) . selS) "must be -join, -nocomplain or --"
       ]
 
-pat2Filter :: [String] -> (String, [String -> Bool])
+pat2Filter :: [String] -> (String, String, [String -> Bool])
 pat2Filter ("/" : pl)
-    = ("/", p2f pl)
+    = ("", "/", p2f pl)
 pat2Filter pl
-    = (".", p2f pl)
+    = (".", "", p2f pl)
 
 p2f :: [String] -> [String -> Bool]
 p2f = map name2pred
