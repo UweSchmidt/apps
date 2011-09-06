@@ -126,7 +126,7 @@ data TclError
       deriving (Show)
 
 type TclEval e s
-    = Eval TclError (TclEnv e) TclWrt (TclState e s)
+    = Eval TclError (TclEnv e) (TclState e s)
 
 type TclLib e s
     = (TclEval e s (), [(String, TclCommand e s)])

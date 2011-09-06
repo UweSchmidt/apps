@@ -52,14 +52,14 @@ type TestEval
 
 execTcl	:: String -> IO ()
 execTcl s
-    = do (r, _st, _w) <- runEval
-                        (initTcl >> interpreteTcl s)
-                        (initTclEnv { _appEnv = ()})
-                        (initTclState { _appState = ()})
+    = do (r, _st) <- runEval
+                     (initTcl >> interpreteTcl s)
+                     (initTclEnv { _appEnv = ()})
+                     (initTclState { _appState = ()})
          putStrLn (show r)
          -- putStrLn (show st)
 
-testTcl :: Error err => Eval err (TclEnv ()) wrt (TclState e ()) res -> IO (Either err res, TclState e (), wrt)
+testTcl :: Error err => Eval err (TclEnv ()) (TclState e ()) res -> IO (Either err res, TclState e ())
 testTcl s
     = runEval s
       (initTclEnv { _appEnv = ()})

@@ -10,12 +10,13 @@ import Control.Concurrent.MVar
 import Control.Exception       	( SomeException, try )
 
 import Control.Monad.Error
-import Control.Monad.RWS.Lazy
+import Control.Monad.Reader
+import Control.Monad.State
 
 -- ------------------------------------------------------------
 --
 -- | record for storing the env and state of a program run
--- to enable continuation of execution
+-- to enable later continuation of execution
 
 data EnvAndState env st
     = EnvAndState
@@ -26,10 +27,6 @@ data EnvAndState env st
 newtype AppState env st
     = AppState (MVar (EnvAndState env st))
 
-newAppState :: env -> st -> IO (AppState env st)
-newAppState e0 s0
-    = AppState <$> newMVar (EnvAndState e0 s0)
-
 -- ------------------------------------------------------------
 --
 -- intitialize an interpreter by executing an init action
@@ -39,23 +36,27 @@ newAppState e0 s0
 -- but can be stored within an application.
 
 initApp :: Error err =>
-           env -> st -> Eval err env wrt st res -> IO (Either err (AppState env st))
+           env -> st -> Eval err env st res -> IO (Either err (AppState env st))
 initApp e0 s0 action0
-    = do (res, s1, _wrt) <- runEval action0 e0 s0
+    = do (res, s1) <- runEval action0 e0 s0
          case res of
            Left err -> return (Left err)
            Right _  -> do v <- newAppState e0 s1
                           return (Right v)
+
+newAppState :: env -> st -> IO (AppState env st)
+newAppState e0 s0
+    = AppState <$> newMVar (EnvAndState e0 s0)
 
 -- | continue an interpreter by taking an application state an run
 -- a command with this env and state, the resulting state is again stored
 -- in the app state for further use
 
 contApp :: Error err =>
-           AppState env st -> Eval err env wrt st res -> IO (Either err res)
+           AppState env st -> Eval err env st res -> IO (Either err res)
 contApp (AppState v) action
     = do es <- takeMVar v
-         (res, s1, _wrt) <- runEval action (_theEnv es) (_theState es)
+         (res, s1) <- runEval action (_theEnv es) (_theState es)
          putMVar v (es {_theState = s1})
          return res
 
@@ -65,13 +66,13 @@ contApp (AppState v) action
 -- take a prog and an interpreter, and start running the prog with an initial env an state
 -- which may be modified by an initializing action
 
-runAppScript :: (Error err, Monoid wrt) =>
-                env -> st -> Eval err env wrt st a ->
-                (prg -> Eval err env wrt st res) ->
+runAppScript :: (Error err) =>
+                env -> st -> Eval err env st a ->
+                (prg -> Eval err env st res) ->
                 prg ->
                 IO (Either err res)
 runAppScript e0 s0 init0 interpreter script
-    = do (res, _s1, _wrt) <- runEval action e0 s0
+    = do (res, _s1) <- runEval action e0 s0
          return res
     where
       action = init0 >> interpreter script
@@ -81,25 +82,20 @@ runAppScript e0 s0 init0 interpreter script
 -- | Evaluation of an expression/command runs in an
 -- error-reader-state-writer-IO monad
 
-type Eval err env wrt st
-    = ErrorT err (RWST env wrt st IO)
-
--- ------------------------------------------------------------
---
--- run the monad
+type Eval err env st
+    = ErrorT err (ReaderT env (StateT st IO))
 
 runEval :: (Error err) =>
-           Eval err env wrt st res ->
+           Eval err env st res ->
            env -> st ->
-           IO (Either err res, st, wrt)
-
+           IO (Either err res, st)
 runEval expr env st 
-    = runRWST (runErrorT expr) env st
+    = runStateT (runReaderT (runErrorT expr) env) st
 
 -- ------------------------------------------------------------
 
-liftIOE	:: (Error err, Monoid wrt) =>
-           IO res -> Eval err env wrt st res
+liftIOE	:: (Error err) =>
+           IO res -> Eval err env st res
 liftIOE a
     = do r <- liftIO $ try' a
          case r of
@@ -111,8 +107,8 @@ liftIOE a
       try' :: IO a -> IO (Either SomeException a)
       try' = try
 
-finallyError :: (Monoid wrt, Error err) =>
-                Eval err env wrt st res -> Eval err env wrt st () -> Eval err env wrt st res
+finallyError :: (Error err) =>
+                Eval err env st res -> Eval err env st () -> Eval err env st res
 finallyError act sequel
     = do a <- act `catchError` (\ e -> sequel >> throwError e)
          _ <- sequel
