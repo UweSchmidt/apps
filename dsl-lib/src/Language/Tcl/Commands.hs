@@ -34,6 +34,7 @@ import Language.Tcl.Commands.List       ( tclJoin
 import Language.Tcl.Commands.ListSort   ( tclLsort
                                         )
 import Language.Tcl.Commands.Puts       ( tclPuts
+                                        , tclGets
                                         )
 import Language.Tcl.Commands.Return     ( tclBreak
                                         , tclContinue
@@ -88,6 +89,7 @@ buildInTclCommands
       , ("expr",        tclExpr)
       , ("for",         tclFor)
       , ("foreach",     tclForeach)
+      , ("gets",        tclGets)
       , ("glob",        tclGlob)
       , ("if",          tclIf)
       , ("incr",        tclIncr)

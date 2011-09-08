@@ -3,6 +3,8 @@
 module Language.Tcl.Expr.Parser
 where
 
+import Data.Char                        ( digitToInt )
+
 import Language.Tcl.Value               ( mkI, mkD, mkS )
 import Language.Tcl.Expr.AbstractSyntax
 
@@ -29,7 +31,10 @@ parens
 
 natural :: ExprParser Integer
 natural
+    = P.lexeme lexer natNum
+{-
     = P.natural lexer
+-}
 
 integer :: ExprParser Integer
 integer
@@ -58,6 +63,34 @@ reservedOp
 whiteSpace :: ExprParser ()
 whiteSpace
     = P.whiteSpace lexer
+
+-- ------------------------------------------------------------
+
+number :: Integer -> ExprParser Char -> ExprParser Integer
+number base baseDigit
+    = do digits <- many1 baseDigit
+         let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
+         n `seq` return n
+
+hexNum :: ExprParser Integer
+hexNum
+    = try $ string "0x" >> number 16 hexDigit
+
+decNum :: ExprParser Integer
+decNum
+    = number 10 digit
+
+octNum :: ExprParser Integer
+octNum
+    = try $ char '0' >> option 'o' (char 'o') >> number 8 octDigit
+
+binNum :: ExprParser Integer
+binNum
+    = try $ string "0b" >> number 2 (oneOf "01")
+
+natNum :: ExprParser Integer
+natNum
+    = hexNum <|> octNum <|> binNum <|> decNum
 
 -- ------------------------------------------------------------
 

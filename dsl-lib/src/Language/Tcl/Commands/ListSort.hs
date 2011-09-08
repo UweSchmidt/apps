@@ -101,16 +101,16 @@ tclLsort l0
 
       sortOptions
           = options
-            [ isOpt     (== (mkS "-increasing")) (first $ const increasing)
-            , isOpt     (== (mkS "-decreasing")) (first $ const decreasing)
-            , isOpt     (== (mkS "-unique"    )) (second . first $ const True)
-            , isOpt     (== (mkS "-indices"   )) (second . second . first $ const True)
-            , isOpt     (== (mkS "-ascii"     )) (second . second . second . first $ const (conv2ascii,   compareS))
-            , isOpt     (== (mkS "-integer"   )) (second . second . second . first $ const (conv2integer, compareI))
-            , isOpt     (== (mkS "-real"      )) (second . second . second . first $ const (conv2double,  compareD))
-            , isOpt     (== (mkS "-nocase"    )) (second . second . second . second . first $ const notCaseSensitive)
-            , isArgOpt  (== (mkS "-command"   )) (\ v ->
-                                                  second . second . second . first $ const (noconv,       compareC v))
+            [ isOpt     ((== "-increasing") . selS) (first $ const increasing)
+            , isOpt     ((== "-decreasing") . selS) (first $ const decreasing)
+            , isOpt     ((== "-unique"    ) . selS) (second . first $ const True)
+            , isOpt     ((== "-indices"   ) . selS) (second . second . first $ const True)
+            , isOpt     ((== "-ascii"     ) . selS) (second . second . second . first $ const (conv2ascii,   compareS))
+            , isOpt     ((== "-integer"   ) . selS) (second . second . second . first $ const (conv2integer, compareI))
+            , isOpt     ((== "-real"      ) . selS) (second . second . second . first $ const (conv2double,  compareD))
+            , isOpt     ((== "-nocase"    ) . selS) (second . second . second . second . first $ const notCaseSensitive)
+            , isArgOpt  ((== "-command"   ) . selS) (\ v ->
+                                                     second . second . second . first $ const (noconv,       compareC v))
             ]
 
 evalCompareCmd :: Value -> TclEval s e (Value -> Value -> TclEval s e Ordering)

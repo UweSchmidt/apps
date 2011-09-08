@@ -1,8 +1,10 @@
 module Language.Tcl.Commands.Puts
-    ( tclPuts
+    ( tclGets
+    , tclPuts
     )
 where
 
+import Control.Applicative              ( (<$>) )
 import Control.Monad.RWS
 
 import Language.Common.Eval
@@ -14,6 +16,26 @@ import Language.Tcl.Value
 import System.IO
 
 -- ------------------------------------------------------------
+
+tclGets :: TclCommand e s
+tclGets [cn]
+    = nextLine cn
+
+tclGets [cn, var]
+    = do l <- nextLine cn
+         setVar (selVN var) l
+         return (mkI . toInteger . length . selS $ l)
+
+tclGets _
+    = tclWrongArgs "gets channelId ?varName?"
+
+nextLine :: Value -> TclEval e s Value
+nextLine cn
+    = do h <- get >>= lookupChannel (selS cn)
+         mkS <$> (liftIOE $ hGetLine h)
+
+-- ------------------------------------------------------------
+
 
 tclPuts :: TclCommand e s
 tclPuts l
@@ -35,6 +57,6 @@ tclPuts l
 
 putOptions :: OptParser [Value] Bool
 putOptions
-    = options [isOpt (== (mkS "-nonewline")) (const True)]
+    = options [isOpt ((== "-nonewline") . selS) (const True)]
 
 -- ------------------------------------------------------------
