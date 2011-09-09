@@ -18,6 +18,7 @@ import Language.Tcl.Eval
 import Language.Tcl.Value
 
 import System.IO
+import System.Environment
 
 -- ------------------------------------------------------------
 
@@ -41,7 +42,24 @@ execTcl s
 
 -- ------------------------------------------------------------
 
+
 tclsh :: IO ()
-tclsh = runTclsh
+tclsh
+    = do args <- getArgs
+         case args of
+           [] -> do i <- hIsTerminalDevice stdin
+                    if i
+                       then runTclShell  Nothing () ()
+                       else runTclScript Nothing () ()
+           [fn] -> runTclScript (Just fn) () ()
+           ["-i", fn] -> runTclShell (Just fn) () ()
+           _ -> message "wrong args, usage: tclsh [[-i] script]" >>
+                finished 1
+         return ()
+
+-- ------------------------------------------------------------
+
+main :: IO ()
+main = tclsh
 
 -- ------------------------------------------------------------

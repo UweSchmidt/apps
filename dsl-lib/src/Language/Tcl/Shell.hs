@@ -15,8 +15,9 @@ import Language.Tcl.AbstractSyntax
 import qualified Language.Tcl.Parser as P
 import Language.Tcl.Eval
 import Language.Tcl.Value
+import Language.Tcl.Commands.SetAppend     ( tclSource )
 
-import System.Exit
+import System.Exit                ( exitFailure )
 
 -- ------------------------------------------------------------
 
@@ -34,13 +35,14 @@ type TclREPLState env state
 
 initTclREPLState ::  (TclEnv e -> TclEnv e)         ->
                      (TclState e s -> TclState e s) ->
+                     TclEval e s r                  ->
                      TclREPLState e s               ->
                      IO (TclREPLState e s)
-initTclREPLState configEnv configState replState
+initTclREPLState configEnv configState initAppScript replState
     = do ires <- initApp
                  (configEnv initTclEnv)
                  (configState initTclState)
-                 initTcl
+                 (initTcl >> initAppScript)
          case ires of
            Left err -> ( message .
                          ("initialization failed: " ++) .
@@ -108,12 +110,34 @@ type TclshREPLState = TclREPLState () ()
 -- tclsh does not have any application env or state
 -- for other apps initialize appEnv and appState with values of app specific types
 
-runTclsh :: IO ()
-runTclsh
-    = do s0 <- initTclREPLState
-               (\ e -> e {_appEnv   = ()})
-               (\ s -> s {_appState = ()})
+runTclShell :: Maybe String -> env -> state -> IO ()
+runTclShell initScript e0 s0
+    = do s1 <- initTclREPLState
+               (\ e -> e {_appEnv   = e0 })
+               (\ s -> s {_appState = s0 })
+               (maybe (return mempty) loadScript initScript)
                defaultTclREPLState
-         runREPL repLoop0 s0
+         runREPL repLoop0 s1
+    where
+      loadScript fn
+          = tclSource [mkS fn]
+
+runTclScript :: Maybe FilePath -> env -> state -> IO ()
+runTclScript script e0 s0
+    = do (res, _s) <- runEval runScript
+                      (initTclEnv   {_appEnv   = e0 })
+                      (initTclState {_appState = s0 })
+         case res of
+           Left (TclError lev msg)
+               -> if lev == (-1)
+                  then finished $ (fromInteger . fromMaybe 2 . selI $ msg)
+                  else message (selS msg) >> finished 1
+           Right _
+               -> finished 0
+    where
+      runScript
+          = do initTcl
+               sc <- liftIOE $ maybe getContents readFile script
+               interpreteTcl sc
 
 -- ------------------------------------------------------------
