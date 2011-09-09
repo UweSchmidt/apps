@@ -4,6 +4,7 @@ module Language.Tcl.Commands.SetAppend
     , tclEval
     , tclLassign
     , tclSet
+    , tclSource
     , tclUnset
     )
 where
@@ -13,6 +14,7 @@ import Control.Monad.RWS
 
 import Data.List                        ( isPrefixOf )
 
+import Language.Common.Eval             ( liftIOE )
 import Language.Common.EvalOptions
 
 import Language.Tcl.CheckArgs
@@ -81,6 +83,16 @@ tclSet [n, v]
 
 tclSet _
     = tclWrongArgs "set varName ?newValue?"
+
+-- ------------------------------------------------------------
+
+tclSource	:: TclCommand e s
+tclSource [fn]
+    = do c <- liftIOE $ readFile (selS fn)
+         tclCatchReturnExc $ interpreteTcl c
+
+tclSource _
+    = tclWrongArgs "source fileName"
 
 -- ------------------------------------------------------------
 

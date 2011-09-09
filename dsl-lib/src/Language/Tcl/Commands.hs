@@ -48,6 +48,7 @@ import Language.Tcl.Commands.SetAppend  ( tclAppend
                                         , tclEval
                                         , tclLassign
                                         , tclSet
+                                        , tclSource
                                         , tclUnset
                                         )
 import Language.Tcl.Value
@@ -109,6 +110,7 @@ buildInTclCommands
       , ("pwd",         tclPwd)
       , ("return",      tclReturn)
       , ("set",		tclSet)
+      , ("source",	tclSource)
       , ("split",	tclSplit)
       , ("switch",	tclSwitch)
       , ("unset",       tclUnset)
