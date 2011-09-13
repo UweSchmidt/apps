@@ -1,3 +1,5 @@
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Language.Lua.Value
 where
 
@@ -6,6 +8,8 @@ import Control.Monad.Trans
 import Data.Function        ( on )
 import Data.IORef
 import Data.Map             ( Map )
+import Data.Maybe           ( fromJust )
+import Data.Typeable
 import Data.Unique
 
 import qualified Data.Map as M
@@ -22,7 +26,9 @@ data Value
     | N Double
     | T Table
     | C Closure
+    | U UserData
       deriving (Eq, Ord)
+
 
 -- function calls and rhs of expressions compute a list of values
 
@@ -31,28 +37,49 @@ type Values
 
 -- ------------------------------------------------------------
 
-nil :: Value
-nil = Nil
+data UserData = forall a . (Typeable a, Eq a, Ord a) => UserData a
 
-true :: Value
-true = B True
+instance Eq UserData where
+    (UserData x) == (UserData y) =
+        typeOf x == typeOf y
+        &&
+        cast x == Just y
 
-false :: Value
-false = B False
+-- this Ord instance is a bit silly,
+-- but it is required to have an Ord instance on Value
+-- if the user data is not of the same type,
+-- an artificial ordering is invented
 
-isNil :: Value -> Bool
-isNil Nil
-    = True
-isNil _
-    = False
+instance Ord UserData where
+    (UserData x) <= (UserData y)
+        | typeOf x == typeOf y
+            = fromJust (cast x) <= y
+        | otherwise
+            = show (typeOf x) <= show (typeOf y)
 
-typeOf :: Value -> String
-typeOf  Nil  = "nil"
-typeOf (B _) = "boolean"
-typeOf (S _) = "string"
-typeOf (N _) = "number"
-typeOf (T _) = "table"
-typeOf (C _) = "function"
+-- ------------------------------------------------------------
+
+nil           :: Value
+nil           = Nil
+
+true          :: Value
+true          = B True
+
+false         :: Value
+false         = B False
+
+isNil         :: Value -> Bool
+isNil Nil     = True
+isNil _       = False
+
+luaType       :: Value -> String
+luaType  Nil  = "nil"
+luaType (B _) = "boolean"
+luaType (S _) = "string"
+luaType (N _) = "number"
+luaType (T _) = "table"
+luaType (C _) = "function"
+luaType (U _) = "userdata"
 
 -- ------------------------------------------------------------
 
