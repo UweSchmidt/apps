@@ -8,8 +8,11 @@ import Control.Monad.Trans
 
 import Data.Function        ( on )
 import Data.IORef
+import Data.List            ( intercalate )
 import Data.Map             ( Map )
-import Data.Maybe           ( fromJust )
+import Data.Maybe           ( fromJust
+                            , fromMaybe
+                            )
 import Data.Typeable
 import Data.Unique
 
@@ -28,6 +31,8 @@ data Value
     | T Table
     | C Closure
     | U UserData
+    | L Values		-- lists of values are used internally with the ... varargs "variable"
+                        -- lists should not be nested
       deriving (Eq, Ord)
 
 instance Show Value where
@@ -79,6 +84,9 @@ true          = B True
 false         :: Value
 false         = B False
 
+emptyList     :: Value
+emptyList     = L []
+
 isNil         :: Value -> Bool
 isNil Nil     = True
 isNil _       = False
@@ -93,6 +101,7 @@ luaType (N _) = "number"
 luaType (T _) = "table"
 luaType (C _) = "function"
 luaType (U _) = "userdata"
+luaType (L _) = "list"		-- should not be visible when evaluating any expressions
 
 -- ------------------------------------------------------------
 
@@ -104,10 +113,11 @@ value2String (N d) = let (n, f) = properFraction d in
                      if f == 0
                      then show (n::Integer)
                      else show d
-value2String (S s) = s
+value2String (S s) = show s
 value2String (T t) = "table: "    ++ ( show . hashUnique . theTID . theTableId   $ t)
 value2String (C c) = "function: " ++ ( show . hashUnique . theCID . theClosureId $ c)
 value2String (U _) = "<userdata>"
+value2String (L l) = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
 
 -- ------------------------------------------------------------
 
@@ -130,6 +140,46 @@ value2Integral _
 
 -- ------------------------------------------------------------
 
+-- conversion of an arbitrary list of values to a single value
+
+list2Value                 :: Value -> Value
+list2Value (L [])          = nil		-- map empty tuple to nil
+list2Value (L (x : _))     = x 	                -- map none empty list to head of list
+list2Value v               = v
+
+-- merging lists of values of right hand sides of assignments or returns
+-- into a single list of values, the 1. arg is converted into a single value and cons'd to the second arg
+
+consValues                 :: Value -> Value -> Value
+consValues v1@(L _) v2     = consValues (list2Value v1) v2
+consValues v1       (L []) = v1
+consValues v1       (L l2) = L (v1 : l2)
+consValues v1       v2     = L [v1,v2]
+
+-- splitting a single value from a list value
+
+uncons                     :: Value -> (Value, Value)
+uncons (L [])              = (nil, emptyList)
+uncons (L (x : xs))        = (x, L xs)
+uncons v                   = (v, emptyList)
+
+-- a multiple assignment can be implemented with these primitive functions
+--
+-- "x, y, z = f1(), f2()" can be implemented by
+--
+-- let v1 = eval("f1()")
+--   , v2 = eval("f2()")
+--   , v3 = consValues v1 v2
+--   , (vx, v4) = uncons v3
+--   , (vy, v5) = uncons v4
+--   ,  vz      = list2Value v5
+-- in
+--   assign(x, vx)
+--   assign(y, vy)
+--   assign(z, vz)
+
+-- ------------------------------------------------------------
+
 -- a table is (Lua language def) an object, every table constructor
 -- generates a unique key, the TableId, used for comparison of tables
 -- when assigning table values, a ref to the table is copied, not the
@@ -137,13 +187,9 @@ value2Integral _
 
 data Table
     = TB { theTableId      :: TableId
-         , theTableEntries :: IORef Variables
+         , theTableEntries :: IORef Entries
          , theMetaTable    :: Value
          }
-
-newtype TableId
-    = TID { theTID :: Unique }
-      deriving (Eq, Ord)
 
 instance Eq Table where
     (==) = (==) `on` theTableId
@@ -151,106 +197,158 @@ instance Eq Table where
 instance Ord Table where
     compare = compare `on` theTableId
 
+newtype TableId
+    = TID { theTID :: Unique }
+      deriving (Eq, Ord)
+
 -- ------------------------------------------------------------
 
 newTable :: (MonadIO m) => m Table
 newTable
     = liftIO $
-      do i <- newUnique
-         t <- newIORef M.empty
-         return $ TB { theTableId      = TID i
+      do i <- TID <$> newUnique
+         t <- newIORef emptyEntries
+         return $ TB { theTableId      = i
                      , theTableEntries = t
                      , theMetaTable    = nil
                      }
 
-getEntries :: (MonadIO m) => Table -> m Variables
+getEntries :: (MonadIO m) => Table -> m Entries
 getEntries
     = liftIO . readIORef . theTableEntries
 
-putEntries :: (MonadIO m) => Table -> Variables -> m ()
+putEntries :: (MonadIO m) => Table -> Entries -> m ()
 putEntries t entries
     = liftIO $ writeIORef (theTableEntries t) entries
 
-lookupTable :: (MonadIO m) => Value -> Table -> m Value
-lookupTable k t
-    = do entries <- getEntries t
-         lookupVariable k entries
+modifyEntries :: (MonadIO m) => Table -> (Entries -> Entries) -> m ()
+modifyEntries t mf
+    = liftIO $ modifyIORef (theTableEntries t) mf
 
-writeTable :: (MonadIO m) => Value -> Value -> Table -> m Table
+hasTableEntry :: (MonadIO m) => Value -> Table -> m Bool
+hasTableEntry k t
+    = do es <- getEntries t
+         return (hasEntry k es)
+
+readTable :: (MonadIO m) => Value -> Table -> m Value
+readTable k t
+    = do es <- getEntries t
+         return . fromMaybe nil . lookupEntry k $ es
+
+writeTable :: (MonadIO m) => Value -> Value -> Table -> m ()
 writeTable k v t
-    = do entries <- getEntries t
-         res <- writeVariable k v entries
-         maybe (return ()) (putEntries t) res
-         return t
-{-
-removeEntry :: MonadIO m => Value -> Table -> m Table
-removeEntry k t
-    = liftIO $
-      do entries <- readIORef (theTableEntries t)
-         case M.lookup k entries of
-           Nothing -> return ()
-           Just _  -> do let entries' = M.delete k entries
-                         writeIORef (theTableEntries t) entries'
-         return t
+    = modifyEntries t (writeEntry k v)
 
-addEntry :: MonadIO m => Value -> Value -> Table -> m Table
-addEntry k v t
-    | isNil k
-        = error "table index is nil"
-    | isNil v
-        = removeEntry k t
-    | otherwise
-        = writeTable k v t
--- -}
+deleteTableEntry :: (MonadIO m) => Value -> Table -> m ()
+deleteTableEntry k t
+    = modifyEntries t (deleteEntry k)
+
 -- ------------------------------------------------------------
 
-type Variables
-    = Map Value Cell
+newtype Entries
+    = ET { theEntries :: Map Value Value}
 
-type Cell = IORef Value
+emptyEntries :: Entries
+emptyEntries
+    = ET $ M.empty
 
-lookupVariable :: (MonadIO m) => Value -> Variables -> m Value
-lookupVariable k vars
-    = liftIO $
-      maybe (return nil) (readIORef) $
-      M.lookup k vars
+hasEntry :: Value -> Entries -> Bool
+hasEntry k
+    = M.member k . theEntries
 
-removeVariable :: MonadIO m => Value -> Variables -> m (Maybe Variables)
-removeVariable k vars
-    = liftIO $
-      return $
-      if M.member k vars
-         then Just $ M.delete k vars
-         else Nothing
+lookupEntry :: Value -> Entries -> Maybe Value
+lookupEntry k
+    = M.lookup k . theEntries
 
-writeVariable :: (MonadIO m) => Value -> Value -> Variables -> m (Maybe Variables)
-writeVariable k v vars
-    = liftIO $
-      case M.lookup k vars of
-        Nothing -> do c <- newIORef v
-                      return . Just $ M.insert k c vars
-        Just c  -> do writeIORef c v
-                      return Nothing
+writeEntry :: Value -> Value -> Entries -> Entries
+writeEntry k v
+    = ET . M.insert k v . theEntries
 
-updateVariable :: MonadIO m => Value -> Value -> Variables -> m (Maybe Variables)
-updateVariable k v t
-    | isNil v
-        = removeVariable k t
-    | otherwise
-        = writeVariable k v t
+deleteEntry :: Value -> Entries -> Entries
+deleteEntry k
+        = ET . M.delete k   . theEntries
+
+-- ------------------------------------------------------------
+
+-- the environment is organized as a stack of
+-- tables, the topmost table contains the variable of the innermost scope
+-- the last table holds the global variables
+--
+-- addNewEnv must be called when entering a new scope (function body or block)
+-- when leaving the scope, the old list of envs must be restored
+--
+-- Hint for using these basic env ops:
+--
+-- a local variable ("local x") should perform a "newLocalVariable x" to store values
+-- a "x = nil" must NOT perform a "deleteVariable x", the variable is still marked as local
+-- a "x = someOtherValue" must perform a "writeVariable x ..."
+--
+-- in tables used as env, deleting variable is never done, because of the
+-- static binding semantics of lua, all none global variable "deleted" must
+-- remain in the table with the associated value "nil", else a kind of dynamic binding
+-- would be the effect
+
+newtype Env = Env { theEnv :: [Table] }
+
+globalEnv :: Table -> Env
+globalEnv gt = Env { theEnv = [gt] }
+
+addNewEnv ::  (MonadIO m) => Env -> m Env
+addNewEnv (Env e)
+    = do t <- newTable
+         return $ Env (t : e)
+
+readVariable :: (MonadIO m) => Value -> Env -> m Value
+readVariable k (Env [ge])
+    = readTable k ge
+
+readVariable k (Env (e1 : env))
+    = do res <- readTable k e1
+         if isNil res
+            then readVariable k (Env env)
+            else return res
+
+readVariable _ _
+    = error "readVariable: no env given"
+
+newLocalVariable :: (MonadIO m) => Value -> Env -> m ()
+newLocalVariable k e
+    = writeLocalVariable k nil e
+
+writeLocalVariable :: (MonadIO m) => Value -> Value -> Env -> m ()
+writeLocalVariable k v (Env (e1 : _))
+    = writeTable k v e1
+
+writeLocalVariable _ _ _
+    = error "writeLocalVariable: no env given"
+
+writeVariable :: (MonadIO m) => Value -> Value -> Env -> m ()
+writeVariable k v (Env [ge])
+    = writeTable k v ge
+
+writeVariable k v (Env (e1 : env))
+    = do found <- hasTableEntry k e1
+         if found
+            then writeTable k v e1
+            else writeVariable k v (Env env)
+
+writeVariable _ _ _
+    = error "writeVariable: no env given"
 
 -- ------------------------------------------------------------
 
 -- a closure consists of a list of tables, the static chain of environments
-
-type Env = Table
+-- on call of this closure the env will be extended by a new empty env for
+-- the parameters and locals
 
 data Closure
-    = CL { theGlobEnv        :: Table
-         , theExternalLocals :: Variables
-         , theCode           :: Closure -> Values -> IO Values
-         , theClosureId      :: ClosureId		-- just for comparisons of function values
+    = CL { theClosueEnv  :: Env
+         , theClosureId  :: ClosureId		-- just for comparisons of function values
+         , theCode       :: Function
          }
+
+type Function
+    = Closure -> Values -> IO Values
 
 newtype ClosureId
     = CID { theCID :: Unique }
@@ -266,6 +364,16 @@ instance Ord Closure where
     compare = compare `on` (hashUnique . theCID . theClosureId)
 
 
+newClosure :: (MonadIO m) => Env -> Function -> m Closure
+newClosure e f
+    = liftIO $
+      do i <- CID <$> newUnique
+         return $
+                CL { theClosueEnv  = e
+                   , theClosureId  = i
+                   , theCode       = f
+                   }
+
 -- ------------------------------------------------------------
 
 -- a program state is a mapping from module names to tables
@@ -278,7 +386,4 @@ newtype State
          }
 
 -- ------------------------------------------------------------
-
-
-
 
