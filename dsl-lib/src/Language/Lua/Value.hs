@@ -89,7 +89,16 @@ emptyList     = L []
 
 isNil         :: Value -> Bool
 isNil Nil     = True
+isNil x@(L _) = isNil (list2Value x)
 isNil _       = False
+
+isFalse	          :: Value -> Bool
+isFalse (B False) = True
+isFalse x@(L _)   = isFalse (list2Value x)
+isFalse x         = isNil x
+
+isTrue            :: Value -> Bool
+isTrue            = not . isFalse
 
 -- ------------------------------------------------------------
 
@@ -121,11 +130,11 @@ value2String (L l) = ("{" ++) . (++ "}") . intercalate "," . map value2String $ 
 
 -- ------------------------------------------------------------
 
-value2Int :: Value -> Maybe Int
-value2Int = value2Integral
+value2Int      :: Value -> Maybe Int
+value2Int      = value2Integral
 
-value2Integer :: Value -> Maybe Integer
-value2Integer = value2Integral
+value2Integer  :: Value -> Maybe Integer
+value2Integer  = value2Integral
 
 value2Integral :: Integral a => Value -> Maybe a
 value2Integral (N d)
