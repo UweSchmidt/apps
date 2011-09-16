@@ -12,8 +12,17 @@ import Data.Char           ( toLower )
 
 -- ------------------------------------------------------------
 
-t :: String -> Either String Block
+t :: String -> Either String (ACode, CState, CErrs)
 t inp
+    = case tokenize "" inp of
+        Left err -> Left $ show err
+        Right ts
+            -> case parse_chunk "" ts of
+                 Left err -> Left $ show err
+                 Right b
+                     -> Right $ compileProg b
+{-
+
       = gencode . parse . scan $ inp
     where
       scan = tokenize ""
@@ -22,8 +31,8 @@ t inp
       parse (Right ts) = gencode . parse_chunk "" $ ts
 
       gencode (Left err) = Left . show $ err
-      gencode (Right b)  = Right b
-
+      gencode (Right b)  = Right . compileProg $ b
+-}
 -- ------------------------------------------------------------
 
 data BOp
@@ -86,11 +95,11 @@ instance (Show lab) => Show (Instr lab) where
     show (UnOp op     ) = fmt0 $ fmtOp $ show op
     show (Jump l      ) = fmt1 "jump" (show l)
     show (Label l     ) = fmtL $ show l
-    show (Branch b l  ) = fmt1 ("branch" ++ if b then "t" else "f") (show l)
+    show (Branch b l  ) = fmt1 ("br" ++ if b then "true" else "false") (show l)
     show (Closure _l  ) = fmt1 "new" "{closue}"
     show (Call        ) = fmt0 "call"
     show (TailCall    ) = fmt0 "tailcall"
-    show (Leave       ) = fmt0 "leave"
+    show (Leave       ) = fmt0 "return"
     show (Exit rc     ) = fmt1 "exit" (show rc)
     show (Abort s     ) = fmt1 "abort" s
 
@@ -163,7 +172,7 @@ type CErr
 data CState
     = CS { newLab :: Int
          , envCnt :: Int
-         , loopEnvLevels :: [Int]
+         , loopEnvLevels :: [(Int, Label)]
          }
       deriving (Show)
 
@@ -193,17 +202,66 @@ compProg block
 
 compBlock :: Block -> Compile ACode
 compBlock (Block sl)
-    = do body <- mconcat <$> mapM compStmt sl
-         genCode [ mkInstr NewEnv
-                 , body
-                 , mkInstr DelEnv
-                 ]
+    | hasLocalDefs sl
+        = do incrEnvCnt
+             body <- compStmtL sl
+             decrEnvCnt
+             genCode [ mkInstr NewEnv
+                     , body
+                     , mkInstr DelEnv
+                     ]
+    | otherwise			-- optimization: unnecessay env creation thrown away
+        = compStmtL sl
+
+compStmtL :: [Stmt] -> Compile ACode
+compStmtL sl
+    = mconcat <$> mapM compStmt sl
+
+-- ------------------------------------------------------------
 
 compStmt :: Stmt -> Compile ACode
-compStmt (SAssignment lvs es)
-    = do c1 <- compExprL es
-         c2 <- compStore lvs
+compStmt (SAssignment [lv] [e])
+    = do c1 <- compExpr1 e
+         c2 <- compStore mempty lv
          genCode [c1, c2]
+
+compStmt (SAssignment lvs es)
+    = do c1 <- compExprL  es
+         c2 <- compStoreL lvs
+         genCode [c1, c2]
+
+compStmt (SWhile cond body)
+    = do lBody <- newLabel
+         lCond <- newLabel
+         lEnd  <- newLabel
+         pushLoopLevel lEnd
+         codeCond <- compCond True lBody cond
+         codeBody <- compBlock body
+         genCode [ mkInstr $ Jump  lCond
+                 , mkInstr $ Label lBody
+                 , codeBody
+                 , mkInstr $ Label lCond
+                 , codeCond
+                 , mkInstr $ Label lEnd
+                 ]
+
+compStmt SBreak
+    = getLoopLevel >>=
+      maybe (do cerr "compiling break statement" "no surrounding loop found"
+                return mempty
+            ) (\ (i, lab) -> genCode $ replicate i (mkInstr DelEnv)
+                                       ++
+                                       [mkInstr $ Jump lab]
+              )
+
+compStmt (SReturn es)		-- TODO: Tail call optimization
+    = do l        <- getEnvCnt
+         code_es  <- compExprL es
+         code_env <- genCode $ replicate l (mkInstr DelEnv)
+         genCode [ code_es
+                 , code_env
+                 , mkInstr Leave
+                 ]
 
 compStmt s
     = do todo "compStmt" s
@@ -211,15 +269,114 @@ compStmt s
 
 -- ------------------------------------------------------------
 
-compExprL :: [Expr] -> Compile ACode
-compExprL es
-    = do todo "compExprL" es
-         return $ mkInstr $ Abort "compExprL"
+compStoreL :: [LValue] -> Compile ACode
+compStoreL []
+    = genCode [ mkInstr Pop ]
 
-compStore :: [LValue] -> Compile ACode
-compStore lvs
-    = do todo "compStore" lvs
-         return $ mkInstr $ Abort "compStore"
+compStoreL lvs
+    = do code_lvs' <- mapM compStore1 lvs'
+         code_lv   <- compStoreLast $ head lv
+         genCode $ code_lvs'
+                   ++
+                   [ code_lv ]
+  where
+    len1 = length lvs - 1
+    (lvs', lv) = splitAt len1 lvs
+
+compStore1 :: LValue -> Compile ACode
+compStore1
+    = compStore (mkInstr UnTuple)
+
+compStoreLast :: LValue -> Compile ACode
+compStoreLast
+    = compStore (mkInstr Take1)
+
+-- gen code for storing a single value from the eval stack into a variable
+-- into a field of a table, in the 1 case stack size is decreased by 1
+-- in the 2. case the top value is a ref to the table, the 2. the field and
+-- the 3. the value, so the eval stack is decreased by 3
+
+compStore :: ACode -> LValue -> Compile ACode
+compStore instr (LVar n)
+    = genCode [ instr
+              , mkInstr $ StoreVar n
+              ]
+
+compStore instr (LFieldRef tb ix)
+    = do code_ix <- compExpr1 ix
+         code_tb <- compExpr1 tb
+         genCode [ instr
+                 , code_ix
+                 , code_tb
+                 , mkInstr StoreField
+                 ]
+
+-- ------------------------------------------------------------
+
+-- gen code such that the list of expressions is pushed as a single list of values onto
+-- the evaluation stack
+
+compExprL :: [Expr] -> Compile ACode
+compExprL []
+    = return $ mkInstr $ LoadEmpty
+compExprL es
+    = do code_es' <- mapM compExpr1 es'
+         code_le  <- compExpr (head le)
+         genCode $ code_es'
+                   ++
+                   [ code_le ]
+                   ++
+                   replicate len1 (mkInstr MkTuple)
+      where
+        len1 = length es -1
+        (es', le) = splitAt len1 es
+
+-- gen code such that a single value, not a tuple is pushed onto the eval stack
+-- from tuple values the 1. one (or nil) will be taken
+
+compExpr1 :: Expr -> Compile ACode
+compExpr1 e
+    | isSingleResExpr e
+        = compExpr e
+    | otherwise
+        = do code_e <- compExpr e
+             genCode [ code_e
+                     , mkInstr Take1
+                     ]
+
+-- gen code such that a single value is pushed onto the evaluation stack
+-- this value may be a tuple of arbitrary length
+
+compExpr :: Expr -> Compile ACode
+compExpr (ENumber d)
+    = genCode [mkInstr $ LoadNum d]
+
+compExpr (EString s)
+    = genCode [mkInstr $ LoadStr s]
+
+compExpr (EBool b)
+    = genCode [mkInstr $ LoadBool b]
+
+compExpr (ENil)
+    = genCode [mkInstr $ LoadNil]
+
+compExpr (EVar n)
+    = genCode [mkInstr $ LoadVar n]
+
+compExpr e
+    = do todo "compExpr" e
+         return $ mkInstr $ Abort "compExpr"
+
+-- gen code such that a single value is pushed onto the stack,
+-- this value will be consumed by a conditional branch instr
+-- so after executing the sequence, the stack has the same state as before
+
+compCond :: Bool -> Label -> Expr -> Compile ACode
+compCond c l e
+    = do codeExpr <- compExpr e
+         genCode [ codeExpr
+                 , mkInstr $ Branch c l
+                 ]
 
 -- ------------------------------------------------------------
 --
@@ -227,6 +384,9 @@ compStore lvs
 
 todo :: (Show a) => String -> a -> Compile ()
 todo s ast = tell $ CErrs [unwords ["TODO:", s, show ast]]
+
+cerr :: (Show a) => String -> a -> Compile ()
+cerr s msg = tell $ CErrs [unwords ["ERROR", "in", s ++ ":", show msg]]
 
 newLabel :: Compile Label
 newLabel
@@ -245,17 +405,38 @@ incrEnvCnt = modifyEnvCnt (+   1 )
 decrEnvCnt :: Compile ()
 decrEnvCnt = modifyEnvCnt (+ (-1))
 
-pushLoopLevel :: Compile ()
-pushLoopLevel
-    = modify $ \ s -> s { loopEnvLevels = envCnt s : loopEnvLevels s }
+getEnvCnt :: Compile Int
+getEnvCnt = envCnt <$> get
+
+pushLoopLevel :: Label -> Compile ()
+pushLoopLevel lab
+    = modify $ \ s -> s { loopEnvLevels = (envCnt s, lab) : loopEnvLevels s }
 
 popLoopLevel :: Compile ()
 popLoopLevel
     = modify $ \ s -> s { loopEnvLevels = tail $ loopEnvLevels s }
 
-getLoopLevel :: Compile Int
+getLoopLevel :: Compile (Maybe (Int, Label))
 getLoopLevel
     = do s <- get
-         return $ envCnt s - head (loopEnvLevels s)
+         return $
+           case loopEnvLevels s of
+             [] -> Nothing
+             ((l, lab) : _) -> Just (envCnt s - l, lab)
+
+-- ------------------------------------------------------------
+
+isSingleResExpr :: Expr -> Bool
+isSingleResExpr (EEllipsis)         = False
+isSingleResExpr (ECall _ _)         = False
+isSingleResExpr (EMemberCall _ _ _) = False
+isSingleResExpr _                   = True
+
+hasLocalDefs :: [Stmt] -> Bool
+hasLocalDefs = any isLocalDef
+
+isLocalDef :: Stmt -> Bool
+isLocalDef (SLocalDef _ _) = True
+isLocalDef _               = False
 
 -- ------------------------------------------------------------
