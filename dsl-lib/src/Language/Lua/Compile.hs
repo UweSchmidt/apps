@@ -10,14 +10,15 @@ import Control.Monad.RWS
 
 -- ------------------------------------------------------------
 
-compileProg :: Block -> (AProg, CErrs)
+compileProg :: Block -> (ACode, CErrs)
 compileProg block = runCompile (compProg block)
 
 -- ------------------------------------------------------------
 
-compProg :: Block -> Compile Label
+compProg :: Block -> Compile ()
 compProg block
     = do start     <- newLabel
+         emitCode $ mkInstr $ Jump start
          code_prog <- compExpr prog
          code_cls  <- genCode [ mkInstr $ Label start
                               , mkInstr $ LoadEmpty
@@ -27,7 +28,7 @@ compProg block
                               , mkInstr $ Exit 0
                               ]
          emitCode code_cls
-         return start
+         return ()
     where
       prog = EFunction [] False block
 
@@ -324,6 +325,7 @@ compExpr e@(EBinOp op e1 e2)
                       , (">=", GRE)
                       , ("<=", LSE)
                       , ("<",  LST)
+                      , ("..", Conc)
                       ]
 
 compExpr (EUnOp op e1)
@@ -386,6 +388,42 @@ compExpr (EFunction fps varargs block)
                         , mkInstr $ Leave
                         ]
 
+compExpr (ETableCons fs)
+    = do code_es <- compFieldList fs
+         genCode [ mkInstr $ NewTable
+                 , code_es
+                 ]
+    where
+      compField compEx key val
+          = maybe (compAppend compEx val)
+                  (compStoreField val)
+                  key
+
+      compAppend compEx val
+          = do code_val <- compEx val
+               genCode [ code_val
+                       , mkInstr $ Dup 1
+                       , mkInstr $ Append
+                       ]
+
+      compStoreField val key
+          = do code_val <- compExpr1 val
+               code_key <- compExpr1 key
+               genCode [ code_val
+                       , code_key
+                       , mkInstr $ Dup 2
+                       , mkInstr $ StoreField
+                       ]
+      
+      compFieldList []
+          = genCode []
+      compFieldList [fLast]
+          = uncurry (compField compExpr) fLast		-- last field must be compiled with compExpr
+      compFieldList (f1 : fs')                          -- all others with compExpr1
+          = do code_f1  <- uncurry (compField  compExpr1) f1
+               code_fs' <- compFieldList fs'
+               genCode [code_f1, code_fs']
+
 compExpr e
     = todo "compExpr" $ show e
 
@@ -409,7 +447,7 @@ compAndOr (EBinOp op e1 e2)
          code_e2 <- compExpr1 e2
          lEnd    <- newLabel
          genCode [ code_e1
-                 , mkInstr $ Dup
+                 , mkInstr $ Dup 0
                  , mkInstr $ Branch (op == "or") lEnd
                  , mkInstr $ Pop
                  , code_e2

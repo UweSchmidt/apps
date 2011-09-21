@@ -27,10 +27,10 @@ import Control.Monad.RWS
 
 type Compile = RWS CEnv CGen CState
 
-runCompile :: Compile Label -> (AProg, CErrs)
+runCompile :: Compile a -> (ACode, CErrs)
 runCompile action
-    = let (l, _cs, res) = runRWS action initCEnv initCState in
-      ((l, theCode res), theErrs res)
+    = let (_v, _cs, res) = runRWS action initCEnv initCState in
+      (theCode res, theErrs res)
 
 -- ------------------------------------------------------------
 --

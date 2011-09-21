@@ -14,8 +14,6 @@ module Language.Lua.Instr
     , ACode
     , MCode
     , mkInstr
-    , AProg
-    , MProg
     )
 where
 
@@ -28,7 +26,7 @@ type Name
     = String
 
 data BOp
-    = Add | Sub | Mult | Div | Exp | Mod | EQU | NEQ | GRT | GRE | LSE | LST
+    = Add | Sub | Mult | Div | Exp | Mod | EQU | NEQ | GRT | GRE | LSE | LST | Conc
       deriving (Show, Eq, Ord)
 
 data UOp
@@ -48,12 +46,13 @@ data Instr lab
     | DelEnv            -- remove an env on block exit (normal exit, break and return)
     | NewLocal Name     -- create new variable in local env
     | StoreVar Name
-    | StoreField
+    | StoreField        -- store a value under a key in a table
+    | Append            -- store a value at the next "free" position in a table
     | MkTuple		-- cons the 2. top value with the tol value list
     | UnTuple           -- split top level value list into head and tail
     | Take1             -- take the head ov a value list and discard the tail
     | Pop               -- throw away the topmost value
-    | Dup               -- duplicate topmost value
+    | Dup Int           -- duplicate topmost value
     | BinOp BOp
     | UnOp UOp
     | Jump lab
@@ -80,11 +79,12 @@ instance (Show lab) => Show (Instr lab) where
     show (DelEnv      ) = fmt0 "delenv"
     show (StoreVar n  ) = fmt1 "store" n
     show (StoreField  ) = fmt1 "store" ".[.]"
+    show (Append      ) = fmt0 "append"
     show (MkTuple     ) = fmt0 "mktuple"
     show (UnTuple     ) = fmt0 "untuple"
     show (Take1       ) = fmt0 "take1"
     show (Pop         ) = fmt0 "pop"
-    show (Dup         ) = fmt0 "dup"
+    show (Dup i       ) = fmt1 "dup" $ show i
     show (BinOp op    ) = fmt0 $ fmtOp $ show op
     show (UnOp op     ) = fmt0 $ fmtOp $ show op
     show (Jump l      ) = fmt1 "jump" (show l)
@@ -144,11 +144,5 @@ instance Monoid (Code a) where
 
 mkInstr :: Instr a -> Code a
 mkInstr = Code . (:[])
-
--- ------------------------------------------------------------
-
-type Prog a = (a, Code a)
-type AProg = Prog Label
-type MProg = Prog Int
 
 -- ------------------------------------------------------------

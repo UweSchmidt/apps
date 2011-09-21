@@ -10,7 +10,7 @@ import Language.Lua.CompileState
 
 -- ------------------------------------------------------------
 
-cc :: String -> Either String (AProg, CErrs)
+cc :: String -> Either String (ACode, CErrs)
 cc inp
     = case tokenize "" inp of
         Left err -> Left $ show err
