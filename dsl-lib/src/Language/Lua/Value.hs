@@ -30,6 +30,7 @@ data Value
     | N Double
     | T Table
     | C Closure
+    | F NativeFct
     | U UserData
     | L Values		-- lists of values are used internally with the ... varargs "variable"
                         -- lists should not be nested
@@ -109,6 +110,7 @@ luaType (S _) = "string"
 luaType (N _) = "number"
 luaType (T _) = "table"
 luaType (C _) = "function"
+luaType (F _) = "function"
 luaType (U _) = "userdata"
 luaType (L _) = "list"		-- should not be visible when evaluating any expressions
 
@@ -124,7 +126,8 @@ value2String (N d) = let (n, f) = properFraction d in
                      else show d
 value2String (S s) = show s
 value2String (T t) = "table: "    ++ ( show . hashUnique . theTID . theTableId   $ t)
-value2String (C c) = "function: " ++ ( show . hashUnique . theCID . theClosureId $ c)
+value2String (C c) = "function: " ++ ( show . theCodeAddr $ c)
+value2String (F f) = "function: " ++ ( show . theNativeFctId $ f)
 value2String (U _) = "<userdata>"
 value2String (L l) = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
 
@@ -347,41 +350,41 @@ writeVariable _ _ _
 -- ------------------------------------------------------------
 
 -- a closure consists of a list of tables, the static chain of environments
--- on call of this closure the env will be extended by a new empty env for
+-- an a start address.
+-- On call of this closure the env will be extended by a new empty env for
 -- the parameters and locals
 
 data Closure
     = CL { theClosueEnv  :: Env
-         , theClosureId  :: ClosureId		-- just for comparisons of function values
-         , theCode       :: Function
+         , theCodeAddr   :: CodeAddress
          }
 
-type Function
-    = Closure -> Values -> IO Values
-
-newtype ClosureId
-    = CID { theCID :: Unique }
-      deriving (Eq, Ord)
+newtype CodeAddress
+    = CA { theCA :: Int }
+      deriving (Eq, Ord, Show)
 
 instance Eq Closure where
-    (==) = (==) `on` theClosureId
-
--- this instance is not very usefull
--- it's required by the Ord instance of Value
+    (==) = (==) `on` theCodeAddr
 
 instance Ord Closure where
-    compare = compare `on` (hashUnique . theCID . theClosureId)
+    compare = compare `on` theCodeAddr
 
 
-newClosure :: (MonadIO m) => Env -> Function -> m Closure
-newClosure e f
-    = liftIO $
-      do i <- CID <$> newUnique
-         return $
-                CL { theClosueEnv  = e
-                   , theClosureId  = i
-                   , theCode       = f
-                   }
+newClosure :: Env -> CodeAddress -> Closure
+newClosure e start
+    = CL { theClosueEnv  = e
+         , theCodeAddr   = start
+         }
+
+-- ------------------------------------------------------------
+
+newtype NativeFct
+    = NF { theNativeFctId :: String
+         }
+      deriving (Eq, Ord)
+
+newNativeFct :: String -> NativeFct
+newNativeFct = NF
 
 -- ------------------------------------------------------------
 
@@ -390,8 +393,11 @@ newClosure e f
 -- there is one anonymous module for all global variables
 -- and (predefined) functions
 
-newtype State
-    = ST { theModules :: Table
+data State
+    = ST { theCurrEnv    :: Env
+         , thePC         :: CodeAddress
+         , theEvalStack  :: Values
+         , theCallStack  :: [Closure]
          }
 
 -- ------------------------------------------------------------

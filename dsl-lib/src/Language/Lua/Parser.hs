@@ -383,12 +383,13 @@ ops = [
      ("<=",  False,  AssocLeft),
      (">",   False,  AssocLeft),
      ("<",   False,  AssocLeft)],
-    [("and", False,  AssocLeft)],
-    [("or",  False,  AssocLeft)]
+    [("and", False,  AssocRight)],
+    [("or",  False,  AssocRight)]
     ]
 
 -----------
 
+funcargs :: Parser [Expr]
 funcargs = do
         (parens $ option [] explist1)
     <|> (liftM (:[]) $ tableconstructor)
@@ -411,10 +412,15 @@ parlist1 =
 
 -----------
 
-tableconstructor = liftM ETableCons $ braces fieldlist
+tableconstructor :: Parser Expr
+tableconstructor
+    = liftM ETableCons $ braces fieldlist
 
-fieldlist = sepEndBy field fieldsep
+fieldlist :: Parser [(Maybe Expr, Expr)]
+fieldlist
+    = sepEndBy field fieldsep
 
+field :: Parser (Maybe Expr, Expr)
 field = do
     field_1 <|> field_2 <|> field_3
     where 
