@@ -50,9 +50,10 @@ data Instr lab
     | Append            -- store a value at the next "free" position in a table
     | MkTuple		-- cons the 2. top value with the tol value list
     | UnTuple           -- split top level value list into head and tail
-    | Take1             -- take the head ov a value list and discard the tail
+    | Take1             -- take the head of a value list and discard the tail
     | Pop               -- throw away the topmost value
     | Dup Int           -- duplicate topmost value
+    | Swap              -- swap the 2 topmost values
     | BinOp BOp
     | UnOp UOp
     | Jump lab
@@ -85,6 +86,7 @@ instance (Show lab) => Show (Instr lab) where
     show (Take1       ) = fmt0 "take1"
     show (Pop         ) = fmt0 "pop"
     show (Dup i       ) = fmt1 "dup" $ show i
+    show (Swap        ) = fmt0 "swap"
     show (BinOp op    ) = fmt0 $ fmtOp $ show op
     show (UnOp op     ) = fmt0 $ fmtOp $ show op
     show (Jump l      ) = fmt1 "jump" (show l)

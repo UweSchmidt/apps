@@ -487,6 +487,20 @@ compExpr (ECall fct args)
                  , mkInstr $ Call
                  ]
 
+compExpr (EMemberCall table name args)
+    = do code_table <- compExpr1 table
+         code_args  <- compExprL args
+         genCode [ code_table			-- eval table, this value is used twice
+                 , mkInstr $ LoadStr name       -- load table index
+                 , mkInstr $ Dup 1              -- load table (2. use)
+                 , mkInstr $ LoadField          -- compute the function (method) to be called by table lookup
+                 , mkInstr $ Swap               -- table and function are on the stack, but in wrong sequence
+                 , code_args                    -- table becomes the 1. arg, the others are pushed on top
+                 , mkInstr $ MkTuple            -- table and arg list must be cons'd together
+                 , mkInstr $ Call               -- everthing is ready for calling the function
+                 ]
+
+
 compExpr (EFunction fps varargs block)
     = do lStart <- newLabel
          code_f <- compWithNewEnv $
@@ -551,9 +565,6 @@ compExpr (ETableCons fs)
           = do code_f1  <- uncurry (compField  compExpr1) f1
                code_fs' <- compFieldList fs'
                genCode [code_f1, code_fs']
-
-compExpr e@(EMemberCall _e1 _n _es)
-   = todo "compExpr" $ show e
 
 {- compExpr is complete
 
