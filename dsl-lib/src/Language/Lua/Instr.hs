@@ -40,30 +40,30 @@ data Instr lab
     | LoadNil
     | LoadEmpty		-- load empty result list
     | LoadVar Name
-    | LoadField         -- binary op
+    | LoadField         -- top: the table, 2.: the index
     | NewTable
     | NewEnv            -- create a new empty env (on block or function entry)
     | DelEnv            -- remove an env on block exit (normal exit, break and return)
     | NewLocal Name     -- create new variable in local env
     | StoreVar Name
-    | StoreField        -- store a value under a key in a table
-    | Append            -- store a value at the next "free" position in a table
-    | MkTuple		-- cons the 2. top value with the tol value list
-    | UnTuple           -- split top level value list into head and tail
-    | Take1             -- take the head of a value list and discard the tail
+    | StoreField        -- top: the table, 2.: the index, 3. the value
+    | Append            -- top: the table, 2.: the value(-list)
+    | MkTuple		-- top: the tail (single value or list), 2. the head value
+    | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
+    | Take1             -- top: take the head or nil, discard the rest
     | Pop               -- throw away the topmost value
-    | Dup Int           -- duplicate topmost value
-    | Swap              -- swap the 2 topmost values
-    | BinOp BOp
-    | UnOp UOp
+    | Copy Int          -- push the i. value onto the stack, 0 == top of stack, stack growes by 1
+    | Move Int          -- move the i. value to the top, i == 1: swap the 2 topmost values, stack remains size
+    | BinOp BOp         -- top: right arg, 2.: left arg
+    | UnOp UOp          -- top: single arg
     | Jump lab
     | Label lab
-    | Branch Bool lab
-    | Closure lab
-    | Call
-    | TailCall
-    | Leave
-    | Exit Int
+    | Branch Bool lab   -- pop top of stack and test on (false or nil)
+    | Closure lab       -- push a closure
+    | Call              -- top: closure, 2. args
+    | TailCall          -- top: closure, 2. args
+    | Leave             -- remove current env and return to saved stored closure
+    | Exit Int          -- terminate prog
     | TODO String	-- for debugging
 
 instance (Show lab) => Show (Instr lab) where
@@ -85,8 +85,8 @@ instance (Show lab) => Show (Instr lab) where
     show (UnTuple     ) = fmt0 "untuple"
     show (Take1       ) = fmt0 "take1"
     show (Pop         ) = fmt0 "pop"
-    show (Dup i       ) = fmt1 "dup" $ show i
-    show (Swap        ) = fmt0 "swap"
+    show (Copy i      ) = fmt1 "copy"  $ show i
+    show (Move i      ) = fmt1 "move"  $ show i
     show (BinOp op    ) = fmt0 $ fmtOp $ show op
     show (UnOp op     ) = fmt0 $ fmtOp $ show op
     show (Jump l      ) = fmt1 "jump" (show l)

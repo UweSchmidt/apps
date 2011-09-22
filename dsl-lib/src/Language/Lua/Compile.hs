@@ -21,8 +21,8 @@ compProg block
          emitCode $ mkInstr $ Jump start
          code_prog <- compExpr prog
          code_cls  <- genCode [ mkInstr $ Label start
-                              , mkInstr $ LoadEmpty
-                              , code_prog
+                              , mkInstr $ LoadEmpty	-- push an empty param list
+                              , code_prog		-- push the closure
                               , mkInstr $ Call
                               , mkInstr $ Pop
                               , mkInstr $ Exit 0
@@ -153,20 +153,13 @@ compStmt SBreak
               )
 
 compStmt (SReturn es)
-    = do l        <- getEnvCnt
-         code_es  <- compExprL es
-         code_env <- genCode $ replicate l (mkInstr DelEnv)
-         genCode [ code_es
-                 , code_env
-                 , exitCode
-                 ]
-    where
-      tailCall [ECall _ _] = True
-      tailCall _           = False
-
-      exitCode
-          | tailCall es    = mkInstr $ TailCall
-          | otherwise      = mkInstr $ Leave
+    | isTailCall es
+        = compTailCall $ head es
+    | otherwise
+        = do code_es  <- compExprL es
+             genCode [ code_es
+                     , mkInstr Leave
+                     ]
 
 compStmt (SDo block)
     = compBlock block
@@ -480,26 +473,14 @@ compExpr (EUnOp op e1)
         = todo "unimplemented" (" unary op " ++ show op)
 
 compExpr (ECall fct args)
-    = do code_fct  <- compExpr1 fct
-         code_args <- compExprL args
-         genCode [ code_fct
-                 , code_args
-                 , mkInstr $ Call
-                 ]
+    = compCall (mkInstr Call) fct args
+
+-- Lua reference: arguments are evaluated before function
+-- this needs some swapping on the stack, because the table is used
+-- twice, once as a extra 1. arg and as lookup table for the method
 
 compExpr (EMemberCall table name args)
-    = do code_table <- compExpr1 table
-         code_args  <- compExprL args
-         genCode [ code_table			-- eval table, this value is used twice
-                 , mkInstr $ LoadStr name       -- load table index
-                 , mkInstr $ Dup 1              -- load table (2. use)
-                 , mkInstr $ LoadField          -- compute the function (method) to be called by table lookup
-                 , mkInstr $ Swap               -- table and function are on the stack, but in wrong sequence
-                 , code_args                    -- table becomes the 1. arg, the others are pushed on top
-                 , mkInstr $ MkTuple            -- table and arg list must be cons'd together
-                 , mkInstr $ Call               -- everthing is ready for calling the function
-                 ]
-
+    = compMemberCall (mkInstr Call) table name args
 
 compExpr (EFunction fps varargs block)
     = do lStart <- newLabel
@@ -544,7 +525,7 @@ compExpr (ETableCons fs)
       compAppend compEx val
           = do code_val <- compEx val
                genCode [ code_val
-                       , mkInstr $ Dup 1
+                       , mkInstr $ Copy 1
                        , mkInstr $ Append
                        ]
 
@@ -553,7 +534,7 @@ compExpr (ETableCons fs)
                code_key <- compExpr1 key
                genCode [ code_val
                        , code_key
-                       , mkInstr $ Dup 2
+                       , mkInstr $ Copy 2
                        , mkInstr $ StoreField
                        ]
       
@@ -571,6 +552,44 @@ compExpr (ETableCons fs)
 compExpr e
    = todo "compExpr" $ show e
 -}
+
+-- ------------------------------------------------------------
+
+compTailCall :: Expr -> Compile ACode
+compTailCall (ECall fct args)
+    = compCall (mkInstr TailCall) fct args
+
+compTailCall (EMemberCall table name args)
+    = compMemberCall (mkInstr TailCall) table name args
+
+compTailCall _
+    = error "compTailCall: illegal arg, not a call expr"
+
+-- ------------------------------------------------------------
+
+compCall :: ACode -> Expr -> [Expr] -> Compile ACode
+compCall callInstr fct args
+    = do code_args <- compExprL args
+         code_fct  <- compExpr1 fct
+         genCode [ code_args
+                 , code_fct
+                 , callInstr
+                 ]
+
+compMemberCall :: ACode -> Expr -> String -> [Expr] -> Compile ACode
+compMemberCall callInstr table name args
+    = do code_table <- compExpr1 table
+         code_args  <- compExprL args
+         genCode [ code_args                    -- evaluate args first
+                 , code_table			-- eval table, this value is used twice
+                 , mkInstr $ Copy 0             -- so copy it
+                 , mkInstr $ Move 2             -- move the arg list to the top
+                 , mkInstr $ MkTuple            -- and cons the table as 1. arg in front of the arg list
+                 , mkInstr $ LoadStr name       -- load table index
+                 , mkInstr $ Move 2             -- move table to the top
+                 , mkInstr $ LoadField          -- compute the function (method) to be called by table lookup
+                 , callInstr                    -- everthing is ready for calling the function
+                 ]
 
 -- ------------------------------------------------------------
 
@@ -624,7 +643,7 @@ compAndOr (EBinOp op e1 e2)
          code_e2 <- compExpr1 e2
          lEnd    <- newLabel
          genCode [ code_e1
-                 , mkInstr $ Dup 0
+                 , mkInstr $ Copy 0
                  , mkInstr $ Branch (op == "or") lEnd
                  , mkInstr $ Pop
                  , code_e2
@@ -701,5 +720,9 @@ hasReturn                            :: [Stmt] -> Bool
 hasReturn []                         = False
 hasReturn sl                         = isReturnStmt (last sl)
 
+isTailCall                           :: [Expr] -> Bool
+isTailCall [ECall _ _]               = True
+isTailCall [EMemberCall _ _ _]       = True
+isTailCall _                         = False
 
 -- ------------------------------------------------------------
