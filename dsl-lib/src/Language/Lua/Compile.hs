@@ -174,7 +174,7 @@ compStmt (SDo block)
 compStmt (SFor [v] (ForNum e1 e2 e3) block)
     = compBlock forBlock
     where
-      var          = "$var"
+      var          = "$var"		-- generated variables
       limit        = "$limit"
       step         = "$step"
       var'         = EVar var
@@ -214,6 +214,13 @@ compStmt (SFor [v] (ForNum e1 e2 e3) block)
 
 {- a for loop is transformed 1-1 into a while loop
    applying the schema given in the Lua reference manual
+
+   Lua reference manual:
+   A for statement like
+
+     for v = e1, e2, e3 do block end
+
+  is equivalent to the code:
   
      do
        local var, limit, step = tonumber(e1), tonumber(e2), tonumber(e3)
@@ -227,13 +234,57 @@ compStmt (SFor [v] (ForNum e1 e2 e3) block)
 -}
 
 compStmt (SFor _ (ForNum _ _ _) _)
-    = do cerr "for statement" "single loop variable required"
-         genCode []
+    = error "compStmt: error in AST: single loop variable required for counting loops"
 
+compStmt (SFor vs@(v1 : _) (ForIter explist) block)
+    = compBlock forBlock
+    where
+      f         = "$f"		-- generated variables
+      s         = "$s"
+      var       = "$var"
+      f'        = EVar f
+      s'        = EVar s
+      var'      = EVar var
+      true'     = EBool True
+      eqNil' e  = EBinOp "==" e ENil
+      f''       = ECall f'
+      forBlock
+          = Block [ SLocalDef [f, s, var] explist
+                  , SWhile true'
+                           ( Block [ SLocalDef vs [f'' [s', var']]
+                                   , SAssignment [LVar var] [EVar v1]
+                                   , SIf [(eqNil' var', Block [SBreak])] Nothing
+                                   , SDo block
+                                   ]
+                           )
+                  ]
+{-
+  A for statement like
+
+     for var_1, ···, var_n in explist do block end
+
+  is equivalent to the code:
+
+     do
+       local f, s, var = explist
+       while true do
+         local var_1, ···, var_n = f(s, var)
+         var = var_1
+         if var == nil then break end
+         block
+       end
+     end
+
+-}
+
+compStmt (SFor _ (ForIter _) _)
+    = error "compStmt: error in AST: loop variable required for general loops"
+
+{- compStmt is complete
 
 compStmt s
     = todo "compStmt" (show s)
-
+-}
 -- ------------------------------------------------------------
 
 compNewLocals :: [Name] -> Compile ACode
@@ -365,6 +416,14 @@ compExpr (EEllipsis)
 compExpr (EVar n)
     = genCode [mkInstr $ LoadVar n]
 
+compExpr (EFieldRef table key)
+    = do code_key   <- compExpr1 key
+         code_table <- compExpr1 table
+         genCode [ code_key
+                 , code_table
+                 , mkInstr $ LoadField
+                 ]
+
 compExpr e@(EBinOp op e1 e2)
     | op `elem` ["and", "or"]
         = compAndOr e
@@ -493,17 +552,55 @@ compExpr (ETableCons fs)
                code_fs' <- compFieldList fs'
                genCode [code_f1, code_fs']
 
+compExpr e@(EMemberCall _e1 _n _es)
+   = todo "compExpr" $ show e
+
+{- compExpr is complete
+
 compExpr e
-    = todo "compExpr" $ show e
+   = todo "compExpr" $ show e
+-}
+
+-- ------------------------------------------------------------
 
 -- gen code such that a single value is pushed onto the stack,
 -- this value will be consumed by a conditional branch instr
 -- so after executing the sequence, the stack has the same state as before
 --
--- extra cases for compiling "and" and "or" may be inserted
+-- compCond can be used to compile an expression from statement level
+-- where the expression is used as a condition for branching
+--
+-- extra cases for compiling "and", "or" and "not" are inserted
 -- to gen simpler code as with compExpr
+---
+-- in the context of a condition (in if, while, ...) and only there
+--   not (not e) == e
 
 compCond :: Bool -> Label -> Expr -> Compile ACode
+compCond c l (EUnOp "not" e1)
+    = compCond (not c) l e1
+
+compCond c l (EBinOp "or" e1 e2)		-- de Morgan
+    = compCond (not c) l (EBinOp "and" (not' e1) (not' e2))
+    where
+      not' = EUnOp "not"
+
+compCond c l (EBinOp "and" e1 e2)
+    | c
+        = do nl      <- newLabel
+             code_e1 <- compCond False nl e1
+             code_e2 <- compCond True  l  e2
+             genCode [ code_e1
+                     , code_e2
+                     , mkInstr $ Label nl
+                     ]
+    | otherwise
+        = do code_e1 <- compCond False l  e1
+             code_e2 <- compCond False l  e2
+             genCode [ code_e1
+                     , code_e2
+                     ]
+
 compCond c l e
     = do codeExpr <- compExpr e
          genCode [ codeExpr
