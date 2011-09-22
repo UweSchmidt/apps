@@ -55,6 +55,12 @@ compStmt (SLocalDef lv f@[EFunction _ _ _])
 compStmt (SLocalDef lvs [])
     = compNewLocals lvs
 
+compStmt (SLocalDef [lv] [e])
+    = do c1 <- compExpr1  e
+         nv <- compNewLocals [lv]
+         c2 <- compStore mempty (LVar lv)
+         genCode [c1, nv, c2]
+
 compStmt (SLocalDef lvs es)
     = do c1 <- compExprL  es
          c2 <- compStoreLocals lvs
@@ -161,6 +167,69 @@ compStmt (SReturn es)
       exitCode
           | tailCall es    = mkInstr $ TailCall
           | otherwise      = mkInstr $ Leave
+
+compStmt (SDo block)
+    = compBlock block
+
+compStmt (SFor [v] (ForNum e1 e2 e3) block)
+    = compBlock forBlock
+    where
+      var          = "$var"
+      limit        = "$limit"
+      step         = "$step"
+      var'         = EVar var
+      limit'       = EVar limit
+      step'        = EVar step
+      zero'        = ENumber 0.0
+      one'         = ENumber 1.0
+      tonumber' e  = ECall  (EVar "tonumber") [e]
+      not'         = EUnOp  "not"
+      and'         = EBinOp "and"
+      or'          = EBinOp "or"
+      gr'          = EBinOp ">"
+      ge'          = EBinOp ">="
+      le'          = EBinOp "<="
+      plus'        = EBinOp "+"
+      error'       = SAssignment []
+                                 [ECall  (EVar "error")
+                                             [EString "missing number(s) in for loop var, limit or step"]
+                                 ]
+      forBlock
+          = Block [ SLocalDef [var]   [tonumber' e1]
+                  , SLocalDef [limit] [tonumber' e2]
+                  , SLocalDef [step]  [tonumber' . maybe one' id $ e3]
+                  , SIf [( (not' (var' `and'` (limit' `and'` step')))
+                         , Block [error']
+                         )
+                        ] Nothing
+                  , SWhile ( ( (step' `gr'` zero') `and'` (var' `le'` limit')   )
+                             `or'`
+                             ( (step' `le'` zero') `and'` (var' `ge'` limit') )
+                           ) ( Block [ SLocalDef [v] [var']
+                                     , SDo block
+                                     , SAssignment [LVar var] [var' `plus'` step']
+                                     ]
+                             )
+                  ]
+
+{- a for loop is transformed 1-1 into a while loop
+   applying the schema given in the Lua reference manual
+  
+     do
+       local var, limit, step = tonumber(e1), tonumber(e2), tonumber(e3)
+       if not (var and limit and step) then error() end
+       while (step > 0 and var <= limit) or (step <= 0 and var >= limit) do
+         local v = var
+         block
+         var = var + step
+       end
+     end
+-}
+
+compStmt (SFor _ (ForNum _ _ _) _)
+    = do cerr "for statement" "single loop variable required"
+         genCode []
+
 
 compStmt s
     = todo "compStmt" (show s)
