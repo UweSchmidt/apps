@@ -4,16 +4,17 @@
 
 -- ------------------------------------------------------------
 
-module Language.Lua.Instr
+module Language.Lua.VM.Instr
     ( BOp(..)
     , UOp(..)
     , Instr(..)
     , Label(..)
-    , AInstr
-    , MInstr
-    , ACode
-    , MCode
+    , Dest(..)
+    , Code(..)
     , mkInstr
+    , branch
+    , jump
+    , closure
     )
 where
 
@@ -33,7 +34,7 @@ data UOp
     = Minus | Not | NumberOf
       deriving (Show, Eq, Ord)
 
-data Instr lab
+data Instr
     = LoadNum Double
     | LoadStr String
     | LoadBool Bool
@@ -56,17 +57,17 @@ data Instr lab
     | Move Int          -- move the i. value to the top, i == 1: swap the 2 topmost values, stack remains size
     | BinOp BOp         -- top: right arg, 2.: left arg
     | UnOp UOp          -- top: single arg
-    | Jump lab
-    | Label lab
-    | Branch Bool lab   -- pop top of stack and test on (false or nil)
-    | Closure lab       -- push a closure
+    | Jump Dest
+    | Label Label
+    | Branch Bool Dest  -- pop top of stack and test on (false or nil)
+    | Closure Dest      -- push a closure
     | Call              -- top: closure, 2. args
     | TailCall          -- top: closure, 2. args
     | Leave             -- remove current env and return to saved stored closure
     | Exit Int          -- terminate prog
     | TODO String	-- for debugging
 
-instance (Show lab) => Show (Instr lab) where
+instance Show Instr where
     show (LoadNum d   ) = fmt1 "load" (show d)
     show (LoadStr s   ) = fmt1 "load" (show s)
     show (LoadBool b  ) = fmt1 "load" (if b then "true" else "false")
@@ -119,32 +120,47 @@ fmtOp      = map toLower
 
 -- ------------------------------------------------------------
 
-newtype Label = Lab Int
+data Dest
+    = L Label
+    | D Int
+
+instance Show Dest where
+    show (L l) = show l
+    show (D d) = show d
+
+-- ------------------------------------------------------------
+
+newtype Label
+    = Lab Int
+      deriving (Eq, Ord)
 
 instance Show Label where
     show (Lab l) = format l
         where
           format = ("l" ++) . reverse . take 3 . reverse . ("0000" ++) . show
                
-type AInstr = Instr Label
-type ACode  = Code  Label
-
-type MInstr = Instr Int
-type MCode  = Code  Int
-
 -- ------------------------------------------------------------
 
-newtype Code a
-    = Code [Instr a]
+newtype Code
+    = Code [Instr]
 
-instance (Show a) => Show (Code a) where
+instance Show Code where
     show (Code is) = "\n" ++ concatMap ((++ "\n") . show) is
 
-instance Monoid (Code a) where
+instance Monoid Code where
     mempty = Code []
     mappend (Code c1) (Code c2) = Code $ c1 ++ c2
 
-mkInstr :: Instr a -> Code a
+mkInstr :: Instr -> Code
 mkInstr = Code . (:[])
+
+branch :: Bool -> Label -> Instr
+branch c l = Branch c (L l)
+
+jump :: Label -> Instr
+jump = Jump . L
+
+closure :: Label -> Instr
+closure = Closure . L
 
 -- ------------------------------------------------------------

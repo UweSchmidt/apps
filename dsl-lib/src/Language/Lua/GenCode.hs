@@ -1,16 +1,17 @@
-module Language.Lua.Compile
+module Language.Lua.GenCode
 where
 
 import Language.Lua.AST
-import Language.Lua.CompileState
-import Language.Lua.Instr
+import Language.Lua.GenCode.ASTPredicates
+import Language.Lua.GenCode.State
+import Language.Lua.VM.Instr
 
 import Control.Applicative ( (<$>) )
 import Control.Monad.RWS
 
 -- ------------------------------------------------------------
 
-compileProg :: Block -> (ACode, CErrs)
+compileProg :: Block -> (Code, CErrs)
 compileProg block = runCompile (compProg block)
 
 -- ------------------------------------------------------------
@@ -18,7 +19,7 @@ compileProg block = runCompile (compProg block)
 compProg :: Block -> Compile ()
 compProg block
     = do start     <- newLabel
-         emitCode $ mkInstr $ Jump start
+         emitCode $ mkInstr $ jump start
          code_prog <- compExpr prog
          code_cls  <- genCode [ mkInstr $ Label start
                               , mkInstr $ LoadEmpty	-- push an empty param list
@@ -32,20 +33,20 @@ compProg block
     where
       prog = EFunction [] False block
 
-compBlock :: Block -> Compile ACode
+compBlock :: Block -> Compile Code
 compBlock (Block sl)
     | hasLocalDefs sl
         = compWithLocalEnv $ compStmtL sl
     | otherwise			-- optimization: unnecessay env creation thrown away
         = compStmtL sl
 
-compStmtL :: [Stmt] -> Compile ACode
+compStmtL :: [Stmt] -> Compile Code
 compStmtL sl
     = mconcat <$> mapM compStmt sl
 
 -- ------------------------------------------------------------
 
-compStmt :: Stmt -> Compile ACode
+compStmt :: Stmt -> Compile Code
 
 compStmt (SLocalDef lv f@[EFunction _ _ _])
     = do c1 <- compStmt (SLocalDef lv [])
@@ -86,7 +87,7 @@ compStmt (SIf thenParts elsePart)
                ) (\ ep ->
                       do code_elsePart <- compBlock ep
                          genCode [ code_thps
-                                 , mkInstr $ Jump lEnd
+                                 , mkInstr $ jump lEnd
                                  , mkInstr $ Label end_thps
                                  , code_elsePart
                                  , mkInstr $ Label lEnd
@@ -100,7 +101,7 @@ compStmt (SIf thenParts elsePart)
           = do (code_tp,  lab_tp ) <- compThenPart  tp
                (code_tps, lab_tps) <- compThenParts lEnd tps
                code <- genCode [ code_tp
-                               , mkInstr $ Jump  lEnd
+                               , mkInstr $ jump  lEnd
                                , mkInstr $ Label lab_tp
                                , code_tps
                                ]
@@ -123,7 +124,7 @@ compStmt (SWhile cond body)
          codeCond <- compCond True lBody cond
          codeBody <- compWithNewLoopLevel lEnd $
                      compBlock body
-         genCode [ mkInstr $ Jump  lCond
+         genCode [ mkInstr $ jump  lCond
                  , mkInstr $ Label lBody
                  , codeBody
                  , mkInstr $ Label lCond
@@ -149,7 +150,7 @@ compStmt SBreak
                 return mempty
             ) (\ (i, lab) -> genCode $ replicate i (mkInstr DelEnv)
                                        ++
-                                       [mkInstr $ Jump lab]
+                                       [mkInstr $ jump lab]
               )
 
 compStmt (SReturn es)
@@ -280,17 +281,17 @@ compStmt s
 -}
 -- ------------------------------------------------------------
 
-compNewLocals :: [Name] -> Compile ACode
+compNewLocals :: [Name] -> Compile Code
 compNewLocals lvs
     = genCode $ map (mkInstr . NewLocal) lvs
 
-compStoreLocals :: [Name] -> Compile ACode
+compStoreLocals :: [Name] -> Compile Code
 compStoreLocals lvs
     = do nv <- compNewLocals lvs
          c2 <- compStoreL (map LVar lvs)
          genCode [nv, c2]
 
-compStoreL :: [LValue] -> Compile ACode
+compStoreL :: [LValue] -> Compile Code
 compStoreL []
     = genCode [ mkInstr Pop ]
 
@@ -304,11 +305,11 @@ compStoreL lvs
     len1 = length lvs - 1
     (lvs', lv) = splitAt len1 lvs
 
-compStore1 :: LValue -> Compile ACode
+compStore1 :: LValue -> Compile Code
 compStore1
     = compStore $ mkInstr UnTuple
 
-compStoreLast :: LValue -> Compile ACode
+compStoreLast :: LValue -> Compile Code
 compStoreLast lv
     | isEllipsis lv
         = compStore mempty lv
@@ -323,7 +324,7 @@ compStoreLast lv
 -- in the 2. case the top value is a ref to the table, the 2. the field and
 -- the 3. the value, so the eval stack is decreased by 3
 
-compStore :: ACode -> LValue -> Compile ACode
+compStore :: Code -> LValue -> Compile Code
 compStore instr (LVar n)
     = genCode [ instr
               , mkInstr $ StoreVar n
@@ -338,7 +339,7 @@ compStore instr (LFieldRef tb ix)
                  , mkInstr StoreField
                  ]
 
-compWithLocalEnv :: Compile ACode -> Compile ACode
+compWithLocalEnv :: Compile Code -> Compile Code
 compWithLocalEnv compPart
     = do part <- local incrEnvCnt compPart
          genCode [ mkInstr NewEnv
@@ -346,11 +347,11 @@ compWithLocalEnv compPart
                  , mkInstr DelEnv
                  ]
 
-compWithNewEnv :: Compile ACode -> Compile ACode
+compWithNewEnv :: Compile Code -> Compile Code
 compWithNewEnv compPart
     = local resetEnvCnt compPart
 
-compWithNewLoopLevel :: Label -> Compile ACode -> Compile ACode
+compWithNewLoopLevel :: Label -> Compile Code -> Compile Code
 compWithNewLoopLevel lEnd compPart
     = local (newLoopLevel lEnd) compPart
 
@@ -359,7 +360,7 @@ compWithNewLoopLevel lEnd compPart
 -- gen code such that the list of expressions is pushed as a single list of values onto
 -- the evaluation stack
 
-compExprL :: [Expr] -> Compile ACode
+compExprL :: [Expr] -> Compile Code
 compExprL []
     = return $ mkInstr $ LoadEmpty
 compExprL es
@@ -377,7 +378,7 @@ compExprL es
 -- gen code such that a single value, not a tuple is pushed onto the eval stack
 -- from tuple values the 1. one (or nil) will be taken
 
-compExpr1 :: Expr -> Compile ACode
+compExpr1 :: Expr -> Compile Code
 compExpr1 e
     | isSingleResExpr e
         = compExpr e
@@ -390,7 +391,7 @@ compExpr1 e
 -- gen code such that a single value is pushed onto the evaluation stack
 -- this value may be a tuple of arbitrary length
 
-compExpr :: Expr -> Compile ACode
+compExpr :: Expr -> Compile Code
 compExpr (ENumber d)
     = genCode [mkInstr $ LoadNum d]
 
@@ -462,9 +463,9 @@ compExpr (EUnOp op e1)
              l1      <- newLabel
              l2      <- newLabel
              genCode [ code_e1
-                     , mkInstr $ Branch False l1
+                     , mkInstr $ branch False l1
                      , mkInstr $ LoadBool True
-                     , mkInstr $ Jump l2
+                     , mkInstr $ jump l2
                      , mkInstr $ Label l1
                      , mkInstr $ LoadBool False
                      , mkInstr $ Label l2
@@ -497,7 +498,7 @@ compExpr (EFunction fps varargs block)
                            , code_e
                            ]
          emitCode code_c
-         genCode [ mkInstr $ Closure lStart ]
+         genCode [ mkInstr $ closure lStart ]
     where
       fps'
           | varargs   = fps ++ ["..."]
@@ -555,7 +556,7 @@ compExpr e
 
 -- ------------------------------------------------------------
 
-compTailCall :: Expr -> Compile ACode
+compTailCall :: Expr -> Compile Code
 compTailCall (ECall fct args)
     = compCall (mkInstr TailCall) fct args
 
@@ -567,7 +568,7 @@ compTailCall _
 
 -- ------------------------------------------------------------
 
-compCall :: ACode -> Expr -> [Expr] -> Compile ACode
+compCall :: Code -> Expr -> [Expr] -> Compile Code
 compCall callInstr fct args
     = do code_args <- compExprL args
          code_fct  <- compExpr1 fct
@@ -576,7 +577,7 @@ compCall callInstr fct args
                  , callInstr
                  ]
 
-compMemberCall :: ACode -> Expr -> String -> [Expr] -> Compile ACode
+compMemberCall :: Code -> Expr -> String -> [Expr] -> Compile Code
 compMemberCall callInstr table name args
     = do code_table <- compExpr1 table
          code_args  <- compExprL args
@@ -606,7 +607,7 @@ compMemberCall callInstr table name args
 -- in the context of a condition (in if, while, ...) and only there
 --   not (not e) == e
 
-compCond :: Bool -> Label -> Expr -> Compile ACode
+compCond :: Bool -> Label -> Expr -> Compile Code
 compCond c l (EUnOp "not" e1)
     = compCond (not c) l e1
 
@@ -634,17 +635,17 @@ compCond c l (EBinOp "and" e1 e2)
 compCond c l e
     = do codeExpr <- compExpr e
          genCode [ codeExpr
-                 , mkInstr $ Branch c l
+                 , mkInstr $ branch c l
                  ]
 
-compAndOr :: Expr -> Compile ACode
+compAndOr :: Expr -> Compile Code
 compAndOr (EBinOp op e1 e2)
     = do code_e1 <- compExpr1 e1
          code_e2 <- compExpr1 e2
          lEnd    <- newLabel
          genCode [ code_e1
                  , mkInstr $ Copy 0
-                 , mkInstr $ Branch (op == "or") lEnd
+                 , mkInstr $ branch (op == "or") lEnd
                  , mkInstr $ Pop
                  , code_e2
                  , mkInstr $ Label lEnd
@@ -656,7 +657,7 @@ compAndOr _
 --
 -- mothers little helpers
 
-todo :: String -> String -> Compile ACode
+todo :: String -> String -> Compile Code
 todo s msg
     = do emitErr $ unwords ["TODO:", s, msg]
          return $ mkInstr $ TODO $ msg
@@ -665,7 +666,7 @@ cerr :: (Show a) => String -> a -> Compile ()
 cerr s msg
     = emitErr $ unwords ["ERROR", "in", s ++ ":", show msg]
 
-genCode :: [ACode] -> Compile ACode
+genCode :: [Code] -> Compile Code
 genCode = return . mconcat
 
 -- ------------------------------------------------------------
@@ -684,45 +685,5 @@ getLoopLevel
 getEnvCnt :: Compile Int
 getEnvCnt
     = asks theEnvCnt
-
--- ------------------------------------------------------------
---
--- predicates for AST
-
-isSingleResExpr                      :: Expr -> Bool
-isSingleResExpr (EEllipsis)          = False
-isSingleResExpr (ECall _ _)          = False
-isSingleResExpr (EMemberCall _ _ _)  = False
-isSingleResExpr _                    = True
-
-hasLocalDefs                         :: [Stmt] -> Bool
-hasLocalDefs                         = any isLocalDef
-
-isLocalDef                           :: Stmt -> Bool
-isLocalDef (SLocalDef _ _)           = True
-isLocalDef _                         = False
-
-isReturnBlock                        :: Block -> Bool
-isReturnBlock (Block sl)             = hasReturn sl
-
-isReturnStmt                         :: Stmt -> Bool
-isReturnStmt (SReturn _ )            = True
-
-isReturnStmt (SDo block)             = isReturnBlock block
-
-isReturnStmt (SIf tps ep)            = all (isReturnBlock . snd) tps
-                                       &&
-                                       maybe False isReturnBlock ep
-
-isReturnStmt _                       = False
-
-hasReturn                            :: [Stmt] -> Bool
-hasReturn []                         = False
-hasReturn sl                         = isReturnStmt (last sl)
-
-isTailCall                           :: [Expr] -> Bool
-isTailCall [ECall _ _]               = True
-isTailCall [EMemberCall _ _ _]       = True
-isTailCall _                         = False
 
 -- ------------------------------------------------------------

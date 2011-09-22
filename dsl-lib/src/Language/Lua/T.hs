@@ -1,16 +1,19 @@
 module T
 where
 
+import Control.Arrow ( first )
+
 import Language.Lua.Parser
 import Language.Lua.Token
 import Language.Lua.AST
-import Language.Lua.Instr
-import Language.Lua.Compile
-import Language.Lua.CompileState
+import Language.Lua.VM.Instr
+import Language.Lua.GenCode
+import Language.Lua.GenCode.State
+import Language.Lua.GenCode.Assemble
 
 -- ------------------------------------------------------------
 
-cc :: String -> Either String (ACode, CErrs)
+cc :: String -> Either String (Code, CErrs)
 cc inp
     = case tokenize "" inp of
         Left err -> Left $ show err
@@ -19,6 +22,16 @@ cc inp
                  Left err -> Left $ show err
                  Right b
                      -> Right $ compileProg b
+
+aa :: String -> Either String (Code, CErrs)
+aa inp
+    = case tokenize "" inp of
+        Left err -> Left $ show err
+        Right ts
+            -> case parse_chunk "" ts of
+                 Left err -> Left $ show err
+                 Right b
+                     -> Right $ (first assembleProg) $ compileProg b
 
 pp :: String -> Either String Block
 pp inp

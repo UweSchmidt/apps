@@ -1,4 +1,4 @@
-module Language.Lua.CompileState
+module Language.Lua.GenCode.State
     ( runCompile
     , CEnv
     , CGen
@@ -17,9 +17,9 @@ module Language.Lua.CompileState
     )
 where
 
-import Language.Lua.Instr
-
 import Control.Monad.RWS
+
+import Language.Lua.VM.Instr
 
 -- ------------------------------------------------------------
 --
@@ -27,7 +27,7 @@ import Control.Monad.RWS
 
 type Compile = RWS CEnv CGen CState
 
-runCompile :: Compile a -> (ACode, CErrs)
+runCompile :: Compile a -> (Code, CErrs)
 runCompile action
     = let (_v, _cs, res) = runRWS action initCEnv initCState in
       (theCode res, theErrs res)
@@ -73,7 +73,7 @@ theLoopLevel env
 -- the assembler code and the error messages.
 
 data CGen
-    = CG { theCode :: ACode
+    = CG { theCode :: Code
          , theErrs :: CErrs
          }
 
@@ -91,7 +91,7 @@ emitErr :: String -> Compile ()
 emitErr msg
     = tell $ CG mempty (CErrs [msg])
 
-emitCode :: ACode -> Compile ()
+emitCode :: Code -> Compile ()
 emitCode code
     = tell $ CG code mempty
 

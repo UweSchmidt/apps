@@ -1,6 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
-module Language.Lua.Value
+module Language.Lua.VM.Value
 where
 
 import Control.Applicative ( (<$>) )
