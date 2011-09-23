@@ -15,6 +15,8 @@ module Language.Lua.VM.Instr
     , branch
     , jump
     , closure
+    , showMachineCode
+    , showMachineInstr
     )
 where
 
@@ -120,6 +122,26 @@ fmtOp      = map toLower
 
 -- ------------------------------------------------------------
 
+showMachineCode :: Code -> String
+showMachineCode (Code is)
+    = unlines . map (uncurry showMachineInstr) $ zip [0..] is
+
+showMachineInstr :: Int -> Instr -> String
+showMachineInstr ic instr
+    = fmtCnt 4 ++ fmtInstr
+    where
+      fmtCnt n = (++ replicate (8 - n) ' ') . reverse . take n . reverse . ((replicate n ' ') ++) . show $ ic
+      fmtInstr
+          = drop 8 $ show instr ++ target instr
+          where
+            dist                d   = "  -- >  " ++ show (d + ic)
+            target (Jump     (D d)) = dist d
+            target (Branch _ (D d)) = dist d
+            target (Closure  (D d)) = dist d
+            target _                = ""
+
+-- ------------------------------------------------------------
+
 data Dest
     = L Label
     | D Int
@@ -145,7 +167,7 @@ newtype Code
     = Code [Instr]
 
 instance Show Code where
-    show (Code is) = "\n" ++ concatMap ((++ "\n") . show) is
+    show (Code is) = "\n" ++ unlines (map show is)
 
 instance Monoid Code where
     mempty = Code []

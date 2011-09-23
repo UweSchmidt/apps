@@ -23,15 +23,16 @@ cc inp
                  Right b
                      -> Right $ compileProg b
 
-aa :: String -> Either String (Code, CErrs)
+aa :: String -> String
 aa inp
     = case tokenize "" inp of
-        Left err -> Left $ show err
+        Left err -> show err
         Right ts
             -> case parse_chunk "" ts of
-                 Left err -> Left $ show err
+                 Left err -> show err
                  Right b
-                     -> Right $ (first assembleProg) $ compileProg b
+                     -> let (code, errs) = compileProg b in
+                        showMachineCode (assembleProg code) ++ "\n" ++ show errs
 
 pp :: String -> Either String Block
 pp inp
