@@ -302,6 +302,9 @@ deleteEntry k
 
 newtype Env = Env { theEnv :: [Table] }
 
+emptyEnv :: Env
+emptyEnv = Env { theEnv = [] }
+
 globalEnv :: Table -> Env
 globalEnv gt = Env { theEnv = [gt] }
 
@@ -369,7 +372,6 @@ instance Eq Closure where
 instance Ord Closure where
     compare = compare `on` theCodeAddr
 
-
 newClosure :: Env -> CodeAddress -> Closure
 newClosure e start
     = CL { theClosueEnv  = e
@@ -378,27 +380,22 @@ newClosure e start
 
 -- ------------------------------------------------------------
 
-newtype NativeFct
+type NativeAction
+    = Values -> IO (Either String Values)
+
+data NativeFct
     = NF { theNativeFctId :: String
+         , theNativeFct   :: NativeAction
          }
-      deriving (Eq, Ord)
 
-newNativeFct :: String -> NativeFct
+instance Eq NativeFct where
+    (==) = (==) `on` theNativeFctId
+
+instance Ord NativeFct where
+    compare = compare `on` theNativeFctId
+
+newNativeFct :: String -> NativeAction -> NativeFct
 newNativeFct = NF
-
--- ------------------------------------------------------------
-
--- a program state is a mapping from module names to tables
--- a single table contains all global variables of a module
--- there is one anonymous module for all global variables
--- and (predefined) functions
-
-data State
-    = ST { theCurrEnv    :: Env
-         , thePC         :: CodeAddress
-         , theEvalStack  :: Values
-         , theCallStack  :: [Closure]
-         }
 
 -- ------------------------------------------------------------
 

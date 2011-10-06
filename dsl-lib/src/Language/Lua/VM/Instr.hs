@@ -11,6 +11,7 @@ module Language.Lua.VM.Instr
     , Label(..)
     , Dest(..)
     , Code(..)
+    , MCode(..)
     , mkInstr
     , branch
     , jump
@@ -122,26 +123,6 @@ fmtOp      = map toLower
 
 -- ------------------------------------------------------------
 
-showMachineCode :: Code -> String
-showMachineCode (Code is)
-    = unlines . map (uncurry showMachineInstr) $ zip [0..] is
-
-showMachineInstr :: Int -> Instr -> String
-showMachineInstr ic instr
-    = fmtCnt 4 ++ fmtInstr
-    where
-      fmtCnt n = (++ replicate (8 - n) ' ') . reverse . take n . reverse . ((replicate n ' ') ++) . show $ ic
-      fmtInstr
-          = drop 8 $ show instr ++ target instr
-          where
-            dist                d   = "  -- >  " ++ show (d + ic)
-            target (Jump     (D d)) = dist d
-            target (Branch _ (D d)) = dist d
-            target (Closure  (D d)) = dist d
-            target _                = ""
-
--- ------------------------------------------------------------
-
 data Dest
     = L Label
     | D Int
@@ -167,22 +148,55 @@ newtype Code
     = Code [Instr]
 
 instance Show Code where
-    show (Code is) = "\n" ++ unlines (map show is)
+    show (Code is) = unlines . map show $ is
 
 instance Monoid Code where
     mempty = Code []
     mappend (Code c1) (Code c2) = Code $ c1 ++ c2
 
-mkInstr :: Instr -> Code
-mkInstr = Code . (:[])
+mkInstr     :: Instr -> Code
+mkInstr     = Code . (:[])
 
-branch :: Bool -> Label -> Instr
-branch c l = Branch c (L l)
+branch      :: Bool -> Label -> Instr
+branch c l  = Branch c (L l)
 
-jump :: Label -> Instr
-jump = Jump . L
+jump        :: Label -> Instr
+jump        = Jump . L
 
-closure :: Label -> Instr
-closure = Closure . L
+closure     :: Label -> Instr
+closure     = Closure . L
 
 -- ------------------------------------------------------------
+
+newtype MCode
+    = MCode [Instr]
+
+instance Show MCode where
+    show (MCode is) = showMachineCode . Code $ is
+
+-- ------------------------------------------------------------
+
+showMachineCode :: Code -> String
+showMachineCode (Code is)
+    = unlines . map (uncurry showMachineInstr) $ zip [0..] is
+
+showMachineInstr :: Int -> Instr -> String
+showMachineInstr ic instr
+    = fmtCnt 4 ++ fmtInstr
+    where
+      fmtCnt n = (++ replicate (8 - n) ' ') .
+                 reverse . take n . reverse .
+                 ((replicate n ' ') ++) .
+                 show
+                 $ ic
+      fmtInstr
+          = drop 8 $ show instr ++ target instr
+          where
+            dist                d   = "   --> " ++ show (d + ic)
+            target (Jump     (D d)) = dist d
+            target (Branch _ (D d)) = dist d
+            target (Closure  (D d)) = dist d
+            target _                = ""
+
+-- ------------------------------------------------------------
+

@@ -8,17 +8,30 @@ import Data.Map               ( Map
                               , lookup
                               , insert
                               )
-import Data.Maybe             ( fromJust )
+import Data.Maybe             ( fromMaybe )
 
 import Language.Lua.VM.Instr
+
+-- ------------------------------------------------------------
 
 type LMap = Map Label Int
 
 -- ------------------------------------------------------------
+--
+-- assembling in this simple case is just
+-- eliminating labels from the code and substituting
+-- labels by distances in the instructions referencing
+-- code points
+--
+-- the label substitution is done with dynamic programming
+-- in a single pass. The result is a new code sequence and the
+-- label map. This map is already looked up when scanning
+-- the code sequence.
+-- This requires lazy evaluation
 
-assembleProg :: Code -> Code
+assembleProg :: Code -> MCode
 assembleProg (Code acode)
-    = Code mcode
+    = MCode mcode
     where
       (tab, mcode) = scanCode empty 0 acode
       scanCode lt _ic []
@@ -30,7 +43,10 @@ assembleProg (Code acode)
                   in (insert l ic lt', code')
               ins ->
                   let (lt', code') = scanCode lt (ic + 1) code
-                      disp l = D $ (fromJust . lookup l $ tab) - ic
+                      disp l = D $ (fromMaybe (error "assembleProg: undefined label")
+                                    .
+                                    lookup l $ tab
+                                   ) - ic
                       ins' =
                           case ins of
                             Jump     (L l) -> Jump     $ disp l
