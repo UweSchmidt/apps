@@ -255,6 +255,15 @@ deleteTableEntry :: (MonadIO m) => Value -> Table -> m ()
 deleteTableEntry k t
     = modifyEntries t (deleteEntry k)
 
+lengthTable :: (MonadIO m) => Table -> m Value
+lengthTable t
+    = do es <- getEntries t
+         return . lengthEntries $ es
+
+appendTable :: (MonadIO m) => Value -> Table -> m ()
+appendTable v t
+    = modifyEntries t (appendEntry v)
+
 -- ------------------------------------------------------------
 
 newtype Entries
@@ -279,6 +288,27 @@ writeEntry k v
 deleteEntry :: Value -> Entries -> Entries
 deleteEntry k
         = ET . M.delete k   . theEntries
+
+lengthEntries :: Entries -> Value
+lengthEntries e
+    = N . fromIntegral . len $ 0
+      where
+        em = theEntries e
+        len :: Int -> Int
+        len n
+            = maybe n (const $ len n1) $ M.lookup (N . fromIntegral $ n1) em
+              where
+                n1 = n + 1
+
+appendEntry :: Value -> Entries -> Entries
+appendEntry (L vs) es
+    = foldl (\ es' (v, k) -> writeEntry (N k) v es') es ps
+      where
+        (N d)  = lengthEntries es
+        ps     = zip vs . map (+ d) $ [0..]
+
+appendEntry v es
+    = writeEntry (lengthEntries es) v es
 
 -- ------------------------------------------------------------
 

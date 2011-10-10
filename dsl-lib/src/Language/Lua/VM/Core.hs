@@ -7,10 +7,14 @@ import Control.Monad.Error
 import Control.Monad.Reader
 import Control.Monad.State
 
+import Data.Array.IArray
+
 import Language.Common.Eval
 
 import Language.Lua.VM.Instr
 import Language.Lua.VM.Value
+
+import System.IO
 
 -- ------------------------------------------------------------
 
@@ -38,19 +42,39 @@ emptyLuaState
 
 -- ------------------------------------------------------------
 
+data LuaEnv
+    = LuaEnv
+      { theLogger :: String -> LuaAction ()
+      , theProg   :: Array Int Instr
+      }
+
+emptyLuaEnv :: LuaEnv
+emptyLuaEnv
+    = LuaEnv
+      { theLogger = \ s -> liftIO (hPutStrLn stderr s)
+--    , theLogger = const $ return ()
+      , theProg   = undefined
+      }
+
+-- ------------------------------------------------------------
+
 type LuaError   = String
 
 type LuaProg    = MCode
 
-type LuaAction  = Eval LuaError LuaProg LuaState
+type LuaAction  = Eval LuaError LuaEnv LuaState
 
 runLua :: LuaAction res -> LuaProg -> LuaState -> IO (Either LuaError res, LuaState)
 runLua act prog s0
-    = runEval act prog s0
+    = runEval act (loadProg prog emptyLuaEnv) s0
 
 luaError :: LuaError -> LuaAction res
 luaError s
     = throwError s
+
+loadProg :: LuaProg -> LuaEnv -> LuaEnv
+loadProg (MCode is) env
+    = env { theProg = listArray (0, length is - 1) is }
 
 -- ------------------------------------------------------------
 
@@ -65,9 +89,17 @@ getPC
 
 getInstr :: LuaAction Instr
 getInstr
-    = do pc           <- getPC
-         (MCode code) <- ask
-         return $ code !! pc
+    = do pc    <- getPC
+         instr <- asks ((! pc) . theProg)
+         traceInstr pc instr
+         return instr
+
+-- ------------------------------------------------------------
+
+traceInstr :: Int -> Instr -> LuaAction ()
+traceInstr pc instr
+    = do logger <- asks theLogger
+         logger (showMachineInstr pc instr)
 
 -- ------------------------------------------------------------
 
