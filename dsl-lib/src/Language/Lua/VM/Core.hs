@@ -133,6 +133,23 @@ remES i
                         "no value on evaluation stack at position " ++ show i
 
 -- ------------------------------------------------------------
+
+checkTable :: Value -> LuaAction Value
+checkTable v
+    = checkValue isTab "table" v
+    where
+      isTab (T _) = True
+      isTab _     = False
+
+checkValue :: (Value -> Bool) -> String -> Value -> LuaAction Value
+checkValue p err v
+    | p v
+        = return v
+    | otherwise
+        = luaError $ err ++ " expected but got a value of type " ++ show (luaType v)
+
+
+-- ------------------------------------------------------------
 --
 -- first check for control instructions
 -- these manipulate the pc explicitly
@@ -213,6 +230,26 @@ execInstr1 (UnTuple)
 
 execInstr1 (Take1)
     = execUnary (return . list2Value)
+
+-- table instructions
+
+execInstr1 (NewTable)
+    = do t <- newTable
+         pushES (T t)
+
+execInstr1 (LoadField)
+    = execBinary loadField
+      where
+        loadField v1 v2
+            = do (T t) <- checkTable v1
+                 readTable v2 t 
+
+execInstr1 (StoreField)
+    = do v1    <- popES
+         ix    <- popES
+         val   <- popES
+         (T t) <- checkTable v1
+         writeTable ix val t
 
 execInstr1 instr
     = luaError $ "unimplemented instr: " ++ show instr
