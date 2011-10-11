@@ -83,14 +83,10 @@ incrPC displ
     = modify $
       \ s -> s { thePC = CA $ theCA (thePC s) + displ }
 
-getPC :: LuaAction Int
-getPC
-    = gets (theCA . thePC)
-
 getInstr :: LuaAction Instr
 getInstr
-    = do pc    <- getPC
-         instr <- gets ((! pc) . theProg)
+    = do pc    <- gets thePC
+         instr <- gets ((! theCA pc) . theProg)
          traceInstr pc instr
          return instr
 
@@ -159,6 +155,14 @@ checkTable v
     where
       isTab (T _) = True
       isTab _     = False
+
+checkFctValue :: Value -> LuaAction Value
+checkFctValue v
+    = checkValue isFct "function" v
+    where
+      isFct (C _) = True
+      isFct (F _) = True
+      isFct _     = False
 
 checkValue :: (Value -> Bool) -> String -> Value -> LuaAction Value
 checkValue p err v
@@ -298,6 +302,21 @@ execInstr1 (DelEnv)
     = closeEnv
 
 -- subroutine instructions
+
+execInstr1 (Closure (D displ))
+    = do (CA ic) <- gets thePC
+         env     <- gets theCurrEnv
+         pushES $ CL { theClosureEnv = env
+                     , theCodeAddr   = CA $ ic + displ
+                     }
+
+execInst1 (Call)
+    = do v1   <- popES
+         args <- popES
+         fct  <- checkFctValue v1
+         case fct of
+           (C cls) -> undefined
+           (F _)   -> undefined
 
 -- the rest
 

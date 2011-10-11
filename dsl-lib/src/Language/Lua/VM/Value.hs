@@ -388,8 +388,8 @@ writeVariable _ _ _
 -- the parameters and locals
 
 data Closure
-    = CL { theClosueEnv  :: Env
-         , theCodeAddr   :: CodeAddress
+    = CL { theClosureEnv  :: Env
+         , theCodeAddr    :: CodeAddress
          }
 
 newtype CodeAddress
@@ -404,8 +404,8 @@ instance Ord Closure where
 
 newClosure :: Env -> CodeAddress -> Closure
 newClosure e start
-    = CL { theClosueEnv  = e
-         , theCodeAddr   = start
+    = CL { theClosureEnv  = e
+         , theCodeAddr    = start
          }
 
 -- ------------------------------------------------------------
