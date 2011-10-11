@@ -27,8 +27,11 @@ data LuaState
     = LuaState
       { theCurrEnv    :: Env
       , thePC         :: CodeAddress
+      , theIntReg     :: Maybe LuaError
       , theEvalStack  :: Values
       , theCallStack  :: [Closure]
+      , theProg       :: Array Int Instr	-- for dynamic loading, else the prog could be a part of the env
+      , theLogger     :: String -> LuaAction ()
       }
 
 emptyLuaState :: LuaState
@@ -36,25 +39,22 @@ emptyLuaState
     = LuaState
       { theCurrEnv    = emptyEnv
       , thePC         = CA 0
+      , theIntReg     = Nothing
       , theEvalStack  = []
       , theCallStack  = []
+      , theProg       = listArray (0,(-1)) []
+      , theLogger     = \ s -> liftIO (hPutStrLn stderr s)
+--    , theLogger     = \ _ -> return ()
       }
 
 -- ------------------------------------------------------------
 
 data LuaEnv
-    = LuaEnv
-      { theLogger :: String -> LuaAction ()
-      , theProg   :: Array Int Instr
-      }
+    = LuaEnv { }
 
 emptyLuaEnv :: LuaEnv
 emptyLuaEnv
-    = LuaEnv
-      { theLogger = \ s -> liftIO (hPutStrLn stderr s)
---    , theLogger = const $ return ()
-      , theProg   = undefined
-      }
+    = LuaEnv { }
 
 -- ------------------------------------------------------------
 
@@ -66,15 +66,15 @@ type LuaAction  = Eval LuaError LuaEnv LuaState
 
 runLua :: LuaAction res -> LuaProg -> LuaState -> IO (Either LuaError res, LuaState)
 runLua act prog s0
-    = runEval act (loadProg prog emptyLuaEnv) s0
+    = runEval act emptyLuaEnv (loadProg prog s0)
 
 luaError :: LuaError -> LuaAction res
 luaError s
     = throwError s
 
-loadProg :: LuaProg -> LuaEnv -> LuaEnv
-loadProg (MCode is) env
-    = env { theProg = listArray (0, length is - 1) is }
+loadProg :: LuaProg -> LuaState -> LuaState
+loadProg (MCode is) s0
+    = s0 { theProg = listArray (0, length is - 1) is }
 
 -- ------------------------------------------------------------
 
@@ -90,7 +90,7 @@ getPC
 getInstr :: LuaAction Instr
 getInstr
     = do pc    <- getPC
-         instr <- asks ((! pc) . theProg)
+         instr <- gets ((! pc) . theProg)
          traceInstr pc instr
          return instr
 
@@ -98,10 +98,29 @@ getInstr
 
 traceInstr :: Int -> Instr -> LuaAction ()
 traceInstr pc instr
-    = do logger <- asks theLogger
+    = do logger <- gets theLogger
          logger (showMachineInstr pc instr)
 
 -- ------------------------------------------------------------
+--
+-- environment primitives
+
+openEnv :: LuaAction ()
+openEnv
+    = do t <- newTable
+         modify $ \ s -> s { theCurrEnv = Env . (t :) . theEnv $ theCurrEnv s }
+         
+
+closeEnv :: LuaAction ()
+closeEnv
+    = do ts <- gets (theEnv . theCurrEnv)
+         case ts of
+           (_ : ts') -> modify $  \ s -> s { theCurrEnv = Env ts' }
+           []        -> luaError "no local env to close"
+
+-- ------------------------------------------------------------
+--
+-- evaluation stack primitives
 
 popES :: LuaAction Value
 popES
@@ -250,6 +269,37 @@ execInstr1 (StoreField)
          val   <- popES
          (T t) <- checkTable v1
          writeTable ix val t
+
+execInstr1 (Append)
+    = execBinary append
+      where
+        append v1 v2
+            = do (T t) <- checkTable v1
+                 appendTable v2 t
+                 return v1
+
+-- env instructions
+
+execInstr1 (LoadVar n)
+    = do v <- gets theCurrEnv >>= readVariable (S n)
+         pushES v
+
+execInstr1 (StoreVar n)
+    = do v <- popES
+         gets theCurrEnv >>= writeVariable (S n) v
+
+execInstr1 (NewLocal n)
+    = gets theCurrEnv >>= newLocalVariable (S n)
+
+execInstr1 (NewEnv)
+    = openEnv
+
+execInstr1 (DelEnv)
+    = closeEnv
+
+-- subroutine instructions
+
+-- the rest
 
 execInstr1 instr
     = luaError $ "unimplemented instr: " ++ show instr
