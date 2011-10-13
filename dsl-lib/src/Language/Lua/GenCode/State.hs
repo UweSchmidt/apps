@@ -19,7 +19,10 @@ where
 
 import Control.Monad.RWS
 
-import Language.Lua.VM.Instr
+import Language.Lua.VM.Instr    ( )
+import Language.Lua.VM.Types	( Label(..)
+                                , Code
+                                )
 
 -- ------------------------------------------------------------
 --

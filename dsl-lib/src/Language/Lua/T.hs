@@ -7,6 +7,7 @@ import Language.Lua.Parser
 import Language.Lua.Token
 import Language.Lua.AST
 import Language.Lua.VM.Instr
+import Language.Lua.VM.Types
 import Language.Lua.GenCode
 import Language.Lua.GenCode.State
 import Language.Lua.GenCode.Assemble

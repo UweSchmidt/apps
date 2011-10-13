@@ -1,78 +1,54 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# OPTIONS -fno-warn-orphans #-}
 
 module Language.Lua.VM.Value
 where
 
-import Control.Applicative ( (<$>) )
-import Control.Monad.Trans
+import Control.Applicative 	( (<$>) )
 
-import Data.Function        ( on )
-import Data.IORef
-import Data.List            ( intercalate )
-import Data.Map             ( Map )
-import Data.Maybe           ( fromJust
-                            , fromMaybe
-                            )
-import Data.Typeable
-import Data.Unique
+import Control.Monad.Trans      ( MonadIO
+                                , liftIO
+                                )
+
+import Data.Array.IArray	( listArray )
+import Data.IORef		( newIORef
+                                , readIORef
+                                , writeIORef
+                                , modifyIORef
+                                )
+import Data.List            	( intercalate )
+import Data.Maybe           	( fromMaybe )
+import Data.Unique          	( newUnique
+                                , hashUnique
+                                )
+
+import Language.Lua.VM.Types
+
+import System.IO		( hPutStrLn
+                                , stderr
+                                )
 
 import qualified Data.Map as M
 
 -- ------------------------------------------------------------
---
--- a Lua value is one of the 4 basic values, a table or a function value
--- (a closure), a user data value (rather anything)
-
-data Value
-    = Nil
-    | B Bool
-    | S String
-    | N Double
-    | T Table
-    | C Closure
-    | F NativeFct
-    | U UserData
-    | L Values		-- lists of values are used internally with the ... varargs "variable"
-                        -- lists should not be nested
-      deriving (Eq, Ord)
 
 instance Show Value where
     show = value2String
-
--- ------------------------------------------------------------
-
--- function calls and rhs of expressions compute a list of values
-
-type Values
-    = [Value]
-
--- ------------------------------------------------------------
-
-newtype Err
-    = Err { theErr :: String }
-      deriving(Eq, Ord)
-
--- ------------------------------------------------------------
-
-data UserData = forall a . (Typeable a, Eq a, Ord a) => UserData a
-
-instance Eq UserData where
-    (UserData x) == (UserData y) =
-        typeOf x == typeOf y
-        &&
-        cast x == Just y
-
--- this Ord instance is a bit silly,
--- but it is required to have an Ord instance on Value
--- if the user data is not of the same type,
--- an artificial ordering is invented
-
-instance Ord UserData where
-    (UserData x) <= (UserData y)
-        | typeOf x == typeOf y
-            = fromJust (cast x) <= y
-        | otherwise
-            = show (typeOf x) <= show (typeOf y)
+           where
+             value2String  :: Value -> String
+             value2String Nil       = "nil"
+             value2String (B True)  = "true"
+             value2String (B False) = "false"
+             value2String (N d)     = let (n, f) = properFraction d in
+                                      if f == 0
+                                      then show (n::Integer)
+                                      else show d
+             value2String (S s)     = show s
+             value2String (T t)     = "table: "    ++ ( show . hashUnique . theTID . theTableId   $ t)
+             value2String (C c)     = "function: " ++ ( show . theCodeAddr $ c)
+             value2String (F f)     = "native function: " ++ ( show . theNativeFctId $ f)
+             value2String (U _)     = "<userdata>"
+             value2String (L l)     = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
 
 -- ------------------------------------------------------------
 
@@ -113,23 +89,6 @@ luaType (C _) = "function"
 luaType (F _) = "function"
 luaType (U _) = "userdata"
 luaType (L _) = "list"		-- should not be visible when evaluating any expressions
-
--- ------------------------------------------------------------
-
-value2String  :: Value -> String
-value2String Nil = "nil"
-value2String (B True) = "true"
-value2String (B False) = "false"
-value2String (N d) = let (n, f) = properFraction d in
-                     if f == 0
-                     then show (n::Integer)
-                     else show d
-value2String (S s) = show s
-value2String (T t) = "table: "    ++ ( show . hashUnique . theTID . theTableId   $ t)
-value2String (C c) = "function: " ++ ( show . theCodeAddr $ c)
-value2String (F f) = "function: " ++ ( show . theNativeFctId $ f)
-value2String (U _) = "<userdata>"
-value2String (L l) = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
 
 -- ------------------------------------------------------------
 
@@ -192,29 +151,6 @@ uncons v                   = (v, emptyList)
 
 -- ------------------------------------------------------------
 
--- a table is (Lua language def) an object, every table constructor
--- generates a unique key, the TableId, used for comparison of tables
--- when assigning table values, a ref to the table is copied, not the
--- entries. This is the reason for the IORef.
-
-data Table
-    = TB { theTableId      :: TableId
-         , theTableEntries :: IORef Entries
-         , theMetaTable    :: Value
-         }
-
-instance Eq Table where
-    (==) = (==) `on` theTableId
-
-instance Ord Table where
-    compare = compare `on` theTableId
-
-newtype TableId
-    = TID { theTID :: Unique }
-      deriving (Eq, Ord)
-
--- ------------------------------------------------------------
-
 newTable :: (MonadIO m) => m Table
 newTable
     = liftIO $
@@ -265,9 +201,6 @@ appendTable v t
     = modifyEntries t (appendEntry v)
 
 -- ------------------------------------------------------------
-
-newtype Entries
-    = ET { theEntries :: Map Value Value}
 
 emptyEntries :: Entries
 emptyEntries
@@ -330,8 +263,6 @@ appendEntry v es
 -- remain in the table with the associated value "nil", else a kind of dynamic binding
 -- would be the effect
 
-newtype Env = Env { theEnv :: [Table] }
-
 emptyEnv :: Env
 emptyEnv = Env { theEnv = [] }
 
@@ -382,26 +313,6 @@ writeVariable _ _ _
 
 -- ------------------------------------------------------------
 
--- a closure consists of a list of tables, the static chain of environments
--- an a start address.
--- On call of this closure the env will be extended by a new empty env for
--- the parameters and locals
-
-data Closure
-    = CL { theClosureEnv  :: Env
-         , theCodeAddr    :: CodeAddress
-         }
-
-newtype CodeAddress
-    = CA { theCA :: Int }
-      deriving (Eq, Ord, Show)
-
-instance Eq Closure where
-    (==) = (==) `on` theCodeAddr
-
-instance Ord Closure where
-    compare = compare `on` theCodeAddr
-
 newClosure :: Env -> CodeAddress -> Closure
 newClosure e start
     = CL { theClosureEnv  = e
@@ -410,22 +321,28 @@ newClosure e start
 
 -- ------------------------------------------------------------
 
-type NativeAction
-    = Values -> IO (Either String Values)
-
-data NativeFct
-    = NF { theNativeFctId :: String
-         , theNativeFct   :: NativeAction
-         }
-
-instance Eq NativeFct where
-    (==) = (==) `on` theNativeFctId
-
-instance Ord NativeFct where
-    compare = compare `on` theNativeFctId
-
 newNativeFct :: String -> NativeAction -> NativeFct
 newNativeFct = NF
 
 -- ------------------------------------------------------------
 
+emptyLuaState :: LuaState
+emptyLuaState
+    = LuaState
+      { theCurrEnv    = emptyEnv
+      , thePC         = CA 0
+      , theIntReg     = Nothing
+      , theEvalStack  = []
+      , theCallStack  = []
+      , theProg       = listArray (0,(-1)) []
+      , theLogger     = \ s -> liftIO (hPutStrLn stderr s)
+--    , theLogger     = \ _ -> return ()
+      }
+
+-- ------------------------------------------------------------
+
+emptyLuaEnv :: LuaEnv
+emptyLuaEnv
+    = LuaEnv { }
+
+-- ------------------------------------------------------------

@@ -10,7 +10,7 @@ import Data.Map               ( Map
                               )
 import Data.Maybe             ( fromMaybe )
 
-import Language.Lua.VM.Instr
+import Language.Lua.VM.Types
 
 -- ------------------------------------------------------------
 
@@ -49,9 +49,9 @@ assembleProg (Code acode)
                                    ) - ic
                       ins' =
                           case ins of
-                            Jump     (L l) -> Jump     $ disp l
-                            Branch c (L l) -> Branch c $ disp l
-                            Closure  (L l) -> Closure  $ disp l
+                            Jump     (M l) -> Jump     $ disp l
+                            Branch c (M l) -> Branch c $ disp l
+                            Closure  (M l) -> Closure  $ disp l
                             _              -> ins
                   in (lt', ins' : code')
 

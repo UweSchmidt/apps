@@ -1,74 +1,29 @@
+{-# OPTIONS -fno-warn-orphans #-}
+
 -- ------------------------------------------------------------
 
--- the instruction set of this Lua VM
+-- the simple functions defined on instructions
 
 -- ------------------------------------------------------------
 
 module Language.Lua.VM.Instr
-    ( BOp(..)
-    , UOp(..)
-    , Instr(..)
-    , Label(..)
-    , Dest(..)
-    , Code(..)
-    , MCode(..)
-    , mkInstr
-    , branch
-    , jump
-    , closure
-    , showMachineCode
-    , showMachineInstr
-    )
 where
 
-import Data.Char           ( toLower )
-import Data.Monoid
+import Data.Char            	( toLower )
+
+import Language.Lua.VM.Types
 
 -- ------------------------------------------------------------
 
-type Name
-    = String
+instance Show Code where
+    show (Code is) = unlines . map show $ is
 
-data BOp
-    = Add | Sub | Mult | Div | Exp | Mod | EQU | NEQ | GRT | GRE | LSE | LST | Conc
-      deriving (Show, Eq, Ord)
+-- ------------------------------------------------------------
 
-data UOp
-    = Minus | Not | NumberOf
-      deriving (Show, Eq, Ord)
+instance Show MCode where
+    show (MCode is) = showMachineCode . Code $ is
 
-data Instr
-    = LoadNum Double
-    | LoadStr String
-    | LoadBool Bool
-    | LoadNil
-    | LoadEmpty		-- load empty result list
-    | LoadVar Name
-    | LoadField         -- top: the table, 2.: the index
-    | NewTable
-    | NewEnv            -- create a new empty env (on block or function entry)
-    | DelEnv            -- remove an env on block exit (normal exit, break and return)
-    | NewLocal Name     -- create new variable in local env
-    | StoreVar Name
-    | StoreField        -- top: the table, 2.: the index, 3. the value
-    | Append            -- top: the table, 2.: the value(-list)
-    | MkTuple		-- top: the tail (single value or list), 2. the head value
-    | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
-    | Take1             -- top: take the head or nil, discard the rest
-    | Pop               -- throw away the topmost value
-    | Copy Int          -- push the i. value onto the stack, 0 == top of stack, stack growes by 1
-    | Move Int          -- move the i. value to the top, i == 1: swap the 2 topmost values, stack remains size
-    | BinOp BOp         -- top: right arg, 2.: left arg
-    | UnOp UOp          -- top: single arg
-    | Jump Dest
-    | Label Label
-    | Branch Bool Dest  -- pop top of stack and test on (false or nil)
-    | Closure Dest      -- push a closure
-    | Call              -- top: closure, 2. args
-    | TailCall          -- top: closure, 2. args
-    | Leave             -- remove current env and return to saved stored closure
-    | Exit Int          -- terminate prog
-    | TODO String	-- for debugging
+-- ------------------------------------------------------------
 
 instance Show Instr where
     show (LoadNum d   ) = fmt1 "load" (show d)
@@ -123,59 +78,6 @@ fmtOp      = map toLower
 
 -- ------------------------------------------------------------
 
-data Dest
-    = L Label
-    | D Int
-
-instance Show Dest where
-    show (L l) = show l
-    show (D d) = show d
-
--- ------------------------------------------------------------
-
-newtype Label
-    = Lab Int
-      deriving (Eq, Ord)
-
-instance Show Label where
-    show (Lab l) = format l
-        where
-          format = ("l" ++) . reverse . take 3 . reverse . ("0000" ++) . show
-               
--- ------------------------------------------------------------
-
-newtype Code
-    = Code [Instr]
-
-instance Show Code where
-    show (Code is) = unlines . map show $ is
-
-instance Monoid Code where
-    mempty = Code []
-    mappend (Code c1) (Code c2) = Code $ c1 ++ c2
-
-mkInstr     :: Instr -> Code
-mkInstr     = Code . (:[])
-
-branch      :: Bool -> Label -> Instr
-branch c l  = Branch c (L l)
-
-jump        :: Label -> Instr
-jump        = Jump . L
-
-closure     :: Label -> Instr
-closure     = Closure . L
-
--- ------------------------------------------------------------
-
-newtype MCode
-    = MCode [Instr]
-
-instance Show MCode where
-    show (MCode is) = showMachineCode . Code $ is
-
--- ------------------------------------------------------------
-
 showMachineCode :: Code -> String
 showMachineCode (Code is)
     = unlines . map (uncurry showMachineInstr) $ zip [0..] is
@@ -197,6 +99,20 @@ showMachineInstr ic instr
             target (Branch _ (D d)) = dist d
             target (Closure  (D d)) = dist d
             target _                = ""
+
+-- ------------------------------------------------------------
+
+mkInstr     :: Instr -> Code
+mkInstr     = Code . (:[])
+
+branch      :: Bool -> Label -> Instr
+branch c l  = Branch c (M l)
+
+jump        :: Label -> Instr
+jump        = Jump . M
+
+closure     :: Label -> Instr
+closure     = Closure . M
 
 -- ------------------------------------------------------------
 

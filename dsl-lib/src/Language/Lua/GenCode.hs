@@ -4,7 +4,9 @@ where
 import Language.Lua.AST
 import Language.Lua.GenCode.ASTPredicates
 import Language.Lua.GenCode.State
+
 import Language.Lua.VM.Instr
+import Language.Lua.VM.Types
 
 import Control.Applicative ( (<$>) )
 import Control.Monad.RWS

@@ -12,57 +12,10 @@ import Data.Array.IArray
 import Language.Common.Eval
 
 import Language.Lua.VM.Instr
+import Language.Lua.VM.Types
 import Language.Lua.VM.Value
 
-import System.IO
-
 -- ------------------------------------------------------------
-
--- a program state is a mapping from module names to tables
--- a single table contains all global variables of a module
--- there is one anonymous module for all global variables
--- and (predefined) functions
-
-data LuaState
-    = LuaState
-      { theCurrEnv    :: Env
-      , thePC         :: CodeAddress
-      , theIntReg     :: Maybe LuaError
-      , theEvalStack  :: Values
-      , theCallStack  :: [Closure]
-      , theProg       :: Array Int Instr	-- for dynamic loading, else the prog could be a part of the env
-      , theLogger     :: String -> LuaAction ()
-      }
-
-emptyLuaState :: LuaState
-emptyLuaState
-    = LuaState
-      { theCurrEnv    = emptyEnv
-      , thePC         = CA 0
-      , theIntReg     = Nothing
-      , theEvalStack  = []
-      , theCallStack  = []
-      , theProg       = listArray (0,(-1)) []
-      , theLogger     = \ s -> liftIO (hPutStrLn stderr s)
---    , theLogger     = \ _ -> return ()
-      }
-
--- ------------------------------------------------------------
-
-data LuaEnv
-    = LuaEnv { }
-
-emptyLuaEnv :: LuaEnv
-emptyLuaEnv
-    = LuaEnv { }
-
--- ------------------------------------------------------------
-
-type LuaError   = String
-
-type LuaProg    = MCode
-
-type LuaAction  = Eval LuaError LuaEnv LuaState
 
 runLua :: LuaAction res -> LuaProg -> LuaState -> IO (Either LuaError res, LuaState)
 runLua act prog s0
@@ -87,7 +40,7 @@ getInstr :: LuaAction Instr
 getInstr
     = do pc    <- gets thePC
          instr <- gets ((! theCA pc) . theProg)
-         traceInstr pc instr
+         traceInstr (theCA pc) instr
          return instr
 
 -- ------------------------------------------------------------
@@ -113,6 +66,55 @@ closeEnv
          case ts of
            (_ : ts') -> modify $  \ s -> s { theCurrEnv = Env ts' }
            []        -> luaError "no local env to close"
+
+-- ------------------------------------------------------------
+
+callClosure :: Closure -> LuaAction ()
+callClosure cls
+    = modify $ call
+      where
+        call s
+            = s { theCurrEnv   = theClosureEnv cls
+                , thePC        = theCodeAddr cls
+                , theCallStack = retCls : theCallStack s
+                }
+            where
+              retCls
+                  = CL { theClosureEnv = theCurrEnv s
+                       , theCodeAddr   = CA ((theCA . thePC) s + 1)
+                       }
+
+jumpClosure :: Closure -> LuaAction ()
+jumpClosure cls
+    = modify $ jmp
+      where
+        jmp s
+            = s { theCurrEnv   = theClosureEnv cls
+                , thePC        = theCodeAddr cls
+                }
+
+callInternal :: NativeFct -> LuaAction ()
+callInternal nf
+    = do (L vs) <- popES >>= checkList		-- get the arguments
+         rs     <- theNativeFct nf $ vs         -- call native function
+         pushES (L rs)                          -- store the results
+
+jumpInternal :: NativeFct -> LuaAction ()
+jumpInternal nf
+    = callInternal nf >> leaveFct
+
+leaveFct :: LuaAction ()
+leaveFct
+    = do cs <- gets theCallStack
+         case cs of
+           []          -> luaError "call stack underflow in leave instr"
+           (cls : cs') -> modify $ leave cls cs'
+    where
+      leave cls cs s
+          = s { theCurrEnv   = theClosureEnv cls
+              , thePC        = theCodeAddr   cls
+              , theCallStack = cs
+              }
 
 -- ------------------------------------------------------------
 --
@@ -148,6 +150,13 @@ remES i
                         "no value on evaluation stack at position " ++ show i
 
 -- ------------------------------------------------------------
+
+checkList :: Value -> LuaAction Value
+checkList v
+    = checkValue isList "list" v
+    where
+      isList (L _) = True
+      isList _     = False
 
 checkTable :: Value -> LuaAction Value
 checkTable v
@@ -306,17 +315,28 @@ execInstr1 (DelEnv)
 execInstr1 (Closure (D displ))
     = do (CA ic) <- gets thePC
          env     <- gets theCurrEnv
-         pushES $ CL { theClosureEnv = env
-                     , theCodeAddr   = CA $ ic + displ
-                     }
+         pushES $ C $ CL { theClosureEnv = env
+                         , theCodeAddr   = CA $ ic + displ
+                         }
 
-execInst1 (Call)
+execInstr1 (Call)
     = do v1   <- popES
-         args <- popES
          fct  <- checkFctValue v1
          case fct of
-           (C cls) -> undefined
-           (F _)   -> undefined
+           (C cls) -> callClosure  cls
+           (F nf)  -> callInternal nf
+           _       -> luaError $ "function value expected in function call, but got a " ++ show (luaType fct)
+
+execInstr1 (TailCall)
+    = do v1   <- popES
+         fct  <- checkFctValue v1
+         case fct of
+           (C cls) -> jumpClosure  cls
+           (F nf)  -> jumpInternal nf
+           _       -> luaError $ "function value expected in function tail call, but got a " ++ show (luaType fct)
+
+execInstr1 (Leave)
+    = leaveFct
 
 -- the rest
 
