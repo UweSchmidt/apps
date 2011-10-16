@@ -150,10 +150,10 @@ data LuaState
     = LuaState
       { theCurrEnv    :: Env
       , thePC         :: CodeAddress
-      , theIntReg     :: Maybe LuaError
+      , theIntrReg    :: Maybe LuaError
       , theEvalStack  :: Values
       , theCallStack  :: [Closure]
-      , theProg       :: Array Int Instr	-- for dynamic loading, else the prog could be a part of the env
+      , theProg       :: LuaCode	-- for dynamic loading the code is part of the state, else the prog could be a part of the env
       , theLogger     :: String -> LuaAction ()
       }
 
@@ -166,7 +166,9 @@ data LuaEnv
 
 type LuaError   = String
 
-type LuaProg    = MCode
+type LuaModule  = MCode
+
+type LuaCode    = [((Int, Int), Array Int Instr)]
 
 type LuaAction  = Eval LuaError LuaEnv LuaState
 
@@ -213,8 +215,7 @@ data Instr
     | Call              -- top: closure, 2. args
     | TailCall          -- top: closure, 2. args
     | Leave             -- remove current env and return to saved stored closure
-    | Exit Int          -- terminate prog
-    | TODO String	-- for debugging
+    | Intr String       -- interrupt
 
 -- ------------------------------------------------------------
 

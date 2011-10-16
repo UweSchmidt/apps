@@ -4,7 +4,7 @@ where
 import Control.Applicative ( (<$>) )
 
 import Control.Monad.Error
-import Control.Monad.Reader
+-- import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.Array.IArray
@@ -17,17 +17,13 @@ import Language.Lua.VM.Value
 
 -- ------------------------------------------------------------
 
-runLua :: LuaAction res -> LuaProg -> LuaState -> IO (Either LuaError res, LuaState)
+runLua :: LuaAction res -> LuaModule -> LuaState -> IO (Either LuaError res, LuaState)
 runLua act prog s0
-    = runEval act emptyLuaEnv (loadProg prog s0)
+    = runEval (loadCode prog >> act) emptyLuaEnv s0
 
 luaError :: LuaError -> LuaAction res
 luaError s
     = throwError s
-
-loadProg :: LuaProg -> LuaState -> LuaState
-loadProg (MCode is) s0
-    = s0 { theProg = listArray (0, length is - 1) is }
 
 -- ------------------------------------------------------------
 
@@ -36,12 +32,53 @@ incrPC displ
     = modify $
       \ s -> s { thePC = CA $ theCA (thePC s) + displ }
 
-getInstr :: LuaAction Instr
-getInstr
-    = do pc    <- gets thePC
-         instr <- gets ((! theCA pc) . theProg)
+getNextInstr :: LuaAction Instr
+getNextInstr
+    = gets thePC >>= getInstr
+
+-- ------------------------------------------------------------
+
+-- the ordered list of segments is searched for the
+-- segment containing the instruction
+-- an exec is raised, when the code address does not exist
+
+getInstr :: CodeAddress -> LuaAction Instr
+getInstr pc
+    = do prog  <- gets theProg
+         instr <- getI (theCA pc) prog
          traceInstr (theCA pc) instr
          return instr
+    where
+      getI ic []
+          = luaError $ "segmentation fault: illegal PC value " ++ show ic
+      getI ic (((lb, ub), seg) : prog')
+          | lb <= ic && ic <= ub
+              = return $ seg ! ic
+          | otherwise
+              = getI ic prog'
+
+-- ------------------------------------------------------------
+
+-- load a module into the program store
+-- for every code module, a segement implemeted as array is allocated
+-- a new segment is allocated at the end of the segment list
+
+loadCode :: LuaModule -> LuaAction CodeAddress
+loadCode (MCode cs)
+    = do prog <- gets theProg
+         let (start, prog') = addInstr cs 0 prog
+         modify $ \ s -> s { theProg = prog' }
+         return $ CA start
+    where
+      addInstr is ic []
+          = (ic, [(lb'ub, listArray lb'ub is)])
+            where
+              lb'ub = (ic, ic + length is - 1)
+      addInstr is _ (seg : segs)
+          = (ic, seg : segs')
+            where
+              (ic, segs') = addInstr is (ub + 1) segs
+              ((_, ub), _) = seg
 
 -- ------------------------------------------------------------
 
@@ -151,6 +188,21 @@ remES i
 
 -- ------------------------------------------------------------
 
+checkNum :: Value -> LuaAction Value
+checkNum v
+    = checkValue isNum "number" v
+    where
+      isNum (N _) = True
+      isNum _     = False
+
+checkStringOrTable :: Value -> LuaAction Value
+checkStringOrTable v
+    = checkValue isST "string or table" v
+    where
+      isST (S _) = True
+      isST (T _) = True
+      isST _     = False
+
 checkList :: Value -> LuaAction Value
 checkList v
     = checkValue isList "list" v
@@ -180,6 +232,15 @@ checkValue p err v
     | otherwise
         = luaError $ err ++ " expected but got a value of type " ++ show (luaType v)
 
+checkValue2 :: (Value -> LuaAction Value) ->
+               (Value -> LuaAction Value) ->
+               Value -> Value -> LuaAction (Value, Value)
+checkValue2 c1 c2 v1 v2
+    = c1 v1 >> c2 v2 >> return (v1, v2)
+
+checkNum2 :: Value -> Value -> LuaAction (Value, Value)
+checkNum2
+    = checkValue2 checkNum checkNum
 
 -- ------------------------------------------------------------
 --
@@ -197,17 +258,27 @@ execInstr (Branch c (D displ))
                   then displ
                   else 1
 
-execInstr instr@(Call)
-    = luaError $ "unimplemented instr: " ++ show instr
+execInstr (Call)
+    = do v1   <- popES
+         fct  <- checkFctValue v1
+         case fct of
+           (C cls) -> callClosure  cls
+           (F nf)  -> callInternal nf
+           _       -> luaError $ "function value expected in function call, but got a " ++ show (luaType fct)
 
-execInstr instr@(TailCall)
-    = luaError $ "unimplemented instr: " ++ show instr
+execInstr (TailCall)
+    = do v1   <- popES
+         fct  <- checkFctValue v1
+         case fct of
+           (C cls) -> jumpClosure  cls
+           (F nf)  -> jumpInternal nf
+           _       -> luaError $ "function value expected in function tail call, but got a " ++ show (luaType fct)
 
-execInstr instr@(Leave)
-    = luaError $ "unimplemented instr: " ++ show instr
+execInstr (Leave)
+    = leaveFct
 
-execInstr instr@(Exit _rc)
-    = luaError $ "unimplemented instr: " ++ show instr
+execInstr (Intr msg)
+    = luaError msg
 
 execInstr instr
     = execInstr1 instr >> incrPC 1
@@ -319,29 +390,8 @@ execInstr1 (Closure (D displ))
                          , theCodeAddr   = CA $ ic + displ
                          }
 
-execInstr1 (Call)
-    = do v1   <- popES
-         fct  <- checkFctValue v1
-         case fct of
-           (C cls) -> callClosure  cls
-           (F nf)  -> callInternal nf
-           _       -> luaError $ "function value expected in function call, but got a " ++ show (luaType fct)
-
-execInstr1 (TailCall)
-    = do v1   <- popES
-         fct  <- checkFctValue v1
-         case fct of
-           (C cls) -> jumpClosure  cls
-           (F nf)  -> jumpInternal nf
-           _       -> luaError $ "function value expected in function tail call, but got a " ++ show (luaType fct)
-
-execInstr1 (Leave)
-    = leaveFct
-
--- the rest
-
 execInstr1 instr
-    = luaError $ "unimplemented instr: " ++ show instr
+    = luaError $ "illegal or unimplemented instr: " ++ show instr
 
 -- ------------------------------------------------------------
 
@@ -361,11 +411,56 @@ execUnary f
 -- ------------------------------------------------------------
 
 lookupOp2 :: BOp -> LuaAction (Value -> Value -> LuaAction Value)
+lookupOp2 Add
+    = numOp2 (+)
+
+lookupOp2 Sub
+    = numOp2 (-)
+
+lookupOp2 Mult
+    = numOp2 (*)
+
+lookupOp2 Exp
+    = numOp2 (**)
+
+lookupOp2 Div
+    = numOp2 (/)
+
+lookupOp2 Mod
+    = undefined
+
 lookupOp2 op
     = luaError $ "unimplemented binary op: " ++ show op
          
+numOp2 :: (Double -> Double -> Double) -> LuaAction (Value -> Value -> LuaAction Value)
+numOp2 op
+    = return $
+      \ v1 v2 -> do (N n1, N n2) <- checkNum2 v1 v2
+                    return $ N (n1 `op` n2)
+
+-- ------------------------------------------------------------
+
 lookupOp1 :: UOp -> LuaAction (Value -> LuaAction Value)
+lookupOp1 Minus
+    = return $
+      \ v1 -> do (N n) <- checkNum v1
+                 return $ N (0 - n)
+
+lookupOp1 Not
+    = return $
+      \ v1 -> return $ B (isFalse v1)
+
+lookupOp1 NumberOf
+    = return $
+      \ v1 -> do v' <- checkStringOrTable v1
+                 case v' of
+                   (S s) -> return $ int2Value $ length s
+                   (T t) -> lengthTable t
+                   _     -> luaError "illegal operand to # op"
+
+{- all unary ops implemented
+
 lookupOp1 op
     = luaError $ "unimplemented unary op: " ++ show op
-         
+-}         
 -- ------------------------------------------------------------

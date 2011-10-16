@@ -55,8 +55,7 @@ instance Show Instr where
     show (Call        ) = fmt0 "call"
     show (TailCall    ) = fmt0 "tailcall"
     show (Leave       ) = fmt0 "return"
-    show (Exit rc     ) = fmt1 "exit" (show rc)
-    show (TODO s      ) = fmt1 "TODO" s
+    show (Intr msg    ) = fmt1 "intr" (show msg)
 
 indent     :: String -> String
 indent s   = replicate 8 ' ' ++ s

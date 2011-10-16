@@ -10,7 +10,6 @@ import Control.Monad.Trans      ( MonadIO
                                 , liftIO
                                 )
 
-import Data.Array.IArray	( listArray )
 import Data.IORef		( newIORef
                                 , readIORef
                                 , writeIORef
@@ -89,6 +88,11 @@ luaType (C _) = "function"
 luaType (F _) = "function"
 luaType (U _) = "userdata"
 luaType (L _) = "list"		-- should not be visible when evaluating any expressions
+
+-- ------------------------------------------------------------
+
+int2Value	:: Int -> Value
+int2Value i    = N $ fromIntegral i
 
 -- ------------------------------------------------------------
 
@@ -331,10 +335,10 @@ emptyLuaState
     = LuaState
       { theCurrEnv    = emptyEnv
       , thePC         = CA 0
-      , theIntReg     = Nothing
+      , theIntrReg    = Nothing
       , theEvalStack  = []
       , theCallStack  = []
-      , theProg       = listArray (0,(-1)) []
+      , theProg       = []
       , theLogger     = \ s -> liftIO (hPutStrLn stderr s)
 --    , theLogger     = \ _ -> return ()
       }

@@ -28,7 +28,7 @@ compProg block
                               , code_prog		-- push the closure
                               , mkInstr $ Call
                               , mkInstr $ Pop
-                              , mkInstr $ Exit 0
+                              , mkInstr $ Intr "terminate program"
                               ]
          emitCode code_cls
          return ()
