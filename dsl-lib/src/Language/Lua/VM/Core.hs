@@ -427,7 +427,7 @@ lookupOp2 Div
     = numOp2 (/)
 
 lookupOp2 Mod
-    = undefined
+    = numOp2 $ \ x y -> x - fromIntegral (floor (x / y ) :: Int) * y
 
 lookupOp2 op
     = luaError $ "unimplemented binary op: " ++ show op
