@@ -9,9 +9,13 @@
 module Language.Lua.VM.Instr
 where
 
+import Control.Monad.Trans      ( MonadIO )
+
 import Data.Char            	( toLower )
+import Data.List                ( intercalate )
 
 import Language.Lua.VM.Types
+import Language.Lua.VM.Value
 
 -- ------------------------------------------------------------
 
@@ -75,6 +79,12 @@ fmtL l     = l ++ ":"
 fmtOp      :: String -> String
 fmtOp      = map toLower
 
+fill'      :: Int -> String -> String
+fill' n s
+    = fill n' s
+    where
+      n' = ((length s - 1) `div` n + 1) * n
+
 -- ------------------------------------------------------------
 
 showMachineCode :: Code -> String
@@ -115,3 +125,101 @@ closure     = Closure . M
 
 -- ------------------------------------------------------------
 
+--
+-- trace and dump operations
+
+dumpEvalStack :: (Monad m) => Values -> m String
+dumpEvalStack es
+    = return $
+      unlines $
+      [ hl1
+      , hl2
+      , ""
+      ] ++ zipWith fmtCell locs es
+    where
+      hl1 = "evaluation stack (size: " ++ show (length es) ++ ")"
+      hl2 = map (const '=') hl1
+      locs = map ( fill 8 . ("top" ++)) $ "" : map show [(-1::Int), -2..]
+      fmtCell l v = l ++ ": " ++ show v
+
+-- ------------------------------------------------------------
+
+dumpCallStack :: (Monad m) => [Closure] -> m String
+dumpCallStack cs
+    = return $
+      unlines $
+      [ hl1
+      , hl2
+      , ""
+      ] ++ zipWith fmtCl locs cs
+    where
+      hl1 = "call stack (size: " ++ show (length cs) ++ ")"
+      hl2 = map (const '=') hl1
+      locs = map ( fill 8 . ("top" ++)) $ "" : map show [(-1::Int), -2..]
+      fmtCl l v = l ++ ": ra = " ++ (show . theCA . theCodeAddr) v
+
+-- ------------------------------------------------------------
+
+dumpPC :: (Monad m) => CodeAddress -> m String
+dumpPC pc
+    = return $
+      fill 8 "pc" ++ ": " ++ (show . theCA $ pc)
+
+dumpIntrReg :: (Monad m) => Maybe LuaError -> m String
+dumpIntrReg reg
+    = return $
+      fill 8 "intr" ++ ": " ++
+           maybe "-" id reg
+
+-- ------------------------------------------------------------
+
+dumpCurrEnv :: (MonadIO m) => Env -> m String
+dumpCurrEnv e
+    = do ce <- dumpEnv e
+         return $
+                fill 8 "env" ++ ": " ++ ce
+
+dumpEnv :: (MonadIO m) => Env -> m String
+dumpEnv e
+    = do le <- dumpLocEnv e
+         ge <- dumpGlob . last . theEnv $ e
+         return $ concat [le, ge]
+
+dumpEnvTable :: (MonadIO m) => Table -> m String
+dumpEnvTable et
+    = do es <- getEntries et
+         return . show . listEntries $ es
+
+dumpLocEnv :: (MonadIO m) => Env -> m String
+dumpLocEnv
+    = dumpTables . init . theEnv		-- the global env is not dumped, only the nested env tables
+    where
+      dumpTables ts
+          = do ets <- mapM dumpEnvTable ts
+               return $ intercalate " " ets
+
+dumpGlob :: (MonadIO m) => Table -> m String
+dumpGlob gt
+    = do ge <- dumpTable gt
+         return $ unlines $ zipWith (++) ((fill 8 "globals" ++ ": ") : repeat (replicate 10 ' ')) ge
+
+dumpTable :: (MonadIO m) => Table -> m [String]
+dumpTable et
+    = do es <- getEntries et
+         return (map (uncurry dumpPair) . listEntries $ es)
+    where
+      dumpPair k v
+          = fill' 8 (show k) ++ ":-> " ++ show v
+
+-- ------------------------------------------------------------
+
+dumpLuaState :: (MonadIO m) => LuaState -> m String
+dumpLuaState s
+    = do pc <- dumpPC        . thePC        $ s
+         ir <- dumpIntrReg   . theIntrReg   $ s
+         ce <- dumpEnv       . theCurrEnv   $ s
+         es <- dumpEvalStack . theEvalStack $ s
+         cs <- dumpCallStack . theCallStack $ s
+         return $ unlines [pc, ir, ce, es, cs]
+
+-- ------------------------------------------------------------

@@ -247,6 +247,10 @@ appendEntry (L vs) es
 appendEntry v es
     = writeEntry (lengthEntries es) v es
 
+listEntries :: Entries -> [(Value, Value)]
+listEntries
+    = M.assocs . theEntries
+
 -- ------------------------------------------------------------
 
 -- the environment is organized as a stack of
