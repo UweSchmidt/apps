@@ -661,8 +661,10 @@ compAndOr _
 
 todo :: String -> String -> Compile Code
 todo s msg
-    = do emitErr $ unwords ["TODO:", s, msg]
-         return $ mkInstr $ TODO $ msg
+    = do emitErr msg'
+         return $ mkInstr $ Intr msg'
+    where
+      msg' = unwords ["TODO:", s, msg]
 
 cerr :: (Show a) => String -> a -> Compile ()
 cerr s msg

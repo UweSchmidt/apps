@@ -14,6 +14,7 @@ module Language.Lua.GenCode.State
     , emitErr
     , genNewLabel
     , theNewLabel
+    , theCErrs
     )
 where
 
@@ -101,7 +102,7 @@ emitCode code
 -- ------------------------------------------------------------
 
 newtype CErrs
-    = CErrs [String]
+    = CErrs { theCErrs :: [String] }
 
 instance Show CErrs where
     show (CErrs es) = "\n" ++ unlines es
