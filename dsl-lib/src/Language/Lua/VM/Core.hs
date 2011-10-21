@@ -27,6 +27,27 @@ luaError s
 
 -- ------------------------------------------------------------
 
+execLoop :: LuaAction ()
+execLoop
+    = do ireg <- gets theIntrReg
+         case ireg of
+           Just _
+               -> return ()	-- terminate loop, when interrupt is set
+           Nothing
+               -> ( ( getNextInstr >>= execInstr )
+                    `catchError`
+                    setIntrReg
+                  ) >> execLoop
+
+-- ------------------------------------------------------------
+
+setIntrReg :: LuaError -> LuaAction ()
+setIntrReg err
+    = modify $
+      \ s -> s { theIntrReg = Just err }
+
+-- ------------------------------------------------------------
+
 incrPC :: Int -> LuaAction ()
 incrPC displ
     = modify $
@@ -195,6 +216,14 @@ checkNum v
       isNum (N _) = True
       isNum _     = False
 
+checkNumOrString :: Value -> LuaAction Value
+checkNumOrString v
+    = checkValue isNumOrString "number or string" v
+    where
+      isNumOrString (N _) = True
+      isNumOrString (S _) = True
+      isNumOrString _     = False
+
 checkStringOrTable :: Value -> LuaAction Value
 checkStringOrTable v
     = checkValue isST "string or table" v
@@ -241,6 +270,16 @@ checkValue2 c1 c2 v1 v2
 checkNum2 :: Value -> Value -> LuaAction (Value, Value)
 checkNum2
     = checkValue2 checkNum checkNum
+
+checkEqType :: String -> Value -> Value -> LuaAction ()
+checkEqType op v1 v2
+    | t1 == t2
+        = return ()
+    | otherwise
+        = luaError $ unwords ["attempt to", op, t1, "with", t2]
+    where
+      t1 = luaType v1
+      t2 = luaType v2
 
 -- ------------------------------------------------------------
 --
@@ -429,6 +468,24 @@ lookupOp2 Div
 lookupOp2 Mod
     = numOp2 $ \ x y -> x - fromIntegral (floor (x / y ) :: Int) * y
 
+lookupOp2 EQU
+    = eqOp (==)
+
+lookupOp2 NEQ
+    = eqOp (/=)
+
+lookupOp2 GRT
+    = cmpOp (>)
+
+lookupOp2 GRE
+    = cmpOp (>=)
+
+lookupOp2 LSE
+    = cmpOp (<=)
+
+lookupOp2 LST
+    = cmpOp (<)
+
 lookupOp2 op
     = luaError $ "unimplemented binary op: " ++ show op
          
@@ -437,6 +494,18 @@ numOp2 op
     = return $
       \ v1 v2 -> do (N n1, N n2) <- checkNum2 v1 v2
                     return $ N (n1 `op` n2)
+
+eqOp :: (Value -> Value -> Bool) -> LuaAction (Value -> Value -> LuaAction Value)
+eqOp op
+    = return $
+      \ x y -> return $ B (x `op` y)
+
+cmpOp :: (Value -> Value -> Bool) -> LuaAction (Value -> Value -> LuaAction Value)
+cmpOp op
+    = return $
+      \ x y -> do checkEqType "compare" x y
+                  checkNumOrString x
+                  return $ B (x `op` y)
 
 -- ------------------------------------------------------------
 

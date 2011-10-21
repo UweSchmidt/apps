@@ -8,7 +8,10 @@ import Control.Monad.Error
 import Language.Lua.Parser
 import Language.Lua.Token
 import Language.Lua.AST
+import Language.Lua.VM.Value
+import Language.Lua.VM.Instr
 import Language.Lua.VM.Types
+import Language.Lua.VM.Core
 import Language.Lua.GenCode
 import Language.Lua.GenCode.State
 import Language.Lua.GenCode.Assemble
@@ -41,9 +44,14 @@ gencode ast
     where
       (code, errs) = compileProg ast
 
-assemble :: Code -> Process MCode
+assemble :: Code -> Process LuaModule
 assemble
     = return . assembleProg
+
+exec :: LuaModule -> Process LuaState
+exec prog
+    = do (_res, state) <- liftIO $ runLua execLoop prog emptyLuaState
+         return state
 
 abort :: String -> Process res
 abort msg
@@ -53,6 +61,10 @@ abort msg
 showRes :: Show res => res -> Process ()
 showRes res
     = liftIO (print res) >> return ()
+
+dumpState :: LuaState -> Process ()
+dumpState state
+    = liftIO $ dumpLuaState state >>= (putStrLn . ("\n" ++))
 
 -- ------------------------------------------------------------
 
@@ -67,6 +79,9 @@ gc = runProcess $ scan >=> parse >=> gencode >=> showRes
 
 as :: String -> IO (Either String ())
 as = runProcess $ scan >=> parse >=> gencode >=> assemble >=> showRes
+
+ex :: String -> IO (Either String ())
+ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 -- ------------------------------------------------------------
 
