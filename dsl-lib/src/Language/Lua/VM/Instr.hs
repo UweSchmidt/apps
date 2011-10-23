@@ -71,7 +71,7 @@ fmt0       :: String -> String
 fmt0 s     = indent s
 
 fmt1       :: String -> String -> String
-fmt1 s0 s1 = indent $ fill 8 s0 ++ s1
+fmt1 s0 s1 = indent $ fill' 8 s0 ++ s1
 
 fmtL       :: String -> String
 fmtL l     = l ++ ":"
@@ -223,3 +223,10 @@ dumpLuaState s
          return $ unlines [pc, ir, ce, es, cs]
 
 -- ------------------------------------------------------------
+
+dumpTOS :: String -> Value -> String
+dumpTOS msg v
+    = fmt1 ("+      " ++ msg) $ show v
+
+-- ------------------------------------------------------------
+

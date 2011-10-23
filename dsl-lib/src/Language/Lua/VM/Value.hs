@@ -65,12 +65,12 @@ emptyList     = L []
 
 isNil         :: Value -> Bool
 isNil Nil     = True
-isNil x@(L _) = isNil (list2Value x)
+isNil x@(L _) = isNil (tuple2Value x)
 isNil _       = False
 
 isFalse	          :: Value -> Bool
 isFalse (B False) = True
-isFalse x@(L _)   = isFalse (list2Value x)
+isFalse x@(L _)   = isFalse (tuple2Value x)
 isFalse x         = isNil x
 
 isTrue            :: Value -> Bool
@@ -96,6 +96,18 @@ int2Value i    = N $ fromIntegral i
 
 -- ------------------------------------------------------------
 
+value2List     :: Value -> Values
+value2List Nil	  = []
+value2List (L vs) = vs
+value2List v      = [v]
+
+list2Value     :: Values -> Value
+list2Value []	= Nil
+list2Value [v]	= v
+list2Value vs   = L vs
+
+-- ------------------------------------------------------------
+
 value2Int      :: Value -> Maybe Int
 value2Int      = value2Integral
 
@@ -117,16 +129,16 @@ value2Integral _
 
 -- conversion of an arbitrary list of values to a single value
 
-list2Value                 :: Value -> Value
-list2Value (L [])          = nil		-- map empty tuple to nil
-list2Value (L (x : _))     = x 	                -- map none empty list to head of list
-list2Value v               = v
+tuple2Value                 :: Value -> Value
+tuple2Value (L [])          = nil		-- map empty tuple to nil
+tuple2Value (L (x : _))     = x 	                -- map none empty list to head of list
+tuple2Value v               = v
 
 -- merging lists of values of right hand sides of assignments or returns
 -- into a single list of values, the 1. arg is converted into a single value and cons'd to the second arg
 
 consValues                 :: Value -> Value -> Value
-consValues v1@(L _) v2     = consValues (list2Value v1) v2
+consValues v1@(L _) v2     = consValues (tuple2Value v1) v2
 consValues v1       (L []) = v1
 consValues v1       (L l2) = L (v1 : l2)
 consValues v1       v2     = L [v1,v2]
@@ -147,7 +159,7 @@ uncons v                   = (v, emptyList)
 --   , v3 = consValues v1 v2
 --   , (vx, v4) = uncons v3
 --   , (vy, v5) = uncons v4
---   ,  vz      = list2Value v5
+--   ,  vz      = tuple2Value v5
 -- in
 --   assign(x, vx)
 --   assign(y, vy)

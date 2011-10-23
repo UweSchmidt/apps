@@ -8,6 +8,7 @@ import Control.Monad.Error
 import Control.Monad.State
 
 import Data.Array.IArray
+import Data.List		( intercalate )
 
 import Language.Common.Eval
 
@@ -19,7 +20,7 @@ import Language.Lua.VM.Value
 
 runLua :: LuaAction res -> LuaModule -> LuaState -> IO (Either LuaError res, LuaState)
 runLua act prog s0
-    = runEval (loadCode prog >> act) emptyLuaEnv s0
+    = runEval (initLuaEnv >> loadCode prog >> act) emptyLuaEnv s0
 
 luaError :: LuaError -> LuaAction res
 luaError s
@@ -108,6 +109,11 @@ traceInstr pc instr
     = do logger <- gets theLogger
          logger (showMachineInstr pc instr)
 
+traceValue :: String -> Value -> LuaAction ()
+traceValue msg val
+    = do logger <- gets theLogger
+         logger (dumpTOS msg val)
+
 -- ------------------------------------------------------------
 --
 -- environment primitives
@@ -124,6 +130,16 @@ closeEnv
          case ts of
            (_ : ts') -> modify $  \ s -> s { theCurrEnv = Env ts' }
            []        -> luaError "no local env to close"
+
+-- ------------------------------------------------------------
+
+initLuaEnv :: LuaAction ()
+initLuaEnv
+    = do openEnv	-- create global env table
+         ge <- gets theCurrEnv
+         writeVariable (S "_G") (T . head . theEnv $ ge) ge	-- insert the global env table into itself
+                                                                -- under name "_G"
+         addCoreFunctions
 
 -- ------------------------------------------------------------
 
@@ -153,9 +169,10 @@ jumpClosure cls
 
 callInternal :: NativeFct -> LuaAction ()
 callInternal nf
-    = do (L vs) <- popES >>= checkList		-- get the arguments
+    = do vs     <- value2List <$> popES		-- get the arguments
          rs     <- theNativeFct nf $ vs         -- call native function
-         pushES (L rs)                          -- store the results
+         pushES $ list2Value rs                 -- store the results
+         incrPC 1
 
 jumpInternal :: NativeFct -> LuaAction ()
 jumpInternal nf
@@ -183,13 +200,15 @@ popES
     = do es <- gets theEvalStack
          case es of
            (v : vs) -> do modify $ \ s -> s { theEvalStack = vs }
+                          traceValue "pop" v
                           return v
            []       -> luaError "no value on evaluation stack"
 
 pushES :: Value -> LuaAction ()
 pushES v
-    = modify $
-      \ s -> s { theEvalStack = v : theEvalStack s }
+    = do modify $ \ s -> s { theEvalStack = v : theEvalStack s }
+         traceValue "push" v
+     
 
 getES :: Int -> LuaAction Value
 getES i
@@ -371,7 +390,7 @@ execInstr1 (UnTuple)
          pushES v1
 
 execInstr1 (Take1)
-    = execUnary (return . list2Value)
+    = execUnary (return . tuple2Value)
 
 -- table instructions
 
@@ -532,4 +551,33 @@ lookupOp1 NumberOf
 lookupOp1 op
     = luaError $ "unimplemented unary op: " ++ show op
 -}         
+-- ------------------------------------------------------------
+
+addCoreFunctions :: LuaAction ()
+addCoreFunctions
+    = do ge <- gets theCurrEnv
+         sequence_ . map (uncurry $ addFct ge) $ coreFcts
+    where
+      addFct env name fct
+          = writeVariable (S name) (F $ newNativeFct name fct) env
+
+coreFcts :: [(String, NativeAction)]
+coreFcts
+    = [ ("print", printValues)
+      , ("toString", toString)
+      ]
+    where
+      show' (S s) = s
+      show' v'    = show v'
+
+      printValues vs
+          = (liftIO . putStrLn . intercalate "\t" . map show' $ vs) >>
+            return []
+
+      toString []
+          = luaError "bad argument #1 to 'tostring' (value expected)"
+      toString (v : _)
+          = return $ [S $ show' v]
+            where
+
 -- ------------------------------------------------------------
