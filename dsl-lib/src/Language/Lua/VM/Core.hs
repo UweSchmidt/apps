@@ -167,16 +167,19 @@ jumpClosure cls
                 , thePC        = theCodeAddr cls
                 }
 
-callInternal :: NativeFct -> LuaAction ()
-callInternal nf
+execInternal :: NativeFct -> LuaAction ()
+execInternal nf
     = do vs     <- value2Tuple <$> popES        -- get the arguments
          rs     <- theNativeFct nf $ vs         -- call native function
-         pushES $ tuple2Value rs                -- store the results
-         incrPC 1
+         pushES rs                              -- store the result tuple
+
+callInternal :: NativeFct -> LuaAction ()
+callInternal nf
+    = execInternal nf >> incrPC 1
 
 jumpInternal :: NativeFct -> LuaAction ()
 jumpInternal nf
-    = callInternal nf >> leaveFct
+    = execInternal nf >> leaveFct
 
 leaveFct :: LuaAction ()
 leaveFct
@@ -563,21 +566,86 @@ addCoreFunctions
 
 coreFcts :: [(String, NativeAction)]
 coreFcts
-    = [ ("print", printValues)
-      , ("toString", toString)
+    = [ ( "assert"
+        , oneOrMoreArgs "assert"
+          >=> firstArgIsTrue
+          >=> tupleRes
+        )
+      , ( "next"
+        , oneOrMoreArgs "next"
+          >=> checkArgs "next" [check1 checkTable, anyArg]
+          >=> nextKeyValue
+          >=> tupleRes
+        )
+      , ( "print"
+        , (liftIO . putStrLn . intercalate "\t" . map show')
+          >=> noRes
+        )
+      , ( "toString"
+        , oneOrMoreArgs "toString"
+          >=> (return . S . show' . head)
+        )
+      , ( "type"
+        , oneOrMoreArgs "type"
+          >=> (return . S . luaType . head)
+        )
       ]
     where
       show' (S s) = s
       show' v'    = show v'
 
-      printValues vs
-          = (liftIO . putStrLn . intercalate "\t" . map show' $ vs) >>
-            return []
+      nextKeyValue vs
+          = undefined
+          where
+            tab : key : _ = vs
 
-      toString []
-          = luaError "bad argument #1 to 'tostring' (value expected)"
-      toString (v : _)
-          = return $ [S $ show' v]
-            where
+-- ------------------------------------------------------------
+
+checkArgs :: String -> [String -> Values -> LuaAction Values] -> Values -> LuaAction Values
+checkArgs _ [] _
+    = return []
+
+checkArgs fn (_c1 : _cs) []
+    = luaError $ unwords ["arguments missing to", fn]
+
+checkArgs fn (c1 : cs) (v1 : vs)
+    = do v1' <- c1 fn [v1]
+         vs' <- checkArgs fn cs vs
+         return $ v1' ++ vs'
+
+check1 :: (Value -> LuaAction Value) -> String -> Values -> LuaAction Values
+check1 cf _fn vs
+    = (:[]) <$> cf (head vs)
+
+-- ------------------------------------------------------------
+
+anyArg :: String -> Values -> LuaAction Values
+anyArg _fn []
+    = return [nil]
+anyArg _ (v : _)
+    = return [v]
+
+oneOrMoreArgs :: String -> Values -> LuaAction Values
+oneOrMoreArgs fn []
+    =  luaError $ unwords ["bad argument #1 to", fn, "(value expected)"]
+oneOrMoreArgs _ vs
+    = return vs
+
+firstArgIsTrue :: Values -> LuaAction Values
+firstArgIsTrue vs
+    | isFalse . head $ vs
+        = luaError $ unwords ["assertion failed!"]
+    | otherwise
+        = return vs
+
+-- ------------------------------------------------------------
+
+noRes :: (res -> LuaAction Value)
+noRes
+    = const $ return emptyTuple
+
+tupleRes :: Values -> LuaAction Value
+tupleRes
+    = return . tuple2Value
 
 -- ------------------------------------------------------------

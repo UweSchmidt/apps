@@ -87,6 +87,9 @@ ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 p0 = "do x = 0; while x < 5 do x = x + 1 end end"
 p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\",x) end"
+p2 = "print(type(1))"
+p3 = "print(assert(true,1))"
+p4 = "print(assert(1==2,1))"
 
 cc :: String -> Either String (Code, CErrs)
 cc inp

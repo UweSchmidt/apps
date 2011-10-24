@@ -126,7 +126,7 @@ instance Ord Closure where
 -- into a single module
 
 type NativeAction
-    = Values -> LuaAction Values
+    = Values -> LuaAction Value
 
 data NativeFct
     = NF { theNativeFctId :: String
