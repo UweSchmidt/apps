@@ -28,13 +28,13 @@ data Value
     | C Closure
     | F NativeFct
     | U UserData
-    | L Values		-- lists of values are used internally with the ... varargs "variable"
-                        -- lists should not be nested
+    | P Values		-- tuple of values are used internally with the ... varargs "variable"
+                        -- tuples must not be nested
     deriving (Eq, Ord)
 
 -- ------------------------------------------------------------
 
--- function calls and rhs of expressions compute a list of values
+-- function calls and rhs of expressions compute a tuple of values
 
 type Values
     = [Value]
@@ -190,7 +190,7 @@ data Instr
     | LoadStr String
     | LoadBool Bool
     | LoadNil
-    | LoadEmpty		-- load empty result list
+    | LoadEmpty		-- load empty result tuple
     | LoadVar VName
     | LoadField         -- top: the table, 2.: the index
     | NewTable

@@ -47,7 +47,7 @@ instance Show Value where
              value2String (C c)     = "function: " ++ ( show . theCodeAddr $ c)
              value2String (F f)     = "native function: " ++ ( show . theNativeFctId $ f)
              value2String (U _)     = "<userdata>"
-             value2String (L l)     = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
+             value2String (P l)     = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
 
 -- ------------------------------------------------------------
 
@@ -60,17 +60,17 @@ true          = B True
 false         :: Value
 false         = B False
 
-emptyList     :: Value
-emptyList     = L []
+emptyTuple     :: Value
+emptyTuple     = P []
 
 isNil         :: Value -> Bool
 isNil Nil     = True
-isNil x@(L _) = isNil (tuple2Value x)
+isNil x@(P _) = isNil (singleValue x)
 isNil _       = False
 
 isFalse	          :: Value -> Bool
 isFalse (B False) = True
-isFalse x@(L _)   = isFalse (tuple2Value x)
+isFalse x@(P _)   = isFalse (singleValue x)
 isFalse x         = isNil x
 
 isTrue            :: Value -> Bool
@@ -87,7 +87,7 @@ luaType (T _) = "table"
 luaType (C _) = "function"
 luaType (F _) = "function"
 luaType (U _) = "userdata"
-luaType (L _) = "list"		-- should not be visible when evaluating any expressions
+luaType (P _) = "tuple"		-- should not be visible when evaluating any expressions
 
 -- ------------------------------------------------------------
 
@@ -96,15 +96,15 @@ int2Value i    = N $ fromIntegral i
 
 -- ------------------------------------------------------------
 
-value2List     :: Value -> Values
-value2List Nil	  = []
-value2List (L vs) = vs
-value2List v      = [v]
+value2Tuple     :: Value -> Values
+value2Tuple Nil	  = []
+value2Tuple (P vs) = vs
+value2Tuple v      = [v]
 
-list2Value     :: Values -> Value
-list2Value []	= Nil
-list2Value [v]	= v
-list2Value vs   = L vs
+tuple2Value     :: Values -> Value
+tuple2Value []	= Nil
+tuple2Value [v]	= v
+tuple2Value vs   = P vs
 
 -- ------------------------------------------------------------
 
@@ -127,28 +127,28 @@ value2Integral _
 
 -- ------------------------------------------------------------
 
--- conversion of an arbitrary list of values to a single value
+-- conversion of an arbitrary tuple of values to a single value
 
-tuple2Value                 :: Value -> Value
-tuple2Value (L [])          = nil		-- map empty tuple to nil
-tuple2Value (L (x : _))     = x 	                -- map none empty list to head of list
-tuple2Value v               = v
+singleValue                 :: Value -> Value
+singleValue (P [])          = nil		-- map empty tuple to nil
+singleValue (P (x : _))     = x 	                -- map none empty list to head of list
+singleValue v               = v
 
--- merging lists of values of right hand sides of assignments or returns
--- into a single list of values, the 1. arg is converted into a single value and cons'd to the second arg
+-- merging tuples of values of right hand sides of assignments or returns
+-- into a single tuple of values, the 1. arg is converted into a single value and cons'd to the second arg
 
 consValues                 :: Value -> Value -> Value
-consValues v1@(L _) v2     = consValues (tuple2Value v1) v2
-consValues v1       (L []) = v1
-consValues v1       (L l2) = L (v1 : l2)
-consValues v1       v2     = L [v1,v2]
+consValues v1@(P _) v2     = consValues (singleValue v1) v2
+consValues v1       (P []) = v1
+consValues v1       (P l2) = P (v1 : l2)
+consValues v1       v2     = P [v1,v2]
 
 -- splitting a single value from a list value
 
 uncons                     :: Value -> (Value, Value)
-uncons (L [])              = (nil, emptyList)
-uncons (L (x : xs))        = (x, L xs)
-uncons v                   = (v, emptyList)
+uncons (P [])              = (nil, emptyTuple)
+uncons (P (x : xs))        = (x, P xs)
+uncons v                   = (v, emptyTuple)
 
 -- a multiple assignment can be implemented with these primitive functions
 --
@@ -250,7 +250,7 @@ lengthEntries e
                 n1 = n + 1
 
 appendEntry :: Value -> Entries -> Entries
-appendEntry (L vs) es
+appendEntry (P vs) es
     = foldl (\ es' (v, k) -> writeEntry (N k) v es') es ps
       where
         (N d)  = lengthEntries es

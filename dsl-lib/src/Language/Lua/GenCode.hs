@@ -24,7 +24,7 @@ compProg block
          emitCode $ mkInstr $ jump start
          code_prog <- compExpr prog
          code_cls  <- genCode [ mkInstr $ Label start
-                              , mkInstr $ LoadEmpty	-- push an empty param list
+                              , mkInstr $ LoadEmpty	-- push an empty param tuple
                               , code_prog		-- push the closure
                               , mkInstr $ Call
                               , mkInstr $ Pop
@@ -359,7 +359,7 @@ compWithNewLoopLevel lEnd compPart
 
 -- ------------------------------------------------------------
 
--- gen code such that the list of expressions is pushed as a single list of values onto
+-- gen code such that the list of expressions is pushed as a single tuple of values onto
 -- the evaluation stack
 
 compExprL :: [Expr] -> Compile Code

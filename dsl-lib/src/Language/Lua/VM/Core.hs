@@ -8,7 +8,7 @@ import Control.Monad.Error
 import Control.Monad.State
 
 import Data.Array.IArray
-import Data.List		( intercalate )
+import Data.List                ( intercalate )
 
 import Language.Common.Eval
 
@@ -33,7 +33,7 @@ execLoop
     = do ireg <- gets theIntrReg
          case ireg of
            Just _
-               -> return ()	-- terminate loop, when interrupt is set
+               -> return ()     -- terminate loop, when interrupt is set
            Nothing
                -> ( ( getNextInstr >>= execInstr )
                     `catchError`
@@ -135,9 +135,9 @@ closeEnv
 
 initLuaEnv :: LuaAction ()
 initLuaEnv
-    = do openEnv	-- create global env table
+    = do openEnv        -- create global env table
          ge <- gets theCurrEnv
-         writeVariable (S "_G") (T . head . theEnv $ ge) ge	-- insert the global env table into itself
+         writeVariable (S "_G") (T . head . theEnv $ ge) ge     -- insert the global env table into itself
                                                                 -- under name "_G"
          addCoreFunctions
 
@@ -169,9 +169,9 @@ jumpClosure cls
 
 callInternal :: NativeFct -> LuaAction ()
 callInternal nf
-    = do vs     <- value2List <$> popES		-- get the arguments
+    = do vs     <- value2Tuple <$> popES        -- get the arguments
          rs     <- theNativeFct nf $ vs         -- call native function
-         pushES $ list2Value rs                 -- store the results
+         pushES $ tuple2Value rs                -- store the results
          incrPC 1
 
 jumpInternal :: NativeFct -> LuaAction ()
@@ -251,12 +251,12 @@ checkStringOrTable v
       isST (T _) = True
       isST _     = False
 
-checkList :: Value -> LuaAction Value
-checkList v
-    = checkValue isList "list" v
+checkTuple :: Value -> LuaAction Value
+checkTuple v
+    = checkValue isTuple "tuple" v
     where
-      isList (L _) = True
-      isList _     = False
+      isTuple (P _) = True
+      isTuple _     = False
 
 checkTable :: Value -> LuaAction Value
 checkTable v
@@ -367,7 +367,7 @@ execInstr1 (LoadNil)
     = pushES nil
 
 execInstr1 (LoadEmpty)
-    = pushES emptyList
+    = pushES emptyTuple
 
 execInstr1 (Pop)
     = popES >> return ()
@@ -390,7 +390,7 @@ execInstr1 (UnTuple)
          pushES v1
 
 execInstr1 (Take1)
-    = execUnary (return . tuple2Value)
+    = execUnary (return . singleValue)
 
 -- table instructions
 
