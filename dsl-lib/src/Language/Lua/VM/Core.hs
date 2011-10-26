@@ -595,9 +595,14 @@ coreFcts
       show' v'    = show v'
 
       nextKeyValue vs
-          = undefined
+          = nextKeyTable key tab >>= checkKeyFound
+               
           where
-            tab : key : _ = vs
+            (T tab) : key : _ = vs
+            checkKeyFound []
+                = luaError $ unwords ["invalid key to next", show key]
+            checkKeyFound vs'
+                = return vs'
 
 -- ------------------------------------------------------------
 

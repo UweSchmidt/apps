@@ -216,6 +216,31 @@ appendTable :: (MonadIO m) => Value -> Table -> m ()
 appendTable v t
     = modifyEntries t (appendEntry v)
 
+-- get the key value pair following the pair with a given key.
+--
+-- key == nil --> first pair as list of 2 Values
+-- key found -> [nextKey, nextVal]
+-- key not there -> []
+-- key is in last pair --> [nil]
+--
+-- not very efficient for an enumerator
+
+nextKeyTable :: (Functor m, MonadIO m) => Value -> Table -> m [Value]
+nextKeyTable k0 t
+    = (lookupNextKey k0 . listEntries) <$> getEntries t
+    where
+      lookupNextKey k kvps
+          | isNil k
+              = case kvps of
+                  []           -> []
+                  (k', v') : _ -> [k', v']
+          | null kvps'         =  []
+          | null kvps''        =  [nil]
+          | otherwise          =  lookupNextKey nil kvps''
+          where
+            kvps'  = dropWhile ((/= k) . fst) kvps
+            kvps'' = tail kvps'
+
 -- ------------------------------------------------------------
 
 emptyEntries :: Entries

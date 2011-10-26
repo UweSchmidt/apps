@@ -189,7 +189,11 @@ dumpEnvTable :: (MonadIO m) => Table -> m String
 dumpEnvTable et
     = do es <- getEntries et
          return . show . listEntries $ es
-
+{-
+dumpLoc :: (MonadIO m) => Env -> m String
+dumpLoc env
+    = undefined
+-}
 dumpLocEnv :: (MonadIO m) => Env -> m String
 dumpLocEnv
     = dumpTables . init . theEnv		-- the global env is not dumped, only the nested env tables
