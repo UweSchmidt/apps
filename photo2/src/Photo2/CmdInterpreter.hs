@@ -398,7 +398,7 @@ showXmlVal pk
         >>>
         writeDocumentToString [ withIndent yes
                               , withXmlPi  no
-                              , withOutputEncoding utf8 -- usAscii
+                              , withOutputEncoding unicodeString -- utf8 -- usAscii
                               ]
         >>>
         putRes
