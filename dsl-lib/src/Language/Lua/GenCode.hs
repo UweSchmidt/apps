@@ -529,7 +529,7 @@ compExpr (ETableCons fs)
           = do code_val <- compEx val
                genCode [ code_val
                        , mkInstr $ Copy 1
-                       , mkInstr $ Append
+                       , mkInstr $ AppendField
                        ]
 
       compStoreField val key

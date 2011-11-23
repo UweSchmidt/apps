@@ -199,7 +199,7 @@ data Instr
     | NewLocal VName    -- create new variable in local env
     | StoreVar VName
     | StoreField        -- top: the table, 2.: the index, 3. the value
-    | Append            -- top: the table, 2.: the value(-list)
+    | AppendField       -- top: the table, 2.: the value(-list)
     | MkTuple		-- top: the tail (single value or list), 2. the head value
     | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
     | Take1             -- top: take the head or nil, discard the rest

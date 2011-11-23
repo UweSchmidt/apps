@@ -127,6 +127,19 @@ value2Integral _
 
 -- ------------------------------------------------------------
 
+value2number   :: Value -> Maybe Double
+value2number (N d)
+               = Just d
+value2number (S s)
+               = Nothing  -- TODO: string to double conversion
+value2number _
+               = Nothing
+ 
+-- ------------------------------------------------------------
+
+
+-- ------------------------------------------------------------
+
 -- conversion of an arbitrary tuple of values to a single value
 
 singleValue                 :: Value -> Value

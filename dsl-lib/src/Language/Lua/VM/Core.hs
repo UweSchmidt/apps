@@ -415,13 +415,11 @@ execInstr1 (StoreField)
          (T t) <- checkTable v1
          writeTable ix val t
 
-execInstr1 (Append)
-    = execBinary append
-      where
-        append v1 v2
-            = do (T t) <- checkTable v1
-                 appendTable v2 t
-                 return v1
+execInstr1 (AppendField)
+    = do v1    <- popES
+         val   <- popES
+         (T t) <- checkTable v1
+         appendTable val t
 
 -- env instructions
 
@@ -581,8 +579,12 @@ coreFcts
         , (liftIO . putStrLn . intercalate "\t" . map show')
           >=> noRes
         )
-      , ( "toString"
-        , oneOrMoreArgs "toString"
+      , ( "tonumber"
+        , oneOrMoreArgs "tonumber"
+          >=> (return . maybe nil N . value2number . head)
+        )
+      , ( "tostring"
+        , oneOrMoreArgs "tostring"
           >=> (return . S . show' . head)
         )
       , ( "type"

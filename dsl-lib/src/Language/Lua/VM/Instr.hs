@@ -43,7 +43,7 @@ instance Show Instr where
     show (DelEnv      ) = fmt0 "delenv"
     show (StoreVar n  ) = fmt1 "store" n
     show (StoreField  ) = fmt1 "store" ".[.]"
-    show (Append      ) = fmt0 "append"
+    show (AppendField ) = fmt0 "append"
     show (MkTuple     ) = fmt0 "mktuple"
     show (UnTuple     ) = fmt0 "untuple"
     show (Take1       ) = fmt0 "take1"
