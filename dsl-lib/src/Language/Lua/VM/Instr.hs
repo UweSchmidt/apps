@@ -183,7 +183,7 @@ dumpEnv :: (MonadIO m) => Env -> m String
 dumpEnv e
     = do le <- dumpLocEnv e
          ge <- dumpGlob . last . theEnv $ e
-         return $ concat [le, ge]
+         return $ unlines [le, ge]
 
 dumpEnvTable :: (MonadIO m) => Table -> m String
 dumpEnvTable et
@@ -198,9 +198,10 @@ dumpLocEnv :: (MonadIO m) => Env -> m String
 dumpLocEnv
     = dumpTables . init . theEnv		-- the global env is not dumped, only the nested env tables
     where
+      indents = (fill 8 "locals" ++ ": ") : repeat (replicate 10 ' ')
       dumpTables ts
           = do ets <- mapM dumpEnvTable ts
-               return $ intercalate " " ets
+               return $ intercalate "\n" $ zipWith (++) indents ets
 
 dumpGlob :: (MonadIO m) => Table -> m String
 dumpGlob gt

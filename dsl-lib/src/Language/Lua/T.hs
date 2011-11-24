@@ -95,7 +95,7 @@ p6 = "do return f(1,2),f(3,4,5) end"
 p7 = "do x = y and z end"
 p8 = "do x = y or z end"
 p9 = "do print(1,2,3) end"
-p10 = "do t = {1,2,3,[2]=55, [1]=11,4,5}; for i=1,1,5 do x = t[i] end end"
+p10 = "do t = {1,2,3,[2]=55, [1]=11,4,5}; for i=1,5,1 do print(\"i=\",i,\"t[i]=\",t[i]) end end"
 p11 = "do for k,v in pairs({1,2,3,[2]=55, [1]=11,4,5}) do print(k,v) end end"
 
 cc :: String -> Either String (Code, CErrs)

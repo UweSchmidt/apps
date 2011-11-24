@@ -14,6 +14,7 @@ module Language.Lua.Token (
     TokenStream,
     ParseError,
     tokenize,
+    string2Number,
     filter_comments,
     number,
     integer
@@ -23,6 +24,7 @@ import Text.Parsec
 
 import Data.Char ( ord )
 import Data.List ( sortBy )
+
 import Control.Monad ( liftM ) 
 
 data Token = TokString     String
@@ -49,6 +51,12 @@ filter_comments = filter not_comment
 
 tokenize :: FilePath -> String -> Either ParseError TokenStream
 tokenize = parse pars
+
+string2Number :: String -> Maybe Double
+string2Number = either (const Nothing) theNumber . tokenize ""
+    where
+      theNumber [(_, TokNumber d)] = Just d
+      theNumber _             = Nothing
 
 pars :: Parser TokenStream
 pars = do

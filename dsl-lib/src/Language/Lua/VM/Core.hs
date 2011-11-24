@@ -405,8 +405,8 @@ execInstr1 (LoadField)
     = execBinary loadField
       where
         loadField v1 v2
-            = do (T t) <- checkTable v1
-                 readTable v2 t 
+            = do (T t) <- checkTable v2
+                 readTable v1 t 
 
 execInstr1 (StoreField)
     = do v1    <- popES

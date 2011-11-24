@@ -22,6 +22,7 @@ import Data.Unique          	( newUnique
                                 )
 
 import Language.Lua.VM.Types
+import Language.Lua.Token	( string2Number )
 
 import System.IO		( hPutStrLn
                                 , stderr
@@ -128,15 +129,9 @@ value2Integral _
 -- ------------------------------------------------------------
 
 value2number   :: Value -> Maybe Double
-value2number (N d)
-               = Just d
-value2number (S s)
-               = Nothing  -- TODO: string to double conversion
-value2number _
-               = Nothing
- 
--- ------------------------------------------------------------
-
+value2number (N d)	= Just d
+value2number (S s)      = string2Number s
+value2number _          = Nothing
 
 -- ------------------------------------------------------------
 
