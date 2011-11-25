@@ -287,10 +287,10 @@ appendEntry (P vs) es
     = foldl (\ es' (v, k) -> writeEntry (N k) v es') es ps
       where
         (N d)  = lengthEntries es
-        ps     = zip vs . map (+ d) $ [0..]
+        ps     = zip vs . map (+ d) $ [1..]
 
 appendEntry v es
-    = writeEntry (lengthEntries es) v es
+    = appendEntry (P [v]) es
 
 listEntries :: Entries -> [(Value, Value)]
 listEntries
