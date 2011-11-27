@@ -85,18 +85,19 @@ ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 -- ------------------------------------------------------------
 
-p0 = "do x = 0; while x < 5 do x = x + 1 end end"
-p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\",x) end"
+p0 = "do vm.traceOn(); x = 0; while x < 5 do x = x + 1 end end"
+p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\"..x) end"
 p2 = "print(type(1))"
 p3 = "print(assert(true,1))"
 p4 = "print(assert(1==2,1))"
-p5 = "do x,y,z = g(0,1),2,f(3,4,5) end"
-p6 = "do return f(1,2),f(3,4,5) end"
-p7 = "do x = y and z end"
-p8 = "do x = y or z end"
+p5 = "do vm.traceOn(); x,y,z = g(0,1),2,f(3,4,5) end"
+p6 = "do vm.traceOn(); return f(1,2),f(3,4,5) end"
+p7 = "do vm.traceOn(); x = y and z end"
+p8 = "do vm.traceOn(); x = y or z end"
 p9 = "do print(1,2,3) end"
 p10 = "do t = {1,2,3,[2]=55, [1]=11,4,5}; for i=1,5,1 do print(\"i=\",i,\"t[i]=\",t[i]) end end"
-p11 = "do for k,v in pairs({1,2,3,[2]=55, [1]=11,4,5}) do print(k,v) end end"
+p11 = "do vm.traceOn(); for k,v in pairs({1,2,3,[2]=55, [1]=11,4,5}) do print(k,v) end end"
+p12 = "do vm.evalTraceOn(); print(1,2,vm.dumpState(3)); vm.traceOff(); print(4,5,6) end"
 
 cc :: String -> Either String (Code, CErrs)
 cc inp

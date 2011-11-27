@@ -16,6 +16,10 @@ import Language.Lua.VM.Instr
 import Language.Lua.VM.Types
 import Language.Lua.VM.Value
 
+import System.IO                ( hPutStrLn
+                                , stderr
+                                )
+
 -- ------------------------------------------------------------
 
 runLua :: LuaAction res -> LuaModule -> LuaState -> IO (Either LuaError res, LuaState)
@@ -68,7 +72,7 @@ getInstr :: CodeAddress -> LuaAction Instr
 getInstr pc
     = do prog  <- gets theProg
          instr <- getI (theCA pc) prog
-         traceInstr (theCA pc) instr
+         logInstr (theCA pc) instr
          return instr
     where
       getI ic []
@@ -104,15 +108,32 @@ loadCode (MCode cs)
 
 -- ------------------------------------------------------------
 
-traceInstr :: Int -> Instr -> LuaAction ()
-traceInstr pc instr
-    = do logger <- gets theLogger
-         logger (showMachineInstr pc instr)
+logInstr :: Int -> Instr -> LuaAction ()
+logInstr pc instr
+    = logMsg instrLog $ showMachineInstr pc instr
 
-traceValue :: String -> Value -> LuaAction ()
-traceValue msg val
+logValue :: String -> Value -> LuaAction ()
+logValue msg val
+    = logMsg evalLog $ dumpTOS msg val
+
+setLoggingOn :: LuaAction ()
+setLoggingOn
+    = setLogging $ \ lg -> lg { logCmd = \ xs -> liftIO (hPutStrLn stderr xs) }
+
+setLoggingOff :: LuaAction ()
+setLoggingOff
+    = setLogging $ \ lg -> lg { logCmd = const $ return () }
+
+setLogging :: (LuaLogger -> LuaLogger) -> LuaAction ()
+setLogging setf
+    = modify $ \ s -> s { theLogger = setf $ theLogger s }
+
+logMsg :: (LuaLogger -> Bool) -> String -> LuaAction ()
+logMsg level msg
     = do logger <- gets theLogger
-         logger (dumpTOS msg val)
+         when (level logger) $
+                  (logCmd logger) msg
+
 
 -- ------------------------------------------------------------
 --
@@ -139,7 +160,8 @@ initLuaEnv
          ge <- gets theCurrEnv
          writeVariable (S "_G") (T . head . theEnv $ ge) ge     -- insert the global env table into itself
                                                                 -- under name "_G"
-         addCoreFunctions
+         addCoreFunctions                                       -- add the core native functions
+         addVMFunctions                                         -- add native functions for observing the VM
 
 -- ------------------------------------------------------------
 
@@ -203,14 +225,14 @@ popES
     = do es <- gets theEvalStack
          case es of
            (v : vs) -> do modify $ \ s -> s { theEvalStack = vs }
-                          traceValue "pop" v
+                          logValue "pop" v
                           return v
            []       -> luaError "no value on evaluation stack"
 
 pushES :: Value -> LuaAction ()
 pushES v
     = do modify $ \ s -> s { theEvalStack = v : theEvalStack s }
-         traceValue "push" v
+         logValue "push" v
      
 
 getES :: Int -> LuaAction Value
@@ -245,6 +267,12 @@ checkNumOrString v
       isNumOrString (N _) = True
       isNumOrString (S _) = True
       isNumOrString _     = False
+
+checkNumOrNumString :: Value -> LuaAction Value
+checkNumOrNumString v@(N _)
+    = return v
+checkNumOrNumString v
+    = maybe (checkNum v) (return . N) $ value2number v
 
 checkStringOrTable :: Value -> LuaAction Value
 checkStringOrTable v
@@ -289,9 +317,9 @@ checkValue2 :: (Value -> LuaAction Value) ->
 checkValue2 c1 c2 v1 v2
     = c1 v1 >> c2 v2 >> return (v1, v2)
 
-checkNum2 :: Value -> Value -> LuaAction (Value, Value)
-checkNum2
-    = checkValue2 checkNum checkNum
+checkNumOrNumString2 :: Value -> Value -> LuaAction (Value, Value)
+checkNumOrNumString2
+    = checkValue2 checkNumOrNumString checkNumOrNumString
 
 checkEqType :: String -> Value -> Value -> LuaAction ()
 checkEqType op v1 v2
@@ -506,13 +534,21 @@ lookupOp2 LSE
 lookupOp2 LST
     = cmpOp (<)
 
+lookupOp2 Conc
+    = return $
+      \ x y -> do checkNumOrString x
+                  checkNumOrString y
+                  return $ S (value2str x ++ value2str y)
+
+{- all binary ops are implemented
 lookupOp2 op
     = luaError $ "unimplemented binary op: " ++ show op
-         
+-}
+
 numOp2 :: (Double -> Double -> Double) -> LuaAction (Value -> Value -> LuaAction Value)
 numOp2 op
     = return $
-      \ v1 v2 -> do (N n1, N n2) <- checkNum2 v1 v2
+      \ v1 v2 -> do (N n1, N n2) <- checkNumOrNumString2 v1 v2
                     return $ N (n1 `op` n2)
 
 eqOp :: (Value -> Value -> Bool) -> LuaAction (Value -> Value -> LuaAction Value)
@@ -554,6 +590,42 @@ lookupOp1 op
 -}         
 -- ------------------------------------------------------------
 
+addVMFunctions :: LuaAction ()
+addVMFunctions
+    = do t <- newTable
+         sequence_ . map (uncurry $ addFct t) $ vmFcts
+         ge <- gets theCurrEnv
+         writeVariable (S "vm") (T t) ge
+    where
+      addFct tab name fct
+          = writeTable (S name) (F $ newNativeFct name fct) tab
+
+vmFcts :: [(String, NativeAction)]
+vmFcts
+    = [ {-
+        ( "traceOn",       wrapProc $ setLoggingOn  )
+      , ( "traceOff",      wrapProc $ setLoggingOff )
+      , -}
+        ( "traceOn",       wrapProc $ iLog True  )
+      , ( "traceOff",      wrapProc $ iLog False >> eLog False )
+      , ( "evalTraceOn",   wrapProc $ eLog True  >> iLog True  )
+      , ( "evalTraceOff",  wrapProc $ eLog False )
+      , ( "dumpState",     wrapProc $ dumpState  )
+      ]
+    where
+      iLog b = setLogging $ \ lg -> lg { instrLog = b }
+      eLog b = setLogging $ \ lg -> lg {  evalLog = b }
+
+      wrapProc prc
+          = \ vs -> prc >> return (tuple2Value vs)
+
+      dumpState
+          = get
+            >>= (liftIO . dumpLuaState)
+            >>= logMsg (const True)
+
+-- ------------------------------------------------------------
+
 addCoreFunctions :: LuaAction ()
 addCoreFunctions
     = do ge <- gets theCurrEnv
@@ -591,6 +663,14 @@ coreFcts
         , oneOrMoreArgs "type"
           >=> (return . S . luaType . head)
         )
+{-
+      , ( "traceon"
+        , oneOrMoreArgs "traceon"
+          >=> (\ v -> do logOn . isTrue . head $ v
+                         return emptyTuple
+              )
+        )
+-}
       ]
     where
       show' (S s) = s

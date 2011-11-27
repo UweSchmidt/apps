@@ -154,7 +154,16 @@ data LuaState
       , theEvalStack  :: Values
       , theCallStack  :: [Closure]
       , theProg       :: LuaCode	-- for dynamic loading the code is part of the state, else the prog could be a part of the env
-      , theLogger     :: String -> LuaAction ()
+      , theLogger     :: LuaLogger
+      }
+
+-- ------------------------------------------------------------
+
+data LuaLogger
+    = LuaLogger
+      { logCmd     :: String -> LuaAction ()
+      , instrLog   :: Bool
+      , evalLog    :: Bool
       }
 
 -- ------------------------------------------------------------

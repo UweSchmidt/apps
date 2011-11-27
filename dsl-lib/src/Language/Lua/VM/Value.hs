@@ -1,31 +1,33 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
+-- ------------------------------------------------------------
+
 module Language.Lua.VM.Value
 where
 
-import Control.Applicative 	( (<$>) )
+import Control.Applicative      ( (<$>) )
 
 import Control.Monad.Trans      ( MonadIO
                                 , liftIO
                                 )
 
-import Data.IORef		( newIORef
+import Data.IORef               ( newIORef
                                 , readIORef
                                 , writeIORef
                                 , modifyIORef
                                 )
-import Data.List            	( intercalate )
-import Data.Maybe           	( fromMaybe )
-import Data.Unique          	( newUnique
+import Data.List                ( intercalate )
+import Data.Maybe               ( fromMaybe )
+import Data.Unique              ( newUnique
                                 , hashUnique
                                 )
 
 import Language.Lua.VM.Types
-import Language.Lua.Token	( string2Number )
+import Language.Lua.Token       ( string2Number )
 
-import System.IO		( hPutStrLn
-                                , stderr
+import System.IO                ( stderr
+                                , hPutStrLn
                                 )
 
 import qualified Data.Map as M
@@ -69,7 +71,7 @@ isNil Nil     = True
 isNil x@(P _) = isNil (singleValue x)
 isNil _       = False
 
-isFalse	          :: Value -> Bool
+isFalse           :: Value -> Bool
 isFalse (B False) = True
 isFalse x@(P _)   = isFalse (singleValue x)
 isFalse x         = isNil x
@@ -88,23 +90,23 @@ luaType (T _) = "table"
 luaType (C _) = "function"
 luaType (F _) = "function"
 luaType (U _) = "userdata"
-luaType (P _) = "tuple"		-- should not be visible when evaluating any expressions
+luaType (P _) = "tuple"         -- should not be visible when evaluating any expressions
 
 -- ------------------------------------------------------------
 
-int2Value	:: Int -> Value
+int2Value       :: Int -> Value
 int2Value i    = N $ fromIntegral i
 
 -- ------------------------------------------------------------
 
 value2Tuple     :: Value -> Values
-value2Tuple Nil	  = []
+value2Tuple Nil   = []
 value2Tuple (P vs) = vs
 value2Tuple v      = [v]
 
 tuple2Value     :: Values -> Value
-tuple2Value []	= Nil
-tuple2Value [v]	= v
+tuple2Value []  = Nil
+tuple2Value [v] = v
 tuple2Value vs   = P vs
 
 -- ------------------------------------------------------------
@@ -128,18 +130,22 @@ value2Integral _
 
 -- ------------------------------------------------------------
 
-value2number   :: Value -> Maybe Double
-value2number (N d)	= Just d
+value2number            :: Value -> Maybe Double
+value2number (N d)      = Just d
 value2number (S s)      = string2Number s
 value2number _          = Nothing
+
+value2str               :: Value -> String
+value2str (S s)         = s
+value2str v             = show v
 
 -- ------------------------------------------------------------
 
 -- conversion of an arbitrary tuple of values to a single value
 
 singleValue                 :: Value -> Value
-singleValue (P [])          = nil		-- map empty tuple to nil
-singleValue (P (x : _))     = x 	                -- map none empty list to head of list
+singleValue (P [])          = nil               -- map empty tuple to nil
+singleValue (P (x : _))     = x                         -- map none empty list to head of list
 singleValue v               = v
 
 -- merging tuples of values of right hand sides of assignments or returns
@@ -388,8 +394,17 @@ emptyLuaState
       , theEvalStack  = []
       , theCallStack  = []
       , theProg       = []
-      , theLogger     = \ s -> liftIO (hPutStrLn stderr s)
---    , theLogger     = \ _ -> return ()
+      , theLogger     = emptyLuaLogger
+      }
+
+-- ------------------------------------------------------------
+
+emptyLuaLogger :: LuaLogger
+emptyLuaLogger
+    = LuaLogger
+      { logCmd   = \ xs -> liftIO (hPutStrLn stderr xs)
+      , instrLog = False
+      , evalLog  = False
       }
 
 -- ------------------------------------------------------------
