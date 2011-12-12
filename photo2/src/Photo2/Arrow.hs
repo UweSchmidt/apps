@@ -948,7 +948,7 @@ renamePic nn c p
         editNode (arrIOE (mvPic nn c p))
       )
 
-{-
+-- {-
 renameContent   :: ConfigArrow AlbumTree AlbumTree
 renameContent c p
     = runAction ("renaming album contents for " ++ showPath p)
@@ -971,12 +971,11 @@ renameContent c p
               processChildren (renameChild nameMap2 $< getPicId)
         where
         renameChild nm cid
-            | isNothing nid     = this
-            | otherwise         = renamePic (fromJust nid) c (p ++ [cid])
-                                  `whenNot`
-                                  isAlbum
-            where
-            nid = lookup cid nm
+            = case lookup cid nm of
+                Nothing  -> this
+                Just nid -> renamePic nid c (p ++ [cid])
+                            `whenNot`
+                            isAlbum
 
         nameMap         :: [(Name, Name)]
         nameMap         = filter isNewName (zip ids (map picnr [1..]))
@@ -989,7 +988,7 @@ renameContent c p
             = n /= o
               &&
               (match "pic-[0-9]+" $ o)
--}
+-- -}
 picnr :: Int -> String
 picnr = show
         >>> reverse

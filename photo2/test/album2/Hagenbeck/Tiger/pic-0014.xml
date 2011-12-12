@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE picture SYSTEM "../../../config/archive.dtd">
 <picture id="pic-0014">
-  <orig href1="2007/2007.03.11.Hagenbeck/petra2/srgb/_dsc0058.jpg" raw1="2007/2007.03.11.Hagenbeck/petra2/_dsc0058.nef"/>
+  <orig href1="2007/2007.03.11.Hagenbeck/petra2/srgb/_dsc0056.jpg" raw1="2007/2007.03.11.Hagenbeck/petra2/_dsc0056.nef"/>
   <copy base="100x100" geometry="100x100"/>
   <copy base="100x75" geometry="100x75"/>
   <copy base="1024x768" geometry="1024x768"/>
@@ -10,7 +10,7 @@
   <copy base="160x120" geometry="160x120"/>
   <copy base="160x120-photoEdit" geometry="160x120"/>
   <copy base="160x160" geometry="160x120"/>
-  <copy base="org" geometry="3172x2379"/>
+  <copy base="org" geometry="2620x1965"/>
   <attr name="cam:CameraModelName">NIKON D200</attr>
   <attr name="cam:FocalLength">400.0mm (35mm equivalent: 600.0mm)</attr>
   <attr name="cam:FocalLengthIn35mmFormat">600mm</attr>
@@ -18,23 +18,23 @@
   <attr name="cam:LensID">AF VR Zoom-Nikkor 80-400mm f/4.5-5.6D ED</attr>
   <attr name="cam:LensSpec">80-400mm f/4.5-5.6 D VR</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
-  <attr name="exif:Aperture">13.0</attr>
+  <attr name="exif:Aperture">14.0</attr>
   <attr name="exif:ColorSpaceData">RGB</attr>
   <attr name="exif:Contrast">Normal</attr>
-  <attr name="exif:CreateDate">2007-03-11 14:44:24</attr>
-  <attr name="exif:DateTimeOriginal">2007-03-11 14:44:24.16</attr>
+  <attr name="exif:CreateDate">2007-03-11 14:44:19</attr>
+  <attr name="exif:DateTimeOriginal">2007-03-11 14:44:19.49</attr>
   <attr name="exif:ExposureCompensation">-1/3</attr>
   <attr name="exif:ExposureMode">Auto</attr>
   <attr name="exif:ExposureProgram">Program AE</attr>
   <attr name="exif:ExposureTime">1/640</attr>
-  <attr name="exif:FNumber">13.0</attr>
+  <attr name="exif:FNumber">14.0</attr>
   <attr name="exif:Flash">No Flash</attr>
   <attr name="exif:FlashSetting">Normal</attr>
   <attr name="exif:FocalLength">400.0mm</attr>
   <attr name="exif:FocalLengthIn35mmFormat">600</attr>
   <attr name="exif:FocusMode">AF-C</attr>
   <attr name="exif:ISO">800</attr>
-  <attr name="exif:ImageSize">3172x2379</attr>
+  <attr name="exif:ImageSize">2620x1965</attr>
   <attr name="exif:MeteringMode">Multi-segment</attr>
   <attr name="exif:Quality">Raw</attr>
   <attr name="exif:Saturation">Normal</attr>
@@ -42,9 +42,9 @@
   <attr name="exif:ShootingMode">Continuous</attr>
   <attr name="exif:ShutterSpeed">1/640</attr>
   <attr name="exif:WhiteBalance">Auto</attr>
-  <attr name="file:FileModificationDateTime">2007-03-15 21:19:12</attr>
-  <attr name="file:FileSize">5 MB</attr>
-  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/petra2/srgb/_dsc0058.jpg</attr>
-  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra2/_dsc0058.nef</attr>
+  <attr name="file:FileModificationDateTime">2007-03-15 21:18:06</attr>
+  <attr name="file:FileSize">4 MB</attr>
+  <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/petra2/srgb/_dsc0056.jpg</attr>
+  <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/petra2/_dsc0056.nef</attr>
 </picture>
 

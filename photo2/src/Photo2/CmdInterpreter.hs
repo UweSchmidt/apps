@@ -200,22 +200,22 @@ parseCmd c@"deleteattr"    args | length args == 2      = parseDeleteAttr       
 parseCmd c@"sortalbum"     args | length args <= 1      = parseSort                                   c args
 parseCmd c@"sortpictures"  args | length args >= 1      = parseSortPictures                           c args
 parseCmd c@"import"        args | length args <= 1      = parseImport                                 c args
-parseCmd c@"newalbum"      args | length args == 2      = parseModifiy c (newAlbum    (concat . drop 1 $ args)) args
-parseCmd c@"setalbumpic"   args | length args == 2      = parseModifiy c (setAlbumPic (concat . drop 1 $ args)) args
-parseCmd c@"rename"        args | length args == 2      = parseModifiy c (renamePic   (concat . drop 1 $ args)) args
-parseCmd c@"removepicture" args | length args == 2      = parseModifiy c (removePicture (concat . drop 1 $ args)) args
-parseCmd c@"makealbum"     args | length args <= 1      = parseModifiy c (makeAlbum)   args
-parseCmd c@"makepicture"   args | length args <= 1      = parseModifiy c (makePicture) args
+parseCmd c@"newalbum"      args | length args == 2      = parseModify c (newAlbum    (concat . drop 1 $ args)) args
+parseCmd c@"setalbumpic"   args | length args == 2      = parseModify c (setAlbumPic (concat . drop 1 $ args)) args
+parseCmd c@"rename"        args | length args == 2      = parseModify c (renamePic   (concat . drop 1 $ args)) args
+parseCmd c@"removepicture" args | length args == 2      = parseModify c (removePicture (concat . drop 1 $ args)) args
+parseCmd c@"makealbum"     args | length args <= 1      = parseModify c (makeAlbum)   args
+parseCmd c@"makepicture"   args | length args <= 1      = parseModify c (makePicture) args
 
 parseCmd c@"copypicture"   [a1, a2]
                                 | "/" `isPrefixOf` a2   = parseCopyPic c a1 a2
 
--- parseCmd c@"rename-cont"   args      | length args <= 1      = parseModifiy c renameContent args
+parseCmd c@"rename-cont"   args | length args <= 1      = parseModify c renameContent args
 
-parseCmd c@"dirty"         args | length args <=1       = parseCleanup c False False args
-parseCmd c@"dirty-all"     args | length args <=1       = parseCleanup c False True  args
-parseCmd c@"cleanup"       args | length args <=1       = parseCleanup c True  False args
-parseCmd c@"cleanup-all"   args | length args <=1       = parseCleanup c True  True  args
+parseCmd c@"dirty"         args | length args <= 1      = parseCleanup c False False args
+parseCmd c@"dirty-all"     args | length args <= 1      = parseCleanup c False True  args
+parseCmd c@"cleanup"       args | length args <= 1      = parseCleanup c True  False args
+parseCmd c@"cleanup-all"   args | length args <= 1      = parseCleanup c True  True  args
 
 parseCmd c@"html"          args                         = parseGenHtml c False args
 parseCmd c@"html-all"      args                         = parseGenHtml c True  args
@@ -304,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.3 from 2011-11-19"
+    = outputCmd $ "Photo2 version 0.2.4 from 2011-12-12"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
@@ -548,8 +548,8 @@ parseNewAttrKeys c      = parseWdCmd' ( changeAlbums $
                                         processTreeSelfAndDesc (withConfig updateAttrKeys)
                                       ) c
 
-parseModifiy            :: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
-parseModifiy c ca al    = parseWdCmd' ( changeAlbums $
+parseModify             :: String -> ConfigArrow AlbumTree AlbumTree -> [String] -> [Cmd]
+parseModify c ca al     = parseWdCmd' ( changeAlbums $
                                         processTree (withConfig ca)
                                       ) c (take 1 al)
 

@@ -246,6 +246,20 @@
                         </child>
                       </widget>
                     </child>
+                    <child>
+                      <widget class="GtkImageMenuItem" id="renamepics">
+                        <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">Renumber pictures in current album</property>
+                        <property name="label" translatable="yes">renumber pics</property>
+                        <property name="use_underline">True</property>
+                        <child internal-child="image">
+                          <widget class="GtkImage" id="menu-item-image21">
+                            <property name="visible">True</property>
+                            <property name="stock">gtk-goto-last</property>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
                   </widget>
                 </child>
               </widget>

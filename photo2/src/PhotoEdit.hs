@@ -462,6 +462,7 @@ buildButtons gm
                  , ("update",           Nothing                 )
                  , ("html",             Nothing                 )
                  , ("htmlalbum",        Nothing                 )
+                 , ("renamepics",       Nothing                 )
                  , ("invert",           Just "tbinvert"         )
                  , ("deselect",         Just "tbdeselect"       )
 
@@ -524,6 +525,7 @@ installGUIControls g
           onActivateBP update   "update"        updateAlbum
           onActivateBP html     "html selected" htmlSelectedEntries
           onActivateBP htmlA    "html album"    htmlAlbum
+          onActivateBP renumber "rename pic"    renumberAlbum
           onActivateBP invert   "invert"        invertSelected
           onActivateBP deselect "deselect"      clearSelected
           onActivateBP test     "test"          testOP1
@@ -533,13 +535,13 @@ installGUIControls g
         [ open, save, close, quit,
           movecb, copycb, cbmove, cbcopy, cbdelete,
           newalbum, newpic, import', editAttr,
-          align, sort, update, html, htmlA, invert, deselect,
+          align, sort, update, html, htmlA, renumber, invert, deselect,
           test, test2] = cs
 
     quitDialog
         = do
-          stateChanged <- return True
-          if stateChanged
+          stateChanged' <- return True
+          if stateChanged'
              then do
                   res <- dialogRun qd
                   widgetHide       qd
@@ -748,11 +750,11 @@ mkLightbox
 -- ------------------------------------------------------------
 
 addTab          :: String -> Notebook -> IO Int
-addTab lab tabs
+addTab lab tabs'
     = do
       trcMsg $ "addTab " ++ lab
       (w, _) <- mkLightbox
-      i <- notebookAppendPage tabs w lab
+      i <- notebookAppendPage tabs' w lab
       trcMsg $ "addTab " ++ show i
       changeSelected $ return . (++ [[]])               -- add empty selection list
       return i
@@ -802,13 +804,13 @@ setBG wg sts c  = mapM_ (\ s -> widgetModifyBg wg s c) sts
 -- ------------------------------------------------------------
 
 switchTab       :: Int -> IO ()
-switchTab i     = withTabs switchTab
+switchTab i     = withTabs switchTab'
     where
-    switchTab tabs
+    switchTab' tabs'
         = do
           trcMsg $ "switchTabs " ++ show i
           setCurrTab i
-          Just w'       <- notebookGetNthPage tabs i
+          Just w'       <- notebookGetNthPage tabs' i
           let w         =  castToScrolledWindow w'
           _n            <- widgetGetName w
           tb            <- getLbxTable w
@@ -816,7 +818,7 @@ switchTab i     = withTabs switchTab
           trcMsg $ "current tab (" ++ show i ++ ") contains " ++ tn
           setLightbox   (w, tb)
           resizeLightboxTable
-          widgetShowAll tabs
+          widgetShowAll tabs'
           return        ()
 
 -- ------------------------------------------------------------
@@ -1458,6 +1460,14 @@ htmlEntry p
       execCmd ["html", p]
       logMsg $ "HTML generated for " ++ p
 
+renumberAlbum               :: IO ()
+renumberAlbum
+    = do p <- getCurrAlbumPath
+         logMsg $ "renumber all pictures in " ++ p
+         execCmd ["rename-cont", p]
+         logMsg $ "renumbering done in " ++ p
+         withLightboxTable updateToggleButtons
+
 -- ------------------------------------------------------------
 
 newSelectedAlbum        :: IO ()
@@ -1582,6 +1592,7 @@ updateToggleButton tb (name, img)
 loadAlbum       :: String -> IO ()
 loadAlbum n     = loadLightbox n imageDescr
 
+imageDescr      :: [(String, String)]
 imageDescr      = zip imgNames ( map imgFile $ imgNames )
                   where
                   imgNames = map ( ("pic-" ++)
@@ -1618,9 +1629,9 @@ currLightboxContents    :: IO (String, [String])
 currLightboxContents    = withLightboxTable listTab
 
 selectedContents        :: IO (String, [String])
-selectedContents        = withLightboxTable $ withCurrSelected . selected
+selectedContents        = withLightboxTable $ withCurrSelected . selected'
     where
-    selected lbt sels
+    selected' lbt sels
         = do
           pn <- widgetGetName lbt
           return (pn, reverse sels)
@@ -1660,17 +1671,20 @@ listLightboxContents    = withTabs $ (\ lbt -> lightboxContents lbt >>= logMsg .
 listSelectedContents :: IO ()
 listSelectedContents    = selectedContents >>= logMsg . show
 
+testOP :: IO ()
 testOP = do
          listLightboxContents
          withSelected $ logMsg . ("selection= " ++ ) . show
          withCurrTab  $ logMsg . ("currTab=   " ++) . show
 
+testOP2 :: IO ()
 testOP2
     = do
       cmd <- albumDialog
       execCmd $ words cmd
       return ()          
 
+testOP1 :: IO ()
 testOP1
     = testOP2
 
