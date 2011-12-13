@@ -1,4 +1,4 @@
-module T
+module LuaTest
 where
 
 import Control.Arrow 			( first )

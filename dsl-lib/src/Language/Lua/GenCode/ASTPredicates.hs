@@ -1,6 +1,7 @@
 module Language.Lua.GenCode.ASTPredicates
 where
 
+import Data.Maybe                   ( isNothing )
 import Language.Lua.AST
 
 -- ------------------------------------------------------------
@@ -43,5 +44,8 @@ isTailCall                           :: [Expr] -> Bool
 isTailCall [ECall _ _]               = True
 isTailCall [EMemberCall _ _ _]       = True
 isTailCall _                         = False
+
+noOfAppends                          :: [(Maybe Expr, Expr)] -> Int
+noOfAppends                          = length . filter (isNothing . fst)
 
 -- ------------------------------------------------------------

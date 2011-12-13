@@ -10,7 +10,7 @@ import Control.Monad.State
 import Data.Array.IArray
 import Data.List                ( intercalate )
 
-import Language.Common.Eval
+-- import Language.Common.Eval
 
 import Language.Lua.VM.Instr
 import Language.Lua.VM.Types
@@ -583,7 +583,7 @@ lookupOp1 NumberOf
                    (T t) -> lengthTable t
                    _     -> luaError "illegal operand to # op"
 
-{- all unary ops implemented
+{- all unary ops are implemented
 
 lookupOp1 op
     = luaError $ "unimplemented unary op: " ++ show op
@@ -663,14 +663,6 @@ coreFcts
         , oneOrMoreArgs "type"
           >=> (return . S . luaType . head)
         )
-{-
-      , ( "traceon"
-        , oneOrMoreArgs "traceon"
-          >=> (\ v -> do logOn . isTrue . head $ v
-                         return emptyTuple
-              )
-        )
--}
       ]
     where
       show' (S s) = s

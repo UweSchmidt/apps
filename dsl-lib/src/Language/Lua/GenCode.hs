@@ -515,40 +515,52 @@ compExpr (EFunction fps varargs block)
                         ]
 
 compExpr (ETableCons fs)
-    = do code_es <- compFieldList fs
-         genCode [ mkInstr $ NewTable
-                 , code_es
-                 ]
+    = do code_es <- compFieldList 0 fs
+         code_ap <- codeAppends (noOfAppends fs)
+         genCode $ [ mkInstr $ NewTable
+                   , code_es
+                   , code_ap
+                   ]
     where
-      compField compEx key val
-          = maybe (compAppend compEx val)
-                  (compStoreField val)
-                  key
-
-      compAppend compEx val
-          = do code_val <- compEx val
-               genCode [ code_val
+      codeAppends 0
+          = genCode []
+      codeAppends n
+          = do code_tp <- genCode $ map (const (mkInstr MkTuple)) [2..n]
+               genCode [ code_tp
                        , mkInstr $ Copy 1
                        , mkInstr $ AppendField
                        ]
 
-      compStoreField val key
+      compField n compEx key val
+          = maybe (compAppend compEx val)
+                  (compStoreField n val)
+                  key
+
+      compAppend compEx val
+          = compEx val
+
+      compStoreField n val key
           = do code_val <- compExpr1 val
                code_key <- compExpr1 key
                genCode [ code_val
                        , code_key
-                       , mkInstr $ Copy 2
+                       , mkInstr $ Copy (n + 2)
                        , mkInstr $ StoreField
                        ]
       
-      compFieldList []
+      compFieldList _ []
           = genCode []
-      compFieldList [fLast]
-          = uncurry (compField compExpr) fLast		-- last field must be compiled with compExpr
-      compFieldList (f1 : fs')                          -- all others with compExpr1
-          = do code_f1  <- uncurry (compField  compExpr1) f1
-               code_fs' <- compFieldList fs'
+
+      compFieldList n [fLast]
+          = uncurry (compField n compExpr) fLast	-- last field must be compiled with compExpr
+
+      compFieldList n (f1 : fs')                        -- all others with compExpr1
+          = do code_f1  <- uncurry (compField n compExpr1) f1
+               code_fs' <- compFieldList (n1 $ fst f1) fs'
                genCode [code_f1, code_fs']
+          where
+            n1 Nothing = n + 1
+            n1 _       = n
 
 {- compExpr is complete
 

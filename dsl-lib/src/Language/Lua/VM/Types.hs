@@ -12,7 +12,9 @@ import Data.Monoid
 import Data.Typeable
 import Data.Unique
 
-import Language.Common.Eval
+import Control.Monad.Error
+import Control.Monad.Reader
+import Control.Monad.State
 
 -- ------------------------------------------------------------
 --
@@ -180,6 +182,21 @@ type LuaModule  = MCode
 type LuaCode    = [((Int, Int), Array Int Instr)]
 
 type LuaAction  = Eval LuaError LuaEnv LuaState
+
+-- ------------------------------------------------------------
+--
+-- | Evaluation of an expression/command runs in an
+-- error-reader-state-IO monad
+
+type Eval err env state
+    = ErrorT err (ReaderT env (StateT state IO))
+
+runEval :: (Error err) =>
+           Eval err env state res ->
+           env -> state ->
+           IO (Either err res, state)
+runEval expr e0 s0 
+    = runStateT (runReaderT (runErrorT expr) e0) s0
 
 -- ------------------------------------------------------------
 
