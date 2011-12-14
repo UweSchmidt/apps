@@ -96,8 +96,16 @@ p7 = "do vm.traceOn(); x = y and z end"
 p8 = "do vm.traceOn(); x = y or z end"
 p9 = "do print(1,2,3) end"
 p10 = "do t = {1,2,3,[2]=55, [1]=11,4,5}; for i=1,5,1 do print(\"i=\",i,\"t[i]=\",t[i]) end end"
-p11 = "do vm.traceOn(); for k,v in pairs({1,2,3,[2]=55, [1]=11,4,5}) do print(k,v) end end"
-p12 = "do vm.evalTraceOn(); print(1,2,vm.dumpState(3)); vm.traceOff(); print(4,5,6) end"
+p11 = "do for k,v in pairs({1,2,3,[2]=55, [1]=11,4,5}) do print(k,v) end end"
+p12 = "do f = function (x) local y = x; return y; end; return f; end"
+p13 = unlines [ "do local z = 1;"
+              , "   local f = function (x)"
+              , "               local y = z;"
+              , "               return y;"
+              , "             end;"
+              , "   return f;"
+              , "end"
+              ]
 
 cc :: String -> Either String (Code, CErrs)
 cc inp

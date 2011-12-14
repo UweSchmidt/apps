@@ -239,7 +239,8 @@ getES :: Int -> LuaAction Value
 getES i
     = do es <- gets (drop i . theEvalStack)
          case es of
-           (v : _) -> return v
+           (v : _) -> do traceValue ("get " ++ show i) v
+                         return v
            []      -> luaError $
                       "no value on evaluation stack at position " ++ show i
 
@@ -247,7 +248,8 @@ remES :: Int -> LuaAction ()
 remES i
     = do (vs0, es) <- gets (splitAt i . theEvalStack)
          case es of
-           (_v : vs) -> modify $ \ s -> s { theEvalStack = vs0 ++ vs }
+           (v : vs) -> do traceValue ("rem " ++ show i) v
+                          modify $ \ s -> s { theEvalStack = vs0 ++ vs }
            []        -> luaError $
                         "no value on evaluation stack at position " ++ show i
 
