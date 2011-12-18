@@ -6,9 +6,9 @@
 160x120
 org
 html-1400x1050
-photo2
+./photo2
 *.o
 *.hi
 *.bak
-photoEdit
+./photoEdit
 160x120-photoEdit
