@@ -186,8 +186,8 @@ allImgAttrs opts c base orig raw xmp
       exifDataOrig <- imgAttrs    (base </-> orig)
       exifDataRaw  <- imgAttrs    (base </-> raw)
       xmpData      <- imgAttrsXmp (base </-> xmp)
-      return ( ( ( exifDataOrig
-                   `M.union` exifDataRaw
+      return ( ( ( exifDataRaw
+                   `M.union` exifDataOrig
                  )
                  `M.union` xmpData
                )

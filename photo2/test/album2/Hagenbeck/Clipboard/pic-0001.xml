@@ -18,6 +18,7 @@
   <attr name="cam:LensID">AF-S VR Nikkor 300mm f/2.8G IF-ED</attr>
   <attr name="cam:LensSpec">300mm f/2.8 G VR</attr>
   <attr name="cam:Make">NIKON CORPORATION</attr>
+  <attr name="descr:Comment">test test test test</attr>
   <attr name="descr:Resource">
     <a href="../../Hagenbeck.html">Hagenbeck</a>
   </attr>
@@ -52,5 +53,6 @@
   <attr name="file:FileSize">6 MB</attr>
   <attr name="file:RefOrig">../Diakaesten/2007/2007.03.11.Hagenbeck/uwe2/srgb/_uwe0039.jpg</attr>
   <attr name="file:RefRaw">../Diakaesten/2007/2007.03.11.Hagenbeck/uwe2/_uwe0039.nef</attr>
+  <attr name="unknown:xxx">test test test</attr>
 </picture>
 

@@ -304,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.4 from 2011-12-12"
+    = outputCmd $ "Photo2 version 0.2.5 from 2011-12-18"
 
 parseCmd "exit" _       = fail ""
 parseCmd "q" _          = fail ""
