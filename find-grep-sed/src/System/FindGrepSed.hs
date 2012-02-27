@@ -569,6 +569,8 @@ binaryFiles
              , Ext ".jar"
              , Ext ".jpg"
              , Ext ".jpeg"
+             , Ext ".mov"
+             , Ext ".mp3"
              , Ext ".nef"
              , Ext ".o"
              , Ext ".pdf"
@@ -584,6 +586,7 @@ binaryFiles
              , Ext ".tif"
              , Ext ".tiff"
              , Ext ".war"
+             , Ext ".wav"
              , Ext ".xbm"
              , Ext ".xcf"
              , Ext ".zip"
@@ -780,7 +783,7 @@ trailingBlankFiles
 
 uppercaseImgFiles       :: FindExpr
 uppercaseImgFiles
-    = AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|TIF|tif|RW2|rw2|((NEF|nef)[.](RWS|rws)))"
+    = AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|MOV|mov|MP3|mp3|TIF|tif|RW2|rw2|WAV|wav|((NEF|nef)[.](DOP|dop|RWS|rws)))"
               , FileName ".*[A-Z].*"		-- at least 1 uppercase char
               ]
 

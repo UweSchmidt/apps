@@ -15,6 +15,27 @@ import System
 
 import System.FindGrepSed
 
+version :: String
+version = "version 0.1.8 from 2012-02-20"
+
+main :: IO ()
+main
+    = do
+      al <- getArgs
+      let fct = head . (++ ["-h"]) $ al
+      let dir = head . (++ [""]) . drop 1 $ al 
+      ( fromMaybe usage . lookup fct $ actions) dir
+      return ()
+
+
+usage   :: FilePath -> IO ()
+usage _dir
+    = do
+      pn <- getProgName
+      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (" ++ version ++ ")\n" )
+    where
+    cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
+
 -- ------------------------------
 
 actions :: [(String, FilePath -> IO () )]
@@ -67,24 +88,6 @@ actions
 
       , ("hunitTest",                   hunitTest       )
       ]
-
-main :: IO ()
-main
-    = do
-      al <- getArgs
-      let fct = head . (++ ["-h"]) $ al
-      let dir = head . (++ [""]) . drop 1 $ al 
-      ( fromMaybe usage . lookup fct $ actions) dir
-      return ()
-
-
-usage   :: FilePath -> IO ()
-usage _dir
-    = do
-      pn <- getProgName
-      putStrLn ( "usage: " ++ pn ++ " [" ++ cmds ++ "] [dir] (version 0.1.7)\n" )
-    where
-    cmds = foldl1 (\ x y -> x ++ " | " ++ y) . map fst $ actions
 
 -- ------------------------------
 
