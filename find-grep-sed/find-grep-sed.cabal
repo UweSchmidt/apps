@@ -1,7 +1,7 @@
 Cabal-Version:  >= 1.2
 Name:           find-grep-sed
-Version:        0.1.8
-Copyright:      Copyright (c) 2008-2011 Uwe Schmidt
+Version:        0.2.0
+Copyright:      Copyright (c) 2008-2012 Uwe Schmidt
 Maintainer:     uwe@fh-wedel.de
 Author:         Uwe Schmidt
 Homepage:       http://www.fh-wedel.de/~si/
@@ -36,6 +36,6 @@ Executable find-grep-sed
 
   Main-Is: Find.hs
 
-  build-depends: haskell98 >= 0, HUnit >= 1.2
+  build-depends: HUnit >= 1.2
 
   GHC-Options: -Wall

@@ -11,12 +11,13 @@ import Test.HUnit
     , failures
     )
 
-import System
+import System.Environment
+import System.Exit
 
 import System.FindGrepSed
 
 version :: String
-version = "version 0.1.8 from 2012-02-20"
+version = "version 0.2.0 from 2012-05-11"
 
 main :: IO ()
 main
@@ -26,7 +27,6 @@ main
       let dir = head . (++ [""]) . drop 1 $ al 
       ( fromMaybe usage . lookup fct $ actions) dir
       return ()
-
 
 usage   :: FilePath -> IO ()
 usage _dir
@@ -132,7 +132,7 @@ hunitTest _
       putStrLn $ show c
       let errs = errors c
           fails = failures c
-      System.exitWith (codeGet errs fails)
+      exitWith (codeGet errs fails)
 
 codeGet :: Int -> Int -> ExitCode
 codeGet errs fails
