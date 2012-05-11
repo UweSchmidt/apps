@@ -1,0 +1,86 @@
+Name:                photo2
+Version:             0.2.6
+Synopsis:            Photo Album Editor
+Description:         Photo Album Editor: Command line app photo2 and gtk app photoEdit
+License:             BSD3
+Author:              Uwe
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+Flag photo2
+ Description:        Build the command line app photo2
+ Default:            True
+
+Flag photoEdit
+ Description:        Build the gtk app photoEdit
+ Default:            False
+
+Executable photo2
+  Main-is:         Photo2.hs
+  If flag(photo2)
+    Hs-Source-Dirs:  ./src
+  
+    Build-depends:      base                   >=4    && < 5
+                      , bytestring             >= 0.9
+                      , containers             >= 0.4
+                      , deepseq                >= 1.1
+                      , directory              >= 1
+                      , find-grep-sed          >= 0.1  
+                      , filepath               >= 1.2
+                      , haskeline              >= 0.6.4
+                      , haskell98              >= 1.1
+                      , hxt                    >= 9.1 && < 10
+                      , hxt-regex-xmlschema    >= 9   && < 10
+                      , mtl                    >= 2
+                      , old-locale             >= 1
+                      , old-time               >= 1
+                      , process                >= 1
+                      , unix                   >= 2.4
+
+    Other-modules:      Photo2.CmdInterpreter
+                      , Photo2.ArchiveTypes
+
+  
+    Extensions:           
+
+    Ghc-Options:      -threaded -Wall -rtsopts -fwarn-tabs
+  Else
+    Buildable: False
+
+Executable photoEdit
+  Main-is:          PhotoEdit.hs
+  If flag(photoEdit)
+    Hs-Source-Dirs:   ./src
+  
+    Build-depends:      base                   >=4    && < 5
+                      , bytestring             >= 0.9
+                      , containers             >= 0.4
+                      , deepseq                >= 1.1
+                      , directory              >= 1
+                      , haskeline              >= 0.6.4
+                      , find-grep-sed          >= 0.1  
+                      , filepath               >= 1.2
+                      , glade                  >= 0.12
+                      , gtk                    >= 0.12
+                      , haskell98              >= 1.1
+                      , hxt                    >= 9.1 && < 10
+                      , hxt-regex-xmlschema    >= 9   && < 10
+                      , mtl                    >= 2
+                      , old-locale             >= 1
+                      , old-time               >= 1
+                      , process                >= 1
+                      , unix                   >= 2.4
+
+    Other-modules:      Photo2.ArchiveTypes
+                      , Photo2.ModelInterface
+                      , Photo2.FilePath
+  
+    Extensions:           
+
+    Ghc-Options:        -threaded -Wall -rtsopts
+                        -fwarn-tabs
+                        -fno-warn-unused-do-bind
+                        -fno-warn-missing-signatures
+                        -fno-warn-name-shadowing
+  Else
+    Buildable: False

@@ -22,7 +22,7 @@ import           Photo2.Config
 import           Photo2.ExifData
 import           Photo2.FilePath
 
-import           System ( system )
+import           System.Cmd     ( system )
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -61,10 +61,11 @@ liftIO a
                   (\ err -> return (Left $ show err))
       evalRc r
     where
-    catch' :: IO a -> (CE.SomeException -> IO a) -> IO a
-    catch' = CE.catch
     evalRc (Left msg)   = throwError msg
     evalRc (Right res)  = return res
+
+catch' :: IO a -> (CE.SomeException -> IO a) -> IO a
+catch' = CE.catch
 
 mapError        :: IOE a -> (String -> String) -> IOE a
 mapError a f
@@ -543,7 +544,7 @@ mkBackupFile bak f
 
 formatDateTime  :: IO ClockTime -> IO String
 formatDateTime timeStamp
-    = catch
+    = catch'
       ( do
         ctime <- timeStamp
         time  <- toCalendarTime ctime
