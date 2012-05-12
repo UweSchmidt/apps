@@ -3,7 +3,7 @@
 <!--Generated with glade3 3.4.5 on Mon Apr 20 20:14:57 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
-    <property name="title" translatable="yes">Photo2 Album Editor 0.2.4 (2011-12-14)</property>
+    <property name="title" translatable="yes">Photo2 Album Editor 0.2.6 (2012-05-12)</property>
     <property name="default_width">1600</property>
     <property name="default_height">800</property>
     <child>
@@ -31,6 +31,7 @@
                     <child>
                       <widget class="GtkImageMenuItem" id="open">
                         <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">open selected album</property>
                         <property name="label" translatable="yes">gtk-open</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
@@ -62,6 +63,7 @@
                     <child>
                       <widget class="GtkImageMenuItem" id="quit">
                         <property name="visible">True</property>
+                        <property name="tooltip" translatable="yes">quit photoEdit2</property>
                         <property name="label" translatable="yes">gtk-quit</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
@@ -389,6 +391,8 @@
             <child>
               <widget class="GtkToolButton" id="tbopen">
                 <property name="visible">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_text">open selected album</property>
                 <property name="stock_id">gtk-open</property>
               </widget>
               <packing>
@@ -497,6 +501,8 @@
             <child>
               <widget class="GtkToolButton" id="tbedit">
                 <property name="visible">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_text">set or edit image attributes</property>
                 <property name="label" translatable="yes">attr</property>
                 <property name="stock_id">gtk-edit</property>
               </widget>
@@ -515,6 +521,8 @@
             <child>
               <widget class="GtkToolButton" id="tbalign">
                 <property name="visible">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="tooltip_text">align icons</property>
                 <property name="label" translatable="yes">align</property>
                 <property name="stock_id">gtk-justify-center</property>
               </widget>

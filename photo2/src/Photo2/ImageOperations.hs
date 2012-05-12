@@ -2,12 +2,12 @@ module Photo2.ImageOperations
 where
 
 import           Control.Arrow
-import qualified Control.Exception as CE
+import qualified Control.Exception      as CE
 
-import           Control.Monad.Error hiding ( liftIO )
-import qualified Control.Monad.Error as ME
+import           Control.Monad.Error    hiding ( liftIO )
+import qualified Control.Monad.Error    as ME
 
-import           Control.DeepSeq
+import           Control.DeepSeq        ( rnf )
 
 
 import           Data.Atom
