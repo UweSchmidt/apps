@@ -521,6 +521,16 @@ lnFile src dst
 
 -- ------------------------------------------------------------
 
+cpFile          :: String -> String -> IOE ()
+cpFile src dst
+    = ( do
+        ex <- liftIO $ doesFileExist src
+        when ex (liftIO $ copyFile src dst)
+      )
+      `mapError` ((unwords ["copy file", show src, show dst, "failed: "]) ++)
+
+-- ------------------------------------------------------------
+
 rmDir           :: String -> IOE ()
 rmDir d
     = ( do
@@ -672,9 +682,9 @@ cpCopies ext dst src copies
     where
     link dir
         = do
-          liftIO $ putStrLn $ unwords ["ln", srcFile, dstFile]
+          liftIO $ putStrLn $ unwords ["cp", srcFile, dstFile]
           mkDirectoryPath dstFile
-          lnFile srcFile  dstFile
+          cpFile srcFile  dstFile       -- lnFile replaced by cpFile, vmware volume don't support links
         where
         srcFile = dir </> listToPath src `addExtension` ext
         dstFile = dir </> listToPath dst `addExtension` ext
