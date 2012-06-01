@@ -1,6 +1,6 @@
 Cabal-Version:  >= 1.2
 Name:           find-grep-sed
-Version:        0.2.0
+Version:        0.2.1
 Copyright:      Copyright (c) 2008-2012 Uwe Schmidt
 Maintainer:     uwe@fh-wedel.de
 Author:         Uwe Schmidt

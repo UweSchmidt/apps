@@ -783,9 +783,11 @@ trailingBlankFiles
 
 uppercaseImgFiles       :: FindExpr
 uppercaseImgFiles
-    = AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|MOV|mov|MP3|mp3|TIF|tif|RW2|rw2|WAV|wav|((NEF|nef)[.](DOP|dop|RWS|rws)))"
-              , FileName ".*[A-Z].*"		-- at least 1 uppercase char
-              ]
+    = OrExpr [ AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|MOV|mov|MP3|mp3|TIF|tif|RW2|rw2|WAV|wav|((NEF|nef)[.](DOP|dop|RWS|rws)))"
+                       , FileName ".*[A-Z].*"		-- at least 1 uppercase char
+                       ]
+             , FileName "[0-9]+-[0-9]+[.](WAV|MP3)"     -- zoom mic
+             ]
 
 nonAsciiFilePath        :: FindExpr
 nonAsciiFilePath
@@ -803,8 +805,21 @@ processUnusedAlbumFiles action dir
       unused <- find "" (filterEx images)
       action unused
     where
-    subdirs = ["org","1600x1200","1600x1200-css","160x120"]
-    fileExt = [".jpg",".html",".html"]
+    subdirs = [ "org"
+              , "1920x1200"
+              , "html-1920x1200"
+              , "1600x1200"
+              , "html-1600x1200"
+              , "1600x1200-css"
+              , "1400x1050"
+              , "html-1400x1050"
+              , "160x160"
+              , "160x120"
+              ]
+    fileExt = [ ".jpg"
+              , ".html"
+              , ".html"
+              ]
     filterEx is = AndExpr
                   [ RE
                     . (++ ")/.*") . ("(" ++)

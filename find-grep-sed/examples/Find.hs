@@ -17,7 +17,7 @@ import System.Exit
 import System.FindGrepSed
 
 version :: String
-version = "version 0.2.0 from 2012-05-11"
+version = "version 0.2.1 from 2012-06-03"
 
 main :: IO ()
 main
