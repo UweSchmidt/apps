@@ -106,6 +106,18 @@ p13 = unlines [ "do local z = 1;"
               , "   return f;"
               , "end"
               ]
+p14 = unlines
+      [ "do"
+      , "  x1, x2 = 23, 42;"
+      , "  local x1 = x1;"
+      , "  function f1() return 42; end;"
+      , "  function f2(x,y) return x-y, x+y, f1(); end;"
+      , "  function f3(x,...) return x,args; end"
+      , "  f1(27);"
+      , "  x1, x2 = f2(x1,x2);"
+      , "  x1, x2 = f3(1,2,3);"
+      , "end"
+      ]
 
 cc :: String -> Either String (Code, CErrs)
 cc inp

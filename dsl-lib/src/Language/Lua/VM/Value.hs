@@ -288,12 +288,16 @@ lengthEntries e
               where
                 n1 = n + 1
 
+-- append must always start with index 1, when inserting a value list
+-- not with index = length + 1
+
 appendEntry :: Value -> Entries -> Entries
 appendEntry (P vs) es
     = foldl (\ es' (v, k) -> writeEntry (N k) v es') es ps
       where
-        (N d)  = lengthEntries es
-        ps     = zip vs . map (+ d) $ [1..]
+--      (N d)  = lengthEntries es
+--      ps     = zip vs . map (+ d) $ [1..]
+        ps     = zip vs [1..]
 
 appendEntry v es
     = appendEntry (P [v]) es
