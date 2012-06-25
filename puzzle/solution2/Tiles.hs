@@ -9,7 +9,10 @@ import Control.Monad	( mzero
                         , liftM
                         , foldM
                         )
-import Control.Arrow    ( (&&&) )
+import Control.Arrow    ( (&&&)
+                        , (***)
+                        , second
+                        )
 
 import Data.List        ( tails
                         , minimumBy
@@ -92,9 +95,6 @@ class Figure a where
     height :: a -> Width
     height = const 0
 
-    area   :: a -> Int
-    area f = xpos f * ypos f
-
     xpos   :: a -> Pos
     xpos _ = 0
 
@@ -104,9 +104,9 @@ class Figure a where
     xy     :: a -> Point
     xy f   = PT (xpos f) (ypos f)
 
-    wh     :: a -> Size
-    wh f   = SZ (width f) (height f)
-  
+    wh     :: a -> (Int, Int)
+    wh f   = (width f, height f)
+
 coords :: Figure a => a -> [(Pos, Pos)]
 coords f
     = [(x, y) | x <- [x0..x1]
@@ -120,13 +120,36 @@ coords f
 
 -- ----------------------------------------
 
+class Size a where
+    size :: a -> Int
+
+-- ----------------------------------------
+
+class Area a where
+    area :: a -> Int
+
+-- ----------------------------------------
+
+class Mirror a where
+    mirror :: a -> a
+  
+-- ----------------------------------------
+
 newtype Square = SQ Int
     deriving (Eq, Ord, Show)
 
 instance Figure Square where
     width  (SQ i) = i
     height (SQ i) = i
-    area   (SQ i) = i * i
+
+instance Size Square where
+    size (SQ i) = i
+
+instance Area Square where
+    area (SQ i) = i * i
+
+instance Mirror Square where
+    mirror        = id
 
 instance Invariant Square where
     inv (SQ i)
@@ -156,7 +179,12 @@ data Rectangle = RT Int Int
 instance Figure Rectangle where
     width  (RT w _) = w
     height (RT _ h) = h
+
+instance Area Rectangle where
     area   (RT w h) = w * h
+
+instance Mirror Rectangle where
+    mirror (RT w h) = RT h w
 
 instance Invariant Rectangle where
     inv (RT w h)
@@ -185,10 +213,18 @@ instance Invariant Point where
                              [ "Point with x = ", show x
                              , "and y =", show y, "not allowed"]
 
+instance Figure Point where
+    xpos (PT x _) = x
+    ypos (PT _ y) = y
+
+instance Mirror Point where
+    mirror (PT x y) = PT y x
 
 pt :: Int -> Int -> Point
 pt !x !y = check . PT x $ y
 
+-- ----------------------------------------
+{-
 data Size = SZ Width Height
              deriving (Eq, Ord, Show)
 
@@ -202,7 +238,7 @@ instance Invariant Size where
 
 sz :: Int -> Int -> Size
 sz !w !h = check . SZ w $ h
-
+-- -}
 -- ----------------------------------------
 
 data PosFig a = FP Point a
@@ -211,10 +247,15 @@ data PosFig a = FP Point a
 instance Figure a => Figure (PosFig a) where
     width  (FP _ f)        = width  f
     height (FP _ f)        = height f
-    area   (FP _ f)        = area   f
     xpos   (FP (PT x _) _) = x
     ypos   (FP (PT _ y) _) = y
     xy     (FP p _)        = p
+
+instance Area a => Area (PosFig a) where
+    area   (FP _ f)        = area   f
+
+instance Mirror a => Mirror (PosFig a) where
+    mirror (FP p f) = FP (mirror p) (mirror f)
 
 type PosRect   = PosFig Rectangle
 type PosSquare = PosFig Square
@@ -234,16 +275,177 @@ ptsq !x !y !w
         ! s = sq w
 
 -- ----------------------------------------
+--
+-- free space is a list of points
+-- 
+-- free space is is allways a list of points
+-- with ascending x coordinates and descending y coordinates
+--
+-- When the board is rotated 45 degrees left
+-- these points form the peaks of a polygon line
+-- the valleys of this polygon line between 2 points p1 and p2
+-- are the points (x1, y2)
+--
+-- Squares will only be placed in a valley,
+-- which fit into that valley, the left and right corners of
+-- the square will never be above the peaks p1 and p2
+
+newtype FreeSpace
+    = FS { unFS :: [Point] }
+      deriving (Show)
+
+instance Invariant FreeSpace where
+    inv s@(FS xs)
+        = invFS xs
+          where
+            invFS []
+                = bad ["FreeSpace list is empty", show s]
+            invFS [_]
+                = ok
+            invFS (p1 : ps1@(p2 : _))
+                | xpos p1 >= xpos p2
+                  ||
+                  ypos p1 <= ypos p2
+                    = bad ["inconsistent free space: x1 < x2 || y1 > y2 violated for some points p1 and p2", show s]
+                | otherwise
+                    = invFS ps1
+
+instance Size FreeSpace where
+    -- size of booard computed from free space list
+    size = ypos . head . unFS
+
+instance Mirror FreeSpace where
+    mirror = FS . map mirror . reverse . unFS
+
+instance Area FreeSpace where
+    area (FS ps) = sum $ zipWith free ps (tail ps)
+                   where
+                     n = ypos . head $ ps
+                     free (PT x1 _) (PT x2 y2)
+                         = (x2 - x1) * (n - y2)
+
+fs :: [Point] -> FreeSpace
+fs = check . FS
+
+-- initial free space is a single (n,n) rectangle at (0,0)
+
+initFreeSpace :: Int -> FreeSpace
+initFreeSpace n = FS [pt 0 n, pt n 0]
+
+-- final free space: the whole space is covered,
+-- so the list of peaks as a single element
+
+nullFreeSpace :: FreeSpace -> Bool
+nullFreeSpace (FS [_]) 	= True
+nullFreeSpace _         = False
+
+-- largest possible square to be placed
+-- all larger square can be removed from the list
+-- of unused squares
+
+largestFreeSquare :: FreeSpace -> Int
+largestFreeSquare (FS ps)
+    = maximum $ 0 : zipWith largest ps (tail ps)
+      where
+        n = ypos . head $ ps
+        largest (PT x1 _) (PT _ y2)
+            = (n - x1) `min` (n - y2)
+
+-- largest possible square to be placed without
+-- violating freespace invariant.
+-- If there isn't any square available, spoiled space
+-- must be inserted
+
+largestPossibleSquare :: FreeSpace -> Int
+largestPossibleSquare (FS ps)
+    = maximum $ 0 : zipWith largest ps (tail ps)
+      where
+        largest (PT x1 y1) (PT x2 y2)
+            = (y1 - y2) `min` (x2 - x1)
+
+-- ----------------------------------------
+
+-- place a square on top of the used space
+
+placeSq :: Int -> [Point] -> [(PosSquare, [Point])]
+placeSq n (p1@(PT x1 y1) : ps2@((PT x2 y2) : ps3))
+    | w == n && h == n		-- perfect fit of square, remove p1 and p2 and replace by upper right corner
+        = r $ pt x2 y1 : ps3
+
+    | w == n && h >  n		-- perfect fit of width, move p2 up
+        = r $ p1 : pt x2 (y2 + n) : ps3
+
+    | w >  n && h == n		-- perfect fit of height, move p1 to the right
+        = r $ pt (x1 + n) y1 : ps2
+
+    | w >  n && h >  n		-- square fits, but too small, insert new corner
+        = r $ p1 : pt (x1 + n) (y2 + n) : ps2
+    where
+        w = x2 - x1
+        h = y1 - y2
+        p = ptsq x1 y2 n
+        r x = return (p, x)
+
+placeSq _ _
+    = mzero
+
+-- place a square on every possible place
+
+placeSqAll :: Int -> [Point] -> [(PosSquare, [Point])]
+placeSqAll n ps1@(p1 : ps2@(_ : _))
+    = placeSq n ps1
+      `mplus`
+      map (second (p1:)) (placeSqAll n ps2)
+
+placeSqAll _ _
+    = mzero
+
+
+-- place spoiled space on left side top, if height is smaller than smallest square
+
+placeSpaceLeftTop :: Int -> [Point] -> ([PosRect], [Point])
+placeSpaceLeftTop n (PT x1 y1 : PT x2 y2 : ps3)
+    | h < n
+        = ([ptrect x1 y2 w h], pt x2 y1 : ps3)
+    where
+      w = x2 - x1
+      h = y1 - y2
+
+placeSpaceLeftTop _ ps
+    = ([], ps)
+
+
+-- place spoiled space on right side bottom, if height is smaller than smallest square
+
+placeSpaceRightBottom :: Int -> [Point] -> ([PosRect], [Point])
+placeSpaceRightBottom n
+    = (map mirror *** mirror') . placeSpaceLeftTop n . mirror'
+    where
+      mirror' = unFS . mirror . fs
+
+-- place spoiled space in both corners
+
+placeSpaceInCorners :: Int -> [Point] -> ([PosRect], [Point])
+placeSpaceInCorners n ps
+    = (s1 ++ s2, ps2)
+    where
+      (s1, ps1) = placeSpaceLeftTop     n ps
+      (s2, ps2) = placeSpaceRightBottom n ps1
+
+-- ----------------------------------------
 
 data State
     = State
       { freeSpace    :: FreeSpace
-      , usedTiles    :: CoveredSpace
+      , usedTiles    :: [PosSquare]
       , unusedTiles  :: Squares
       , coveredSpace :: Int
       , spoiledSpace :: Int
       }
     deriving (Show)
+
+instance Size State where
+    size = size . freeSpace
 
 instance Invariant State where
     inv s
@@ -272,7 +474,7 @@ instance Invariant State where
           .&&.
           mzero
           where
-            n        = width . freeSpace $ s
+            n        = size $ s
             total    = n * n
             free     = areaUnused s
             spoiled  = spoiledSpace s
@@ -282,9 +484,7 @@ instance Invariant State where
             fitOnBoard f
                 = all (\ (x, y) -> x >= 0 && x < n && y >= 0 && y < n) $ coords f
 
-instance Figure State where
-    width  = width . freeSpace
-    height = height . freeSpace
+instance Area State where
     area   = sum . map area . usedTiles
 
 initState :: Int -> Squares -> State
@@ -292,9 +492,6 @@ initState n sqs
     = State
       { freeSpace    = initFreeSpace n
       , usedTiles = []
-      -- , unusedTiles  = filter (\ f -> let w = width f in 0 <= w && w <= n) sqs
-      -- , unusedTiles  = map sq  [ n - i | i <- [0 .. n - 1]]
-      -- , unusedTiles  = map sq  [ n - i | i <- [1 .. n - 1]]
       , unusedTiles = reverse . L.sort $ sqs
       , coveredSpace = 0
       , spoiledSpace = 0
@@ -305,10 +502,6 @@ finalState s
     = (nullFreeSpace . freeSpace $ s)
       ||
       (null . unusedTiles $ s)
-
-classicProblem :: Int -> (Int, Squares)
-classicProblem n
-    = (n, map sq  [ n - i | i <- [1 .. n - 1]])
 
 -- ----------------------------------------
 
@@ -325,11 +518,11 @@ areaCovered
 
 areaUnused :: State -> Int
 areaUnused
-    = sum . map area . unFS . freeSpace
+    = oldstuff -- sum . map area . unFS . freeSpace
 
-whCurrFreeSpace :: State -> Size
+whCurrFreeSpace :: State -> (Int, Int)
 whCurrFreeSpace
-    = wh . currFreeSpace . freeSpace
+    = oldstuff -- wh . currFreeSpace . freeSpace
 
 -- ----------------------------------------
 --
@@ -341,7 +534,7 @@ whCurrFreeSpace
 removeUselessTiles :: Width -> State -> State
 removeUselessTiles n s
     | null usableTiles
-        = s { freeSpace    = FS [] [ptrect 0 n n 0]
+        = s { freeSpace    = oldstuff -- FS [] [ptrect 0 n n 0]
             , unusedTiles  = []
             , spoiledSpace = n * n - coveredSpace s
             }
@@ -349,7 +542,7 @@ removeUselessTiles n s
         = s { unusedTiles = usableTiles }
     where
       usableTiles
-          = dropWhile (\ f -> width f > (largestPossibleSquare . unFS $ freeSpace s))
+          = oldstuff -- dropWhile (\ f -> width f > (largestPossibleSquare . unFS $ freeSpace s))
             $ unusedTiles s
 
 -- insert spoiled space for
@@ -363,18 +556,18 @@ removeSpoiledSpace s
     | smallestSquareSize == 1		-- smallest tile can be placed anywhere
         = s
     | otherwise
-        = s { freeSpace    = FS [] fs1
+        = s { freeSpace    = oldstuff -- FS [] fs1
             , spoiledSpace = spoiledSpace s + sps
             }
     where
       fs0 = unFS . freeSpace $ s
       r1  = head fs0
-      h1  = height r1
+      h1  = oldstuff -- height r1
       sqs = unusedTiles s
 
       smallestSquareSize = width . last $ sqs
 
-      (fs1, sps) = removeSpoiled smallestSquareSize h1 fs0
+      (fs1, sps) = oldstuff -- removeSpoiled smallestSquareSize h1 fs0
 
       removeSpoiled minWidth leftWall' rs0'@(r0 : rs0)
           | h0 == 0       = cons		-- no space to remove
@@ -389,7 +582,7 @@ removeSpoiledSpace s
             w0 = width  r0
             h0 = height r0
 
-            rightWall' = rightWall (FS [] rs0')
+            rightWall' = oldstuff -- rightWall (FS [] rs0')
             minWall'   = (leftWall' `min` rightWall')
             (rs', sp') = removeSpoiled minWidth (0 - rightWall') rs0
             cons       = (r0  : rs', sp')
@@ -403,7 +596,7 @@ removeSpoiledSpace s
 
 mergeFreeSpace :: State -> State
 mergeFreeSpace s
-    = s { freeSpace = FS [] . merge' . unFS . freeSpace $ s
+    = s { freeSpace = oldstuff -- FS [] . merge' . unFS . freeSpace $ s
         }
       where
         merge' (x : xs@( _ : _)) = merge x xs
@@ -416,8 +609,8 @@ mergeFreeSpace s
             | otherwise =  r1 : merge r2 rs
             where
               PT x1 y1 = xy r1
-              SZ w1 h1 = wh r1
-              SZ w2 h2 = wh r2
+              (w1, h1) = wh r1
+              (w2, h2) = wh r2
 
 moveToMin :: State -> State
 moveToMin s
@@ -454,8 +647,8 @@ placeSquare placeFigure q s
       usqs = unusedTiles s
       fsp  = freeSpace s
       f    = currFreeSpace fsp
-      PT x y = xy f
-      SZ w h = wh f
+      PT x y = oldstuff -- xy f
+      (w, h) = oldstuff -- wh f
 
 placeSquareL :: Square -> StateFilter
 placeSquareL = placeSquare placeFigureL
@@ -475,14 +668,14 @@ placeSquareLR q s
         = []
     where
       wq   = width q
-      w    = width . currFreeSpace . freeSpace $ s
+      w    = oldstuff -- width . currFreeSpace . freeSpace $ s
 
 
 placeFitWidth :: StateFilter
 placeFitWidth s
     = placeSquareL (sq w) s
       where
-        SZ w _  = whCurrFreeSpace s
+        (w, _)  = whCurrFreeSpace s
 
 -- --------------------
 
@@ -491,7 +684,7 @@ placeAny' placeSquare' gen s
     = do q <- qs
          placeSquare' q s
     where
-      SZ w h = whCurrFreeSpace $ s
+      (w, h) = whCurrFreeSpace $ s
       qs     = filterAvailable s $
                gen (w `min` h)
 
@@ -530,7 +723,7 @@ placeHole s
     where
       fsq    = freeSpace s
       h      = uncurry min . (leftWall &&& rightWall) $ fsq
-      SZ w _ = whCurrFreeSpace s
+      (w, _) = whCurrFreeSpace s
       rt     = rect w h
 
 placeHole1 :: StateFilter
@@ -608,71 +801,14 @@ removeSquare x ss@(s : ss1)
         = ss
 
 -- ----------------------------------------
---
--- free space is a navigatable list of rectangles
--- without any space in between, the head of rr
--- is the currently processed space, for which
--- tiles will be searched to cover its bottom
+oldstuff = undefined
 
-data FreeSpace    = FS { ll :: [PosRect]
-                       , rr :: [PosRect]
-                       }
-                    deriving (Show)
+currFreeSpace = oldstuff
+leftWall = oldstuff
+rightWall = oldstuff
+moveToValley = oldstuff
 
-instance Invariant FreeSpace where
-    inv s@(FS _ [])
-        = bad ["FreeSpace list is empty on right side", show s]
-    inv s
-        = invfs 0 (-1) lrs
-          where
-            lrs@(r1:_) = unFS s
-            n          = ypos r1 + height r1
-            invfs _ _ []
-                = ok
-            invfs x1 h1 (r : rs1)
-                | x1 == x
-                  &&
-                  h1 /= h
-                  &&
-                  y + h == n
-                  &&
-                  w > 0
-                      = invfs (x + w) h rs1
-                | otherwise
-                    = bad
-                      ["inconsistent FreeSpace", show s]
-                where
-                  PT x y = xy r
-                  SZ w h = wh r
-
-instance Figure FreeSpace where
-    width  = sum . map width . unFS
-    height = (\ f -> ypos f + height f) . head . unFS
-    area   = sum . map area . unFS
-
-fs :: [PosRect] -> FreeSpace
-fs = check . FS []
-
-unFS :: FreeSpace -> [PosRect]
-unFS (FS l r)
-    = foldl (flip (:)) r l
-
-type CoveredSpace = [PosSquare]
-
--- ----------------------------------------
-
--- initial free space is a single (n,n) rectangle at (0,0)
-
-initFreeSpace :: Int -> FreeSpace
-initFreeSpace n = FS [] [ptrect 0 0 n n]
-
--- final free space: the whole space is covered,
--- so the rectangle is located at (0,n) and has size (n, 0) 
-
-nullFreeSpace :: FreeSpace -> Bool
-nullFreeSpace (FS [] [r]) = height r == 0
-nullFreeSpace _           = False
-
+{-
 -- current rectangle in free space list
 
 currFreeSpace :: FreeSpace -> PosRect
@@ -706,12 +842,16 @@ inValley s
     = leftWall s `min` rightWall s > 0
       ||
       nullFreeSpace s
-
+-- -}
 -- ----------------------------------------
 --
 -- place a figure at the left bottom corner of a free rectangle space
 -- and try to merge free space with the neighbour space
 
+placeFigureL = oldstuff
+placeFigureR = oldstuff
+
+{-
 placeFigureL :: Figure f => f -> FreeSpace -> FreeSpace
 placeFigureL f (FS ls (r : rs))
     = FS ls (takeSpaceL f r ++ rs)
@@ -736,11 +876,11 @@ placeFigureR f (FS ls (r : rs))
 
 placeFigureR _ s
     = illegal "placeFigureR" s
-
+-- -}
 -- ----------------------------------------
 --
 -- navigation in the list of free space squares
-
+{-
 moveL :: FreeSpace -> Maybe FreeSpace
 moveL (FS [] _)
     = mzero
@@ -801,12 +941,16 @@ minFS (FS _ (r1 : _)) (FS _ (r2 : _))
       w2 = width  r2
 
 minFS _ _
-    = error "minFS with wrong args"
+    = error "minFS with wrong a
+
+-- -}
 
 -- ----------------------------------------
 --
 -- try to merge adjoin freespace rectangles
 
+fuseSpace = oldstuff
+{-
 fuseSpace :: FreeSpace -> FreeSpace
 fuseSpace s@(FS _ [])
     = s
@@ -840,7 +984,7 @@ fuseSpace (FS ls rs)
             SZ w1 h1 = wh r1
             y2       = ypos   r2
             w2       = width  r2
-
+-- -}
 -- ----------------------------------------
 --
 -- take space from a free rectangle
@@ -894,12 +1038,8 @@ largestPossibleSquareL (f1 : f2 : s)
     | h2 >  w1  = largestPossibleSquareL (ptrect 0 0 (w1 + w2) (h1 `min` h2) : s)
     | otherwise = w1
     where
-      SZ w1 h1 = wh f1
-      SZ w2 h2 = wh f2
-
-largestPossibleSquare :: [PosRect] -> Int
-largestPossibleSquare
-    = maximum . map largestPossibleSquareL . tails
+      (w1, h1) = wh f1
+      (w2, h2) = wh f2
 
 -- ----------------------------------------
 --
@@ -911,11 +1051,10 @@ showState n s
       [ "board        :"
       , showBoard s
       , "usable tiles : " ++ (show . map width . unusedTiles $ s)
-      , "size         : " ++ (show . width $ s)
+      , "size         : " ++ (show . size $ s)
       , "covered space: " ++ (show . coveredSpace $ s)
       , "free space   : " ++ (show . areaUnused $ s)
       , "spoiled space: " ++ (show . spoiledSpace $ s)
-      , "current free : " ++ (showFigure . currFreeSpace . freeSpace $ s)
       , "quality      : " ++ (show . quality n $ s)
       , "final state  : " ++ (show . finalState $ s)
       ]
@@ -931,12 +1070,12 @@ showBoard s
     = ("+" ++ replicate n '-' ++ "+\n" )
       ++
       (concat . map (("|" ++) .(++ "|\n")) . reverse . toStrings
-       . M.toList . insertFS rs . insertCS cs . insertFig "X" (sq n) $ M.empty
+       $ oldstuff -- . M.toList . insertFS rs . insertCS cs . insertFig "X" (sq n) $ M.empty
       )
       ++
       ("+" ++ replicate n '-' ++ "+\n" )
     where
-      n  = width s
+      n  = size s
       cs = usedTiles s
       rs = unFS . freeSpace $ s
 
@@ -1004,7 +1143,7 @@ showSearchState sst
 
 data SearchState
     = SearchState
-      { bestSolution  :: CoveredSpace
+      { bestSolution  :: [PosSquare]
       , solutionCnt   :: Int
       , coveredArea   :: Int
       , candidates    :: Candidates
@@ -1131,31 +1270,6 @@ run placeSq maxSteps sst0
 runL :: Int -> SearchState -> IO SearchState
 runL = run $ placeAnyOrHole1 placeAnyDescL
 
-{-
-stepsL :: Int -> SearchState -> IO SearchState
-stepsL n sst
-    | n == 0	= return sst
-    | otherwise = case step' sst of
-                    Nothing -> return sst
-                    Just (sst', solution) ->
-                        do maybe (return ()) writeSolution $ solution
-                           stepsL (n - 1) sst'
-
--- stepsL (n - 1) . step (placeAnyOrHole1 placeAnyDescL)
-
-stepsLR :: Int -> SearchState -> IO SearchState
-stepsLR n
-    | n <= 0    = id
-    | otherwise = steps (n - 1) . step placeAnyDescL
-    where
-      steps i
-          | i == 0    = id
-          | otherwise = steps (i - 1) . step placeAnyDescLR
-
-step :: StateFilter -> SearchState -> Maybe (SearchState, Maybe CoveredSpace)
-step placeSq sst
-    = undefined
--- -}
 
 -- {-
 stepsL :: Int -> SearchState -> SearchState
@@ -1233,45 +1347,6 @@ mkCand :: Int -> State -> Candidate
 mkCand n s = H.Entry (quality n s) s
 
 -- ----------------------------------------
-{-
-choices :: Width -> Squares -> [Squares]
-choices n _
-    | n < 0  = []
-    | n == 0 = [[]]
-choices _ [] = []
-
-choices n (sq : sqs)
-    | w <= n
-        = map (sq:) (choices (n - w) sqs) ++ cs
-    | otherwise
-        = cs
-    where
-      w = width sq
-      cs = choices n sqs
-
--- ----------------------------------------
-
-perms xs = [y : ps | (y,ys) <- selections xs, ps <- perms ys]
-
-selections []     = []
-selections (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- selections xs]
-
--- ----------------------------------------
-
--- {-
-
-sq1 = map sq . reverse $ [1..8]
-
--- -}
-
-
-inter x [] = [[x]]
-inter x yys@(y:ys) = [x:yys] ++ map (y:) (inter x ys)
-
-permute [] = [[]]
-permute (x:xs) = concatMap (inter x) (permute xs)
-
--- -}
 
 main :: IO ()
 main
@@ -1294,7 +1369,7 @@ readProblem
          sqz <- fmap read getLine
          return (sqz, sqs)
 
-writeSolution :: CoveredSpace -> IO ()
+writeSolution :: [PosSquare] -> IO ()
 writeSolution cs
     = do putStrLn . show . map (\ (FP (PT x y) (SQ w)) -> (x, y, w)) $ cs
          hFlush stdout
