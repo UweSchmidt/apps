@@ -39,10 +39,12 @@ import System.IO ( hFlush, stdout, stderr, hPutStrLn )
 class Invariant a where
     inv   :: a -> Maybe String
     check :: a -> a
+    check = id
+{-
     check x = case inv x of
                 Nothing -> x
                 Just e  -> error e
-
+-- -}
 infixr 3 .&&.
 
 (.&&.) :: Maybe a -> Maybe a -> Maybe a
@@ -224,22 +226,6 @@ pt :: Int -> Int -> Point
 pt !x !y = check . PT x $ y
 
 -- ----------------------------------------
-{-
-data Size = SZ Width Height
-             deriving (Eq, Ord, Show)
-
-instance Invariant Size where
-    inv (SZ w h) 
-        | w >= 0 && w >= 0 = ok
-        | otherwise        = bad
-                             [ "Size with w = ", show w
-                             , "and h =", show h, "not allowed"]
-
-
-sz :: Int -> Int -> Size
-sz !w !h = check . SZ w $ h
--- -}
--- ----------------------------------------
 
 data PosFig a = FP Point a
               deriving (Eq, Show)
@@ -259,6 +245,9 @@ instance Mirror a => Mirror (PosFig a) where
 
 type PosRect   = PosFig Rectangle
 type PosSquare = PosFig Square
+
+fg :: PosFig a -> a
+fg (FP _ f) = f
 
 ptrect :: Int -> Int -> Int -> Int -> PosRect
 ptrect !x !y !w !h
@@ -364,6 +353,194 @@ largestPossibleSquare (FS ps)
             = (y1 - y2) `min` (x2 - x1)
 
 -- ----------------------------------------
+--
+-- remove symmetric search paths
+-- assumption: the largest tile is placed in a corner,
+-- and this can be done in the 1. step
+
+step1States :: State -> [State]
+step1States
+    = map rmLarge . nextStates1
+    where
+      rmLarge s'
+          = s' { unusedTiles = dropWhile (> sq1) . unusedTiles $ s' }
+            where
+              sq1 = fg . head . usedTiles $ s'
+
+
+-- 2. step: place a tile on top of the 1. tile
+-- and mirror the board.
+-- ==> in the 3. step a tile <= tile 2 can be placed on top
+
+step2States :: State -> [State]
+step2States
+    = map mirror . nextStates1
+
+nextMirroredStates :: State -> [State]
+nextMirroredStates
+    = map mirror . nextStates
+
+step3States :: State -> [State]
+step3States s2
+    = filter smallerSq2 . nextStates1 $ s2
+      where
+        sq2 = fg . head . usedTiles $ s2
+        smallerSq2
+            = (<= sq2) . fg . head . usedTiles
+
+nextStates1 :: State -> [State]
+nextStates1 = nextStates' placeSquare1
+
+nextStates :: State -> [State]
+nextStates = nextStates' placeSquare
+
+nextStates' :: (Int -> State -> [State]) -> State -> [State]
+nextStates' placef s0
+    | null sqs
+        = mzero
+    | otherwise
+        = do n <- fmap size . nubSq $ sqs
+             placef n s0
+    where
+      sqs = unusedTiles s0
+
+placeSquare1 :: Int -> State -> [State]
+placeSquare1 = placeSquare' placeSq
+
+placeSquare :: Int -> State -> [State]
+placeSquare = placeSquare' placeSqAll
+
+placeSquare' :: (Int -> [Point] -> [(PosSquare, [Point])]) -> Int -> State -> [State]
+placeSquare' placef n s0
+    = do (tp, fs1) <- placef n (unFS . freeSpace $ s0)
+         return .
+           rmLargestSq .
+           insertSpoiled $
+           s0 { freeSpace    = fs fs1
+              , usedTiles    = tp : usedTiles s0
+              , unusedTiles  = rmSq (sq n) $ unusedTiles s0
+              , coveredSpace = n * n + coveredSpace s0
+              }
+
+insertSpoiled :: State -> State
+insertSpoiled s0
+    | null sqs
+        = s0 { spoiledSpace = n * n - coveredSpace s0 }
+    | otherwise
+        = placeSpoiled' s0
+    where
+      n    = size s0
+      sqs  = unusedTiles s0
+      smin = size . last $ sqs
+
+      placeSpoiled' s'
+          = s' { freeSpace    = fs fs1'
+               , spoiledRect  = spoiled ++ spoiledRect s'
+               , spoiledSpace = (sum . map area $ spoiled) + spoiledSpace s'
+               }
+                where
+                  fs' = unFS . freeSpace $ s'
+                  (spoiled, fs1') = placeSpaceInCorners smin fs'
+
+rmLargestSq :: State -> State
+rmLargestSq s0
+    = s0 { unusedTiles = rm (sq . largestFreeSquare . freeSpace $ s0) $ unusedTiles s0 }
+      where
+        rm x = dropWhile (> x)
+
+placeLargeSquare :: Int -> State -> [State]
+placeLargeSquare i s0
+    = do (spoiled, ps) <- placeSpoiled n i (unFS . freeSpace $ s0)
+         placeSquare i $
+           s0 { freeSpace = fs ps
+              , spoiledRect = spoiled ++ spoiledRect s0
+              , spoiledSpace = (sum . map area $ spoiled) + spoiledSpace s0
+              }
+    where
+      n = size s0
+
+nextLargeStates :: State -> [State]
+nextLargeStates
+    = nextStates `orElse` forcePlaceSmallest
+
+forcePlaceSmallest :: State -> [State]
+forcePlaceSmallest s0
+    = placeLargeSquare i s0
+    where
+      i = size . last . unusedTiles $ s0
+
+-- ----------------------------------------
+
+rmSq :: Square -> Squares -> Squares
+rmSq x
+    = rm id
+    where
+      rm res []
+          = res []
+      rm res xs@(x1 : xs1)
+          | x == x1
+              = res xs1
+          | x > x1
+              = res xs 
+          | otherwise
+              = rm (res . (x1:)) xs1
+
+nubSq :: [Square] -> [Square]
+nubSq (x1 : xs2@(x2 : _))
+    | x1 == x2
+        = nubSq xs2
+    | otherwise
+        = x1 : nubSq xs2
+nubSq xs
+    = xs
+
+-- ----------------------------------------
+
+placeSpoiled :: Int -> Int -> [Point] -> [([PosRect], [Point])]
+placeSpoiled sz n ps
+    = do cand <- part ps
+         addSpace sz n cand
+
+part :: [Point] -> [([Point], Point, [Point])]
+part (p0 : ps0)
+    = part' [mirror p0] ps0
+      where
+        part' ls ps1@(p1 : ps2)
+            = (ls, pt x y, ps1) : part' ls2 ps2
+              where
+                x   = ypos . head $ ls
+                y   = ypos p1
+                ls2 = mirror p1 : ls
+        part' _ls _ps
+            = []
+
+part _
+    = error "part called with empty list"
+
+addSpace :: Int -> Int -> ([Point], Point, [Point]) -> [([PosRect], [Point])]
+addSpace sz n (ls@(PT y' _ : _), PT x0 y0, ps@(PT x' _ : _))
+    | x0 + n > sz
+      ||
+      y0 + n > sz
+          = mzero	-- to less space to place tile of size n
+    | otherwise
+        = return (map mirror lfs ++ rfs, (reverse . map mirror $ ls') ++ ps')
+    where
+      (rfs, ps') = insertSpace (n - (x' - x0)) y0 ps
+      (lfs, ls') = insertSpace (n - (y' - y0)) x0 ls
+      insertSpace i h0 xs@(PT x y : xs1)
+          | i <= 0
+              = ([], xs)
+          | i <  w1
+              = ([ptrect x y1 i (h0 - y1)], pt (x + i) h0 : xs1)
+          | i == w1
+              = ([ptrect x y1 i (h0 - y1)], pt x1 (y1 + i) : xs2)
+          | i >  w1
+              = (ptrect x y1 w1 (h0 - y1) : fs', xs')
+          where
+            (PT x1 y1 : xs2) = xs1
+            w1 = x1 - x
+            (fs', xs') = insertSpace (i - w1) h0 xs1
 
 -- place a square on top of the used space
 
@@ -406,10 +583,12 @@ placeSqAll _ _
 placeSpaceLeftTop :: Int -> [Point] -> ([PosRect], [Point])
 placeSpaceLeftTop n (PT x1 y1 : PT x2 y2 : ps3)
     | h < n
-        = ([ptrect x1 y2 w h], pt x2 y1 : ps3)
+        = (ptrect x1 y2 w h : sp1', ps1')
     where
       w = x2 - x1
       h = y1 - y2
+      ps' = pt x2 y1 : ps3
+      (sp1', ps1') = placeSpaceLeftTop n ps'
 
 placeSpaceLeftTop _ ps
     = ([], ps)
@@ -441,11 +620,22 @@ data State
       , unusedTiles  :: Squares
       , coveredSpace :: Int
       , spoiledSpace :: Int
+      , spoiledRect  :: [PosRect]
       }
     deriving (Show)
 
 instance Size State where
     size = size . freeSpace
+
+instance Area State where
+    area   = sum . map area . usedTiles
+
+instance Mirror State where
+    mirror s
+        = s { freeSpace   =     mirror . freeSpace   $ s
+            , usedTiles   = map mirror . usedTiles   $ s
+            , spoiledRect = map mirror . spoiledRect $ s
+            }
 
 instance Invariant State where
     inv s
@@ -484,17 +674,15 @@ instance Invariant State where
             fitOnBoard f
                 = all (\ (x, y) -> x >= 0 && x < n && y >= 0 && y < n) $ coords f
 
-instance Area State where
-    area   = sum . map area . usedTiles
-
 initState :: Int -> Squares -> State
 initState n sqs
     = State
       { freeSpace    = initFreeSpace n
-      , usedTiles = []
-      , unusedTiles = reverse . L.sort $ sqs
+      , usedTiles    = []
+      , unusedTiles  = reverse . L.sort $ sqs
       , coveredSpace = 0
       , spoiledSpace = 0
+      , spoiledRect  = []
       }
 
 finalState :: State -> Bool
@@ -508,545 +696,35 @@ finalState s
 -- spoiled space (no longer usable space) is worse than not yet used space
 -- this handicap can be raised to perform a broader search
 
-quality :: Int -> State -> Int
-quality weight s
-    = 2 * weight * spoiledSpace s - coveredSpace s
+quality :: State -> Int
+quality s
+    = 10 * (bad1 + bad2) - (good1 + good2)
+    where
+      bad1  = 4 * spoiledSpace s                  -- spoiling tiles is 4 times worse than placing tiles
+      bad2  = n * (length . unFS . freeSpace $ s) -- less peaks (corners) gives better quality
+      good1 = 1 * coveredSpace s                  -- more covered gives better quality 
+                                                  -- largest placeable square as bonus added
+      good2 = 1 * let i = head . (++ [0]) . map size . take 1 . unusedTiles $ s in i * i
+      n  = size s
+
+areaAvailable :: State -> Int
+areaAvailable
+    = sum . map area . unusedTiles
 
 areaCovered :: State -> Int
 areaCovered
     = sum . map area . usedTiles
 
 areaUnused :: State -> Int
-areaUnused
-    = oldstuff -- sum . map area . unFS . freeSpace
-
-whCurrFreeSpace :: State -> (Int, Int)
-whCurrFreeSpace
-    = oldstuff -- wh . currFreeSpace . freeSpace
-
--- ----------------------------------------
---
--- state transtions
-
--- remove useless squares
--- this can result in a final state, if all squares are removed
-
-removeUselessTiles :: Width -> State -> State
-removeUselessTiles n s
-    | null usableTiles
-        = s { freeSpace    = oldstuff -- FS [] [ptrect 0 n n 0]
-            , unusedTiles  = []
-            , spoiledSpace = n * n - coveredSpace s
-            }
-    | otherwise
-        = s { unusedTiles = usableTiles }
-    where
-      usableTiles
-          = oldstuff -- dropWhile (\ f -> width f > (largestPossibleSquare . unFS $ freeSpace s))
-            $ unusedTiles s
-
--- insert spoiled space for
--- rectangles or parts of rectangles that can't be covered by tiles
--- because all tiles are too large
-
-removeSpoiledSpace :: State -> State
-removeSpoiledSpace s
-    | null sqs				-- no more tiles: final state
-        = s
-    | smallestSquareSize == 1		-- smallest tile can be placed anywhere
-        = s
-    | otherwise
-        = s { freeSpace    = oldstuff -- FS [] fs1
-            , spoiledSpace = spoiledSpace s + sps
-            }
-    where
-      fs0 = unFS . freeSpace $ s
-      r1  = head fs0
-      h1  = oldstuff -- height r1
-      sqs = unusedTiles s
-
-      smallestSquareSize = width . last $ sqs
-
-      (fs1, sps) = oldstuff -- removeSpoiled smallestSquareSize h1 fs0
-
-      removeSpoiled minWidth leftWall' rs0'@(r0 : rs0)
-          | h0 == 0       = cons		-- no space to remove
-          | h0 < minWidth = remove h0		-- rectangle can be removed, height too small
-          | w0 < minWidth
-            &&
-            minWall' > 0  = remove minWall'     -- rectangle can be filled up
-          | otherwise     = cons
-          where
-            x0 = xpos   r0
-            y0 = ypos   r0
-            w0 = width  r0
-            h0 = height r0
-
-            rightWall' = oldstuff -- rightWall (FS [] rs0')
-            minWall'   = (leftWall' `min` rightWall')
-            (rs', sp') = removeSpoiled minWidth (0 - rightWall') rs0
-            cons       = (r0  : rs', sp')
-            remove h'  = (r0' : rs', sp' + a0')
-                where
-                  a0'  = h' * w0
-                  r0'  = ptrect x0 (y0 + h') w0 (h0 - h')
-
-      removeSpoiled _ _ _
-          = ([], 0)
-
-mergeFreeSpace :: State -> State
-mergeFreeSpace s
-    = s { freeSpace = oldstuff -- FS [] . merge' . unFS . freeSpace $ s
-        }
-      where
-        merge' (x : xs@( _ : _)) = merge x xs
-        merge' xs                = xs
-
-        merge x []
-            = [x]
-        merge r1 (r2 : rs)
-            | h1 == h2  = merge (ptrect x1 y1 (w1 + w2) h1) rs
-            | otherwise =  r1 : merge r2 rs
-            where
-              PT x1 y1 = xy r1
-              (w1, h1) = wh r1
-              (w2, h2) = wh r2
-
-moveToMin :: State -> State
-moveToMin s
-    = s { freeSpace = moveToValley $ freeSpace s }
-
--- ----------------------------------------
-
-type StateFilter = Filter State State
-
-place :: Width -> StateFilter -> StateFilter
-place n f s
-    = do r <- f s
-         return . check . moveToMin . mergeFreeSpace . removeSpoiledSpace . removeUselessTiles n $ r
-
-placeSquare :: (Square -> FreeSpace -> FreeSpace) -> Square -> StateFilter
-placeSquare placeFigure q s
-    | wq <= w `min` h
-      &&
-      q `elem` usqs
-          = return $
-            s { freeSpace
-                  = placeFigure q fsp
-              , usedTiles
-                  = ptsq x y wq : usedTiles s
-              , coveredSpace
-                  = area q + coveredSpace s
-              , unusedTiles
-                  = removeSquare q (unusedTiles s)
-              }
-    | otherwise
-        = mzero
-    where
-      wq   = width q
-      usqs = unusedTiles s
-      fsp  = freeSpace s
-      f    = currFreeSpace fsp
-      PT x y = oldstuff -- xy f
-      (w, h) = oldstuff -- wh f
-
-placeSquareL :: Square -> StateFilter
-placeSquareL = placeSquare placeFigureL
-
-placeSquareR :: Square -> StateFilter
-placeSquareR = placeSquare placeFigureR
-
-placeSquareLR :: Square -> StateFilter
-placeSquareLR q s
-    | wq == w
-        = placeSquareL q s
-    | wq <  w
-        = placeSquareL q s
-          ++
-          placeSquareR q s
-    | otherwise
-        = []
-    where
-      wq   = width q
-      w    = oldstuff -- width . currFreeSpace . freeSpace $ s
-
-
-placeFitWidth :: StateFilter
-placeFitWidth s
-    = placeSquareL (sq w) s
-      where
-        (w, _)  = whCurrFreeSpace s
-
--- --------------------
-
-placeAny' :: (Square -> StateFilter) -> (Int -> [Int]) -> StateFilter
-placeAny' placeSquare' gen s
-    = do q <- qs
-         placeSquare' q s
-    where
-      (w, h) = whCurrFreeSpace $ s
-      qs     = filterAvailable s $
-               gen (w `min` h)
-
-placeAnyL :: (Int -> [Int]) -> StateFilter
-placeAnyL = placeAny' placeSquareL
-
-placeAnyLR :: (Int -> [Int]) -> StateFilter
-placeAnyLR = placeAny' placeSquareLR
-
-placeAnyAltN :: StateFilter
-placeAnyAltN s
-    = placeAnyL (genAltSeqN lw) s
-      where
-        lw = leftWall . freeSpace $ s
-
-placeAnyAlt2 :: StateFilter
-placeAnyAlt2 = placeAnyL genAltSeq2
-
-placeAnyDescL :: StateFilter
-placeAnyDescL = placeAnyL genDescSeq
-
-placeAnyDescLR :: StateFilter
-placeAnyDescLR = placeAnyLR genDescSeq
-
-placeHole :: StateFilter
-placeHole s
-    | h > 0
-        = return $
-          s { freeSpace
-                = placeFigureL rt fsq
-            , spoiledSpace
-                = area rt + spoiledSpace s
-            }
-    | otherwise
-        = mzero
-    where
-      fsq    = freeSpace s
-      h      = uncurry min . (leftWall &&& rightWall) $ fsq
-      (w, _) = whCurrFreeSpace s
-      rt     = rect w h
-
-placeHole1 :: StateFilter
-placeHole1 s
-    | h > 0
-        = return $
-          s { freeSpace
-                = placeFigureL rt fsq
-            , spoiledSpace
-                = area rt + spoiledSpace s
-            }
-    | otherwise
-        = mzero
-    where
-      fsq    = freeSpace s
-      h      = uncurry min . (leftWall &&& rightWall) $ fsq
-      rt     = rect 1 1
-
-placeAnyAltNOrHole :: StateFilter
-placeAnyAltNOrHole
-    = placeAnyAltN `orElse` placeHole
-
-
-placeAnyOrHole1 :: StateFilter -> StateFilter
-placeAnyOrHole1 f s
-    | null ss			-- no chance: place spoiled place
-        = placeHole s
-    | otherwise
-        = ss -- ++ placeHole1 s	-- there are chances to place a square,
-                                -- but inserting a 1*1 hole could also be a choice
-      where
-        ss = f s		-- try to place squares
-
--- ----------------------------------------
---
--- different generator for selecting square candidates
-
-genDescSeq :: Int -> [Int]
-genDescSeq n
-    = reverse [1 .. n]
-
-genAltSeqN :: Int -> Int -> [Int]
-genAltSeqN i n
-    = take n . filter (\ x -> 0 < x && x <= n) . map (+ i) $ altSeq
-
-genAltSeq2 :: Int -> [Int]
-genAltSeq2 n
-    = genAltSeqN n0 n
-      where
-        n0 = (n + 1) `div` 2 
-
-altSeq :: [Int]
-altSeq = gen 0
-    where
-      gen i = i : gen i1
-          where
-            i1 | i > 0     = (-i)
-               | otherwise = (1 - i)
-
-filterAvailable :: State -> [Int] -> [Square]
-filterAvailable s
-    = filter (`elem` unusedTiles s) . map sq
-
--- ----------------------------------------
-
-removeSquare :: Square -> Squares -> Squares
-removeSquare _ []
-    = []
-removeSquare x ss@(s : ss1)
-    | x <  s
-        = s : removeSquare x ss1
-    | x == s
-        = ss1
-    | otherwise
-        = ss
-
--- ----------------------------------------
-oldstuff = undefined
-
-currFreeSpace = oldstuff
-leftWall = oldstuff
-rightWall = oldstuff
-moveToValley = oldstuff
-
-{-
--- current rectangle in free space list
-
-currFreeSpace :: FreeSpace -> PosRect
-currFreeSpace
-    = head . rr
-
--- heights of borders of a free space rectangle
--- values may be negative
-
-leftWall :: FreeSpace -> Int
-leftWall (FS [] (m : _))
-    = height m
-leftWall (FS (l : _) (m : _))
-    = height m - height l
-leftWall s
-    = illegal "leftWall" s
-
-rightWall :: FreeSpace -> Int
-rightWall (FS _ (m : []))
-    = height m
-rightWall (FS _ (m : r : _))
-    = height m - height r
-rightWall s
-    = illegal "rightWall" s
-
--- a free space with real walls around
--- this is a candidate to be filled
-
-inValley :: FreeSpace -> Bool
-inValley s
-    = leftWall s `min` rightWall s > 0
-      ||
-      nullFreeSpace s
--- -}
--- ----------------------------------------
---
--- place a figure at the left bottom corner of a free rectangle space
--- and try to merge free space with the neighbour space
-
-placeFigureL = oldstuff
-placeFigureR = oldstuff
-
-{-
-placeFigureL :: Figure f => f -> FreeSpace -> FreeSpace
-placeFigureL f (FS ls (r : rs))
-    = FS ls (takeSpaceL f r ++ rs)
-    -- = fuseSpace $ FS ls (takeSpaceL f r ++ rs)
-placeFigureL _ s
-    = illegal "placeFigureL" s
-
-
--- place a figure at the right bottom corner of a free rectangle space
--- and try to merge free space with the neighbour space
-
-placeFigureR :: Figure f => f -> FreeSpace -> FreeSpace
-placeFigureR f (FS ls (r : rs))
-    = FS ls (takeSpaceR f r ++ rs)
-
-{- fusion comes later
-    = case takeSpaceR f r of
-        [r1', r2'] -> fuseSpace $ FS (r1' : ls) (r2' : rs)
-        [r1']      -> fuseSpace $ FS        ls  (r1' : rs)
-        e          -> illegal "placeFigureR" (show e)
--}
-
-placeFigureR _ s
-    = illegal "placeFigureR" s
--- -}
--- ----------------------------------------
---
--- navigation in the list of free space squares
-{-
-moveL :: FreeSpace -> Maybe FreeSpace
-moveL (FS [] _)
-    = mzero
-moveL (FS (l1: ls) rs)
-    = return $ FS ls (l1 : rs)
-
-moveR :: FreeSpace -> Maybe FreeSpace
-moveR (FS _ ( _ : []))
-    = mzero
-moveR (FS ls (r : rs))
-    = return $ FS (r : ls) rs
-moveR s
-    = illegal "moveR" s
-
--- search a valley
-
-moveToValley' :: FreeSpace -> FreeSpace
-moveToValley' s
-    = fromMaybe (illegal "moveToValley" s) $
-      rightValley s `mplus` (moveL >=> leftValley) s
-    where
-      rightValley s'
-          | inValley s' = return s'
-          | otherwise    = moveR >=> rightValley $ s'
-
-      leftValley s'
-          | inValley s' = return s'
-          | otherwise    = moveL >=> rightValley $ s'
-
-moveToValley :: FreeSpace -> FreeSpace
-moveToValley
-    = minimumBy minFS . buildZippers . unFS
-
-buildZippers :: [PosRect] -> [FreeSpace]
-buildZippers
-    = build []
-    where
-      build ls rs@(r1 : rs1)
-          = FS ls rs : rest
-          where
-            rest
-                | null rs1  = []
-                | otherwise = build (r1 : ls) rs1
-      build _ _
-          = error "buildZippers with wrong args"
-
-minFS :: FreeSpace -> FreeSpace -> Ordering
-minFS (FS _ (r1 : _)) (FS _ (r2 : _))
-    | h1 >  h2  = LT
-    | h1 <  h2  = GT
-    | w1 <  w2  = LT
-    | w1 >  w2  = GT
-    | otherwise = EQ
-    where
-      h1 = height r1
-      w1 = width  r1
-      h2 = height r2
-      w2 = width  r2
-
-minFS _ _
-    = error "minFS with wrong a
-
--- -}
-
--- ----------------------------------------
---
--- try to merge adjoin freespace rectangles
-
-fuseSpace = oldstuff
-{-
-fuseSpace :: FreeSpace -> FreeSpace
-fuseSpace s@(FS _ [])
-    = s
-fuseSpace (FS ls rs)
-    = fuseLeft ls . fuseRight $ rs
-    where
-      fuseRight (r1 : r2 : rs')
-          = fuseFreeSpace r1 r2 ++ rs'
-
-      fuseRight rs'
-          = rs'
-
-      fuseLeft ls' rs'
-          | null ls'
-            ||
-            null rs'
-                = FS ls' rs'
-          | otherwise
-              = FS ls1' (fuseFreeSpace l1' r1' ++ rs1')
-                where
-                  (l1' : ls1') = ls'
-                  (r1' : rs1') = rs'
-
-      fuseFreeSpace r1 r2
-          | y1 == y2
-              = [ptrect x1 y1 (w1 + w2) h1]
-          | otherwise
-              = [r1, r2]
-          where
-            PT x1 y1 = xy r1
-            SZ w1 h1 = wh r1
-            y2       = ypos   r2
-            w2       = width  r2
--- -}
--- ----------------------------------------
---
--- take space from a free rectangle
--- and split the remaining space into 2 rectangles
--- if necessary
-       
-takeSpaceL :: Figure f => f -> PosRect -> [PosRect]
-takeSpaceL f r
-    = ptrect' x (y + hf) wf (h - hf)
-      ++
-      ptrect' (x + wf) y (w - wf) h
-      where
-        wf = width  f
-        hf = height f
-        x  = xpos   r
-        y  = ypos   r
-        w  = width  r
-        h  = height r
-
-takeSpaceR :: Figure f => f -> PosRect -> [PosRect]
-takeSpaceR f r
-    = ptrect' x y (w - wf) h
-      ++
-      ptrect' (x + (w - wf)) (y + hf) wf (h - hf)
-      where
-        wf = width  f
-        hf = height f
-        x  = xpos   r
-        y  = ypos   r
-        w  = width  r
-        h  = height r
-
-ptrect' :: Pos -> Pos -> Width -> Height -> [PosRect]
-ptrect' x' y' w' h'
-    | w' == 0   = []
-    | otherwise = [ptrect x' y' w' h']
-
--- ----------------------------------------
---
--- largest square placable at left side of a free space list
-
-largestPossibleSquareL :: [PosRect] -> Int
-largestPossibleSquareL []
-    = 0
-
-largestPossibleSquareL (f : [])
-    = width f `min` height f
-
-largestPossibleSquareL (f1 : f2 : s)
-    | w1 >= h1  = h1
-    | h2 >  w1  = largestPossibleSquareL (ptrect 0 0 (w1 + w2) (h1 `min` h2) : s)
-    | otherwise = w1
-    where
-      (w1, h1) = wh f1
-      (w2, h2) = wh f2
+areaUnused s
+    = size s - coveredSpace s - spoiledSpace s
 
 -- ----------------------------------------
 --
 -- show function for a state and board
 
-showState :: Int -> State -> String
-showState n s
+showState :: State -> String
+showState s
     = unlines $
       [ "board        :"
       , showBoard s
@@ -1055,8 +733,10 @@ showState n s
       , "covered space: " ++ (show . coveredSpace $ s)
       , "free space   : " ++ (show . areaUnused $ s)
       , "spoiled space: " ++ (show . spoiledSpace $ s)
-      , "quality      : " ++ (show . quality n $ s)
+      , "spoiled rect.: " ++ (unwords . map showFigure . spoiledRect $ s)
+      , "quality      : " ++ (show . quality $ s)
       , "final state  : " ++ (show . finalState $ s)
+      , ""
       ]
 
 showFigure :: Figure f => f -> String
@@ -1070,14 +750,14 @@ showBoard s
     = ("+" ++ replicate n '-' ++ "+\n" )
       ++
       (concat . map (("|" ++) .(++ "|\n")) . reverse . toStrings
-       $ oldstuff -- . M.toList . insertFS rs . insertCS cs . insertFig "X" (sq n) $ M.empty
+       $ M.toList . insertSS rs . insertCS cs . insertFig (if null . unusedTiles $ s then "X" else ".") (sq n) $ M.empty
       )
       ++
       ("+" ++ replicate n '-' ++ "+\n" )
     where
       n  = size s
       cs = usedTiles s
-      rs = unFS . freeSpace $ s
+      rs = spoiledRect $ s
 
       insertCS cs' b'
           = foldl ins b' cs'
@@ -1085,10 +765,10 @@ showBoard s
               ins b'' f
                   = insertFig (reverse . show . width $ f) f b''
               
-      insertFS rs' b'
+      insertSS rs' b'
           = foldl ins b' rs'
             where
-              ins = flip (insertFig ".")
+              ins = flip (insertFig "X")
 
       toStrings []
           = []
@@ -1108,7 +788,7 @@ insertFig s f b
 
 printST :: SearchState -> IO ()
 printST sst
-    = do mapM_ (putStrLn . showState (squareSize sst)) . toList . candidates $ sst
+    = do mapM_ (putStrLn . showState) . toList . candidates $ sst
     where
       toList q
           = case H.viewMin q of
@@ -1118,7 +798,7 @@ printST sst
 showSearchState :: SearchState -> String
 showSearchState sst
     = unlines $
-      (map (showState $ squareSize sst) . reverse. take n . toList . candidates $ sst)
+      (map showState . reverse. take n . toList . candidates $ sst)
       ++
       [ "search step  : " ++ (show . stepCnt $ sst)
       , "# candidates : " ++ show qs
@@ -1176,7 +856,7 @@ initSearchState n sqs
       { bestSolution  = []
       , solutionCnt   = 0
       , coveredArea   = 0
-      , candidates    = H.singleton . mkCand n $ initState n sqs
+      , candidates    = H.singleton . mkCand $ initState n sqs
       , queueCapacity = 1000000
       , squareSize    = n
       , stepCnt       = 0
@@ -1190,30 +870,33 @@ spoiledArea s
 
 -- ----------------------------------------
 
-run :: StateFilter -> Int -> SearchState -> IO SearchState
-run placeSq maxSteps sst0
-   = do sst1 <- go sst0
+type StateFilter = Filter State State
+
+run :: Int -> [StateFilter] -> SearchState -> IO SearchState
+run maxSteps places0 sst0
+   = do sst1 <- go places0 sst0
         printSearchState sst1
         return sst1
     where
-      size
-          = squareSize sst0
-
-      nextCandidates
-          = place size placeSq
-
-      go sst
+      go :: [StateFilter] -> SearchState -> IO SearchState
+      go (place : places) sst
           | steps >= maxSteps
               = return sst
           | otherwise
               = maybe
                 (return sst)
-                (uncurry nextStates >=> printS >=> go) nextCand
+                ({- printS0 >=> -} uncurry nextStates' >=> printS >=> go places) nextCand
           where
-            steps    = stepCnt sst
+            steps
+                = stepCnt sst
+
+            printS0 x
+                = do hPutStrLn stderr "expanding state"
+                     hPutStrLn stderr . show . fst $ x
+                     return x
 
             printS sst'
-                | steps' `mod` 1000 == 0
+                | steps' `mod` 10000 == 0
                     = do printSearchState sst'
                          return sst'
                 | otherwise
@@ -1223,8 +906,8 @@ run placeSq maxSteps sst0
 
             nextCand = H.viewMin . candidates $ sst
 
-            nextStates best rest
-                = foldM insertCandidate sst' $ nextCandidates $ H.payload best
+            nextStates' best rest
+                = foldM insertCandidate sst' $ place $ H.payload best
                   where
                     sst' = sst { candidates = rest
                                , stepCnt = stepCnt sst + 1
@@ -1264,87 +947,18 @@ run placeSq maxSteps sst0
                     = return st
                 | otherwise 				-- not final && not tooBad
                     = return $
-                      st { candidates = H.insert (mkCand size c) (candidates st)
+                      st { candidates = H.insert (mkCand c) (candidates st)
                          }
 
 runL :: Int -> SearchState -> IO SearchState
-runL = run $ placeAnyOrHole1 placeAnyDescL
+runL mx = run mx $ step1States : step2States : step3States : repeat nextLargeStates
 
-
--- {-
-stepsL :: Int -> SearchState -> SearchState
-stepsL n
-    | n <= 0	= id
-    | otherwise = stepsL (n - 1) . step (placeAnyOrHole1 placeAnyDescL)
-
-stepsLR :: Int -> SearchState -> SearchState
-stepsLR n
-    | n <= 0    = id
-    | otherwise = steps (n - 1) . step placeAnyDescL
-    where
-      steps i
-          | i == 0    = id
-          | otherwise = steps (i - 1) . step placeAnyDescLR
-
-step :: StateFilter -> SearchState -> SearchState
-step placeSq sst
-    = case H.viewMin . candidates $ sst of
-        Nothing -> sst
-        Just (e, qu) -> let sst' = sst 
-                                   { candidates = qu
-                                   , stepCnt = stepCnt sst + 1
-                                   }
-                        in
-                          check $
-                          (foldl (flip nextCand) sst' .  nextCandidates . H.payload $ e)
-      where
-        nextCandidates
-            = place (squareSize sst) placeSq
-
-        nextCand c st
-            | tooBad						-- too much spoiled space, cut off search tree
-                = st
-            | otherwise
-                = addCandidate c . checkBest c $ st
-            where
-              tooBad
-                  = sp >= sa
-                    ||
-                    n * n - (coveredSpace c + (sum . map area . unusedTiles $ c)) >= sa
-                  where
-                    sp = spoiledSpace c
-                    sa = spoiledArea st
-                    n  = squareSize  st
-
-        checkBest c st
-            | moreCovered
-                = st
-                  { bestSolution = usedTiles    c
-                  , solutionCnt  = solutionCnt  st + 1
-                  , coveredArea  = coveredSpace c
-                  }
-            | otherwise
-                = st
-            where
-              moreCovered
-                  = coveredSpace c > coveredArea st
-
-        addCandidate c st
-            | finalState c				-- candidate is thrown away
-                = st
-            | otherwise 				-- not final && not tooBad
-                = st                                  -- insert candiadate into queue
-                  { candidates = H.insert (mkCand n c) (candidates st)
-                  }
-            where
-              n = squareSize st
--- -}
 
 nullCands :: Candidates -> Bool
 nullCands = H.null
 
-mkCand :: Int -> State -> Candidate
-mkCand n s = H.Entry (quality n s) s
+mkCand :: State -> Candidate
+mkCand s = H.Entry (quality s) s
 
 -- ----------------------------------------
 
@@ -1359,9 +973,9 @@ main
 
 runProblem :: Int -> Int -> Squares -> IO ()
 runProblem steps sqz sqs
-    = runL steps s0 >> return ()
+    = runL steps s >> return ()
     where
-      s0 = initSearchState sqz sqs
+      s = initSearchState sqz sqs
 
 readProblem :: IO (Int, Squares)
 readProblem
@@ -1378,5 +992,42 @@ printSearchState :: SearchState -> IO ()
 printSearchState s
     = do hPutStrLn stderr $ showSearchState s
          hFlush stderr
+
+-- ----------------------------------------
+{-
+s00 = initState 10 (map sq [1,2,3,7,8,9])
+
+-- error inconsistent FS when calling nextsteps
+
+ss1 = State
+      { freeSpace = FS {unFS = [PT 9 20,PT 10 14,PT 11 13,PT 20 0]}
+      , usedTiles = [FP (PT 9 13) (SQ 1),FP (PT 9 11) (SQ 2),FP (PT 0 11) (SQ 9),FP (PT 0 0) (SQ 11)]
+      , unusedTiles = [SQ 8,SQ 7,SQ 6,SQ 5,SQ 4,SQ 3]
+      , coveredSpace = 207
+      , spoiledSpace = 0
+      , spoiledRect = []
+      }
+
+ss2 = State
+      { freeSpace = FS {unFS = [PT 12 20,PT 13 16,PT 14 10,PT 20 9]}
+      , usedTiles = [FP (PT 8 16) (SQ 4)
+                    ,FP (PT 13 9) (SQ 1)
+                    ,FP (PT 8 11) (SQ 5)
+                    ,FP (PT 11 9) (SQ 2)
+                    ,FP (PT 0 11) (SQ 8)
+                    ,FP (PT 11 0) (SQ 9)
+                    ,FP (PT 0 0) (SQ 11)
+                    ]
+      , unusedTiles = [SQ 7,SQ 6,SQ 3]
+      , coveredSpace = 312
+      , spoiledSpace = 8
+      , spoiledRect = [FP (PT 0 19) (RT 8 1)]
+      }
+
+testAddSpace = addSpace 20 3 $ ([PT 10 14,PT 16 13,PT 20 12],PT 14 9,[PT 20 9])
+
+-- -}
+
+run50 = runProblem 10000 50 (map sq [1..49])
 
 -- ----------------------------------------
