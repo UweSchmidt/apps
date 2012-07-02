@@ -118,6 +118,15 @@ p14 = unlines
       , "  x1, x2 = f3(1,2,3);"
       , "end"
       ]
+p15 = unlines
+      [ "do"
+      , "  function Account:withdraw(v) "
+      , "      self.balance = self.balance - v"
+      , "  end"
+      , "a:withdraw(100.00)"
+      , "end"
+      ]
+p16 = "function f(x) return g(x-1) end"
 
 cc :: String -> Either String (Code, CErrs)
 cc inp
