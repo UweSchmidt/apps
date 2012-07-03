@@ -8,6 +8,7 @@ import Control.Monad	( mzero
                         , (>=>)
                         , liftM
                         , foldM
+                        , when
                         )
 import Control.Arrow    ( (&&&)
                         , (***)
@@ -392,7 +393,7 @@ nextStates1 :: State -> [State]
 nextStates1 = nextStates' placeSquare1
 
 nextStates :: State -> [State]
-nextStates = nextStates' placeSquare
+nextStates = nextStates' placeSquareFst
 
 nextStates' :: (Int -> State -> [State]) -> State -> [State]
 nextStates' placef s0
@@ -406,6 +407,9 @@ nextStates' placef s0
 
 placeSquare1 :: Int -> State -> [State]
 placeSquare1 = placeSquare' placeSq
+
+placeSquareFst :: Int -> State -> [State]
+placeSquareFst = placeSquare' placeSqFst
 
 placeSquare :: Int -> State -> [State]
 placeSquare = placeSquare' placeSqAll
@@ -577,6 +581,9 @@ placeSqAll n ps1@(p1 : ps2@(_ : _))
 placeSqAll _ _
     = mzero
 
+placeSqFst :: Int -> [Point] -> [(PosSquare, [Point])]
+placeSqFst n
+    = take 1 . placeSqAll n 
 
 -- place spoiled space on left side top, if height is smaller than smallest square
 
@@ -872,10 +879,10 @@ spoiledArea s
 
 type StateFilter = Filter State State
 
-run :: Int -> [StateFilter] -> SearchState -> IO SearchState
-run maxSteps places0 sst0
+run :: Bool -> Int -> [StateFilter] -> SearchState -> IO SearchState
+run withTrace maxSteps places0 sst0
    = do sst1 <- go places0 sst0
-        printSearchState sst1
+        when withTrace $ printSearchState sst1
         return sst1
     where
       go :: [StateFilter] -> SearchState -> IO SearchState
@@ -891,12 +898,15 @@ run maxSteps places0 sst0
                 = stepCnt sst
 
             printS0 x
-                = do hPutStrLn stderr "expanding state"
-                     hPutStrLn stderr . show . fst $ x
+                = do when withTrace $
+                          do hPutStrLn stderr "expanding state"
+                             hPutStrLn stderr . show . fst $ x
                      return x
 
             printS sst'
-                | steps' `mod` 10000 == 0
+                | withTrace
+                  &&
+                  steps' `mod` 10000 == 0
                     = do printSearchState sst'
                          return sst'
                 | otherwise
@@ -950,8 +960,8 @@ run maxSteps places0 sst0
                       st { candidates = H.insert (mkCand c) (candidates st)
                          }
 
-runL :: Int -> SearchState -> IO SearchState
-runL mx = run mx $ step1States : step2States : step3States : repeat nextLargeStates
+runL :: Bool -> Int -> SearchState -> IO SearchState
+runL withTrace mx = run withTrace mx $ step1States : step2States : step3States : repeat nextLargeStates
 
 
 nullCands :: Candidates -> Bool
@@ -965,15 +975,15 @@ mkCand s = H.Entry (quality s) s
 main :: IO ()
 main
     = do (z, sqs) <- readProblem
-         runProblem steps z sqs
+         runProblem False steps z sqs
          return ()
     where
       steps :: Int
       steps = 2 * 10^(6::Int)
 
-runProblem :: Int -> Int -> Squares -> IO ()
-runProblem steps sqz sqs
-    = runL steps s >> return ()
+runProblem :: Bool -> Int -> Int -> Squares -> IO ()
+runProblem withTrace steps sqz sqs
+    = runL withTrace steps s >> return ()
     where
       s = initSearchState sqz sqs
 
@@ -1028,6 +1038,6 @@ testAddSpace = addSpace 20 3 $ ([PT 10 14,PT 16 13,PT 20 12],PT 14 9,[PT 20 9])
 
 -- -}
 
-run50 = runProblem 10000 50 (map sq [1..49])
+run50 = runProblem True 10000 50 (map sq [1..49])
 
 -- ----------------------------------------
