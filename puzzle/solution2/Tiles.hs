@@ -17,6 +17,7 @@ import Control.Arrow    ( (&&&)
 
 import Data.List        ( tails
                         , minimumBy
+                        , sort
                         )
 
 import Data.Maybe	( fromMaybe
@@ -28,6 +29,7 @@ import qualified Data.List      as L
 import qualified Data.Heap      as H
 
 import System.IO ( hFlush, stdout, stderr, hPutStrLn )
+import System.Environment (getArgs)
 
 -- ----------------------------------------
 
@@ -176,7 +178,7 @@ type Pos     = Int
 
 -- ----------------------------------------
 
-data Rectangle = RT Int Int
+data Rectangle = RT {-# UNPACK #-} ! Int {-# UNPACK #-} ! Int
                  deriving (Eq, Ord, Show)
 
 instance Figure Rectangle where
@@ -206,7 +208,7 @@ type Rectangles = [Rectangle]
 
 -- ----------------------------------------
 
-data Point = PT Pos Pos
+data Point = PT {-# UNPACK #-} ! Pos {-# UNPACK #-} ! Pos
              deriving (Eq, Ord, Show)
 
 instance Invariant Point where
@@ -228,7 +230,7 @@ pt !x !y = check . PT x $ y
 
 -- ----------------------------------------
 
-data PosFig a = FP Point a
+data PosFig a = FP{-# UNPACK #-} ! Point ! a
               deriving (Eq, Show)
 
 instance Figure a => Figure (PosFig a) where
@@ -622,12 +624,12 @@ placeSpaceInCorners n ps
 
 data State
     = State
-      { freeSpace    :: FreeSpace
-      , usedTiles    :: [PosSquare]
-      , unusedTiles  :: Squares
-      , coveredSpace :: Int
-      , spoiledSpace :: Int
-      , spoiledRect  :: [PosRect]
+      { freeSpace    :: ! FreeSpace
+      , usedTiles    :: ! [PosSquare]
+      , unusedTiles  :: ! Squares
+      , coveredSpace :: {-# UNPACK #-} ! Int
+      , spoiledSpace :: {-# UNPACK #-} ! Int
+      , spoiledRect  :: ! [PosRect]
       }
     deriving (Show)
 
@@ -831,12 +833,11 @@ showSearchState sst
 data SearchState
     = SearchState
       { bestSolution  :: [PosSquare]
-      , solutionCnt   :: Int
-      , coveredArea   :: Int
+      , solutionCnt   :: {-# UNPACK #-} ! Int
+      , coveredArea   :: {-# UNPACK #-} ! Int
       , candidates    :: Candidates
-      , queueCapacity :: Int
-      , squareSize    :: Int
-      , stepCnt       :: Int
+      , squareSize    :: {-# UNPACK #-} ! Int
+      , stepCnt       :: {-# UNPACK #-} ! Int
       }
     deriving (Show)
 
@@ -847,9 +848,6 @@ instance Invariant SearchState where
           .&&.
           invCond (all (not . finalState . H.payload) . H.toUnsortedList . candidates $ s)
                   [ "SearchState: candidate queue contains final states" ]
-          .&&.
-          invCond (H.size q <= queueCapacity s)
-                  [ "searchState: candidate queue exceeds maximum capacity" ]
         where
           q       = candidates s
           covered = sum . map area . bestSolution $ s
@@ -864,7 +862,6 @@ initSearchState n sqs
       , solutionCnt   = 0
       , coveredArea   = 0
       , candidates    = H.singleton . mkCand $ initState n sqs
-      , queueCapacity = 1000000
       , squareSize    = n
       , stepCnt       = 0
       }
@@ -879,16 +876,24 @@ spoiledArea s
 
 type StateFilter = Filter State State
 
-run :: Bool -> Int -> [StateFilter] -> SearchState -> IO SearchState
-run withTrace maxSteps places0 sst0
+run :: Bool -> Int -> Int -> [StateFilter] -> SearchState -> IO SearchState
+run withTrace maxSteps capacity places0 sst0
    = do sst1 <- go places0 sst0
         when withTrace $ printSearchState sst1
         return sst1
     where
+      minCapacity = capacity `div` 2
+
       go :: [StateFilter] -> SearchState -> IO SearchState
-      go (place : places) sst
-          | steps >= maxSteps
+      go places0@(place : places) sst
+          | steps >= maxSteps			-- stop processing
               = return sst
+
+          | queueSize > capacity		-- throw away the bad states
+              = do when withTrace $
+                        hPutStrLn stderr ("reduce queue to length " ++ show minCapacity)
+                   go places0 $ sst { candidates = H.take minCapacity $ candidates sst }
+
           | otherwise
               = maybe
                 (return sst)
@@ -896,6 +901,9 @@ run withTrace maxSteps places0 sst0
           where
             steps
                 = stepCnt sst
+
+            queueSize
+                = H.size . candidates $ sst
 
             printS0 x
                 = do when withTrace $
@@ -960,9 +968,10 @@ run withTrace maxSteps places0 sst0
                       st { candidates = H.insert (mkCand c) (candidates st)
                          }
 
-runL :: Bool -> Int -> SearchState -> IO SearchState
-runL withTrace mx = run withTrace mx $ step1States : step2States : step3States : repeat nextLargeStates
-
+runL :: Bool -> Int -> Int -> SearchState -> IO SearchState
+runL withTrace mx qsize
+    = run withTrace mx qsize $
+      step1States : step2States : step3States : repeat nextLargeStates
 
 nullCands :: Candidates -> Bool
 nullCands = H.null
@@ -974,16 +983,26 @@ mkCand s = H.Entry (quality s) s
 
 main :: IO ()
 main
-    = do (z, sqs) <- readProblem
-         runProblem False steps z sqs
+    = do (steps, qsize,trc) <- options
+         (z, sqs) <- readProblem
+         runProblem trc steps qsize z sqs
          return ()
-    where
-      steps :: Int
-      steps = 2 * 10^(6::Int)
 
-runProblem :: Bool -> Int -> Int -> Squares -> IO ()
-runProblem withTrace steps sqz sqs
-    = runL withTrace steps s >> return ()
+options :: IO (Int, Int, Bool)
+options
+    = do args <- getArgs
+         return $
+           case args of
+             [] -> (maxBound, maxBound, False)
+             (steps : []) -> (readNum steps, maxBound, False)
+             (steps : (qsize : [])) -> (readNum steps, readNum qsize, False)
+             (steps : (qsize : (trc : []))) -> (readNum steps, readNum qsize, read trc)
+    where
+      readNum = (\ x -> if x <= 0 then maxBound else x) . read
+
+runProblem :: Bool -> Int -> Int -> Int -> Squares -> IO ()
+runProblem withTrace steps qsize sqz sqs
+    = runL withTrace steps qsize s >> return ()
     where
       s = initSearchState sqz sqs
 
@@ -1038,6 +1057,73 @@ testAddSpace = addSpace 20 3 $ ([PT 10 14,PT 16 13,PT 20 12],PT 14 9,[PT 20 9])
 
 -- -}
 
-run50 = runProblem True 10000 50 (map sq [1..49])
+run50 :: IO ()
+run50 = runProblem True 10000 10000 50 (map sq [1..49])
+
+-- ----------------------------------------
+
+
+sisso13n :: (String, State)
+sisso13n
+    = ("Imperfect Square of size 23, tiles 11,5,3,2,1 used twice"
+      , check $ State
+                  { freeSpace    = fs [pt 23 23]
+                  , usedTiles    = [ ptsq  0  0 11
+                                   , ptsq 11  0  7
+                                   , ptsq 18  0  5
+                                   , ptsq 18  5  2
+                                   , ptsq 20  5  3
+                                   , ptsq 11  7  3
+                                   , ptsq 14  7  5
+                                   , ptsq 19  7  1
+                                   , ptsq 19  8  4
+                                   , ptsq 11 10  1
+                                   , ptsq 12 10  2
+                                   , ptsq  0 11 12
+                                   , ptsq 12 12 11
+                                   ]
+                  , unusedTiles  = []
+                  , coveredSpace = 23 * 23
+                  , spoiledSpace = 0
+                  , spoiledRect  = []
+                  }
+      )
+
+sisso13n1 :: (String, State)
+sisso13n1
+    = ("Imperfect Square of size 23, but with a hole of 1 at (11,10)"
+      , check $ State
+                  { freeSpace    = fs [pt 23 23]
+                  , usedTiles    = [ ptsq  0  0 11
+                                   , ptsq 11  0  7
+                                   , ptsq 18  0  5
+                                   , ptsq 18  5  2
+                                   , ptsq 20  5  3
+                                   , ptsq 11  7  3
+                                   , ptsq 14  7  5
+                                   , ptsq 19  7  1
+                                   , ptsq 19  8  4
+                                   , ptsq 12 10  2
+                                   , ptsq  0 11 12
+                                   , ptsq 12 12 11
+                                   ]
+                  , unusedTiles  = []
+                  , coveredSpace = 23 * 23
+                  , spoiledSpace = 1
+                  , spoiledRect  = [ptrect 11 10 1 1]
+                  }
+      )
+
+printProblem :: String -> State -> IO ()
+printProblem cmt s
+    = putStrLn . unlines . map ($ s) $
+      [ ("Squares : " ++) . show . reverse . sort . map (size . fg) . usedTiles
+      , ("Size    : " ++) . show . size
+      , ("Area    : " ++) . show . (\ x -> x * x) . size
+      , const ""
+      , ("Solution: " ++) . show . sort . map (\ (FP (PT x y) (SQ w)) -> (x, y, w)) . usedTiles
+      , ("Covered : " ++) . show . sum . map area . usedTiles
+      , ("Comment : " ++) . (const cmt)
+      ]
 
 -- ----------------------------------------
