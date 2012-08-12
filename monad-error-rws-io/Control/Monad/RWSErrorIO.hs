@@ -15,7 +15,8 @@ import Control.Monad.RWS
 import Control.Monad
 
 -- import Data.Monoid
-
+import System.Cmd               ( rawSystem )
+import System.Exit
 import System.IO                ( hPutStrLn
                                 , stderr
                                 )
@@ -52,6 +53,9 @@ class Config c where
     errorOn :: c -> Bool
     errorOn = const True
 
+    stderrOn :: c -> Bool
+    stderrOn = const True
+
 -- ----------------------------------------
 
 newtype Msg = Msg String
@@ -81,13 +85,21 @@ instance Monoid Log where
     mappend l1 LogEmpty = l1
     mappend l1 l2       = Log2 l1 l2
 
+-- logging can be configured for stderr or for a writer protocol
+-- the log level can be configured in the env
+
 logg :: Config r => (r -> Bool) -> String -> String -> Action r s ()
 logg enabled level msg
-    = do b <- asks enabled
-         when b $ tell . LogMsg $ fmt
+    = do e <- asks enabled
+         when e $ do s <- asks stderrOn
+                     if s
+                       then io $ hPutStrLn stderr fmt
+                       else tell . LogMsg $ fmt
     where
       fmt = take 10 (level ++ ":" ++ replicate 10 ' ') ++ msg
 
+-- convenience functions for logging
+ 
 trc :: Config r => String -> Action r s ()
 trc = logg traceOn "message"
 
@@ -96,6 +108,7 @@ warn = logg warningOn "warning"
 
 err :: Config r => String -> Action r s ()
 err = logg errorOn "error"
+
 
 logToList :: Log -> [String]
 logToList = log' []
@@ -125,6 +138,25 @@ orElse x1 x2
       try2 (Msg s)
           = do warn $ "error ignored: " ++ s
                x2
+
+-- ----------------------------------------
+
+-- execute external program
+
+exec :: Config r => String -> [String] -> Action r s ()
+exec cmd args
+    = do rc <- io $ rawSystem cmd args
+         if rc == ExitSuccess
+            then return ()
+            else abort $ unwords ["error in executing external program: ", cmd, show args]
+
+-- convenience function for simple commands
+
+execStr :: Config r => String -> Action r s ()
+execStr cmd0
+    = exec (concat . take 1 $ cmd) (drop 1 cmd)
+    where
+      cmd = words cmd0
 
 -- ----------------------------------------
 

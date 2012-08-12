@@ -1,5 +1,5 @@
 Name:                monad-error-rws-io
-Version:             0.0.1
+Version:             0.0.2
 Synopsis:            Reader Writer State IO Error Monad
 Description:         Reader Writer State IO Error Monad
 License:             BSD3
@@ -21,6 +21,7 @@ Library
   extensions: MultiParamTypeClasses FunctionalDependencies FlexibleInstances
 
   Build-depends:       base          >= 4   && < 5
+                     , process       >= 1.1
                      , mtl           >= 2.1
                      , transformers  >= 0.3
 

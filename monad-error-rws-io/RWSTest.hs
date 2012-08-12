@@ -2,6 +2,7 @@ module Main
 where
 
 import Control.Monad.RWSErrorIO
+
 import System.Environment
 import System.Exit
 import System.IO
@@ -15,7 +16,8 @@ main
 data Env = Env
 
 instance Config Env where
-    traceOn = const True
+    -- traceOn = const False    -- default is True
+    -- stderrOn = const False   -- default is True
 
 type Test = Action Env ()
 
@@ -39,6 +41,12 @@ test args
          trc "catch io error test"
          ( io $ do h <- openFile "xxx" ReadMode
                    hClose h ) `orElse` (err "open file xxx has failed")
+
+         trc "exec test"
+         always $ exec "ls" ["-l", "."]
+
+         trc "exec test which fails"
+         always $ exec "xxx" ["-l", "."]
 
          trc "script finished"
          return ()
