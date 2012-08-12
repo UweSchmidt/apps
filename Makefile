@@ -1,5 +1,5 @@
-PL	= args-parser find-grep-sed
-PLrex	= (args-parser|find-grep-sed)
+PL	= args-parser find-grep-sed monad-error-rws-io
+PLrex	= (args-parser|find-grep-sed|monad-error-rws-io)
 
 all	:
 	$(foreach i,$(PL), ( cd $i && cabal install && cabal sdist; ); )

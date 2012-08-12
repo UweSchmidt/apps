@@ -1,0 +1,33 @@
+Name:                monad-error-rws-io
+Version:             0.0.1
+Synopsis:            Reader Writer State IO Error Monad
+Description:         Reader Writer State IO Error Monad
+License:             BSD3
+Author:              Uwe Schmidt
+Maintainer:          uwe@fh-wedel.de
+Copyright:           2012 Uwe Schmidt
+Category:            Control
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+
+Library
+  Exposed-modules:   Control.Monad.RWSErrorIO
+
+  Hs-Source-Dirs:    .
+
+  ghc-options: -Wall -fwarn-tabs
+
+  extensions: MultiParamTypeClasses FunctionalDependencies FlexibleInstances
+
+  Build-depends:       base          >= 4   && < 5
+                     , mtl           >= 2.1
+                     , transformers  >= 0.3
+
+Executable rws-e-io
+  hs-source-dirs: .
+
+  Main-Is: RWSTest.hs
+
+  GHC-Options: -Wall  -fwarn-tabs
+

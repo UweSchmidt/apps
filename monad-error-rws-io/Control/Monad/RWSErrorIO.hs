@@ -1,0 +1,132 @@
+module Control.Monad.RWSErrorIO
+    ( module Control.Monad.RWSErrorIO
+    , module Control.Monad.Error
+    , module Control.Monad.RWS
+    , module Control.Monad
+    )
+where
+
+import Control.Exception        ( SomeException
+                                , try
+                                )
+
+import Control.Monad.Error
+import Control.Monad.RWS
+import Control.Monad
+
+-- import Data.Monoid
+
+import System.IO                ( hPutStrLn
+                                , stderr
+                                )
+
+-- ----------------------------------------
+
+type Action r s = ErrorT Msg (RWST r Log s IO)
+
+runAction :: Action r s a -> r -> s -> IO (Either Msg a, s, Log)
+runAction action env0 state0
+    = runRWST (runErrorT action) env0 state0
+
+evalAction :: Action r s a -> r -> s -> IO (Maybe a)
+evalAction action env0 state0
+    = do (res, _state1, lg) <- runAction action env0 state0
+
+         -- issue log on stderr
+         sequence_ . map (hPutStrLn stderr) . logToList $ lg
+
+         -- issue error or return value
+         either (\ x -> hPutStrLn stderr (unMsg x) >> return Nothing)
+                (return . Just)
+                res
+
+-- ----------------------------------------
+
+class Config c where
+    traceOn :: c -> Bool
+    traceOn = const True
+
+    warningOn :: c -> Bool
+    warningOn = const True
+
+    errorOn :: c -> Bool
+    errorOn = const True
+
+-- ----------------------------------------
+
+newtype Msg = Msg String
+    deriving (Show)
+
+unMsg :: Msg -> String
+unMsg (Msg s) = s
+
+instance Error Msg where
+    strMsg = Msg
+
+abort :: Config r => String -> Action r s a
+abort msg
+    = do err msg
+         throwError . Msg $ msg
+
+-- ----------------------------------------
+
+data Log = LogEmpty
+         | LogMsg String
+         | Log2 Log Log
+           deriving (Show)
+
+instance Monoid Log where
+    mempty = LogEmpty
+    mappend LogEmpty l2 = l2
+    mappend l1 LogEmpty = l1
+    mappend l1 l2       = Log2 l1 l2
+
+logg :: Config r => (r -> Bool) -> String -> String -> Action r s ()
+logg enabled level msg
+    = do b <- asks enabled
+         when b $ tell . LogMsg $ fmt
+    where
+      fmt = take 10 (level ++ ":" ++ replicate 10 ' ') ++ msg
+
+trc :: Config r => String -> Action r s ()
+trc = logg traceOn "message"
+
+warn :: Config r => String -> Action r s ()
+warn = logg warningOn "warning"
+
+err :: Config r => String -> Action r s ()
+err = logg errorOn "error"
+
+logToList :: Log -> [String]
+logToList = log' []
+    where
+      log' r (Log2 l1 l2) = log' (log' r l2) l1
+      log' r (LogMsg s)   = s : r
+      log' r  LogEmpty    = r
+
+-- ----------------------------------------
+
+io :: Config r => IO a -> Action r s a
+io x
+    = do r <- liftIO $ try x
+         either (abort . showExc) return $ r
+    where
+      showExc :: SomeException -> String
+      showExc = show
+
+always :: Config r => Action r s () -> Action r s ()
+always x
+    = x `orElse` return ()
+
+orElse :: Config r => Action r s a -> Action r s a -> Action r s a
+orElse x1 x2
+    = x1 `catchError` try2
+    where
+      try2 (Msg s)
+          = do warn $ "error ignored: " ++ s
+               x2
+
+-- ----------------------------------------
+
+
+
