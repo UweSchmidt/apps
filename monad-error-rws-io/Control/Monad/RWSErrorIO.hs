@@ -90,11 +90,11 @@ instance Monoid Log where
 
 logg :: Config r => (r -> Bool) -> String -> String -> Action r s ()
 logg enabled level msg
-    = do e <- asks enabled
-         when e $ do s <- asks stderrOn
-                     if s
-                       then io $ hPutStrLn stderr fmt
-                       else tell . LogMsg $ fmt
+    = do asks enabled `guards`
+           do s <- asks stderrOn
+              if s
+                 then io $ hPutStrLn stderr fmt
+                 else tell . LogMsg $ fmt
     where
       fmt = take 10 (level ++ ":" ++ replicate 10 ' ') ++ msg
 
@@ -138,6 +138,18 @@ orElse x1 x2
       try2 (Msg s)
           = do warn $ "error ignored: " ++ s
                x2
+
+finally :: Action r s a -> Action r s () -> Action r s a
+finally x fin
+    = ( do res <- x
+           fin
+           return res
+      ) `catchError` (\ e -> fin >> throwError e)
+
+guards :: Monad m => m Bool -> m () -> m ()
+guards g x
+    = do b <- g
+         when b x
 
 -- ----------------------------------------
 
