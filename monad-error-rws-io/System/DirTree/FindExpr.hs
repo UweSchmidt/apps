@@ -6,7 +6,7 @@ import Control.Monad.RWSErrorIO
 
 import Data.List                        ( isSuffixOf )
 
-import Text.Regex.XMLSchema.String	( match )
+import Text.Regex.XMLSchema.String	-- ( match, matchRE, parseRegex, isZero )
 
 import System.DirTree.Types
 import System.DirTree.FileSystem
@@ -28,13 +28,13 @@ findExpr2FindPred (PathName f1) f
     = (== f1) <$> pathName f
 
 findExpr2FindPred (MatchRE re) f
-    = return $ match re f
+    = return $ matchRE re f
 
 findExpr2FindPred (MatchExtRE re) f
-    = return $ match (".*[.](" ++ re ++ ")") f
+    = return $ matchRE  (mkSeqs [mkAll, mkSym1 '.', re]) f
 
 findExpr2FindPred (MatchPathRE re) f
-    = pathName f >>= return . match re
+    = pathName f >>= return . matchRE re
 
 findExpr2FindPred FTrue f
     = truePred f
@@ -51,11 +51,11 @@ findExpr2FindPred IsDir f
 findExpr2FindPred (HasCont p) f
     = isFile `andPred` (getFileContents >=> p) $ f
 
-findExpr2FindPred (AndExpr fl) f
-    = (foldl andPred truePred . map findExpr2FindPred) fl f
+findExpr2FindPred (AndExpr2 e1 e2) f
+    = andPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
 
-findExpr2FindPred (OrExpr fl) f
-    = (foldl orPred falsePred . map findExpr2FindPred) fl f
+findExpr2FindPred (OrExpr2 e1 e2) f
+    = orPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
 
 findExpr2FindPred (NotExpr e) f
     = not <$> findExpr2FindPred e f
@@ -86,51 +86,134 @@ orPred fct1 fct2 f
 
 -- ------------------------------
 
+checkRegex :: String -> Maybe Regex
+checkRegex
+    = (\ re -> if isZero re then Nothing else Just re) . parseRegex 
+
+-- ------------------------------
+
 boringFiles     :: FindExpr
 boringFiles
-    = OrExpr [ MatchExtRE "bak|old|out|tmp|aux|log|[~]"
-             , AndExpr [ IsDir
-                       , OrExpr [ Name "cache"
+    = orExpr [ matchExtRE "bak|old|out|tmp|aux|log|[~]"
+             , andExpr [ IsDir
+                       , orExpr [ Name "cache"
                                 , Name ".xvpics"
                                 ]
                        ]
              , Name ".directory"
              , Name ".DS_Store"
-             , MatchRE "[.]#.*"
+             , matchNameRE "[.]#.*"
              ]
 
 cvsFiles        :: FindExpr
 cvsFiles
-    = OrExpr [ MatchPathRE ".*/CVS(/.*)?"
+    = orExpr [ matchPathRE ".*/CVS(/.*)?"
              , Name ".cvsignore"
              ]
 
 badNames        :: FindExpr
 badNames
-    = AndExpr [ NotExpr boringFiles,
-                MatchRE ".*[^-+,._/a-zA-Z0-9].*"
+    = andExpr [ NotExpr boringFiles,
+                matchNameRE ".*[^-+,._/a-zA-Z0-9].*"
               ]
 
 -- ------------------------------
 
 imageFiles     :: FindExpr
 imageFiles
-    = AndExpr [ IsFile
-              , MatchExtRE "bmp|gif|jpg|jpeg|mov|nef|pbm|pgm|png|ppm|psd|rw2|tif|tiff|xmb|xcf"
+    = andExpr [ IsFile
+              , matchExtRE "bmp|gif|jpg|jpeg|mov|nef|pbm|pgm|png|ppm|psd|rw2|tif|tiff|xmb|xcf"
               ]
 
 soundFiles :: FindExpr
 soundFiles
-    = AndExpr [ IsFile
-              , MatchExtRE "mp3|wav|midi"
+    = andExpr [ IsFile
+              , matchExtRE "mp3|wav|midi"
               ]
 
 makeFiles :: FindExpr
 makeFiles
-    = AndExpr [ IsFile
-              , OrExpr [ MatchRE "[Mm]akefile"
-                       , MatchExtRE "mk"
+    = andExpr [ IsFile
+              , orExpr [ matchNameRE    "[Mm]akefile"
+                       , matchExtRE "mk"
                        ]
               ]
+
+-- ------------------------------
+
+star, plus              :: String -> String
+
+star s                  = "(" ++ s ++ ")*"
+plus s                  = "(" ++ s ++ ")+"
+
+reAsciiChar, reLatin1Char, reUnicodeChar, reNoTabsChar
+                        :: String
+
+reAsciiChar             = "[\\s\33-\127]"
+reLatin1Char            = "[\\s\33-\127\160-\255]"
+reUnicodeChar           = "[\\s\33-\127\160-" ++ [maxBound::Char] ++ "]"
+reNoTabsChar            = "[\\n\\r\32-\127\160-" ++ [maxBound::Char] ++ "]"
+
+isAsciiText             :: String -> Bool
+isAsciiText             = match $ star reAsciiChar
+
+isLatin1Text            :: String -> Bool
+isLatin1Text            = match $ reLatin1Char
+
+isUnicodeText           :: String -> Bool
+isUnicodeText           = match $ reUnicodeChar
+
+containsLatin1          :: String -> Bool
+containsLatin1          = match $ plus ((star reAsciiChar) ++ reLatin1Char)
+
+containsNoneLatin1      :: String -> Bool
+containsNoneLatin1      = match $ plus ((star reLatin1Char) ++ reUnicodeChar)
+
+containsBinary          :: String -> Bool
+containsBinary          = not . isLatin1Text
+
+containsTabs            :: String -> Bool
+containsTabs            = match $ plus ((star reNoTabsChar) ++ "\\t")
+
+isUtfText               :: String -> Bool
+isUtfText s             = not (isAsciiText s) && isUtf8 s
+
+isUtf8                  :: String -> Bool
+isUtf8 []               = True
+isUtf8 (c:cs)
+    | isAsciiChar c     = isUtf8 cs
+    | isUtf2Char c      = isUtf81 cs
+    | isUtf3Char c      = isUtf82 cs
+    | otherwise         = False
+
+isUtf81                 :: String -> Bool
+isUtf81 (c:cs)
+    | isUtf1Char c      = isUtf8 cs
+isUtf81 _               = False
+
+isUtf82                 :: String -> Bool
+isUtf82 (c:cs)
+    | isUtf1Char c      = isUtf81 cs
+isUtf82 _               = False
+
+-- hasTrailingWS           :: String -> Bool
+-- hasTrailingWS           = not . null . takeWhile isSpace . reverse
+
+-- ------------------------------------------------------------
+
+isAsciiChar     :: Char -> Bool
+isAsciiChar  c  = (' ' <= c && c <= '~') || (c `elem` "\n\t\r")
+
+isLatin1Char    :: Char -> Bool
+isLatin1Char c  = isAsciiChar c || ( '\160' <= c && c <= '\255')
+
+isUtf1Char      :: Char -> Bool
+isUtf1Char c    = '\128' <= c && c < '\192'
+
+isUtf2Char      :: Char -> Bool
+isUtf2Char c    = '\192' <= c && c < '\224'
+
+isUtf3Char      :: Char -> Bool
+isUtf3Char c    = '\224' <= c && c < '\240'
 
 -- ------------------------------

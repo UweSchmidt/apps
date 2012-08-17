@@ -20,12 +20,12 @@ initEnv = Env
           , theCwd          = "."
           , theLevel        = 0
           , theUserFindExpr = FTrue
-          , theSysFindExpr  = NotExpr $ MatchRE "[.]{1,2}"	-- exclude . and ..
+          , theSysFindExpr  = FTrue
           , theFindPred     = falsePred
           , theGrepPred     = const False
           , theSedFct       = id
           , theProcessor    = genFindProcessor
-          , theTraceFlag    = False -- True
+          , theTraceFlag    = False
           , theWarningFlag  = True
           , theStdErrFlag   = True
           , theCreateBackup = True
@@ -36,15 +36,13 @@ initGrepPred :: Env -> Env
 initGrepPred env
     = env { theGrepPred = ("True" `isInfixOf`)
           , theProcessor = genGrepProcessor
-          , theUserFindExpr = MatchExtRE "hs"
+          , theUserFindExpr = matchExtRE "hs"
           }
 
 initFindPred :: Env -> Env
 initFindPred env
     = env { theFindPred = findExpr2FindPred $
-                          AndExpr [ theSysFindExpr env
-                                  , theUserFindExpr env
-                                  ]
+                          andExpr2 (theSysFindExpr env) (theUserFindExpr env)
           }
 
 initCwd :: Env -> Env
