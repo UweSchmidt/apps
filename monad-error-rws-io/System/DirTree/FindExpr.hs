@@ -4,7 +4,7 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
-import Data.List                        ( isSuffixOf )
+import Data.List                        ( isPrefixOf, isSuffixOf )
 
 import Text.Regex.XMLSchema.String	-- ( match, matchRE, parseRegex, isZero )
 
@@ -85,10 +85,33 @@ orPred fct1 fct2 f
          else fct2 f
 
 -- ------------------------------
+--
+-- should be part of hxt-regex-xmlschema
 
 checkRegex :: String -> Maybe Regex
 checkRegex
     = (\ re -> if isZero re then Nothing else Just re) . parseRegex 
+
+checkContextRegex :: String -> Maybe Regex
+checkContextRegex
+    = (\ re -> if isZero re then Nothing else Just re) . parseContextRegex parseRegex 
+
+parseContextRegex :: (String -> Regex) -> String -> Regex
+parseContextRegex parseRegex' re
+    = re'
+    where
+      re' = mkSeqs . concat $ [ startContext
+                              , (:[]) . parseRegex' $ re2
+                              , endContext
+                              ]
+      (startContext, re1)
+          | "^"   `isPrefixOf` re   = ([],                          tail   re)
+          | "\\<" `isPrefixOf` re   = ([parseRegexExt "(\\A\\W)?"], drop 2 re)
+          | otherwise               = ([mkStar mkDot],                     re)
+      (endContext, re2)
+          | "$"   `isSuffixOf` re1  = ([],                          init          re1)
+          | "\\>" `isSuffixOf` re1  = ([parseRegexExt "(\\W\\A)?"], init . init $ re1)
+          | otherwise               = ([mkStar mkDot],                            re1)
 
 -- ------------------------------
 
@@ -146,28 +169,32 @@ star, plus              :: String -> String
 star s                  = "(" ++ s ++ ")*"
 plus s                  = "(" ++ s ++ ")+"
 
-reAsciiChar, reLatin1Char, reUnicodeChar, reNoTabsChar
-                        :: String
+reAsciiChar
+ , reLatin1Char, reLatin1'Char
+ , reUnicodeChar, reUnicode'Char
+ , reNoTabsChar         :: String
 
 reAsciiChar             = "[\\s\33-\127]"
 reLatin1Char            = "[\\s\33-\127\160-\255]"
+reLatin1'Char           = "[\160-\255]"
 reUnicodeChar           = "[\\s\33-\127\160-" ++ [maxBound::Char] ++ "]"
+reUnicode'Char          = "[\256-" ++ [maxBound::Char] ++ "]"
 reNoTabsChar            = "[\\n\\r\32-\127\160-" ++ [maxBound::Char] ++ "]"
 
 isAsciiText             :: String -> Bool
 isAsciiText             = match $ star reAsciiChar
 
 isLatin1Text            :: String -> Bool
-isLatin1Text            = match $ reLatin1Char
+isLatin1Text            = match $ star reLatin1Char
 
 isUnicodeText           :: String -> Bool
-isUnicodeText           = match $ reUnicodeChar
+isUnicodeText           = match $ star reUnicodeChar
 
 containsLatin1          :: String -> Bool
-containsLatin1          = match $ plus ((star reAsciiChar) ++ reLatin1Char)
+containsLatin1          = match $ plus ((star reAsciiChar) ++ reLatin1'Char)
 
 containsNoneLatin1      :: String -> Bool
-containsNoneLatin1      = match $ plus ((star reLatin1Char) ++ reUnicodeChar)
+containsNoneLatin1      = match $ plus ((star reLatin1Char) ++ reUnicode'Char)
 
 containsBinary          :: String -> Bool
 containsBinary          = not . isLatin1Text
@@ -196,8 +223,11 @@ isUtf82 (c:cs)
     | isUtf1Char c      = isUtf81 cs
 isUtf82 _               = False
 
--- hasTrailingWS           :: String -> Bool
--- hasTrailingWS           = not . null . takeWhile isSpace . reverse
+hasTrailingWS           :: String -> Bool
+hasTrailingWS           = match ".*\\s"
+
+hasTrailingWSLine	:: String -> Bool
+hasTrailingWSLine	= any hasTrailingWS . lines
 
 -- ------------------------------------------------------------
 

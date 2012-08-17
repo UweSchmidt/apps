@@ -11,6 +11,8 @@ import System.DirTree.Core
 import System.DirTree.FindExpr
 import System.DirTree.Types
 
+import Text.Regex.XMLSchema.String	( matchRE )
+
 import System.Console.CmdTheLine
 
 import Text.PrettyPrint
@@ -49,7 +51,7 @@ findGrepSed setOpts
     = do res <- evalAction doIt env initState
          maybe exitFailure return res
     where
-      env = initFindPred . initGrepPred . initCwd . setOpts $ initEnv
+      env = initFindPred . initCwd . setOpts $ initEnv
 
 
 fgsInfo :: TermInfo
@@ -63,11 +65,16 @@ oAll :: Term (Env -> Env)
 oAll = oVerbose
        <.> oQuiet
        <.> oBackup
-       <.> oMatchName <.> oNotMatchName
+       <.> oUtf8
+       <.> oScan				-- sequence of filter options is important
+       <.> oTypes				-- expensive options first: oScan eval reads contents,
+       <.> oMatchName <.> oNotMatchName 	-- oTypes eval reads file types, oMatch* does not need IO
        <.> oMatchPath <.> oNotMatchPath
        <.> oMatchExt  <.> oNotMatchExt
-       <.> oIsFile    <.> oNotIsFile
-       <.> oIsDir     <.> oNotIsDir
+--     <.> oIsFile    <.> oNotIsFile
+--     <.> oIsDir     <.> oNotIsDir
+       <.> oFind
+       <.> oGrep
 
 -- ----------------------------------------
 --
@@ -76,7 +83,7 @@ oAll = oVerbose
 oVerbose :: Term (Env -> Env)
 oVerbose
     = convFlag setVerbose
-      $ (optInfo ["verbose", "v"])
+      $ (optInfo ["verbose"])
             { optDoc = "Turn on trace output." }
     where
       setVerbose True e
@@ -89,7 +96,7 @@ oVerbose
 oQuiet :: Term (Env -> Env)
 oQuiet
     = convFlag setQuiet
-      $ (optInfo ["quiet", "q"])
+      $ (optInfo ["quiet"])
             { optDoc = "Turn off warnings and trace output." }
     where
       setQuiet True e
@@ -98,6 +105,15 @@ oQuiet
               }
       setQuiet False e
           = e
+
+oUtf8 :: Term (Env -> Env)
+oUtf8
+    = convFlag setUtf8
+      $ (optInfo ["utf8"])
+            { optDoc = "File contents are assumed to be utf8 encoded when processed by grep commands." }
+    where
+      setUtf8 True  e = e { theUtf8Flag = True }
+      setUtf8 False e = e
 
 oBackup :: Term (Env -> Env)
 oBackup
@@ -119,41 +135,30 @@ oBackup
               , theBackupName   = (++ s)
               }
 
-oIsFile :: Term (Env -> Env)
-oIsFile
-    = convFlag setIsFile
-      $ (optInfo ["file", "f"])
-            { optDoc = "Test whether entry is a file." }
+oTypes :: Term (Env -> Env)
+oTypes
+    = convValue "illegal type given in type spec" setTypes
+      $ (optInfo ["types", "T"])
+            { optDoc = unwords [ "Test whether entry is one of the types specified in TYPES."
+                               , "Every char in TYPES stands for a type,"
+                               , "'d' stands for directory, 'f' for file."
+                               , "Other types are not yet supported."
+                               ]
+            , optName = "TYPES"
+            }
     where
-      setIsFile True  = addFindExpr IsFile
-      setIsFile False = id
-
-oNotIsFile :: Term (Env -> Env)
-oNotIsFile
-    = convFlag setNotIsFile
-      $ (optInfo ["not-file", "F"])
-            { optDoc = "Test whether entry isn't a file." }
-    where
-      setNotIsFile True  = addFindExpr $ NotExpr IsFile
-      setNotIsFile False = id
-
-oIsDir :: Term (Env -> Env)
-oIsDir
-    = convFlag setIsDir
-      $ (optInfo ["dir", "d"])
-            { optDoc = "Test whether entry is a directory." }
-    where
-      setIsDir True  = addFindExpr IsDir
-      setIsDir False = id
-
-oNotIsDir :: Term (Env -> Env)
-oNotIsDir
-    = convFlag setNotIsDir
-      $ (optInfo ["not-dir", "D"])
-            { optDoc = "Test whether entry isn't a directory." }
-    where
-      setNotIsDir True  = addFindExpr $ NotExpr IsDir
-      setNotIsDir False = id
+      setTypes s
+          | null s
+              = Just id
+          | all (`elem` "fd") s
+              = Just $ addFindExpr typeExpr
+          | otherwise
+              = Nothing
+          where
+            c2e 'f' = IsFile
+            c2e 'd' = IsDir
+            c2e _   = FFalse
+            typeExpr = orExpr . map c2e $ s
 
 oMatchName :: Term (Env -> Env)
 oMatchName
@@ -214,6 +219,74 @@ oNotMatchExt
             }
     where
       setMatchExt = setFindRegex (NotExpr . MatchExtRE)
+
+oFind :: Term (Env -> Env)
+oFind
+    = convFlag setFind
+      $ (optInfo ["print", "p"])
+            { optDoc = "Print matching file paths (default)." }
+    where
+      setFind True  e = e { theProcessor = genFindProcessor }
+      setFind False e = e
+
+oGrep :: Term (Env -> Env)
+oGrep
+    = convRegex setGrep
+      $ (optInfo ["grep", "g"])
+            { optName = "REGEXP"
+            , optDoc = unwords [ "Find lines in all selected files matching REGEXP."
+                               , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
+                               ]
+            }
+    where
+      setGrep ""
+          = return id
+      setGrep s
+          = fmap setG $ checkContextRegex s
+          where
+            setG re e
+                = e { theProcessor = genGrepProcessor
+                    , theGrepPred  = matchRE re
+                    }
+
+oScan :: Term (Env -> Env)
+oScan
+    = convValue "illegal scan function or regexp" setScan
+      $ (optInfo ["scan", "s"])
+            { optName = "SCAN-FCT-or-REGEXP"
+            , optDoc = unwords [ "Test whether file contents has some feature given by SCAN-FCT."
+                               , "SCAN-FCT may have the following values:"
+                               , "'ascii', 'latin1', 'latin1+', 'unicode',"
+                               , "'unicode+', 'utf8', 'utf8+', 'trailing-ws', 'contains-tabs'"
+                               , "or it may be a regular expression like in --grep option."
+                               , "Meaning:"
+                               , "'latin1+': There are some none ascii chars,"
+                               , "'utf8+': There are some none ascii chars (multi byte chars),"
+                               , "'unicode+': There are some none latin1 chars."
+                               , "REGEXP args are processed like in --grep functions but acts here as"
+                               , "filter for selecting files."
+                               ]
+            }
+    where
+      setScan ""
+          = return id
+      setScan s
+          = fmap addFindExpr $ checkScan s
+          where
+            checkScan "ascii"         = fe isAsciiText
+            checkScan "latin1"        = fe isLatin1Text
+            checkScan "latin1+"       = fe containsLatin1
+            checkScan "unicode"       = fe isUnicodeText
+            checkScan "unicode+"      = fe containsNoneLatin1
+            checkScan "utf8"          = fe isUtf8
+            checkScan "utf8+"         = fe isUtfText
+            checkScan "trailing-ws"   = fe hasTrailingWSLine
+            checkScan "contains-tabs" = fe containsTabs
+            checkScan s'              = fmap grp $ checkContextRegex s'
+
+            fe x                      = Just $ HasCont $ (return . x)
+
+            grp re                    = HasCont $ (return . any (matchRE re) . lines)
 
 -- ----------------------------------------
 --

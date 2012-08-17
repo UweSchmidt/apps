@@ -28,6 +28,7 @@ initEnv = Env
           , theTraceFlag    = False
           , theWarningFlag  = True
           , theStdErrFlag   = True
+          , theUtf8Flag     = False
           , theCreateBackup = True
           , theBackupName   = (++ "~")
           }
@@ -36,7 +37,7 @@ initGrepPred :: Env -> Env
 initGrepPred env
     = env { theGrepPred = ("True" `isInfixOf`)
           , theProcessor = genGrepProcessor
-          , theUserFindExpr = matchExtRE "hs"
+          -- , theUserFindExpr = matchExtRE "hs"
           }
 
 initFindPred :: Env -> Env
@@ -123,13 +124,13 @@ geSedProcessor
 
 contentGrep     :: (String -> Bool) -> FilePath -> Cmd ()
 contentGrep p f
-    = do xs <- grep . lines <$> getFileContents f 
+    = do pn  <- pathName f
+         xs <- test pn . lines <$> getFileContents f
          mapM_ (io . putStrLn) xs
     where
-      grep
+      test pn'
           = map format . filter (p . snd) . zip [(1::Int)..]
           where
-            format (n, k) = f ++ ":" ++ show n ++ ": " ++ k
-
+            format (n, k) = pn' ++ ":" ++ show n ++ ": " ++ k
 
 -- ----------------------------------------

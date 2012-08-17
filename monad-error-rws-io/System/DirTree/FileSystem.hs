@@ -4,6 +4,10 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
+import Data.String.Unicode              ( utf8ToUnicode
+                                        , unicodeToUtf8
+                                        )
+
 import System.Directory
 import System.IO                        ( IOMode(..)
                                         , openFile
@@ -51,7 +55,14 @@ isFile f
 getFileContents :: FilePath -> Cmd String
 getFileContents f
     = do trc $ "getFileContents: reading file " ++ show f
-         C.unpack <$> readFileContents f
+         dec       <- decFct <$> asks theUtf8Flag
+         (res, es) <- (dec . C.unpack) <$> readFileContents f
+         if null es
+            then return res
+            else abort "UTF8 decoding errors detected"
+    where
+      decFct True  = utf8ToUnicode
+      decFct False = \ x -> (x, [])
 
 getDirContents :: FilePath -> Cmd [String]
 getDirContents f

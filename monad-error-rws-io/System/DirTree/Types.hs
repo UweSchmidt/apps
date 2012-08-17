@@ -27,6 +27,7 @@ data Env
       , theTraceFlag    :: Bool
       , theWarningFlag  :: Bool
       , theStdErrFlag   :: Bool
+      , theUtf8Flag     :: Bool
       , theCreateBackup :: Bool
       , theBackupName   :: String -> String
       }
@@ -83,7 +84,7 @@ andExpr2 e1                 e2  = AndExpr2 e1 e2
 
 
 orExpr :: [FindExpr] -> FindExpr
-orExpr = foldr orExpr2 FTrue
+orExpr = foldr orExpr2 FFalse
 
 orExpr2 :: FindExpr -> FindExpr -> FindExpr
 orExpr2 FFalse              e2  = e2
