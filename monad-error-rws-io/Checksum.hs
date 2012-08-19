@@ -4,6 +4,8 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
+import Data.Maybe
+
 import System.Exit
 
 import System.DirTree.Core
@@ -47,6 +49,7 @@ oAll = oVerbose
        <.> oTypes
        <.> oFind
        <.> oGrep
+       <.> oSed
 
 -- ----------------------------------------
 --
@@ -212,49 +215,6 @@ oNotMatchExt
     where
       setMatchExt = setFindRegex (NotExpr . MatchExtRE)
 
-oFind :: Term (Env -> Env)
-oFind
-    = convFlag setFind
-      $ (optInfo ["print"])
-            { optDoc = "Print matching file paths (default)." }
-    where
-      setFind True  e = e { theProcessor = genFindProcessor }
-      setFind False e = e
-
-oGrep :: Term (Env -> Env)
-oGrep
-    = convRegex setGrep
-      $ (optInfo ["grep"])
-            { optName = "SCAN-FCT-or-REGEXP"
-            , optDoc = unwords [ "Find lines in all selected files matching REGEXP."
-                               , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
-                               , "The arguments in --scan may also be used here,"
-                               , "e.g. '--grep /tabs/' lists all lines containing tabs,"
-                               ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
-                               ]
-            }
-    where
-      setGrep ""
-          = return id
-      setGrep s
-          = fmap setG $ checkGrep s
-          where
-            checkGrep "/ascii/"          = Just isAsciiText
-            checkGrep "/latin1/"         = Just isLatin1Text
-            checkGrep "/latin1-ascii/"   = Just containsLatin1
-            checkGrep "/unicode/"        = Just isUnicodeText
-            checkGrep "/unicode-latin1/" = Just containsNoneLatin1
-            checkGrep "/utf8/"           = Just isUtf8
-            checkGrep "/utf8-ascii/"     = Just isUtfText
-            checkGrep "/trailing-ws/"    = Just hasTrailingWSLine
-            checkGrep "/tabs/        "   = Just containsTabs
-            checkGrep s'                 = fmap matchRE $ checkContextRegex s'
-
-            setG p e
-                = e { theProcessor = genGrepProcessor
-                    , theGrepPred  = p
-                    }
-
 oScan :: Term (Env -> Env)
 oScan
     = convStringSeqValue "illegal scan function or regexp" setScan
@@ -262,14 +222,14 @@ oScan
             { optName = "SCAN-FCT-or-REGEXP"
             , optDoc = unwords [ "Test whether file contents has some feature given by SCAN-FCT."
                                , "SCAN-FCT may have the following values:"
-                               , "/ascii/, /latin1/, '/latin1-ascii/', '/unicode/',"
-                               , "/unicode-latin1/', /utf8/, /utf8-ascii/, /trailing-ws/, /tabs/"
+                               , "'/ascii/', '/latin1/', '/latin1-ascii/', '/unicode/',"
+                               , "'/unicode-latin1/', '/utf8/', '/utf8-ascii/', '/trailing-ws/', '/tabs/'"
                                , "or it may be a regular expression like in --grep option."
                                , "\n"
                                , "Meaning:"
-                               , "/latin1-ascii/: Latin1 with some none ascii chars,"
-                               , "/utf8/: Utf8 with some utf8 multi byte chars,"
-                               , "/unicode-latin1/: Unicode with some none latin1 chars."
+                               , "'/latin1-ascii/': Latin1 with some none ascii chars,"
+                               , "'/utf8/': Utf8 with some utf8 multi byte chars,"
+                               , "'/unicode-latin1/': Unicode with some none latin1 chars."
                                , "REGEXP args are processed like in --grep functions but acts here as"
                                , "filter for selecting files."
                                , "\n"
@@ -299,6 +259,85 @@ oScan
 
 -- ----------------------------------------
 --
+-- the action opions
+
+oFind :: Term (Env -> Env)
+oFind
+    = convFlag setFind
+      $ (optInfo ["print"])
+            { optDoc = "Print matching file paths (default)." }
+    where
+      setFind True  e = e { theProcessor = genFindProcessor }
+      setFind False e = e
+
+oGrep :: Term (Env -> Env)
+oGrep
+    = convStringValue "illegal grep function or regexp" setGrep
+      $ (optInfo ["grep"])
+            { optName = "GREP-FCT-or-REGEXP"
+            , optDoc = unwords [ "Find lines in all selected files matching REGEXP."
+                               , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
+                               , "The arguments in --scan may also be used here as GREP-FCT,"
+                               , "e.g. '--grep /tabs/' lists all lines containing tabs,"
+                               ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
+                               ]
+            }
+    where
+      setGrep ""
+          = return id
+      setGrep s
+          = fmap setG $ checkGrep s
+          where
+            checkGrep "/ascii/"          = Just isAsciiText
+            checkGrep "/latin1/"         = Just isLatin1Text
+            checkGrep "/latin1-ascii/"   = Just containsLatin1
+            checkGrep "/unicode/"        = Just isUnicodeText
+            checkGrep "/unicode-latin1/" = Just containsNoneLatin1
+            checkGrep "/utf8/"           = Just isUtf8
+            checkGrep "/utf8-ascii/"     = Just isUtfText
+            checkGrep "/trailing-ws/"    = Just hasTrailingWSLine
+            checkGrep "/tabs/        "   = Just containsTabs
+            checkGrep s'                 = fmap matchRE $ checkContextRegex s'
+
+            setG p e
+                = e { theProcessor = genGrepProcessor
+                    , theGrepPred  = p
+                    }
+
+oSed :: Term (Env -> Env)
+oSed
+    = convStringValue "illegal sed function" setSed
+      $ (optInfo ["sed"])
+            { optName = "SED-FCT"
+            , optDoc = unwords [ "Edit files with given edit function."
+                               , "currently supported edit functions are:"
+                               , "'/umlauts-to-ascii/', '/umlauts-to-tex/',"
+                               , "'/html-to-ascii/', '/haskell-to-ascii/', '/tcl-to-ascii/',"
+                               , "'/no-trailing-ws/', '/no-tabs/'."
+                               ]
+            }
+    where
+      setSed ""
+          = return id
+      setSed s
+          = fmap setS $ checkSed s
+          where
+            checkSed "/umlauts-to-ascii/" = Just substUmlauts
+            checkSed "/umlauts-to-tex/"   = Just substUmlautsTex
+            checkSed "/html-to-ascii/"    = Just substXhtmlChars
+            checkSed "/haskell-to-ascii/" = Just substToAsciiHaskell
+            checkSed "/tcl-to-ascii/"     = Just substLatin1Tcl
+            checkSed "/no-trailing-ws/"   = Just removeTrailingWS
+            checkSed "/no-tabs/"          = Just removeTabs
+            checkSed _                    = Nothing
+
+            setS f e
+                = e { theProcessor = genSedProcessor
+                    , theSedFct  = f
+                    }
+
+-- ----------------------------------------
+--
 -- mothers little helpers
 
 convRegex :: (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
@@ -323,3 +362,5 @@ addFindExpr fe e
     =  e { theUserFindExpr = andExpr (theUserFindExpr e) fe }
 
 -- ----------------------------------------
+
+

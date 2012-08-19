@@ -9,10 +9,18 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
+import Data.Char                         ( isSpace )
+import Data.List                         ( mapAccumL )
+import Data.Maybe
+
 import Text.Regex.XMLSchema.String	-- ( match, matchRE, parseRegex, isZero )
+
+import Text.XML.HXT.Parser.XhtmlEntities ( xhtmlEntities )
 
 import System.DirTree.Types
 import System.DirTree.FileSystem
+
+import qualified Data.Map                as M
 
 -- ------------------------------
 
@@ -216,5 +224,115 @@ isUtf2Char c    = '\192' <= c && c < '\224'
 
 isUtf3Char      :: Char -> Bool
 isUtf3Char c    = '\224' <= c && c < '\240'
+
+-- ----------------------------------------
+--
+-- edit functions
+
+substUmlauts    :: String -> String
+substUmlauts	= substUmlauts' umlautMapAscii
+
+substUmlautsTex :: String -> String
+substUmlautsTex	= substUmlauts' umlautMapTex
+
+substUmlauts'    :: [(Char,String)] -> String -> String
+substUmlauts' umlautMap
+    = concatMap transUmlaut
+    where
+    transUmlaut c
+        | isAsciiChar c
+            = [c]
+        | otherwise
+            =  fromMaybe [c]
+               . lookup c
+               $ umlautMap
+
+umlautMapAscii	:: [(Char,String)]
+umlautMapAscii
+    = [ ('\196', "Ae")
+      , ('\214', "Oe")
+      , ('\220', "Ue")
+      , ('\223', "ss")
+      , ('\228', "ae")
+      , ('\246', "oe")
+      , ('\252', "ue")
+      ]
+
+umlautMapTex	:: [(Char,String)]
+umlautMapTex
+    = [ ('\196', "\"A")
+      , ('\214', "\"O")
+      , ('\220', "\"U")
+      , ('\223', "\\3")
+      , ('\228', "\"a")
+      , ('\246', "\"o")
+      , ('\252', "\"u")
+      ]
+
+substToAsciiHaskell      :: String -> String
+substToAsciiHaskell
+    = concatMap transHaskellChar
+    where
+    transHaskellChar c
+        | isAsciiChar c = [c]
+        | otherwise     = init. tail . show $ c
+
+substLatin1Tcl  :: String -> String
+substLatin1Tcl
+    = concatMap transTclChar
+    where
+    transTclChar c
+        | isAsciiChar c = [c]
+        | otherwise     = "\\x" ++ hexDigits 2 (fromEnum c)
+
+hexDigits       :: Int -> Int -> String
+hexDigits n
+    = reverse . take n . (++ (replicate n '0')) . reverse . toHx
+    where
+    toHx        :: Int -> String
+    toHx i
+        | i < 16        = [ cv !! i ]
+        | otherwise     = toHx (i `div` 16) ++ toHx (i `mod` 16)
+        where
+        cv = "0123456789ABCDEF"
+
+removeTrailingWS        :: String -> String
+removeTrailingWS
+    = unlines . map (reverse . dropWhile isSpace . reverse) . lines
+
+removeTabs		:: String -> String
+removeTabs
+    = unlines . map (concat . snd . mapAccumL rmTab 0) . lines
+    where
+    rmTab		:: Int -> Char -> (Int, String)
+    rmTab i '\t'	= (i', replicate (i' - i) ' ')
+                          where
+                          i' = ((i + 8) `div` 8) * 8
+    rmTab i ch		= (i+1, [ch])
+
+-- ------------------------------
+
+substXhtmlChars :: String -> String
+substXhtmlChars
+    = concatMap transChar
+    where
+    transChar   :: Char -> String
+    transChar c
+        | isAsciiChar c
+            = [c]
+        | otherwise
+            = ("&" ++)
+              . (++ ";")
+              . fromMaybe (("#" ++) . show .fromEnum $ c)
+              . M.lookup (fromEnum c)
+              $ xhtmlEntityMap
+
+type EntityMap = M.Map Int String
+
+xhtmlEntityMap  :: EntityMap
+xhtmlEntityMap
+    = M.fromList
+      . map (\(x,y) -> (y,x))
+      $ xhtmlEntities
 
 -- ------------------------------

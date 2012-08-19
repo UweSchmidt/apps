@@ -118,8 +118,8 @@ genGrepProcessor
     = do grepPred <- asks theGrepPred
          return (return (), contentGrep grepPred, return ())
 
-geSedProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
-geSedProcessor
+genSedProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
+genSedProcessor
     = do sedFct <- asks theSedFct
          return (return (), editFileContents sedFct, return ())
 
