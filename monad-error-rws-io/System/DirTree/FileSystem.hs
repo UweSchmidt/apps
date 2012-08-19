@@ -55,8 +55,17 @@ isFile f
 getFileContents :: FilePath -> Cmd String
 getFileContents f
     = do trc $ "getFileContents: reading file " ++ show f
-         dec       <- decFct <$> asks theUtf8Flag
-         (res, es) <- (dec . C.unpack) <$> readFileContents f
+         readFileContents f >>= decodeFileContents
+
+getDirContents :: FilePath -> Cmd [String]
+getDirContents f
+    = do trc $ "getDirContents: reading dir " ++ show f
+         io . getDirectoryContents $ f
+
+decodeFileContents :: B.ByteString -> Cmd String
+decodeFileContents contents
+    = do dec <- asks (decFct . theUtf8DecFlag)
+         let (res, es) = dec . C.unpack $ contents
          if null es
             then return res
             else abort "UTF8 decoding errors detected"
@@ -64,20 +73,20 @@ getFileContents f
       decFct True  = utf8ToUnicode
       decFct False = \ x -> (x, [])
 
-getDirContents :: FilePath -> Cmd [String]
-getDirContents f
-    = do trc $ "getDirContents: reading dir " ++ show f
-         io . getDirectoryContents $ f
-
+encodeFileContents :: String -> Cmd B.ByteString
+encodeFileContents contents
+    = do enc <- asks (encFct . theUtf8EncFlag)
+         return $ C.pack . enc  $ contents
+    where
+      encFct True  = unicodeToUtf8
+      encFct False = id
 
 editFileContents :: (String -> String) -> FilePath -> Cmd ()
-editFileContents ef f
+editFileContents editFct f
     = do trc $ "editFileContents: edit file " ++ show f
-         bc <-io $ do h <- openFile f ReadMode
-                      c <- B.hGetContents h
-                      c `seq` hClose h
-                      return c
-         let bc' = C.pack . ef . C.unpack $ bc
+         bc  <- readFileContents f
+         sc  <- decodeFileContents bc
+         bc' <- encodeFileContents . editFct $ sc
          when (bc' /= bc) $
            do trc $ "editFileContents: contents changed in " ++ show f
               asks theCreateBackup
@@ -101,5 +110,9 @@ readFileContents f
               b <- B.hGetContents h
               b `seq` hClose h
               return b
+
+readFileContentsAsString :: FilePath -> Cmd String
+readFileContentsAsString f
+    = C.unpack <$> readFileContents f
 
 -- ----------------------------------------

@@ -28,7 +28,8 @@ initEnv = Env
           , theTraceFlag    = False
           , theWarningFlag  = True
           , theStdErrFlag   = True
-          , theUtf8Flag     = False
+          , theUtf8DecFlag  = False
+          , theUtf8EncFlag  = False
           , theCreateBackup = True
           , theBackupName   = (++ "~")
           }
@@ -43,7 +44,7 @@ initGrepPred env
 initFindPred :: Env -> Env
 initFindPred env
     = env { theFindPred = findExpr2FindPred $
-                          andExpr2 (theSysFindExpr env) (theUserFindExpr env)
+                          andExpr (theSysFindExpr env) (theUserFindExpr env)
           }
 
 initCwd :: Env -> Env

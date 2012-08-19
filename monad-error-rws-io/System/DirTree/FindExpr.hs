@@ -1,10 +1,13 @@
+{- | module for evaluating find expressions -}
+
 module System.DirTree.FindExpr
+    ( module System.DirTree.FindExpr
+    , matchRE
+    )
 where
 
 import Control.Applicative
 import Control.Monad.RWSErrorIO
-
-import Data.List                        ( isPrefixOf, isSuffixOf )
 
 import Text.Regex.XMLSchema.String	-- ( match, matchRE, parseRegex, isZero )
 
@@ -14,18 +17,6 @@ import System.DirTree.FileSystem
 -- ------------------------------
 
 findExpr2FindPred :: FindExpr -> FindPred
-
-findExpr2FindPred (FPred p) f
-    = p f
-
-findExpr2FindPred (Ext ext) f
-    = return $ ext `isSuffixOf` f
-
-findExpr2FindPred (Name f1) f
-    = return $ f1 == f
-
-findExpr2FindPred (PathName f1) f
-    = (== f1) <$> pathName f
 
 findExpr2FindPred (MatchRE re) f
     = return $ matchRE re f
@@ -49,12 +40,12 @@ findExpr2FindPred IsDir f
     = isDir f
 
 findExpr2FindPred (HasCont p) f
-    = isFile `andPred` (getFileContents >=> p) $ f
+    = isFile `andPred` (readFileContentsAsString >=> p) $ f
 
-findExpr2FindPred (AndExpr2 e1 e2) f
+findExpr2FindPred (AndExpr e1 e2) f
     = andPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
 
-findExpr2FindPred (OrExpr2 e1 e2) f
+findExpr2FindPred (OrExpr e1 e2) f
     = orPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
 
 findExpr2FindPred (NotExpr e) f
@@ -96,71 +87,51 @@ checkContextRegex :: String -> Maybe Regex
 checkContextRegex
     = (\ re -> if isZero re then Nothing else Just re) . parseContextRegex parseRegex 
 
-parseContextRegex :: (String -> Regex) -> String -> Regex
-parseContextRegex parseRegex' re
-    = re'
-    where
-      re' = mkSeqs . concat $ [ startContext
-                              , (:[]) . parseRegex' $ re2
-                              , endContext
-                              ]
-      (startContext, re1)
-          | "^"   `isPrefixOf` re   = ([],                          tail   re)
-          | "\\<" `isPrefixOf` re   = ([parseRegexExt "(\\A\\W)?"], drop 2 re)
-          | otherwise               = ([mkStar mkDot],                     re)
-      (endContext, re2)
-          | "$"   `isSuffixOf` re1  = ([],                          init          re1)
-          | "\\>" `isSuffixOf` re1  = ([parseRegexExt "(\\W\\A)?"], init . init $ re1)
-          | otherwise               = ([mkStar mkDot],                            re1)
-
 -- ------------------------------
 
 boringFiles     :: FindExpr
 boringFiles
-    = orExpr [ matchExtRE "bak|old|out|tmp|aux|log|[~]"
-             , andExpr [ IsDir
-                       , orExpr [ Name "cache"
-                                , Name ".xvpics"
-                                ]
-                       ]
-             , Name ".directory"
-             , Name ".DS_Store"
-             , matchNameRE "[.]#.*"
-             ]
+    = orExprSeq [ matchExtRE "bak|old|out|tmp|aux|log|[~]"
+                , andExprSeq [ IsDir
+                             , matchNameRE "cache|\\.xvpics"
+                             ]
+                , matchNameRE "\\.(directory|DS_Store)"
+                , matchNameRE "[.]#.*"
+                ]
 
 cvsFiles        :: FindExpr
 cvsFiles
-    = orExpr [ matchPathRE ".*/CVS(/.*)?"
-             , Name ".cvsignore"
-             ]
+    = orExprSeq [ matchPathRE ".*/CVS(/.*)?"
+                , matchNameRE "\\.cvsignore"
+                ]
 
 badNames        :: FindExpr
 badNames
-    = andExpr [ NotExpr boringFiles,
-                matchNameRE ".*[^-+,._/a-zA-Z0-9].*"
-              ]
+    = andExprSeq [ NotExpr boringFiles,
+                   matchNameRE ".*[^-+,._/a-zA-Z0-9].*"
+                 ]
 
 -- ------------------------------
 
 imageFiles     :: FindExpr
 imageFiles
-    = andExpr [ IsFile
-              , matchExtRE "bmp|gif|jpg|jpeg|mov|nef|pbm|pgm|png|ppm|psd|rw2|tif|tiff|xmb|xcf"
-              ]
+    = andExprSeq [ IsFile
+                 , matchExtRE "bmp|gif|jpg|jpeg|mov|nef|pbm|pgm|png|ppm|psd|rw2|tif|tiff|xmb|xcf"
+                 ]
 
 soundFiles :: FindExpr
 soundFiles
-    = andExpr [ IsFile
-              , matchExtRE "mp3|wav|midi"
-              ]
+    = andExprSeq [ IsFile
+                 , matchExtRE "mp3|wav|midi"
+                 ]
 
 makeFiles :: FindExpr
 makeFiles
-    = andExpr [ IsFile
-              , orExpr [ matchNameRE    "[Mm]akefile"
-                       , matchExtRE "mk"
-                       ]
-              ]
+    = andExprSeq [ IsFile
+                 , orExprSeq [ matchNameRE    "[Mm]akefile"
+                             , matchExtRE "mk"
+                             ]
+                 ]
 
 -- ------------------------------
 

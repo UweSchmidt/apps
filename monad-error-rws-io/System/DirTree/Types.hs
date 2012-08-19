@@ -27,7 +27,8 @@ data Env
       , theTraceFlag    :: Bool
       , theWarningFlag  :: Bool
       , theStdErrFlag   :: Bool
-      , theUtf8Flag     :: Bool
+      , theUtf8DecFlag  :: Bool
+      , theUtf8EncFlag  :: Bool
       , theCreateBackup :: Bool
       , theBackupName   :: String -> String
       }
@@ -49,11 +50,7 @@ type Cmd = Action Env State
 -- ----------------------------------------
 
 data FindExpr
-    = FPred       FindPred
-    | Ext         String
-    | Name        String
-    | PathName    String
-    | MatchRE     Regex
+    = MatchRE     Regex
     | MatchExtRE  Regex
     | MatchPathRE Regex
     | FTrue
@@ -61,37 +58,55 @@ data FindExpr
     | IsFile
     | IsDir
     | HasCont     FindPred
-    | AndExpr2    FindExpr FindExpr
-    | OrExpr2     FindExpr FindExpr
+    | AndExpr     FindExpr FindExpr
+    | OrExpr      FindExpr FindExpr
     | NotExpr     FindExpr
 
 type FindPred = String -> Cmd Bool
+
+-- ------------------------------
+
+fCost :: FindExpr -> Int
+fCost (FTrue         ) = 0
+fCost (FFalse        ) = 0
+fCost (MatchRE      _) = 1
+fCost (MatchExtRE   _) = 1
+fCost (MatchPathRE  _) = 1
+fCost (IsFile        ) = 2
+fCost (IsDir         ) = 2
+fCost (HasCont     _ ) = 3
+fCost (AndExpr  e1 e2) = fCost e1 `max` fCost e2
+fCost (OrExpr   e1 e2) = fCost e1 `max` fCost e2
+fCost (NotExpr  e1   ) = fCost e1
 
 -- ----------------------------------------
 --
 -- smart constructors
 -- ----------------------------------------
 
-andExpr :: [FindExpr] -> FindExpr
-andExpr = foldr andExpr2 FTrue
+andExprSeq :: [FindExpr] -> FindExpr
+andExprSeq = foldr andExpr FTrue
 
-andExpr2 :: FindExpr -> FindExpr -> FindExpr
-andExpr2 FTrue              e2  = e2
-andExpr2 FFalse            _e2  = FFalse
-andExpr2 _e1            FFalse  = FFalse
-andExpr2 (AndExpr2 e11 e12) e2  = andExpr2 e11 (andExpr2 e12 e2)
-andExpr2 e1                 e2  = AndExpr2 e1 e2
+andExpr :: FindExpr -> FindExpr -> FindExpr
+andExpr FTrue              e2  = e2
+andExpr FFalse            _e2  = FFalse
+andExpr _e1            FFalse  = FFalse
+andExpr (AndExpr  e11 e12) e2  = andExpr e11 (andExpr e12 e2)
+andExpr e1                 e2
+    | fCost e1 <= fCost e2      = AndExpr e1 e2
+    | otherwise                 = andExpr e2 e1
 
+orExprSeq :: [FindExpr] -> FindExpr
+orExprSeq = foldr orExpr FFalse
 
-orExpr :: [FindExpr] -> FindExpr
-orExpr = foldr orExpr2 FFalse
-
-orExpr2 :: FindExpr -> FindExpr -> FindExpr
-orExpr2 FFalse              e2  = e2
-orExpr2 FTrue              _e2  = FTrue
-orExpr2 _e1              FTrue  = FTrue
-orExpr2 (OrExpr2 e11 e12)   e2  = orExpr2 e11 (orExpr2 e12 e2)
-orExpr2 e1                  e2  = OrExpr2 e1 e2
+orExpr :: FindExpr -> FindExpr -> FindExpr
+orExpr FFalse              e2  = e2
+orExpr FTrue              _e2  = FTrue
+orExpr _e1              FTrue  = FTrue
+orExpr (OrExpr  e11 e12)   e2  = orExpr e11 (orExpr e12 e2)
+orExpr e1                  e2
+    | fCost e1 <= fCost e2     = OrExpr e1 e2
+    | otherwise                = orExpr e2 e1
 
 matchNameRE :: String -> FindExpr
 matchNameRE = MatchRE . parseRegex

@@ -4,43 +4,17 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
-import System.Environment
 import System.Exit
 
 import System.DirTree.Core
 import System.DirTree.FindExpr
 import System.DirTree.Types
-
-import Text.Regex.XMLSchema.String	( matchRE )
-
-import System.Console.CmdTheLine
-
-import Text.PrettyPrint
+import System.DirTree.CmdTheLine
 
 -- ----------------------------------------
 --
 -- module Main where
 --
--- ----------------------------------------
-
-main1 :: IO ()
-main1
-    = do args <- getArgs
-         prog <- getProgName
-         env <- evalOptions prog args initEnv
-         res <- evalAction doIt env initState
-         maybe exitFailure return res
-
--- ----------------------------------------
-
-evalOptions :: String -> [String] -> Env -> IO Env
-evalOptions pn args env0
-    = return $ initFindPred . initGrepPred . initCwd
-             $ setOptions args
-             $ env0 { theProgName = pn }
-      where
-        setOptions = const id
-
 -- ----------------------------------------
 
 main :: IO ()
@@ -65,14 +39,12 @@ oAll :: Term (Env -> Env)
 oAll = oVerbose
        <.> oQuiet
        <.> oBackup
-       <.> oUtf8
-       <.> oScan				-- sequence of filter options is important
-       <.> oTypes				-- expensive options first: oScan eval reads contents,
-       <.> oMatchName <.> oNotMatchName 	-- oTypes eval reads file types, oMatch* does not need IO
+       <.> oReadUtf8 <.> oWriteUtf8 <.> oUtf8
+       <.> oMatchName <.> oNotMatchName
        <.> oMatchPath <.> oNotMatchPath
        <.> oMatchExt  <.> oNotMatchExt
---     <.> oIsFile    <.> oNotIsFile
---     <.> oIsDir     <.> oNotIsDir
+       <.> oScan
+       <.> oTypes
        <.> oFind
        <.> oGrep
 
@@ -110,15 +82,35 @@ oUtf8 :: Term (Env -> Env)
 oUtf8
     = convFlag setUtf8
       $ (optInfo ["utf8"])
-            { optDoc = "File contents are assumed to be utf8 encoded when processed by grep commands." }
+            { optDoc = "Shortcut for --read-utf8 --write-utf8." }
     where
-      setUtf8 True  e = e { theUtf8Flag = True }
+      setUtf8 True  e = e { theUtf8DecFlag = True
+                          , theUtf8EncFlag = True
+                          }
+      setUtf8 False e = e
+
+oReadUtf8 :: Term (Env -> Env)
+oReadUtf8
+    = convFlag setUtf8
+      $ (optInfo ["read-utf8"])
+            { optDoc = "File contents are assumed to be utf8 encoded when reading files in grep and sed commands." }
+    where
+      setUtf8 True  e = e { theUtf8DecFlag = True }
+      setUtf8 False e = e
+
+oWriteUtf8 :: Term (Env -> Env)
+oWriteUtf8
+    = convFlag setUtf8
+      $ (optInfo ["write-utf8"])
+            { optDoc = "File contents are utf8 encoded when writing files in sed commands." }
+    where
+      setUtf8 True  e = e { theUtf8EncFlag = True }
       setUtf8 False e = e
 
 oBackup :: Term (Env -> Env)
 oBackup
     = fmap setBackup . value . opt "~"
-      $ (optInfo ["backup", "b"])
+      $ (optInfo ["backup"])
             { optName = "BACKUP-SUFFIX"
             , optDoc  = unwords
                         [ "Make backup file when changing contents"
@@ -137,8 +129,8 @@ oBackup
 
 oTypes :: Term (Env -> Env)
 oTypes
-    = convValue "illegal type given in type spec" setTypes
-      $ (optInfo ["types", "T"])
+    = convStringValue "illegal type given in type spec" setTypes
+      $ (optInfo ["types"])
             { optDoc = unwords [ "Test whether entry is one of the types specified in TYPES."
                                , "Every char in TYPES stands for a type,"
                                , "'d' stands for directory, 'f' for file."
@@ -158,64 +150,64 @@ oTypes
             c2e 'f' = IsFile
             c2e 'd' = IsDir
             c2e _   = FFalse
-            typeExpr = orExpr . map c2e $ s
+            typeExpr = orExprSeq . map c2e $ s
 
 oMatchName :: Term (Env -> Env)
 oMatchName
-    = convRegex setMatchName
-      $ (optInfo ["name", "n"])
+    = convRegexSeq setMatchName
+      $ (optInfo ["name"])
             { optName = "REGEXP"
-            , optDoc = "Test whether file name matches REGEXP"
+            , optDoc = "Test whether file name matches REGEXP."
             }
     where
       setMatchName = setFindRegex MatchRE
 
 oNotMatchName :: Term (Env -> Env)
 oNotMatchName
-    = convRegex setMatchName
-      $ (optInfo ["not-name", "N"])
+    = convRegexSeq setMatchName
+      $ (optInfo ["not-name"])
             { optName = "REGEXP"
-            , optDoc = "Test whether file name does not match REGEXP"
+            , optDoc = "Test whether file name does not match REGEXP."
             }
     where
       setMatchName = setFindRegex (NotExpr . MatchRE)
 
 oMatchPath :: Term (Env -> Env)
 oMatchPath
-    = convRegex setMatchPath
-      $ (optInfo ["path", "p"])
+    = convRegexSeq setMatchPath
+      $ (optInfo ["path"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path matches REGEXP"
+            , optDoc = "Test whether whole path matches REGEXP."
             }
     where
       setMatchPath = setFindRegex MatchPathRE
 
 oNotMatchPath :: Term (Env -> Env)
 oNotMatchPath
-    = convRegex setMatchPath
-      $ (optInfo ["not-path", "P"])
+    = convRegexSeq setMatchPath
+      $ (optInfo ["not-path"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path does not match REGEXP"
+            , optDoc = "Test whether whole path does not match REGEXP."
             }
     where
       setMatchPath = setFindRegex (NotExpr . MatchPathRE)
 
 oMatchExt :: Term (Env -> Env)
 oMatchExt
-    = convRegex setMatchExt
-      $ (optInfo ["extension", "e"])
+    = convRegexSeq setMatchExt
+      $ (optInfo ["ext"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path matches REGEXP"
+            , optDoc = "Test whether whole path matches REGEXP."
             }
     where
       setMatchExt = setFindRegex MatchExtRE
 
 oNotMatchExt :: Term (Env -> Env)
 oNotMatchExt
-    = convRegex setMatchExt
-      $ (optInfo ["not-extension", "E"])
+    = convRegexSeq setMatchExt
+      $ (optInfo ["not-ext"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path does not match REGEXP"
+            , optDoc = "Test whether whole path does not match REGEXP."
             }
     where
       setMatchExt = setFindRegex (NotExpr . MatchExtRE)
@@ -223,7 +215,7 @@ oNotMatchExt
 oFind :: Term (Env -> Env)
 oFind
     = convFlag setFind
-      $ (optInfo ["print", "p"])
+      $ (optInfo ["print"])
             { optDoc = "Print matching file paths (default)." }
     where
       setFind True  e = e { theProcessor = genFindProcessor }
@@ -232,39 +224,56 @@ oFind
 oGrep :: Term (Env -> Env)
 oGrep
     = convRegex setGrep
-      $ (optInfo ["grep", "g"])
-            { optName = "REGEXP"
+      $ (optInfo ["grep"])
+            { optName = "SCAN-FCT-or-REGEXP"
             , optDoc = unwords [ "Find lines in all selected files matching REGEXP."
                                , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
+                               , "The arguments in --scan may also be used here,"
+                               , "e.g. '--grep /tabs/' lists all lines containing tabs,"
+                               ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
                                ]
             }
     where
       setGrep ""
           = return id
       setGrep s
-          = fmap setG $ checkContextRegex s
+          = fmap setG $ checkGrep s
           where
-            setG re e
+            checkGrep "/ascii/"          = Just isAsciiText
+            checkGrep "/latin1/"         = Just isLatin1Text
+            checkGrep "/latin1-ascii/"   = Just containsLatin1
+            checkGrep "/unicode/"        = Just isUnicodeText
+            checkGrep "/unicode-latin1/" = Just containsNoneLatin1
+            checkGrep "/utf8/"           = Just isUtf8
+            checkGrep "/utf8-ascii/"     = Just isUtfText
+            checkGrep "/trailing-ws/"    = Just hasTrailingWSLine
+            checkGrep "/tabs/        "   = Just containsTabs
+            checkGrep s'                 = fmap matchRE $ checkContextRegex s'
+
+            setG p e
                 = e { theProcessor = genGrepProcessor
-                    , theGrepPred  = matchRE re
+                    , theGrepPred  = p
                     }
 
 oScan :: Term (Env -> Env)
 oScan
-    = convValue "illegal scan function or regexp" setScan
-      $ (optInfo ["scan", "s"])
+    = convStringSeqValue "illegal scan function or regexp" setScan
+      $ (optInfo ["scan"])
             { optName = "SCAN-FCT-or-REGEXP"
             , optDoc = unwords [ "Test whether file contents has some feature given by SCAN-FCT."
                                , "SCAN-FCT may have the following values:"
-                               , "'ascii', 'latin1', 'latin1+', 'unicode',"
-                               , "'unicode+', 'utf8', 'utf8+', 'trailing-ws', 'contains-tabs'"
+                               , "/ascii/, /latin1/, '/latin1-ascii/', '/unicode/',"
+                               , "/unicode-latin1/', /utf8/, /utf8-ascii/, /trailing-ws/, /tabs/"
                                , "or it may be a regular expression like in --grep option."
+                               , "\n"
                                , "Meaning:"
-                               , "'latin1+': There are some none ascii chars,"
-                               , "'utf8+': There are some none ascii chars (multi byte chars),"
-                               , "'unicode+': There are some none latin1 chars."
+                               , "/latin1-ascii/: Latin1 with some none ascii chars,"
+                               , "/utf8/: Utf8 with some utf8 multi byte chars,"
+                               , "/unicode-latin1/: Unicode with some none latin1 chars."
                                , "REGEXP args are processed like in --grep functions but acts here as"
                                , "filter for selecting files."
+                               , "\n"
+                               , "No Utf8 decoding is done in scan operations, input is read as bytestring."
                                ]
             }
     where
@@ -273,28 +282,32 @@ oScan
       setScan s
           = fmap addFindExpr $ checkScan s
           where
-            checkScan "ascii"         = fe isAsciiText
-            checkScan "latin1"        = fe isLatin1Text
-            checkScan "latin1+"       = fe containsLatin1
-            checkScan "unicode"       = fe isUnicodeText
-            checkScan "unicode+"      = fe containsNoneLatin1
-            checkScan "utf8"          = fe isUtf8
-            checkScan "utf8+"         = fe isUtfText
-            checkScan "trailing-ws"   = fe hasTrailingWSLine
-            checkScan "contains-tabs" = fe containsTabs
-            checkScan s'              = fmap grp $ checkContextRegex s'
+            checkScan "/ascii/"          = fe isAsciiText
+            checkScan "/latin1/"         = fe isLatin1Text
+            checkScan "/latin1-ascii/"   = fe containsLatin1
+            checkScan "/unicode/"        = fe isUnicodeText
+            checkScan "/unicode-latin1/" = fe containsNoneLatin1
+            checkScan "/utf8/"           = fe isUtf8
+            checkScan "/utf8-ascii/"     = fe isUtfText
+            checkScan "/trailing-ws/"    = fe hasTrailingWSLine
+            checkScan "/tabs/        "   = fe containsTabs
+            checkScan s'                 = fmap grp $ checkContextRegex s'
 
-            fe x                      = Just $ HasCont $ (return . x)
+            fe x                         = Just $ HasCont $ (return . x)
 
-            grp re                    = HasCont $ (return . any (matchRE re) . lines)
+            grp re                       = HasCont $ (return . any (matchRE re) . lines)
 
 -- ----------------------------------------
 --
 -- mothers little helpers
 
-convRegex :: (String -> Maybe b) -> OptInfo -> Term b
+convRegex :: (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
 convRegex
-    = convValue "illegal regular expression"
+    = convStringValue "illegal regular expression"
+
+convRegexSeq :: (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
+convRegexSeq
+    = convStringSeqValue "illegal regular expression"
 
 setFindRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
 setFindRegex _ ""
@@ -303,54 +316,10 @@ setFindRegex constr s
     = fmap setFind $ checkRegex s
     where
       setFind re e
-          =  e { theUserFindExpr = andExpr2 (theUserFindExpr e) (constr re) }
+          =  e { theUserFindExpr = andExpr (theUserFindExpr e) (constr re) }
 
 addFindExpr :: FindExpr -> (Env -> Env)
 addFindExpr fe e
-    =  e { theUserFindExpr = andExpr2 (theUserFindExpr e) fe }
+    =  e { theUserFindExpr = andExpr (theUserFindExpr e) fe }
 
 -- ----------------------------------------
---
--- CmdTheLine utils
---
--- ----------------------------------------
-
--- an alias for (.) from Control.Category to compose terms of functions
-
-(<.>) :: Applicative f => f (b -> c) -> f (a -> b) -> f (a -> c)
-(<.>) = liftA2 (.)
-
-convertIO' :: (a -> String) -> (a -> IO (Maybe b)) -> String -> Term a -> Term b
-convertIO' showArg conv msg
-    = ret . fmap check
-    where
-      check v
-          = do res <- liftIO $ conv v
-               case res of
-                 Nothing -> msgFail $ msg'
-                 Just r  -> return r
-          where
-            msg' = sep [text msg, quotes . text . showArg $ v]
-
-convertIO :: Show a => (a -> IO (Maybe b)) -> String -> Term a -> Term b
-convertIO = convertIO' show
-
-convert' :: (a -> String) -> (a -> Maybe b) -> String -> Term a -> Term b
-convert' sf cv = convertIO' sf (return . cv)
-
-convert :: Show a => (a -> Maybe b) -> String -> Term a -> Term b
-convert = convert' show
-
-convertString :: (String -> Maybe b) -> String -> Term String -> Term b
-convertString = convert' id
-
-convFlag :: (Bool -> b) -> OptInfo -> Term b
-convFlag setFct
-    = fmap setFct . value . flag
-
-convValue :: String -> (String -> Maybe b) -> OptInfo -> Term b
-convValue msg setFct
-    = convertString setFct msg . value . opt ""
-
--- ----------------------------------------
-
