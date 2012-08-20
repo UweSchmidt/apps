@@ -27,6 +27,10 @@ import System.DirTree.Types
 --
 -- ----------------------------------------
 
+type ByteString = B.ByteString
+
+-- ----------------------------------------
+
 cd :: FilePath -> Cmd ()
 cd "."
     = return ()
@@ -62,7 +66,7 @@ getDirContents f
     = do trc $ "getDirContents: reading dir " ++ show f
          io . getDirectoryContents $ f
 
-decodeFileContents :: B.ByteString -> Cmd String
+decodeFileContents :: ByteString -> Cmd String
 decodeFileContents contents
     = do dec <- asks (decFct . theUtf8DecFlag)
          let (res, es) = dec . C.unpack $ contents
@@ -73,7 +77,7 @@ decodeFileContents contents
       decFct True  = utf8ToUnicode
       decFct False = \ x -> (x, [])
 
-encodeFileContents :: String -> Cmd B.ByteString
+encodeFileContents :: String -> Cmd ByteString
 encodeFileContents contents
     = do enc <- asks (encFct . theUtf8EncFlag)
          return $ C.pack . enc  $ contents
@@ -98,7 +102,7 @@ editFileContents editFct f
               trc $ "editFileContents: write canged contents back to " ++ show f
               writeFileContents f bc'
 
-writeFileContents :: FilePath -> B.ByteString -> Cmd ()
+writeFileContents :: FilePath -> ByteString -> Cmd ()
 writeFileContents f' b'
     = io $ do h <- openFile f' WriteMode
               B.hPutStr h b'
