@@ -22,7 +22,7 @@ import Data.List                             ( partition
 import System.DirTree.Types
 import System.DirTree.FileSystem
 
-import Text.Regex.XMLSchema.String	     ( match )
+import Text.Regex.XMLSchema.String           ( match )
 
 import qualified Data.Map                    as M
 import qualified Data.ByteString.Lazy        as L
@@ -116,7 +116,7 @@ checkCmd dictRef f
                      -> return () -- out "file not yet in hash dictionary" f
                  Just oldHash
                      -> do when (oldHash /= newHash) $
-                                out "hash has changed for file" f
+                                msg "hash has changed for file" f
                insertNewHash f newHash dictRef
 
 -- check removed and new files and update checksum file
@@ -128,10 +128,10 @@ finishCmd csFile dictRef
                  = (uncurry (\\) &&& uncurry (flip (\\))) . (M.keys *** M.keys) $ s
 
          when (not . null $ removedFiles) $
-              mapM_ (out "file not found for hash in checksum file") removedFiles
+              mapM_ (msg "file not found for hash in checksum file") removedFiles
 
          when (not . null $ newFiles) $
-              mapM_ (out $ "hash not found in current checksum file") newFiles 
+              mapM_ (msg $ "hash not found in current checksum file") newFiles
 
          update <- asks theHashUpdate
          when update $
@@ -141,11 +141,5 @@ finishCmd csFile dictRef
     where
       format
           = unlines . map (\ (f, h) -> h ++ " * " ++ f) . M.toList
-
-out :: String -> FilePath -> Cmd ()
-out msg f
-    = do p <- pathName f
-         io $ putStrLn $ unwords ["check-hashes:", msg ++ ":", p]
-
 
 -- ----------------------------------------

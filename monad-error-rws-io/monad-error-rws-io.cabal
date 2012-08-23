@@ -26,9 +26,9 @@ Library
                      , transformers  >= 0.3
 
 Executable rws-e-io
-  hs-source-dirs: .
+  hs-source-dirs:      .
 
-  Main-Is: RWSTest.hs
+  Main-Is:             RWSTest.hs
 
   GHC-Options: -Wall  -fwarn-tabs
 

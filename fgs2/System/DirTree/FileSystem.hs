@@ -12,6 +12,8 @@ import System.Directory
 import System.IO                        ( IOMode(..)
                                         , openFile
                                         , hClose
+                                        , hPutStrLn
+                                        , stderr
                                         )
 import System.Posix.Files
 
@@ -30,6 +32,13 @@ import System.DirTree.Types
 ignoreErrors :: Cmd a -> Cmd a
 ignoreErrors
     = local $ \ e -> e {theErrorFlag = False}
+
+msg :: String -> FilePath -> Cmd ()
+msg s f
+    = asks warningOn
+      `guards` (do p <- pathName f
+                   io $ hPutStrLn stderr $ s ++ ": " ++ p
+               )
 
 cd :: FilePath -> Cmd ()
 cd "."
@@ -99,11 +108,12 @@ editFileContents editFct f
            do trc $ "editFileContents: contents changed in " ++ show f
               asks theCreateBackup
                 `guards`
-                ( do bf <- asks (($ f) . theBackupName) 
+                ( do bf <- asks (($ f) . theBackupName)
                      trc $ "editFileContents: create backup file " ++ show bf
                      writeFileContents bf bc
                 )
               trc $ "editFileContents: write canged contents back to " ++ show f
+              msg "contents edited in file" f
               writeFileContents f bc'
 
 writeFileContents :: FilePath -> ByteString -> Cmd ()

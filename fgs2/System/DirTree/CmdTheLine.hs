@@ -10,7 +10,7 @@ import Control.Applicative
 import Control.Arrow                    ( (***) )
 import Control.Monad.RWSErrorIO
 
-import Data.List			( partition )
+import Data.List                        ( partition )
 import Data.Maybe                       ( isJust
                                         , fromJust
                                         )

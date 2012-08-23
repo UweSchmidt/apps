@@ -6,7 +6,7 @@ where
 
 import Control.Monad.RWSErrorIO
 
-import Text.Regex.XMLSchema.String	( Regex
+import Text.Regex.XMLSchema.String      ( Regex
                                         , parseRegex
                                         )
 

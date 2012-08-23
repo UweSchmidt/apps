@@ -32,8 +32,8 @@ findGrepSed setOpts
 fgsInfo :: TermInfo
 fgsInfo
     = defTI
-      { termName = "find-grep-sed"
-      , version  = "0.0.0"
+      { termName = "fgs2"
+      , version  = "0.1.0.0"
       }
 
 oAll :: Term (Env -> Env)
@@ -256,7 +256,7 @@ oScan
             checkScan "{utf8}"           = fe isUtf8
             checkScan "{utf8-ascii}"     = fe isUtfText
             checkScan "{trailing-ws}"    = fe hasTrailingWSLine
-            checkScan "{tabs}        "   = fe containsTabs
+            checkScan "{tabs}"           = fe containsTabs
             checkScan s'                 = fmap grp $ checkContextRegex s'
 
             fe x                         = Just $ HasCont $ (return . x)
@@ -303,7 +303,7 @@ oGrep
             checkGrep "{utf8}"           = Just isUtf8
             checkGrep "{utf8-ascii}"     = Just isUtfText
             checkGrep "{trailing-ws}"    = Just hasTrailingWSLine
-            checkGrep "{tabs}        "   = Just containsTabs
+            checkGrep "{tabs}"           = Just containsTabs
             checkGrep s'                 = fmap matchRE $ checkContextRegex s'
 
             setG p e

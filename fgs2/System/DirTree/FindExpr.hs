@@ -13,7 +13,7 @@ import Data.Char                         ( isSpace )
 import Data.List                         ( mapAccumL )
 import Data.Maybe
 
-import Text.Regex.XMLSchema.String	-- ( match, matchRE, parseRegex, isZero )
+import Text.Regex.XMLSchema.String      -- ( match, matchRE, parseRegex, isZero )
 
 import Text.XML.HXT.Parser.XhtmlEntities ( xhtmlEntities )
 
@@ -89,11 +89,11 @@ orPred fct1 fct2 f
 
 checkRegex :: String -> Maybe Regex
 checkRegex
-    = (\ re -> if isZero re then Nothing else Just re) . parseRegex 
+    = (\ re -> if isZero re then Nothing else Just re) . parseRegex
 
 checkContextRegex :: String -> Maybe Regex
 checkContextRegex
-    = (\ re -> if isZero re then Nothing else Just re) . parseContextRegex parseRegex 
+    = (\ re -> if isZero re then Nothing else Just re) . parseContextRegex parseRegex
 
 -- ------------------------------
 
@@ -143,43 +143,66 @@ makeFiles
 
 -- ------------------------------
 
-star, plus              :: String -> String
+reSpace :: Regex
+reSpace
+    = parseRegex "\\s"
 
-star s                  = "(" ++ s ++ ")*"
-plus s                  = "(" ++ s ++ ")+"
-
+reAsciiChar :: Regex
 reAsciiChar
- , reLatin1Char, reLatin1'Char
- , reUnicodeChar, reUnicode'Char
- , reNoTabsChar         :: String
+    = mkAlt reSpace $ mkSymRng '\33' '\127'
 
-reAsciiChar             = "[\\s\33-\127]"
-reLatin1Char            = "[\\s\33-\127\160-\255]"
-reLatin1'Char           = "[\160-\255]"
-reUnicodeChar           = "[\\s\33-\127\160-" ++ [maxBound::Char] ++ "]"
-reUnicode'Char          = "[\256-" ++ [maxBound::Char] ++ "]"
-reNoTabsChar            = "[\\n\\r\32-\127\160-" ++ [maxBound::Char] ++ "]"
+reLatin1Char :: Regex
+reLatin1Char
+    = mkAlt reAsciiChar reLatin1NoneAsciiChar
+
+reLatin1NoneAsciiChar :: Regex
+reLatin1NoneAsciiChar
+    = mkSymRng '\160' '\255'
+
+reUnicodeChar :: Regex
+reUnicodeChar
+    = mkAlt reLatin1Char reUnicodeNoneLatin1Char
+
+reUnicodeNoneLatin1Char :: Regex
+reUnicodeNoneLatin1Char
+    = mkSymRng '\256' maxBound
+
+reAsciiWord :: Regex
+reAsciiWord
+    = mkStar reAsciiChar
+
+reLatin1Word :: Regex
+reLatin1Word
+    = mkStar reLatin1Char
+
+reUnicodeWord :: Regex
+reUnicodeWord
+    = mkStar reUnicodeChar
+
+reContainsTabs :: Regex
+reContainsTabs
+    = mkSeqs [mkAll, mkSym1 '\t', mkAll]
 
 isAsciiText             :: String -> Bool
-isAsciiText             = match $ star reAsciiChar
+isAsciiText             = matchRE reAsciiWord
 
 isLatin1Text            :: String -> Bool
-isLatin1Text            = match $ star reLatin1Char
+isLatin1Text            = matchRE reLatin1Word
 
 isUnicodeText           :: String -> Bool
-isUnicodeText           = match $ star reUnicodeChar
+isUnicodeText           = matchRE reUnicodeWord
 
 containsLatin1          :: String -> Bool
-containsLatin1          = match $ plus ((star reAsciiChar) ++ reLatin1'Char)
+containsLatin1          = matchRE $ mkSeqs [reAsciiWord,  reLatin1NoneAsciiChar, reLatin1Word]
 
 containsNoneLatin1      :: String -> Bool
-containsNoneLatin1      = match $ plus ((star reLatin1Char) ++ reUnicode'Char)
+containsNoneLatin1      = matchRE $ mkSeqs [reLatin1Word, reUnicodeNoneLatin1Char, reUnicodeWord]
 
 containsBinary          :: String -> Bool
 containsBinary          = not . isLatin1Text
 
 containsTabs            :: String -> Bool
-containsTabs            = match $ plus ((star reNoTabsChar) ++ "\\t")
+containsTabs            = matchRE $ reContainsTabs
 
 isUtfText               :: String -> Bool
 isUtfText s             = not (isAsciiText s) && isUtf8 s
@@ -205,8 +228,8 @@ isUtf82 _               = False
 hasTrailingWS           :: String -> Bool
 hasTrailingWS           = match ".*\\s"
 
-hasTrailingWSLine	:: String -> Bool
-hasTrailingWSLine	= any hasTrailingWS . lines
+hasTrailingWSLine       :: String -> Bool
+hasTrailingWSLine       = any hasTrailingWS . lines
 
 -- ------------------------------------------------------------
 
@@ -230,10 +253,10 @@ isUtf3Char c    = '\224' <= c && c < '\240'
 -- edit functions
 
 substUmlauts    :: String -> String
-substUmlauts	= substUmlauts' umlautMapAscii
+substUmlauts    = substUmlauts' umlautMapAscii
 
 substUmlautsTex :: String -> String
-substUmlautsTex	= substUmlauts' umlautMapTex
+substUmlautsTex = substUmlauts' umlautMapTex
 
 substUmlauts'    :: [(Char,String)] -> String -> String
 substUmlauts' umlautMap
@@ -247,7 +270,7 @@ substUmlauts' umlautMap
                . lookup c
                $ umlautMap
 
-umlautMapAscii	:: [(Char,String)]
+umlautMapAscii  :: [(Char,String)]
 umlautMapAscii
     = [ ('\196', "Ae")
       , ('\214', "Oe")
@@ -258,7 +281,7 @@ umlautMapAscii
       , ('\252', "ue")
       ]
 
-umlautMapTex	:: [(Char,String)]
+umlautMapTex    :: [(Char,String)]
 umlautMapTex
     = [ ('\196', "\"A")
       , ('\214', "\"O")
@@ -300,15 +323,15 @@ removeTrailingWS        :: String -> String
 removeTrailingWS
     = unlines . map (reverse . dropWhile isSpace . reverse) . lines
 
-removeTabs		:: String -> String
+removeTabs              :: String -> String
 removeTabs
     = unlines . map (concat . snd . mapAccumL rmTab 0) . lines
     where
-    rmTab		:: Int -> Char -> (Int, String)
-    rmTab i '\t'	= (i', replicate (i' - i) ' ')
+    rmTab               :: Int -> Char -> (Int, String)
+    rmTab i '\t'        = (i', replicate (i' - i) ' ')
                           where
                           i' = ((i + 8) `div` 8) * 8
-    rmTab i ch		= (i+1, [ch])
+    rmTab i ch          = (i+1, [ch])
 
 -- ------------------------------
 

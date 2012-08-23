@@ -85,7 +85,7 @@ traverseDirTree
          genProcessor <- asks theProcessor
          (start, action, finish)
                       <- genProcessor
-         
+
          always $
            do start
               always  $
