@@ -41,9 +41,11 @@ genChecksumProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
 genChecksumProcessor
     = do dictRef <- newChecksumRef
          csFile  <- asks theChecksumFile
+         csFct   <- asks theHashFct
+         csUpd   <- asks theHashUpdate
          return ( initDict csFile >>= initChecksumState dictRef
-                , checkCmd  dictRef
-                , finishCmd csFile dictRef
+                , checkCmd  csFct  csUpd dictRef
+                , finishCmd csFile csUpd dictRef
                 )
 
 -- ----------------------------------------
@@ -106,38 +108,50 @@ initDict csFile
 
 -- compute hashes and compare with old hashes
 
-checkCmd :: ChecksumRef -> FilePath -> Cmd ()
-checkCmd dictRef f
-          = do trc $ "computing hash for file " ++ show f
-               newHash <- sha1Hash <$> readFileContents f
-               h       <- lookupOldHash f dictRef
-               case h of
-                 Nothing
-                     -> return () -- out "file not yet in hash dictionary" f
-                 Just oldHash
-                     -> do when (oldHash /= newHash) $
-                                msg "hash has changed for file" f
-               insertNewHash f newHash dictRef
+checkCmd :: HashFct -> Bool -> ChecksumRef -> FilePath -> Cmd ()
+checkCmd hashFct update dictRef f
+    | update
+        = do trc $ "updating hash for file " ++ show f
+             newHash <- hashFct <$> readFileContents f
+             h       <- length newHash `seq` lookupOldHash f dictRef
+             case h of
+               Nothing
+                   -> trc $ "file not yet in hash dictionary: " ++ show f
+               Just oldHash
+                   -> do when (oldHash /= newHash) $
+                              msg "hash has changed for file" f
+             insertNewHash f newHash dictRef
+    | otherwise
+        = do trc $ "checking hash for file " ++ show f 
+             h <- lookupOldHash f dictRef
+             case h of
+               Nothing
+                   -> trc $ "file not yet in hash dictionary: " ++ show f
+               Just oldHash
+                   -> do newHash <- hashFct <$> readFileContents f
+                         when (oldHash /= newHash) $
+                              msg "hash has changed for file" f
 
 -- check removed and new files and update checksum file
 
-finishCmd :: FilePath -> ChecksumRef -> Cmd ()
-finishCmd csFile dictRef
-    = do s@(_old, new) <- getChecksumState dictRef
-         let (removedFiles, newFiles)
-                 = (uncurry (\\) &&& uncurry (flip (\\))) . (M.keys *** M.keys) $ s
+finishCmd :: FilePath -> Bool -> ChecksumRef -> Cmd ()
+finishCmd csFile update dictRef
+    | update
+        = do s@(_old, new) <- getChecksumState dictRef
+             let (removedFiles, newFiles)
+                     = (uncurry (\\) &&& uncurry (flip (\\))) . (M.keys *** M.keys) $ s
 
-         when (not . null $ removedFiles) $
-              mapM_ (msg "file not found for hash in checksum file") removedFiles
+             when (not . null $ removedFiles) $
+                  mapM_ (msg "file not found for hash in checksum file") removedFiles
 
-         when (not . null $ newFiles) $
-              mapM_ (msg $ "hash not found in current checksum file") newFiles
+             when (not . null $ newFiles) $
+                  mapM_ (msg $ "hash not found in current checksum file") newFiles
 
-         update <- asks theHashUpdate
-         when update $
-              if M.null new
-              then rmFile csFile
-              else writeStringAsFileContents csFile $ format new
+             if M.null new
+                then rmFile csFile
+                else writeStringAsFileContents csFile $ format new
+    | otherwise
+        = return ()
     where
       format
           = unlines . map (\ (f, h) -> h ++ " * " ++ f) . M.toList
