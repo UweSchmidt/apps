@@ -50,6 +50,9 @@ findExpr2FindPred IsDir f
 findExpr2FindPred (HasCont p) f
     = isFile `andPred` (readFileContentsAsString >=> p) $ f
 
+findExpr2FindPred (HasFeature p) f
+    = p f
+
 findExpr2FindPred (AndExpr e1 e2) f
     = andPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
 
@@ -97,27 +100,33 @@ checkContextRegex
 
 -- ------------------------------
 
-boringFiles     :: FindExpr
-boringFiles
-    = orExprSeq [ matchExtRE "bak|old|out|tmp|aux|log|[~]"
-                , andExprSeq [ IsDir
-                             , matchNameRE "cache|\\.xvpics"
-                             ]
-                , matchNameRE "\\.(directory|DS_Store)"
-                , matchNameRE "[.]#.*"
-                ]
+isBoringFile :: FindPred
+isBoringFile = findExpr2FindPred boringFiles
+    where
+      boringFiles
+          = orExprSeq [ matchExtRE "bak|old|out|tmp|aux|log|[~]"
+                      , matchNameRE "\\..*"
+                      , matchNameRE "[.]#.*"
+                      ]
 
-cvsFiles        :: FindExpr
-cvsFiles
-    = orExprSeq [ matchPathRE ".*/CVS(/.*)?"
-                , matchNameRE "\\.cvsignore"
-                ]
+isUpperCaseImgFile :: FindPred
+isUpperCaseImgFile = findExpr2FindPred upperCaseImgFiles
+    where
+    upperCaseImgFiles
+        = orExprSeq
+          [ andExprSeq
+            [ matchNameRE $
+              concat [ "([_A-Z]+)[0-9]+(-[0-9]+)?[.]"
+                     , "(XMP|xmp|NEF|nef|JPG|jpg|MOV|mov"
+                     , "|MP3|mp3|TIF|tif|RW2|rw2|WAV|wav"
+                     , "|((NEF|nef)[.](DOP|dop|RWS|rws)))"
+                     ]
+            , matchNameRE ".*[A-Z].*"                   -- at least 1 uppercase char
+            ]
+          , matchNameRE "[0-9]+-[0-9]+[.](WAV|MP3)"     -- zoom mic
+          ]
 
-badNames        :: FindExpr
-badNames
-    = andExprSeq [ NotExpr boringFiles,
-                   matchNameRE ".*[^-+,._/a-zA-Z0-9].*"
-                 ]
+
 
 -- ------------------------------
 

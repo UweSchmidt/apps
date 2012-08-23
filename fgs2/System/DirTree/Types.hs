@@ -72,6 +72,7 @@ data FindExpr
     | FFalse
     | IsFile
     | IsDir
+    | HasFeature  FindPred
     | HasCont     FindPred
     | AndExpr     FindExpr FindExpr
     | OrExpr      FindExpr FindExpr
@@ -89,7 +90,8 @@ fCost (MatchExtRE   _) = 1
 fCost (MatchPathRE  _) = 1
 fCost (IsFile        ) = 2
 fCost (IsDir         ) = 2
-fCost (HasCont     _ ) = 3
+fCost (HasFeature  _ ) = 3
+fCost (HasCont     _ ) = 4
 fCost (AndExpr  e1 e2) = fCost e1 `max` fCost e2
 fCost (OrExpr   e1 e2) = fCost e1 `max` fCost e2
 fCost (NotExpr  e1   ) = fCost e1

@@ -44,6 +44,7 @@ oAll = oVerbose
        <.> oMatchName <.> oNotMatchName
        <.> oMatchPath <.> oNotMatchPath
        <.> oMatchExt  <.> oNotMatchExt
+       <.> oSpecial
        <.> oScan
        <.> oTypes
        <.> oFind
@@ -219,6 +220,35 @@ oNotMatchExt
             }
     where
       setMatchExt = setFindRegex (NotExpr . MatchExtRE)
+
+oSpecial :: Term (Env -> Env)
+oSpecial
+    = convStringSeqValue "illegal special function" setSpecial
+      $ (optInfo ["special"])
+            { optName = "SPECIAL-PRED"
+            , optDoc  = unwords
+                        [ "Test whether a special buildin predicate holds."
+                        , "Currently buildin predicates are:"
+                        , "'{boring-file}',"
+                        , "'{not-boring-file}',"
+                        , "'{uppercase-img-file}' and"
+                        , "'{not-uppercase-img-file}'."
+                        ]
+            }
+    where
+      setSpecial ""
+          = return id
+      setSpecial s
+          = fmap addFindExpr $ checkSpecial s
+          where
+            checkSpecial "{boring-file}"            = fe isBoringFile
+            checkSpecial "{not-boring-file}"        = fn isBoringFile
+            checkSpecial "{uppercase-img-file}"     = fe isUpperCaseImgFile
+            checkSpecial "{not-uppercase-img-file}" = fn isUpperCaseImgFile
+            checkSpecial _                          = Nothing
+
+            fe p = Just . HasFeature $ p
+            fn p = Just . HasFeature $ p >=> return . not
 
 oScan :: Term (Env -> Env)
 oScan
