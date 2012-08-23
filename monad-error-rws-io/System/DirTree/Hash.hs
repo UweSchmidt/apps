@@ -1,6 +1,7 @@
 module System.DirTree.Hash
     ( genChecksumProcessor
     , sha1Hash
+    , md5Hash
     )
 where
 
@@ -13,6 +14,7 @@ import Control.Arrow                         ( first
 import Control.Monad.RWSErrorIO
 
 import Data.Digest.Pure.SHA
+import Data.Digest.OpenSSL.MD5
 import Data.IORef
 import Data.List                             ( partition
                                              , (\\)
@@ -43,12 +45,14 @@ genChecksumProcessor
                 , checkCmd  dictRef
                 , finishCmd csFile dictRef
                 )
-    where
 
 -- ----------------------------------------
 
 sha1Hash           :: HashFct
 sha1Hash           = showDigest . sha1 . L.fromChunks . (:[])
+
+md5Hash            :: HashFct
+md5Hash            = last . words . md5sum
 
 -- ----------------------------------------
 --

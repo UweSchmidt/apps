@@ -49,7 +49,7 @@ oAll = oVerbose
        <.> oFind
        <.> oGrep
        <.> oSed
-       <.> oHash <.> oUpdateHash <.> oSha1
+       <.> oHash <.> oUpdateHash <.> oSha1 <.> oMd5
 
 -- ----------------------------------------
 --
@@ -228,14 +228,14 @@ oScan
             , optDoc  = unwords
                         [ "Test whether file contents has some feature given by SCAN-FCT."
                         , "SCAN-FCT may have the following values:"
-                        , "'/ascii/', '/latin1/', '/latin1-ascii/', '/unicode/',"
-                        , "'/unicode-latin1/', '/utf8/', '/utf8-ascii/', '/trailing-ws/', '/tabs/'"
+                        , "'{ascii}', '{latin1}', '{latin1-ascii}', '{unicode}',"
+                        , "'{unicode-latin1}', '{utf8}', '{utf8-ascii}', '{trailing-ws}', '{tabs}'"
                         , "or it may be a regular expression like in --grep option."
                         , "\n"
                         , "Meaning:"
-                        , "'/latin1-ascii/': Latin1 with some none ascii chars,"
-                        , "'/utf8/': Utf8 with some utf8 multi byte chars,"
-                        , "'/unicode-latin1/': Unicode with some none latin1 chars."
+                        , "'{latin1-ascii}': Latin1 with some none ascii chars,"
+                        , "'{utf8}': Utf8 with some utf8 multi byte chars,"
+                        , "'{unicode-latin1}': Unicode with some none latin1 chars."
                         , "REGEXP args are processed like in --grep functions but acts here as"
                         , "filter for selecting files."
                         , "\n"
@@ -248,15 +248,15 @@ oScan
       setScan s
           = fmap addFindExpr $ checkScan s
           where
-            checkScan "/ascii/"          = fe isAsciiText
-            checkScan "/latin1/"         = fe isLatin1Text
-            checkScan "/latin1-ascii/"   = fe containsLatin1
-            checkScan "/unicode/"        = fe isUnicodeText
-            checkScan "/unicode-latin1/" = fe containsNoneLatin1
-            checkScan "/utf8/"           = fe isUtf8
-            checkScan "/utf8-ascii/"     = fe isUtfText
-            checkScan "/trailing-ws/"    = fe hasTrailingWSLine
-            checkScan "/tabs/        "   = fe containsTabs
+            checkScan "{ascii}"          = fe isAsciiText
+            checkScan "{latin1}"         = fe isLatin1Text
+            checkScan "{latin1-ascii}"   = fe containsLatin1
+            checkScan "{unicode}"        = fe isUnicodeText
+            checkScan "{unicode-latin1}" = fe containsNoneLatin1
+            checkScan "{utf8}"           = fe isUtf8
+            checkScan "{utf8-ascii}"     = fe isUtfText
+            checkScan "{trailing-ws}"    = fe hasTrailingWSLine
+            checkScan "{tabs}        "   = fe containsTabs
             checkScan s'                 = fmap grp $ checkContextRegex s'
 
             fe x                         = Just $ HasCont $ (return . x)
@@ -285,8 +285,8 @@ oGrep
                         [ "Find lines in all selected files matching REGEXP."
                         , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
                         , "The arguments in --scan may also be used here as GREP-FCT,"
-                        , "e.g. '--grep /tabs/' lists all lines containing tabs,"
-                        ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
+                        , "e.g. '--grep {tabs}' lists all lines containing tabs,"
+                        ,"'--grep {latin1-ascii}' lists all lines containing none ascii latin1 chars."
                         ]
             }
     where
@@ -295,15 +295,15 @@ oGrep
       setGrep s
           = fmap setG $ checkGrep s
           where
-            checkGrep "/ascii/"          = Just isAsciiText
-            checkGrep "/latin1/"         = Just isLatin1Text
-            checkGrep "/latin1-ascii/"   = Just containsLatin1
-            checkGrep "/unicode/"        = Just isUnicodeText
-            checkGrep "/unicode-latin1/" = Just containsNoneLatin1
-            checkGrep "/utf8/"           = Just isUtf8
-            checkGrep "/utf8-ascii/"     = Just isUtfText
-            checkGrep "/trailing-ws/"    = Just hasTrailingWSLine
-            checkGrep "/tabs/        "   = Just containsTabs
+            checkGrep "{ascii}"          = Just isAsciiText
+            checkGrep "{latin1}"         = Just isLatin1Text
+            checkGrep "{latin1-ascii}"   = Just containsLatin1
+            checkGrep "{unicode}"        = Just isUnicodeText
+            checkGrep "{unicode-latin1}" = Just containsNoneLatin1
+            checkGrep "{utf8}"           = Just isUtf8
+            checkGrep "{utf8-ascii}"     = Just isUtfText
+            checkGrep "{trailing-ws}"    = Just hasTrailingWSLine
+            checkGrep "{tabs}        "   = Just containsTabs
             checkGrep s'                 = fmap matchRE $ checkContextRegex s'
 
             setG p e
@@ -319,9 +319,9 @@ oSed
             , optDoc  = unwords
                         [ "Edit files with given edit function."
                         , "currently supported edit functions are:"
-                        , "'/umlauts-to-ascii/', '/umlauts-to-tex/',"
-                        , "'/html-to-ascii/', '/haskell-to-ascii/', '/tcl-to-ascii/',"
-                        , "'/no-trailing-ws/', '/no-tabs/'."
+                        , "'{umlauts-to-ascii}', '{umlauts-to-tex}',"
+                        , "'{html-to-ascii}', '{haskell-to-ascii}', '{tcl-to-ascii}',"
+                        , "'{no-trailing-ws}', '{no-tabs}'."
                         ]
             }
     where
@@ -330,13 +330,13 @@ oSed
       setSed s
           = fmap setS $ checkSed s
           where
-            checkSed "/umlauts-to-ascii/" = Just substUmlauts
-            checkSed "/umlauts-to-tex/"   = Just substUmlautsTex
-            checkSed "/html-to-ascii/"    = Just substXhtmlChars
-            checkSed "/haskell-to-ascii/" = Just substToAsciiHaskell
-            checkSed "/tcl-to-ascii/"     = Just substLatin1Tcl
-            checkSed "/no-trailing-ws/"   = Just removeTrailingWS
-            checkSed "/no-tabs/"          = Just removeTabs
+            checkSed "{umlauts-to-ascii}" = Just substUmlauts
+            checkSed "{umlauts-to-tex}"   = Just substUmlautsTex
+            checkSed "{html-to-ascii}"    = Just substXhtmlChars
+            checkSed "{haskell-to-ascii}" = Just substToAsciiHaskell
+            checkSed "{tcl-to-ascii}"     = Just substLatin1Tcl
+            checkSed "{no-trailing-ws}"   = Just removeTrailingWS
+            checkSed "{no-tabs}"          = Just removeTabs
             checkSed _                    = Nothing
 
             setS f e
@@ -378,12 +378,20 @@ oUpdateHash
       setUpdateHash False e = e
 
 oSha1 :: Term (Env -> Env)
-oSha1
-    = convDefaultStringValue "illegal checksum file name" setChecksumFile ".sha1"
-      $ (optInfo ["sha1"])
+oSha1 = oHashFct "sha1" sha1Hash
+
+oMd5 :: Term (Env -> Env)
+oMd5 = oHashFct "md5" md5Hash
+
+oHashFct :: String -> HashFct -> Term (Env -> Env)
+oHashFct name fct
+    = convDefaultStringValue "illegal checksum file name" setChecksumFile ("." ++ name)
+      $ (optInfo [name])
             { optName = "HASH-FILE"
             , optDoc  = unwords
-                        [ "Set hash function to sha1 and use"
+                        [ "Set hash function to"
+                        , name
+                        , "and use"
                         , "HASH-FILE for the dictionary of hashes."
                         ]
             }
@@ -394,7 +402,7 @@ oSha1
           = fmap setS $ checkName f
 
       setS f e
-          = e { theHashFct      = sha1Hash
+          = e { theHashFct      = fct
               , theChecksumFile = f
               }
 
@@ -418,10 +426,7 @@ setFindRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
 setFindRegex _ ""
     = return id
 setFindRegex constr s
-    = fmap setFind $ checkRegex s
-    where
-      setFind re e
-          =  e { theUserFindExpr = andExpr (theUserFindExpr e) (constr re) }
+    = fmap (addFindExpr . constr) $ checkRegex s
 
 addFindExpr :: FindExpr -> (Env -> Env)
 addFindExpr fe e
