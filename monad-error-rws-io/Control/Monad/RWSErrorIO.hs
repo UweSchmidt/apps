@@ -135,8 +135,8 @@ orElse :: Config r => Action r s a -> Action r s a -> Action r s a
 orElse x1 x2
     = x1 `catchError` try2
     where
-      try2 (Msg s)
-          = do warn $ "error ignored: " ++ s
+      try2 (Msg _s)
+          = do -- warn $ "error ignored: " ++ s
                x2
 
 finally :: Action r s a -> Action r s () -> Action r s a

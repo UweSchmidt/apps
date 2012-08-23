@@ -27,9 +27,9 @@ import System.DirTree.Types
 --
 -- ----------------------------------------
 
-type ByteString = B.ByteString
-
--- ----------------------------------------
+ignoreErrors :: Cmd a -> Cmd a
+ignoreErrors
+    = local $ \ e -> e {theErrorFlag = False}
 
 cd :: FilePath -> Cmd ()
 cd "."
@@ -48,13 +48,17 @@ pathName name
 
 isDir :: FilePath -> Cmd Bool
 isDir f
-    = do s <- io $ getSymbolicLinkStatus f 	-- followSymLinks: getFileStatus
-         return (isDirectory s)
+    = ignoreErrors $
+         (isDirectory <$> (io $ getSymbolicLinkStatus f))
+      `orElse`
+      return False
 
 isFile :: FilePath -> Cmd Bool
 isFile f
-    = do s <- io $ getSymbolicLinkStatus f 	-- followSymLinks: getFileStatus
-         return (isRegularFile s)
+    = ignoreErrors $
+         (isRegularFile <$> (io $ getSymbolicLinkStatus f))
+      `orElse`
+      return False
 
 getFileContents :: FilePath -> Cmd String
 getFileContents f
@@ -108,7 +112,11 @@ writeFileContents f' b'
               B.hPutStr h b'
               hClose h
 
-readFileContents :: FilePath -> Cmd B.ByteString
+writeStringAsFileContents :: FilePath -> String -> Cmd ()
+writeStringAsFileContents f' s'
+    = writeFileContents f' $ C.pack s'
+
+readFileContents :: FilePath -> Cmd ByteString
 readFileContents f
     = io $ do h <- openFile f ReadMode
               b <- B.hGetContents h
@@ -118,5 +126,11 @@ readFileContents f
 readFileContentsAsString :: FilePath -> Cmd String
 readFileContentsAsString f
     = C.unpack <$> readFileContents f
+
+rmFile :: FilePath -> Cmd ()
+rmFile f
+    = io $
+      do x <- doesFileExist f
+         when x $ removeFile f
 
 -- ----------------------------------------

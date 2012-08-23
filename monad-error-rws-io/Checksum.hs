@@ -4,11 +4,10 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
-import Data.Maybe
-
 import System.Exit
 
 import System.DirTree.Core
+import System.DirTree.Hash
 import System.DirTree.FindExpr
 import System.DirTree.Types
 import System.DirTree.CmdTheLine
@@ -50,6 +49,7 @@ oAll = oVerbose
        <.> oFind
        <.> oGrep
        <.> oSed
+       <.> oHash <.> oUpdateHash <.> oSha1
 
 -- ----------------------------------------
 --
@@ -96,7 +96,11 @@ oReadUtf8 :: Term (Env -> Env)
 oReadUtf8
     = convFlag setUtf8
       $ (optInfo ["read-utf8"])
-            { optDoc = "File contents are assumed to be utf8 encoded when reading files in grep and sed commands." }
+            { optDoc = unwords
+                       [ "File contents are assumed to be utf8 encoded"
+                       , "when reading files in grep and sed commands."
+                       ]
+            }
     where
       setUtf8 True  e = e { theUtf8DecFlag = True }
       setUtf8 False e = e
@@ -134,11 +138,12 @@ oTypes :: Term (Env -> Env)
 oTypes
     = convStringValue "illegal type given in type spec" setTypes
       $ (optInfo ["types"])
-            { optDoc = unwords [ "Test whether entry is one of the types specified in TYPES."
-                               , "Every char in TYPES stands for a type,"
-                               , "'d' stands for directory, 'f' for file."
-                               , "Other types are not yet supported."
-                               ]
+            { optDoc = unwords
+                       [ "Test whether entry is one of the types specified in TYPES."
+                       , "Every char in TYPES stands for a type,"
+                       , "'d' stands for directory, 'f' for file."
+                       , "Other types are not yet supported."
+                       ]
             , optName = "TYPES"
             }
     where
@@ -160,7 +165,7 @@ oMatchName
     = convRegexSeq setMatchName
       $ (optInfo ["name"])
             { optName = "REGEXP"
-            , optDoc = "Test whether file name matches REGEXP."
+            , optDoc  = "Test whether file name matches REGEXP."
             }
     where
       setMatchName = setFindRegex MatchRE
@@ -170,7 +175,7 @@ oNotMatchName
     = convRegexSeq setMatchName
       $ (optInfo ["not-name"])
             { optName = "REGEXP"
-            , optDoc = "Test whether file name does not match REGEXP."
+            , optDoc  = "Test whether file name does not match REGEXP."
             }
     where
       setMatchName = setFindRegex (NotExpr . MatchRE)
@@ -180,7 +185,7 @@ oMatchPath
     = convRegexSeq setMatchPath
       $ (optInfo ["path"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path matches REGEXP."
+            , optDoc  = "Test whether whole path matches REGEXP."
             }
     where
       setMatchPath = setFindRegex MatchPathRE
@@ -190,7 +195,7 @@ oNotMatchPath
     = convRegexSeq setMatchPath
       $ (optInfo ["not-path"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path does not match REGEXP."
+            , optDoc  = "Test whether whole path does not match REGEXP."
             }
     where
       setMatchPath = setFindRegex (NotExpr . MatchPathRE)
@@ -200,7 +205,7 @@ oMatchExt
     = convRegexSeq setMatchExt
       $ (optInfo ["ext"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path matches REGEXP."
+            , optDoc  = "Test whether whole path matches REGEXP."
             }
     where
       setMatchExt = setFindRegex MatchExtRE
@@ -210,7 +215,7 @@ oNotMatchExt
     = convRegexSeq setMatchExt
       $ (optInfo ["not-ext"])
             { optName = "REGEXP"
-            , optDoc = "Test whether whole path does not match REGEXP."
+            , optDoc  = "Test whether whole path does not match REGEXP."
             }
     where
       setMatchExt = setFindRegex (NotExpr . MatchExtRE)
@@ -220,21 +225,22 @@ oScan
     = convStringSeqValue "illegal scan function or regexp" setScan
       $ (optInfo ["scan"])
             { optName = "SCAN-FCT-or-REGEXP"
-            , optDoc = unwords [ "Test whether file contents has some feature given by SCAN-FCT."
-                               , "SCAN-FCT may have the following values:"
-                               , "'/ascii/', '/latin1/', '/latin1-ascii/', '/unicode/',"
-                               , "'/unicode-latin1/', '/utf8/', '/utf8-ascii/', '/trailing-ws/', '/tabs/'"
-                               , "or it may be a regular expression like in --grep option."
-                               , "\n"
-                               , "Meaning:"
-                               , "'/latin1-ascii/': Latin1 with some none ascii chars,"
-                               , "'/utf8/': Utf8 with some utf8 multi byte chars,"
-                               , "'/unicode-latin1/': Unicode with some none latin1 chars."
-                               , "REGEXP args are processed like in --grep functions but acts here as"
-                               , "filter for selecting files."
-                               , "\n"
-                               , "No Utf8 decoding is done in scan operations, input is read as bytestring."
-                               ]
+            , optDoc  = unwords
+                        [ "Test whether file contents has some feature given by SCAN-FCT."
+                        , "SCAN-FCT may have the following values:"
+                        , "'/ascii/', '/latin1/', '/latin1-ascii/', '/unicode/',"
+                        , "'/unicode-latin1/', '/utf8/', '/utf8-ascii/', '/trailing-ws/', '/tabs/'"
+                        , "or it may be a regular expression like in --grep option."
+                        , "\n"
+                        , "Meaning:"
+                        , "'/latin1-ascii/': Latin1 with some none ascii chars,"
+                        , "'/utf8/': Utf8 with some utf8 multi byte chars,"
+                        , "'/unicode-latin1/': Unicode with some none latin1 chars."
+                        , "REGEXP args are processed like in --grep functions but acts here as"
+                        , "filter for selecting files."
+                        , "\n"
+                        , "No Utf8 decoding is done in scan operations, input is read as bytestring."
+                        ]
             }
     where
       setScan ""
@@ -275,12 +281,13 @@ oGrep
     = convStringValue "illegal grep function or regexp" setGrep
       $ (optInfo ["grep"])
             { optName = "GREP-FCT-or-REGEXP"
-            , optDoc = unwords [ "Find lines in all selected files matching REGEXP."
-                               , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
-                               , "The arguments in --scan may also be used here as GREP-FCT,"
-                               , "e.g. '--grep /tabs/' lists all lines containing tabs,"
-                               ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
-                               ]
+            , optDoc  = unwords
+                        [ "Find lines in all selected files matching REGEXP."
+                        , "Context specs (^, $, \\<, \\>) like in egrep are allowed."
+                        , "The arguments in --scan may also be used here as GREP-FCT,"
+                        , "e.g. '--grep /tabs/' lists all lines containing tabs,"
+                        ,"'--grep /latin1-ascii/' lists all lines containing none ascii latin1 chars."
+                        ]
             }
     where
       setGrep ""
@@ -309,12 +316,13 @@ oSed
     = convStringValue "illegal sed function" setSed
       $ (optInfo ["sed"])
             { optName = "SED-FCT"
-            , optDoc = unwords [ "Edit files with given edit function."
-                               , "currently supported edit functions are:"
-                               , "'/umlauts-to-ascii/', '/umlauts-to-tex/',"
-                               , "'/html-to-ascii/', '/haskell-to-ascii/', '/tcl-to-ascii/',"
-                               , "'/no-trailing-ws/', '/no-tabs/'."
-                               ]
+            , optDoc  = unwords
+                        [ "Edit files with given edit function."
+                        , "currently supported edit functions are:"
+                        , "'/umlauts-to-ascii/', '/umlauts-to-tex/',"
+                        , "'/html-to-ascii/', '/haskell-to-ascii/', '/tcl-to-ascii/',"
+                        , "'/no-trailing-ws/', '/no-tabs/'."
+                        ]
             }
     where
       setSed ""
@@ -335,6 +343,64 @@ oSed
                 = e { theProcessor = genSedProcessor
                     , theSedFct  = f
                     }
+
+-- ----------------------------------------
+--
+-- checksum options
+
+oHash :: Term (Env -> Env)
+oHash
+    = convFlag setHash
+      $ (optInfo ["check-hashes"])
+            { optDoc = unwords
+                       [ "Compute, check and update hashes in checksum file."
+                       , "Default hash function is 'sha1',"
+                       , "default hash dictionary is '.sha1'"
+                       ]
+            }
+      where
+        setHash True  e = addFindExpr IsFile $
+                          e { theProcessor = genChecksumProcessor
+                            }
+        setHash False e = e
+
+oUpdateHash :: Term (Env -> Env)
+oUpdateHash
+    = convFlag setUpdateHash
+      $ (optInfo ["update-hashes"])
+            { optDoc = unwords
+                       [ "Update hash dictionaries when checking hashes"
+                       , "(see '--check-hashes' for details)."
+                       ]
+            }
+    where
+      setUpdateHash True  e = e { theHashUpdate = True }
+      setUpdateHash False e = e
+
+oSha1 :: Term (Env -> Env)
+oSha1
+    = convDefaultStringValue "illegal checksum file name" setChecksumFile ".sha1"
+      $ (optInfo ["sha1"])
+            { optName = "HASH-FILE"
+            , optDoc  = unwords
+                        [ "Set hash function to sha1 and use"
+                        , "HASH-FILE for the dictionary of hashes."
+                        ]
+            }
+    where
+      setChecksumFile ""
+          = return id
+      setChecksumFile f
+          = fmap setS $ checkName f
+
+      setS f e
+          = e { theHashFct      = sha1Hash
+              , theChecksumFile = f
+              }
+
+      checkName s
+          | all (/= '/') s = Just s
+          | otherwise      = Nothing
 
 -- ----------------------------------------
 --

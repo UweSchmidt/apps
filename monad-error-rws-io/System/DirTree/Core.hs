@@ -4,20 +4,14 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
-import Data.List                        ( isInfixOf, sort )
-
+import Data.List                        ( isInfixOf
+                                        , sort
+                                        )
 import System.DirTree.Types
 import System.DirTree.FilePath
 import System.DirTree.FileSystem
 import System.DirTree.FindExpr
-
--- ----------------------------------------
-
-import Control.Arrow                        ( second )
-import Data.IORef
-import Data.Digest.Pure.SHA
-import qualified Data.Map as M
-import qualified Data.ByteString.Lazy        as L
+import System.DirTree.Hash
 
 -- ----------------------------------------
 
@@ -35,11 +29,15 @@ initEnv = Env
           , theProcessor    = genFindProcessor
           , theTraceFlag    = False
           , theWarningFlag  = True
+          , theErrorFlag    = True
           , theStdErrFlag   = True
           , theUtf8DecFlag  = False
           , theUtf8EncFlag  = False
           , theCreateBackup = True
           , theBackupName   = (++ "~")
+          , theHashFct      = sha1Hash
+          , theHashUpdate   = False
+          , theChecksumFile = ".sha1"
           }
 
 initGrepPred :: Env -> Env
@@ -141,65 +139,5 @@ contentGrep p f
           = map format . filter (p . snd) . zip [(1::Int)..]
           where
             format (n, k) = pn' ++ ":" ++ show n ++ ": " ++ k
-
--- ----------------------------------------
-
-type Hash          = String
-
-type HashFct       = ByteString -> Hash
-
-type HashDict      = M.Map FilePath Hash
-
-type ChecksumState = (HashDict, HashDict)
-
-type ChecksumRef   = IORef ChecksumState
-
-sha1Hash           :: HashFct
-sha1Hash           = showDigest . sha1 . L.fromChunks . (:[])
-
-newChecksumRef     :: Cmd ChecksumRef
-newChecksumRef
-    = io $ newIORef (M.empty, M.empty)
-
-lookupOldHash      :: FilePath -> ChecksumRef -> Cmd (Maybe Hash)
-lookupOldHash f r
-    = M.lookup f . fst <$> (io $ readIORef r)
-
-insertNewHash      :: FilePath -> Hash -> ChecksumRef -> Cmd ()
-insertNewHash f h r
-    = io $ modifyIORef r $ second $ M.insert f h
-
-initChecksumState  :: ChecksumRef -> HashDict -> Cmd ()
-initChecksumState r oldDict
-    = io $ writeIORef r (oldDict, M.empty)
-
-genChecksumProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
-genChecksumProcessor
-    = do dictRef <- newChecksumRef
-         return ( initDict >>= initChecksumState dictRef
-                , checkCmd  dictRef
-                , finishCmd dictRef
-                )
-    where
-      -- read hashes from file
-      initDict = return M.empty  -- parse checksum file and build dict
-
-      -- compute hashes and compare with old hashes
-      checkCmd dictRef f
-          = do trc $ "computing sha1 hash for file " ++ show f
-               newHash <- sha1Hash <$> readFileContents f
-               h       <- lookupOldHash f dictRef
-               case h of
-                 Nothing
-                     -> return ()
-                 Just oldHash
-                     -> do when (oldHash /= newHash) $
-                                warn $ "sha1 checksum has changed for file " ++ show f
-                           insertNewHash f newHash dictRef
-
-      -- write checksum dict
-      finishCmd dictRef
-          = do
-               return ()
 
 -- ----------------------------------------

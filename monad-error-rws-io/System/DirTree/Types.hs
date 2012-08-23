@@ -10,6 +10,16 @@ import Text.Regex.XMLSchema.String	( Regex
                                         , parseRegex
                                         )
 
+import qualified Data.ByteString        as B
+
+-- ----------------------------------------
+
+type Hash        = String
+
+type HashFct     = ByteString -> Hash
+
+type ByteString  = B.ByteString
+
 -- ----------------------------------------
 
 data Env
@@ -26,16 +36,21 @@ data Env
       , theProcessor    :: Cmd (Cmd (), String -> Cmd (), Cmd ())
       , theTraceFlag    :: Bool
       , theWarningFlag  :: Bool
+      , theErrorFlag    :: Bool
       , theStdErrFlag   :: Bool
       , theUtf8DecFlag  :: Bool
       , theUtf8EncFlag  :: Bool
       , theCreateBackup :: Bool
       , theBackupName   :: String -> String
+      , theHashUpdate   :: Bool
+      , theHashFct      :: HashFct
+      , theChecksumFile :: String
       }
 
 instance Config Env where
     traceOn   = theTraceFlag
     warningOn = theWarningFlag
+    errorOn   = theErrorFlag
     stderrOn  = theStdErrFlag
 
 
