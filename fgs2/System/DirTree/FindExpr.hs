@@ -30,7 +30,7 @@ findExpr2FindPred (MatchRE re) f
     = return $ matchRE re f
 
 findExpr2FindPred (MatchExtRE re) f
-    = return $ matchRE  (mkSeqs [mkAll, mkSym1 '.', re]) f
+    = return $ matchRE (mkSeqs [mkRep 1 mkDot, mkSym1 '.', re]) f
 
 findExpr2FindPred (MatchPathRE re) f
     = pathName f >>= return . matchRE re
@@ -47,11 +47,11 @@ findExpr2FindPred IsFile f
 findExpr2FindPred IsDir f
     = isDir f
 
-findExpr2FindPred (HasCont p) f
-    = isFile `andPred` (readFileContentsAsString >=> p) $ f
-
 findExpr2FindPred (HasFeature p) f
     = p f
+
+findExpr2FindPred (HasCont p) f
+    = isFile `andPred` (readFileContentsAsString >=> p) $ f
 
 findExpr2FindPred (AndExpr e1 e2) f
     = andPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
@@ -145,52 +145,42 @@ soundFiles
 makeFiles :: FindExpr
 makeFiles
     = andExprSeq [ IsFile
-                 , orExprSeq [ matchNameRE    "[Mm]akefile"
-                             , matchExtRE "mk"
+                 , orExprSeq [ matchNameRE "[Mm]akefile"
+                             , matchExtRE  "mk"
                              ]
                  ]
 
 -- ------------------------------
 
-reSpace :: Regex
-reSpace
-    = parseRegex "\\s"
+reSpace                 :: Regex
+reSpace                 = parseRegex "\\s"
 
-reAsciiChar :: Regex
-reAsciiChar
-    = mkAlt reSpace $ mkSymRng '\33' '\127'
+reAsciiChar             :: Regex
+reAsciiChar             = mkAlt reSpace $ mkSymRng '\33' '\127'
 
-reLatin1Char :: Regex
-reLatin1Char
-    = mkAlt reAsciiChar reLatin1NoneAsciiChar
+reLatin1Char            :: Regex
+reLatin1Char            = mkAlt reAsciiChar reLatin1NoneAsciiChar
 
-reLatin1NoneAsciiChar :: Regex
-reLatin1NoneAsciiChar
-    = mkSymRng '\160' '\255'
+reLatin1NoneAsciiChar   :: Regex
+reLatin1NoneAsciiChar   = mkSymRng '\160' '\255'
 
-reUnicodeChar :: Regex
-reUnicodeChar
-    = mkAlt reLatin1Char reUnicodeNoneLatin1Char
+reUnicodeChar           :: Regex
+reUnicodeChar           = mkAlt reLatin1Char reUnicodeNoneLatin1Char
 
 reUnicodeNoneLatin1Char :: Regex
-reUnicodeNoneLatin1Char
-    = mkSymRng '\256' maxBound
+reUnicodeNoneLatin1Char = mkSymRng '\256' maxBound
 
-reAsciiWord :: Regex
-reAsciiWord
-    = mkStar reAsciiChar
+reAsciiWord             :: Regex
+reAsciiWord             = mkStar reAsciiChar
 
-reLatin1Word :: Regex
-reLatin1Word
-    = mkStar reLatin1Char
+reLatin1Word            :: Regex
+reLatin1Word            = mkStar reLatin1Char
 
-reUnicodeWord :: Regex
-reUnicodeWord
-    = mkStar reUnicodeChar
+reUnicodeWord           :: Regex
+reUnicodeWord           = mkStar reUnicodeChar
 
-reContainsTabs :: Regex
-reContainsTabs
-    = mkSeqs [mkAll, mkSym1 '\t', mkAll]
+reContainsTabs          :: Regex
+reContainsTabs          = mkSeqs [mkAll, mkSym1 '\t', mkAll]
 
 isAsciiText             :: String -> Bool
 isAsciiText             = matchRE reAsciiWord
