@@ -341,7 +341,7 @@ rasterPixMap    = mapImageC raster
 instance Show ix => Show (Geo ix) where
     show (Geo w h) = show w ++ "x" ++ show h
 
-mkGeo   :: (Num ix, Ord ix) => ix -> ix -> Geo ix
+mkGeo   :: (Num ix, Ord ix, Show ix) => ix -> ix -> Geo ix
 mkGeo w h
     | w > 0 && h > 0    = Geo w h
     | otherwise         = error $ "illegal geometry " ++ show (Geo w h)
@@ -357,19 +357,19 @@ flipGeo         :: Geo ix -> Geo ix
 flipGeo (Geo w h)
                 = Geo h w
 
-scaleGeo        :: (Ord ix, Num ix) => ix -> ix -> Geo ix -> Geo ix
+scaleGeo        :: (Ord ix, Num ix, Show ix) => ix -> ix -> Geo ix -> Geo ix
 scaleGeo n m (Geo w h)
                 = mkGeo (n * w) (m * h)
 
-shiftGeo        :: (Ord ix, Num ix) => ix -> ix -> Geo ix -> Geo ix
+shiftGeo        :: (Ord ix, Num ix, Show ix) => ix -> ix -> Geo ix -> Geo ix
 shiftGeo n m (Geo w h)
                 = mkGeo (w + n) (h + m)
 
-partGeo         :: (Integral ix) => ix -> ix -> Geo ix -> Geo ix
+partGeo         :: (Integral ix, Show ix) => ix -> ix -> Geo ix -> Geo ix
 partGeo n m (Geo w h)
                 = mkGeo ((w + n - 1) `div` n) ((h + m - 1) `div` m)
 
-resizeGeo       :: (Num ix, Ord ix) =>
+resizeGeo       :: (Num ix, Ord ix, Show ix) =>
                    ix -> ix -> Geo ix -> Geo ix
 resizeGeo n m (Geo w h)
     = mkGeo w1 h1
@@ -759,7 +759,7 @@ unifyImages (Image g1 c1) (Image g2 c2)
                   (c1', c2') = unifyColorChannels (rectangleChannel g1) (rectangleChannel g2) c1 c2
 
 
-above           :: (Num ix, Ord ix) =>
+above           :: (Num ix, Ord ix, Show ix) =>
                    ImgMap ix -> ImgMap ix -> ImgMap ix
 above i1 i2     = uncurry above' . uncurry unifyImages . equalWidth i1 $ i2
                   where
@@ -769,11 +769,11 @@ above i1 i2     = uncurry above' . uncurry unifyImages . equalWidth i1 $ i2
                         above'' f1 f2
                             = \ x y -> (if y < h1 then f1 x y else f2 x (y - h1))
 
-aboves          :: (Num ix, Ord ix) =>
+aboves          :: (Num ix, Ord ix, Show ix) =>
                    [ImgMap ix] -> ImgMap ix
 aboves          = foldr1 above
 
-sideBySide              :: (Num ix, Ord ix) =>
+sideBySide              :: (Num ix, Ord ix, Show ix) =>
                    ImgMap ix -> ImgMap ix -> ImgMap ix
 sideBySide i1   = uncurry side' . uncurry unifyImages . equalHeight i1
                   where
@@ -783,7 +783,7 @@ sideBySide i1   = uncurry side' . uncurry unifyImages . equalHeight i1
                         side'' f1 f2
                             = \ x y -> (if x < w1 then f1 x y else f2 (x - w1) y)
 
-sideBySides     :: (Num ix, Ord ix) =>
+sideBySides     :: (Num ix, Ord ix, Show ix) =>
                    [ImgMap ix] -> ImgMap ix
 sideBySides     = foldr1 sideBySide
 
@@ -907,7 +907,7 @@ shrink n m      = rasterPixMap . mapImage (partGeo n m) shrink'
                             ]
                         / fromIntegral (n * m)
                               
-shift           :: (Num ix, Ord ix) =>
+shift           :: (Num ix, Ord ix, Show ix) =>
                    ix -> ix -> ImgMap ix -> ImgMap ix
 shift w h
                 = mapImage (shiftGeo w h) $

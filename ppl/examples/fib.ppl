@@ -1,0 +1,9 @@
+function f(n : int) : int
+  if n < 1
+  then n
+  else f(n - 1) + f(n - 2)
+;
+
+begin
+ var r : int := f(5)
+end
