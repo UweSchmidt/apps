@@ -24,7 +24,9 @@ initEnv = Env
           , theLevel        = 0
           , theUserFindExpr = FTrue
           , theSysFindExpr  = FTrue
+          , theDirFindExpr  = FTrue
           , theFindPred     = falsePred
+          , theDirPred      = falsePred
           , theGrepPred     = const False
           , theSedFct       = id
           , theProcessor    = genFindProcessor "{path}"
@@ -52,6 +54,8 @@ initFindPred :: Env -> Env
 initFindPred env
     = env { theFindPred = findExpr2FindPred $
                           andExpr (theSysFindExpr env) (theUserFindExpr env)
+          , theDirPred  = findExpr2FindPred $
+                          theDirFindExpr env
           }
 
 initCwd :: Env -> Env
@@ -83,6 +87,7 @@ traverseDirTree :: Cmd ()
 traverseDirTree
     = do pwd >>= trc . ("scan directory " ++) . show
          predicate    <- asks theFindPred
+         dirPred      <- asks theDirPred
          genProcessor <- asks theProcessor
          (start, action, finish)
                       <- genProcessor
@@ -93,18 +98,19 @@ traverseDirTree
                 pwd
                 >>= getDirContents
                 >>= return . sort . filter (`notElem` [".", ".."])
-                >>= mapM_ (processEntry predicate action)
+                >>= mapM_ (processEntry predicate dirPred action)
               finish
     where
-      processEntry predicate action n
+      processEntry predicate dirPred action n
           = do always $
                  predicate n `guards`
                    do pathName n >>= trc . ("processing " ++) . show
                       action n
 
                always $
-                 isDir n `guards`
-                   withSubDir n traverseDirTree
+                 dirPred n `guards`
+                   ( isDir n `guards`
+                       withSubDir n traverseDirTree )
 
 withSubDir :: FilePath -> Cmd a -> Cmd a
 withSubDir dir cmd

@@ -33,14 +33,15 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.0.0"
+      , version  = "0.1.1.0"
       }
 
 oAll :: Term (Env -> Env)
 oAll = oVerbose
        <.> oQuiet
        <.> oBackup
-       <.> oReadUtf8 <.> oWriteUtf8 <.> oUtf8
+       <.> oReadUtf8  <.> oWriteUtf8 <.> oUtf8
+       <.> oMatchDir  <.> oNotMatchDir
        <.> oMatchName <.> oNotMatchName
        <.> oMatchPath <.> oNotMatchPath
        <.> oMatchExt  <.> oNotMatchExt
@@ -160,6 +161,33 @@ oTypes
             c2e 'd' = IsDir
             c2e _   = FFalse
             typeExpr = orExprSeq . map c2e $ s
+
+oMatchDir :: Term (Env -> Env)
+oMatchDir
+    = convRegexSeq setMatchDir
+      $ (optInfo ["dir-path"])
+            { optName = "REGEXP"
+            , optDoc  = unwords
+                        [ "Test whether a dir pathname matches REGEXP and has to be processed."
+                        , "The subdirectories to recurse into can be selected with this options."
+                        ]
+            }
+    where
+      setMatchDir = setDirRegex (MatchPathRE . reDirPath)
+
+oNotMatchDir :: Term (Env -> Env)
+oNotMatchDir
+    = convRegexSeq setMatchDir
+      $ (optInfo ["not-dir-path"])
+            { optName = "REGEXP"
+            , optDoc  = unwords
+                        [ "Test whether a dir pathname does not match REGEXP and has to be skipped"
+                        , "when recursing into the dir tree"
+                        , "(negation of --dir option)."
+                        ]
+            }
+    where
+      setMatchDir = setDirRegex (NotExpr . MatchPathRE . reDirPath)
 
 oMatchName :: Term (Env -> Env)
 oMatchName
@@ -466,15 +494,25 @@ convRegexSeq :: (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
 convRegexSeq
     = convStringSeqValue "illegal regular expression"
 
-setFindRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
-setFindRegex _ ""
+setFindRegex' :: (FindExpr -> (Env -> Env)) -> (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
+setFindRegex' _ _ ""
     = return id
-setFindRegex constr s
-    = fmap (addFindExpr . constr) $ checkRegex s
+setFindRegex' addExpr constr s
+    = fmap (addExpr . constr) $ checkRegex s
+
+setFindRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
+setFindRegex = setFindRegex' addFindExpr
+
+setDirRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
+setDirRegex = setFindRegex' addDirExpr
 
 addFindExpr :: FindExpr -> (Env -> Env)
 addFindExpr fe e
     =  e { theUserFindExpr = andExpr (theUserFindExpr e) fe }
+
+addDirExpr :: FindExpr -> (Env -> Env)
+addDirExpr fe e
+    =  e { theDirFindExpr = andExpr (theDirFindExpr e) fe }
 
 -- ----------------------------------------
 

@@ -188,6 +188,12 @@ reParam                 = mkSeqs [ mkSym1 '{'
                                  , mkRep 1 $ mkAlt (mkSym1 '-') (mkSymRng 'a' 'z')
                                  , mkSym1 '}'
                                  ]
+
+reDirPath               :: Regex -> Regex
+reDirPath re            = mkSeqs [ re
+                                 , mkOpt $ mkSeq (mkSym1 '/') mkAll
+                                 ]
+
 -- ------------------------------
 
 isAsciiText             :: String -> Bool

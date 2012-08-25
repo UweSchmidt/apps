@@ -1,7 +1,7 @@
 module System.DirTree.FilePath
 where
 
-import Control.Arrow	( first )
+import Control.Arrow    ( first )
 
 -- ------------------------------
 
@@ -78,8 +78,8 @@ splitExt pn
       splitNameExt fn
           = uncurry step1 . span (/= '.') $ fn
           where
-            step1 _  ""  = (fn, "")		-- no extension there
-            step1 _  "." = (fn, "")         	-- dot file
+            step1 _  ""  = (fn, "")             -- no extension there
+            step1 _  "." = (fn, "")             -- dot file
             step1 "" _   = (fn, "")             -- empty extension
             step1 xs (_:ys) = (reverse ys, reverse xs)
 

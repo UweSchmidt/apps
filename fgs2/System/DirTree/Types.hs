@@ -30,7 +30,9 @@ data Env
       , theLevel        :: Int
       , theUserFindExpr :: FindExpr
       , theSysFindExpr  :: FindExpr
+      , theDirFindExpr  :: FindExpr
       , theFindPred     :: FindPred
+      , theDirPred      :: FindPred
       , theGrepPred     :: String -> Bool
       , theSedFct       :: String -> String
       , theProcessor    :: Cmd (Cmd (), String -> Cmd (), Cmd ())
