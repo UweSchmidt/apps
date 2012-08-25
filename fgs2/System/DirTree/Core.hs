@@ -4,6 +4,7 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
+import Data.Char                        ( toLower )
 import Data.List                        ( isInfixOf
                                         , sort
                                         )
@@ -26,7 +27,7 @@ initEnv = Env
           , theFindPred     = falsePred
           , theGrepPred     = const False
           , theSedFct       = id
-          , theProcessor    = genFindProcessor
+          , theProcessor    = genFindProcessor "{path}"
           , theTraceFlag    = False
           , theWarningFlag  = True
           , theErrorFlag    = True
@@ -115,9 +116,29 @@ withSubDir dir cmd
 
 -- ----------------------------------------
 
-genFindProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
-genFindProcessor
-    = return (return (), pathName >=> io . putStrLn, return ())
+genFindProcessor :: String -> Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
+genFindProcessor fmt
+    = return (return (), pathName >=> format >=> io . putStrLn, return ())
+    where
+      format path
+          = return $ sedRE subst reParam fmt
+          where
+            subst "{base}"     = remExt . getFileName $ path
+            subst "{ext}"      =          getExt        path
+            subst "{dir}"      =          getDirPath    path
+            subst "{name}"     =          getFileName   path
+            subst "{path}"     =                        path
+
+            subst "{lc-base}"  = remExt .
+                                 toLC   . getFileName $ path
+            subst "{lc-ext}"   = toLC   . getExt      $ path
+            subst "{lc-dir}"   = toLC   . getDirPath  $ path
+            subst "{lc-name}"  = toLC   . getFileName $ path
+            subst "{lc-path}"  = toLC                   path
+
+            subst x            = x
+
+            toLC               = map toLower
 
 genGrepProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
 genGrepProcessor

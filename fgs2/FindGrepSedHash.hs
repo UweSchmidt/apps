@@ -299,12 +299,26 @@ oScan
 
 oFind :: Term (Env -> Env)
 oFind
-    = convFlag setFind
+    = convDefaultStringValue "illegal print command" setFind "{path}"
       $ (optInfo ["print"])
-            { optDoc = "Print matching file paths (default)." }
+            { optName = "FORMAT"
+            , optDoc  = unwords
+                        [ "Print matching file paths."
+                        , "FORMAT controls output."
+                        , "It can be an arbitrary string containing format directives."
+                        , "Following format directives are implemented:"
+                        , "'{path}', '{name}', '{ext}', '{dir}' and '{base}'," 
+                        , "'{lc-path}', '{lc-name}', '{lc-ext}', '{lc-dir}' and '{lc-base}'."
+                        , "With the 'lc'-formats the strings are converted to lowercase."
+                        , "The --print option with FORMAT can be used to generate scripts"
+                        , "for manipulating the dirtree entries by e.g. shell commands."
+                        ]
+            }
     where
-      setFind True  e = e { theProcessor = genFindProcessor }
-      setFind False e = e
+      setFind ""
+          = return id
+      setFind s
+          = return $ \ e -> e {theProcessor = genFindProcessor s}
 
 oGrep :: Term (Env -> Env)
 oGrep

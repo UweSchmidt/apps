@@ -3,6 +3,7 @@
 module System.DirTree.FindExpr
     ( module System.DirTree.FindExpr
     , matchRE
+    , sedRE
     )
 where
 
@@ -181,6 +182,13 @@ reUnicodeWord           = mkStar reUnicodeChar
 
 reContainsTabs          :: Regex
 reContainsTabs          = mkSeqs [mkAll, mkSym1 '\t', mkAll]
+
+reParam                 :: Regex
+reParam                 = mkSeqs [ mkSym1 '{'
+                                 , mkRep 1 $ mkAlt (mkSym1 '-') (mkSymRng 'a' 'z')
+                                 , mkSym1 '}'
+                                 ]
+-- ------------------------------
 
 isAsciiText             :: String -> Bool
 isAsciiText             = matchRE reAsciiWord
