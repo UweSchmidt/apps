@@ -10,6 +10,7 @@ import System.Exit
 
 import System.DirTree.Core
 import System.DirTree.Hash
+import System.DirTree.FileSystem
 import System.DirTree.FindExpr
 import System.DirTree.Types
 import System.DirTree.CmdTheLine
@@ -35,19 +36,21 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.2.0"
+      , version  = "0.1.3.0"
       }
 
 oAll :: Term (Env -> Env)
 oAll = oVerbose
        <.> oQuiet
        <.> oBackup
-       <.> oReadUtf8  <.> oWriteUtf8 <.> oUtf8
-       <.> oMatchDir  <.> oNotMatchDir
-       <.> oMatchName <.> oNotMatchName
-       <.> oMatchPath <.> oNotMatchPath
-       <.> oMatchExt  <.> oNotMatchExt
-       <.> oMinLevel  <.> oMaxLevel
+       <.> oReadUtf8   <.> oWriteUtf8 <.> oUtf8
+       <.> oMatchDir   <.> oNotMatchDir
+       <.> oMatchOwner <.> oNotMatchOwner
+       <.> oMatchGroup <.> oNotMatchGroup
+       <.> oMatchName  <.> oNotMatchName
+       <.> oMatchPath  <.> oNotMatchPath
+       <.> oMatchExt   <.> oNotMatchExt
+       <.> oMinLevel   <.> oMaxLevel
        <.> oSpecial
        <.> oScan
        <.> oTypes
@@ -238,6 +241,54 @@ oNotMatchDir
             }
     where
       setMatchDir = setDirRegex (NotExpr . MatchPathRE . reDirPath)
+
+-- ----------------------------------------
+
+oMatchOwner :: Term (Env -> Env)
+oMatchOwner
+    = convRegexSeq setMatchName
+      $ (optInfo ["owner"])
+            { optName = "REGEXP"
+            , optDoc  = "Test whether owner of entry matches REGEXP."
+            }
+    where
+      setMatchName = setFindRegex $ hasFSPred id getFileOwner
+
+oNotMatchOwner :: Term (Env -> Env)
+oNotMatchOwner
+    = convRegexSeq setMatchName
+      $ (optInfo ["not-owner"])
+            { optName = "REGEXP"
+            , optDoc  = "Test whether owner of entry does not match REGEXP."
+            }
+    where
+      setMatchName = setFindRegex $ hasFSPred not getFileOwner
+
+oMatchGroup :: Term (Env -> Env)
+oMatchGroup
+    = convRegexSeq setMatchName
+      $ (optInfo ["group"])
+            { optName = "REGEXP"
+            , optDoc  = "Test whether group of entry matches REGEXP."
+            }
+    where
+      setMatchName = setFindRegex $ hasFSPred id getFileGroup
+
+oNotMatchGroup :: Term (Env -> Env)
+oNotMatchGroup
+    = convRegexSeq setMatchName
+      $ (optInfo ["not-group"])
+            { optName = "REGEXP"
+            , optDoc  = "Test whether group of entry does not match REGEXP."
+            }
+    where
+      setMatchName = setFindRegex $ hasFSPred not getFileGroup
+
+hasFSPred :: (Bool -> Bool) -> (FilePath -> Cmd String) -> Regex -> FindExpr
+hasFSPred bf getf re
+    = HasFeature $ \ f -> (bf . matchRE re) <$> getf f
+
+-- ----------------------------------------
 
 oMatchName :: Term (Env -> Env)
 oMatchName

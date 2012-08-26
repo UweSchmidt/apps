@@ -16,6 +16,7 @@ import System.IO                        ( IOMode(..)
                                         , stderr
                                         )
 import System.Posix.Files
+import System.Posix.User
 
 import qualified Data.ByteString        as B
 import qualified Data.ByteString.Char8  as C
@@ -68,6 +69,29 @@ isFile f
          (isRegularFile <$> (io $ getSymbolicLinkStatus f))
       `orElse`
       return False
+
+isSymLink :: FilePath -> Cmd Bool
+isSymLink f
+    = ignoreErrors $
+         (isSymbolicLink <$> (io $ getSymbolicLinkStatus f))
+      `orElse`
+      return False
+
+-- return the file owner name or the owner id as string
+
+getFileOwner :: FilePath -> Cmd String
+getFileOwner f
+    = do oid <- io $ fileOwner <$> getSymbolicLinkStatus f
+         (io $ userName <$> getUserEntryForID oid)
+           `orElse` (return . show $ oid)
+
+-- return the file group name or the group id as string
+
+getFileGroup :: FilePath -> Cmd String
+getFileGroup f
+    = do gid <- io $ fileGroup <$> getSymbolicLinkStatus f
+         (io $ groupName <$> getGroupEntryForID gid)
+           `orElse` (return . show $ gid)
 
 getFileContents :: FilePath -> Cmd String
 getFileContents f
