@@ -4,6 +4,8 @@ where
 import Control.Applicative
 import Control.Monad.RWSErrorIO
 
+import Data.Char                ( isDigit )
+
 import System.Exit
 
 import System.DirTree.Core
@@ -33,7 +35,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.1.0"
+      , version  = "0.1.2.0"
       }
 
 oAll :: Term (Env -> Env)
@@ -45,6 +47,7 @@ oAll = oVerbose
        <.> oMatchName <.> oNotMatchName
        <.> oMatchPath <.> oNotMatchPath
        <.> oMatchExt  <.> oNotMatchExt
+       <.> oMinLevel  <.> oMaxLevel
        <.> oSpecial
        <.> oScan
        <.> oTypes
@@ -140,13 +143,13 @@ oTypes :: Term (Env -> Env)
 oTypes
     = convStringValue "illegal type given in type spec" setTypes
       $ (optInfo ["types"])
-            { optDoc = unwords
-                       [ "Test whether entry is one of the types specified in TYPES."
-                       , "Every char in TYPES stands for a type,"
-                       , "'d' stands for directory, 'f' for file."
-                       , "Other types are not yet supported."
-                       ]
-            , optName = "TYPES"
+            { optName = "TYPES"
+            , optDoc  = unwords
+                        [ "Test whether entry is one of the types specified in TYPES."
+                        , "Every char in TYPES stands for a type,"
+                        , "'d' stands for directory, 'f' for file."
+                        , "Other types are not yet supported."
+                        ]
             }
     where
       setTypes s
@@ -161,6 +164,53 @@ oTypes
             c2e 'd' = IsDir
             c2e _   = FFalse
             typeExpr = orExprSeq . map c2e $ s
+
+oMinLevel :: Term (Env -> Env)
+oMinLevel
+    = convStringValue "LEVEL must be a number" setLevel
+      $ (optInfo ["min-level"])
+            { optName = "LEVEL"
+            , optDoc  = unwords
+                        [ "Test whether entry is located at least MINLEVEL steps deep in directory tree."
+                        , "The root directory has level 0."
+                        , "Example: '--min-level=1' excludes entries in the root directory"
+                        , "(see also '--max-level')."
+                        ]
+            }
+    where
+      setLevel s
+          | null s
+              = Just id
+          | all isDigit s
+              = Just $ addFindExpr levelExpr    -- predicate for checking entries
+          | otherwise
+              = Nothing
+          where
+            levelExpr = HasFeature $ const $ asks ((>= read s) . theLevel)
+
+oMaxLevel :: Term (Env -> Env)
+oMaxLevel
+    = convStringValue "LEVEL must be a number" setLevel
+      $ (optInfo ["max-level"])
+            { optName = "LEVEL"
+            , optDoc  = unwords
+                        [ "Test whether entry is located at most MAXLEVEL steps deep in directory tree."
+                        , "The root directory has level 0."
+                        , "Example: '--max-level=1 restricts search to root dir and all child dirs"
+                        , "(see also: '--min-level')."
+                        ]
+            }
+    where
+      setLevel s
+          | null s
+              = Just id
+          | all isDigit s
+              = Just $ addDirExpr levelExpr     -- predicate for recursing directories
+          | otherwise
+              = Nothing
+          where
+            levelExpr = HasFeature $ const $ asks ((< read s) . theLevel)
+
 
 oMatchDir :: Term (Env -> Env)
 oMatchDir
