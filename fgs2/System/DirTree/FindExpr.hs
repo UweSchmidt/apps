@@ -19,6 +19,7 @@ import Text.Regex.XMLSchema.String      -- ( match, matchRE, parseRegex, isZero 
 import Text.XML.HXT.Parser.XhtmlEntities ( xhtmlEntities )
 
 import System.DirTree.Types
+import System.DirTree.FilePath
 import System.DirTree.FileSystem
 
 import qualified Data.Map                as M
@@ -98,6 +99,25 @@ checkRegex
 checkContextRegex :: String -> Maybe Regex
 checkContextRegex
     = (\ re -> if isZero re then Nothing else Just re) . parseContextRegex parseRegex
+
+checkPathRegex :: String -> Maybe [Regex]
+checkPathRegex s
+    | null p
+        = (:[]) <$> checkRegex d
+    | otherwise
+        = do re1 <- checkRegex d
+             res <- checkPathRegex $ tail p
+             return $ re1 : res
+    where
+      (d, p) = span (/= '/') s
+
+matchSeqRE :: [Regex] -> [String] -> Bool
+matchSeqRE []            _ = True
+matchSeqRE _            [] = True
+matchSeqRE (r1:rs) (n1:ns) = matchRE r1 n1 && matchSeqRE rs ns
+
+matchPath :: [Regex] -> FilePath -> Bool
+matchPath re = matchSeqRE re . splitPath
 
 -- ------------------------------
 

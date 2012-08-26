@@ -32,6 +32,17 @@ remTopDir       = drop 1 . dropWhile (/= '/')
 
 -- ------------------------------
 
+splitPath :: FilePath -> [FilePath]
+splitPath s
+    | null s    = []
+    | null d    =     splitPath (tail p)
+    | null p    = [d]
+    | otherwise = d : splitPath (tail p)
+    where
+      (d, p) = span (/= '/') s
+
+-- ------------------------------
+
 splitFileName :: FilePath -> (FilePath, FilePath)
 splitFileName pn
     = uncurry step0 . span (/= '/') . reverse $ pn

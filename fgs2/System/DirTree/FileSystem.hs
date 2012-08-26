@@ -34,6 +34,10 @@ ignoreErrors :: Cmd a -> Cmd a
 ignoreErrors
     = local $ \ e -> e {theErrorFlag = False}
 
+withDefault :: Cmd a -> Cmd a -> Cmd a
+withDefault c1 c2
+    = ignoreErrors c1 `orElse` c2
+
 msg :: String -> FilePath -> Cmd ()
 msg s f
     = asks warningOn
@@ -58,24 +62,18 @@ pathName name
 
 isDir :: FilePath -> Cmd Bool
 isDir f
-    = ignoreErrors $
-         (isDirectory <$> (io $ getSymbolicLinkStatus f))
-      `orElse`
-      return False
+    = (isDirectory <$> (io $ getSymbolicLinkStatus f))
+      `withDefault` return False
 
 isFile :: FilePath -> Cmd Bool
 isFile f
-    = ignoreErrors $
-         (isRegularFile <$> (io $ getSymbolicLinkStatus f))
-      `orElse`
-      return False
+    = (isRegularFile <$> (io $ getSymbolicLinkStatus f))
+      `withDefault` return False
 
 isSymLink :: FilePath -> Cmd Bool
 isSymLink f
-    = ignoreErrors $
-         (isSymbolicLink <$> (io $ getSymbolicLinkStatus f))
-      `orElse`
-      return False
+    = (isSymbolicLink <$> (io $ getSymbolicLinkStatus f))
+      `withDefault` return False
 
 -- return the file owner name or the owner id as string
 
@@ -83,7 +81,7 @@ getFileOwner :: FilePath -> Cmd String
 getFileOwner f
     = do oid <- io $ fileOwner <$> getSymbolicLinkStatus f
          (io $ userName <$> getUserEntryForID oid)
-           `orElse` (return . show $ oid)
+           `withDefault` (return . show $ oid)
 
 -- return the file group name or the group id as string
 
@@ -91,7 +89,7 @@ getFileGroup :: FilePath -> Cmd String
 getFileGroup f
     = do gid <- io $ fileGroup <$> getSymbolicLinkStatus f
          (io $ groupName <$> getGroupEntryForID gid)
-           `orElse` (return . show $ gid)
+           `withDefault` (return . show $ gid)
 
 getFileContents :: FilePath -> Cmd String
 getFileContents f

@@ -36,7 +36,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.3.0"
+      , version  = "0.1.3.1"
       }
 
 oAll :: Term (Env -> Env)
@@ -214,6 +214,7 @@ oMaxLevel
           where
             levelExpr = HasFeature $ const $ asks ((< read s) . theLevel)
 
+-- ----------------------------------------
 
 oMatchDir :: Term (Env -> Env)
 oMatchDir
@@ -223,10 +224,12 @@ oMatchDir
             , optDoc  = unwords
                         [ "Test whether a dir pathname matches REGEXP and has to be processed."
                         , "The subdirectories to recurse into can be selected with this options."
+                        , "The REGEX must be a sequence of regular expressions separated by '/'-es"
+                        , "and must start with './'"
                         ]
             }
     where
-      setMatchDir = setDirRegex (MatchPathRE . reDirPath)
+      setMatchDir = setDirRegex matchPathPred
 
 oNotMatchDir :: Term (Env -> Env)
 oNotMatchDir
@@ -240,7 +243,12 @@ oNotMatchDir
                         ]
             }
     where
-      setMatchDir = setDirRegex (NotExpr . MatchPathRE . reDirPath)
+      setMatchDir = setDirRegex (NotExpr . matchPathPred)
+
+matchPathPred :: [Regex] -> FindExpr
+matchPathPred re
+    = HasFeature $ \ f -> do p <- pathName f
+                             return $ matchPath re p
 
 -- ----------------------------------------
 
@@ -595,21 +603,23 @@ convRegexSeq :: (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
 convRegexSeq
     = convStringSeqValue "illegal regular expression"
 
-setFindRegex' :: (FindExpr -> (Env -> Env)) -> (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
-setFindRegex' _ _ ""
-    = return id
-setFindRegex' addExpr constr s
-    = fmap (addExpr . constr) $ checkRegex s
 
 setFindRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
-setFindRegex = setFindRegex' addFindExpr
-
-setDirRegex :: (Regex -> FindExpr) -> String -> Maybe (Env -> Env)
-setDirRegex = setFindRegex' addDirExpr
+setFindRegex _ ""
+    = return id
+setFindRegex constr s
+    = fmap (addFindExpr . constr) $ checkRegex s
 
 addFindExpr :: FindExpr -> (Env -> Env)
 addFindExpr fe e
     =  e { theUserFindExpr = andExpr (theUserFindExpr e) fe }
+
+
+setDirRegex :: ([Regex] -> FindExpr) -> String -> Maybe (Env -> Env)
+setDirRegex _ ""
+    = return id
+setDirRegex constr s
+    = fmap (addDirExpr . constr) $ checkPathRegex s
 
 addDirExpr :: FindExpr -> (Env -> Env)
 addDirExpr fe e

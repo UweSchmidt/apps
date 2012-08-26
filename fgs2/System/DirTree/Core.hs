@@ -108,8 +108,8 @@ traverseDirTree
                       action n
 
                always $
-                 dirPred n `guards`
-                   ( isDir n `guards`
+                 isDir n `guards`
+                   ( dirPred n `guards`
                        withSubDir n traverseDirTree )
 
 withSubDir :: FilePath -> Cmd a -> Cmd a
