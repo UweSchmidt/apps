@@ -168,6 +168,8 @@ oTypes
             c2e _   = FFalse
             typeExpr = orExprSeq . map c2e $ s
 
+-- ----------------------------------------
+
 oMinLevel :: Term (Env -> Env)
 oMinLevel
     = convStringValue "LEVEL must be a number" setLevel
@@ -229,7 +231,7 @@ oMatchDir
                         ]
             }
     where
-      setMatchDir = setDirRegex matchPathPred
+      setMatchDir = setDirRegex (matchPathPred id)
 
 oNotMatchDir :: Term (Env -> Env)
 oNotMatchDir
@@ -243,12 +245,16 @@ oNotMatchDir
                         ]
             }
     where
-      setMatchDir = setDirRegex (NotExpr . matchPathPred)
+      setMatchDir = setDirRegex (matchPathPred not)
 
-matchPathPred :: [Regex] -> FindExpr
-matchPathPred re
-    = HasFeature $ \ f -> do p <- pathName f
-                             return $ matchPath re p
+matchPathPred :: (Bool -> Bool) -> [Regex] -> (FindExpr, FindExpr)
+matchPathPred bf re
+    = (fex True, fex False)
+    where
+      fex b
+          = HasFeature $
+            \ f -> do p <- pathName f
+                      return .bf $ matchPath b re p
 
 -- ----------------------------------------
 
@@ -615,11 +621,13 @@ addFindExpr fe e
     =  e { theUserFindExpr = andExpr (theUserFindExpr e) fe }
 
 
-setDirRegex :: ([Regex] -> FindExpr) -> String -> Maybe (Env -> Env)
+setDirRegex :: ([Regex] -> (FindExpr, FindExpr)) -> String -> Maybe (Env -> Env)
 setDirRegex _ ""
     = return id
 setDirRegex constr s
-    = fmap (addDirExpr . constr) $ checkPathRegex s
+    = fmap (uncurry addExpr . constr) $ checkPathRegex s
+    where
+      addExpr de fe = addDirExpr de . addFindExpr fe
 
 addDirExpr :: FindExpr -> (Env -> Env)
 addDirExpr fe e

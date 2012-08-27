@@ -111,13 +111,19 @@ checkPathRegex s
     where
       (d, p) = span (/= '/') s
 
-matchSeqRE :: [Regex] -> [String] -> Bool
-matchSeqRE []            _ = True
-matchSeqRE _            [] = True
-matchSeqRE (r1:rs) (n1:ns) = matchRE r1 n1 && matchSeqRE rs ns
+-- If b is set, a string list shorter than the regex list is true,
+-- so every path prefix matches the regex list.
+-- This matching function is used to control the descending into the dir tree.
+-- If b is set to false, the string list (the path) must be longer than the regex list,
+-- this match is used for selecting the entries to be processed
 
-matchPath :: [Regex] -> FilePath -> Bool
-matchPath re = matchSeqRE re . splitPath
+matchSeqRE :: Bool -> [Regex] -> [String] -> Bool
+matchSeqRE b _            [] = b
+matchSeqRE _ []            _ = True
+matchSeqRE b (r1:rs) (n1:ns) = matchRE r1 n1 && matchSeqRE b rs ns
+
+matchPath :: Bool -> [Regex] -> FilePath -> Bool
+matchPath b re = matchSeqRE b re . splitPath
 
 -- ------------------------------
 
