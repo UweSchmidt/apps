@@ -74,8 +74,8 @@ data FindExpr
     | FFalse
     | IsFile
     | IsDir
-    | HasFeature  FindPred
-    | HasCont     FindPred
+    | HasFeature  String   FindPred
+    | HasCont     String   FindPred
     | AndExpr     FindExpr FindExpr
     | OrExpr      FindExpr FindExpr
     | NotExpr     FindExpr
@@ -92,8 +92,8 @@ fCost (MatchExtRE   _) = 1
 fCost (MatchPathRE  _) = 1
 fCost (IsFile        ) = 2
 fCost (IsDir         ) = 2
-fCost (HasFeature  _ ) = 3
-fCost (HasCont     _ ) = 4
+fCost (HasFeature _ _) = 3
+fCost (HasCont    _ _) = 4
 fCost (AndExpr  e1 e2) = fCost e1 `max` fCost e2
 fCost (OrExpr   e1 e2) = fCost e1 `max` fCost e2
 fCost (NotExpr  e1   ) = fCost e1
@@ -110,10 +110,15 @@ andExpr :: FindExpr -> FindExpr -> FindExpr
 andExpr FTrue              e2  = e2
 andExpr FFalse            _e2  = FFalse
 andExpr _e1            FFalse  = FFalse
-andExpr (AndExpr  e11 e12) e2  = andExpr e11 (andExpr e12 e2)
+
+andExpr (AndExpr  e11 e12) e2  = andExpr e11 (andExpr e12 e2)  -- Assoc
+
+andExpr e1  (AndExpr e21 e22)
+    | fCost e21 < fCost e1     = andExpr e21 (andExpr e1 e22)  -- Symmetry
+
 andExpr e1                 e2
-    | fCost e1 <= fCost e2      = AndExpr e1 e2
-    | otherwise                 = andExpr e2 e1
+    | fCost e2  < fCost e1     = andExpr e2 e1                 -- Symmetry
+    | otherwise                = AndExpr e1 e2
 
 orExprSeq :: [FindExpr] -> FindExpr
 orExprSeq = foldr orExpr FFalse
@@ -123,9 +128,12 @@ orExpr FFalse              e2  = e2
 orExpr FTrue              _e2  = FTrue
 orExpr _e1              FTrue  = FTrue
 orExpr (OrExpr  e11 e12)   e2  = orExpr e11 (orExpr e12 e2)
+
+orExpr e1  (OrExpr e21 e22)
+    | fCost e21 < fCost e1     = orExpr e21 (orExpr e1 e22)  -- Symmetry
 orExpr e1                  e2
-    | fCost e1 <= fCost e2     = OrExpr e1 e2
-    | otherwise                = orExpr e2 e1
+    | fCost e2  < fCost e1     = orExpr e2 e1                -- Symmetry
+    | otherwise                = OrExpr e1 e2
 
 matchNameRE :: String -> FindExpr
 matchNameRE = MatchRE . parseRegex

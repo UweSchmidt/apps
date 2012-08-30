@@ -36,7 +36,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.3.1"
+      , version  = "0.1.4.0"
       }
 
 oAll :: Term (Env -> Env)
@@ -191,7 +191,7 @@ oMinLevel
           | otherwise
               = Nothing
           where
-            levelExpr = HasFeature $ const $ asks ((>= read s) . theLevel)
+            levelExpr = HasFeature "minlevel" $ const $ asks ((>= read s) . theLevel)
 
 oMaxLevel :: Term (Env -> Env)
 oMaxLevel
@@ -214,7 +214,7 @@ oMaxLevel
           | otherwise
               = Nothing
           where
-            levelExpr = HasFeature $ const $ asks ((< read s) . theLevel)
+            levelExpr = HasFeature "maxlevel" $ const $ asks ((< read s) . theLevel)
 
 -- ----------------------------------------
 
@@ -252,9 +252,9 @@ matchPathPred bf re
     = (fex True, fex False)
     where
       fex b
-          = HasFeature $
+          = HasFeature "matchPathPred" $
             \ f -> do p <- pathName f
-                      return .bf $ matchPath b re p
+                      return . bf $ matchPath b re p
 
 -- ----------------------------------------
 
@@ -266,7 +266,7 @@ oMatchOwner
             , optDoc  = "Test whether owner of entry matches REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred id getFileOwner
+      setMatchName = setFindRegex $ hasFSPred "owner" id getFileOwner
 
 oNotMatchOwner :: Term (Env -> Env)
 oNotMatchOwner
@@ -276,7 +276,7 @@ oNotMatchOwner
             , optDoc  = "Test whether owner of entry does not match REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred not getFileOwner
+      setMatchName = setFindRegex $ hasFSPred "not-owner" not getFileOwner
 
 oMatchGroup :: Term (Env -> Env)
 oMatchGroup
@@ -286,7 +286,7 @@ oMatchGroup
             , optDoc  = "Test whether group of entry matches REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred id getFileGroup
+      setMatchName = setFindRegex $ hasFSPred "group" id getFileGroup
 
 oNotMatchGroup :: Term (Env -> Env)
 oNotMatchGroup
@@ -296,11 +296,11 @@ oNotMatchGroup
             , optDoc  = "Test whether group of entry does not match REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred not getFileGroup
+      setMatchName = setFindRegex $ hasFSPred "not-group" not getFileGroup
 
-hasFSPred :: (Bool -> Bool) -> (FilePath -> Cmd String) -> Regex -> FindExpr
-hasFSPred bf getf re
-    = HasFeature $ \ f -> (bf . matchRE re) <$> getf f
+hasFSPred :: String -> (Bool -> Bool) -> (FilePath -> Cmd String) -> Regex -> FindExpr
+hasFSPred s bf getf re
+    = HasFeature s $ \ f -> (bf . matchRE re) <$> getf f
 
 -- ----------------------------------------
 
@@ -388,10 +388,12 @@ oSpecial
             checkSpecial "{not-boring-file}"        = fn isBoringFile
             checkSpecial "{uppercase-img-file}"     = fe isUpperCaseImgFile
             checkSpecial "{not-uppercase-img-file}" = fn isUpperCaseImgFile
+            checkSpecial "{is-album-file}"          = fe isAlbumFile
+            checkSpecial "{not-is-album-file}"      = fn isAlbumFile
             checkSpecial _                          = Nothing
 
-            fe p = Just . HasFeature $ p
-            fn p = Just . HasFeature $ p >=> return . not
+            fe p = Just . HasFeature ("special " ++ s) $ p
+            fn p = Just . HasFeature ("special " ++ s) $ p >=> return . not
 
 oScan :: Term (Env -> Env)
 oScan
@@ -432,9 +434,9 @@ oScan
             checkScan "{tabs}"           = fe containsTabs
             checkScan s'                 = fmap grp $ checkContextRegex s'
 
-            fe x                         = Just $ HasCont $ (return . x)
+            fe x                         = Just $ HasCont s $ (return . x)
 
-            grp re                       = HasCont $ (return . any (matchRE re) . lines)
+            grp re                       = HasCont ("scan " ++ s) $ (return . any (matchRE re) . lines)
 
 -- ----------------------------------------
 --

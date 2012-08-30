@@ -49,11 +49,13 @@ findExpr2FindPred IsFile f
 findExpr2FindPred IsDir f
     = isDir f
 
-findExpr2FindPred (HasFeature p) f
-    = p f
+findExpr2FindPred (HasFeature s p) f
+    = do trc $ unwords ["hasFeature:", s ++ ":", show f]
+         p f
 
-findExpr2FindPred (HasCont p) f
-    = isFile `andPred` (readFileContentsAsString >=> p) $ f
+findExpr2FindPred (HasCont s p) f
+    = do trc $ unwords ["hasCont:",    s ++ ":", show f]
+         isFile `andPred` (readFileContentsAsString >=> p) $ f
 
 findExpr2FindPred (AndExpr e1 e2) f
     = andPred (findExpr2FindPred e1) (findExpr2FindPred e2) f
@@ -154,6 +156,25 @@ isUpperCaseImgFile = findExpr2FindPred upperCaseImgFiles
           ]
 
 
+-- test whether a picture or html file has a corresponding .xml description file
+--
+-- used for album maintenance
+
+isAlbumFile :: FindPred
+isAlbumFile f
+    = do p0 <- pathName f
+         let p1 = remDir1 . normPath $ p0
+         if null p1
+            then return False
+            else do l <- asks theLevel
+                    -- d <- pwd
+                    -- trc $ "isAlbumFile: " ++ show (d ++ "/" ++ albumFile p1 l)
+                    isFile (albumFile p1 l)
+    where
+      albumFile p l
+          = joinPath $ replicate l ".." ++ ["album2", p']
+          where
+            p' = (`joinExt` "xml") . remExt $ p
 
 -- ------------------------------
 

@@ -2,6 +2,7 @@ module System.DirTree.FilePath
 where
 
 import Control.Arrow    ( first )
+import Data.List        ( intercalate )
 
 -- ------------------------------
 
@@ -32,14 +33,39 @@ remTopDir       = drop 1 . dropWhile (/= '/')
 
 -- ------------------------------
 
+joinPath :: [FilePath] -> FilePath
+joinPath = intercalate "/"
+
 splitPath :: FilePath -> [FilePath]
 splitPath s
-    | null s    = []
-    | null d    =     splitPath (tail p)
-    | null p    = [d]
-    | otherwise = d : splitPath (tail p)
+    | null s        = []
+    | head s == '/' = "" : splitPath (tail s)
+    | null d        =      splitPath (tail p)
+    | null p        = [d]
+    | otherwise     =  d : splitPath (tail p)
     where
       (d, p) = span (/= '/') s
+
+remDir1 :: FilePath -> FilePath
+remDir1
+    = intercalate "/" . drop 1 . splitPath
+
+normPath :: FilePath -> FilePath
+normPath = intercalate "/" . norm'' . norm . splitPath
+    where
+      norm []              = []
+      norm (""        : p) =    "" : norm p
+      norm ("."       : p) =         norm p
+      norm (".."      : p) =  ".." : norm p
+      norm (n         : p) = norm' . (n:)
+                                . norm $  p
+
+      norm' (n : ".." : p)
+          | n /= ".."      = p
+      norm'  p             = p
+
+      norm'' []            = ["."]
+      norm'' p             = p
 
 -- ------------------------------
 
@@ -84,7 +110,7 @@ splitExt :: FilePath -> (FilePath, FilePath)
 splitExt pn
     = uncurry step0 . span (/= '/') . reverse $ pn
     where
-      step0 xs ys = first (reverse ys ++) . splitNameExt $ xs
+      step0 xs ys = first (reverse . (++ ys)) . splitNameExt $ xs
 
       splitNameExt fn
           = uncurry step1 . span (/= '.') $ fn
@@ -92,7 +118,7 @@ splitExt pn
             step1 _  ""  = (fn, "")             -- no extension there
             step1 _  "." = (fn, "")             -- dot file
             step1 "" _   = (fn, "")             -- empty extension
-            step1 xs (_:ys) = (reverse ys, reverse xs)
+            step1 xs (_:ys) = (ys, reverse xs)
 
 joinExt :: FilePath ->  FilePath -> FilePath
 joinExt fn ext
