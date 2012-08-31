@@ -5,6 +5,7 @@ import Control.Applicative
 import Control.Monad.RWSErrorIO
 
 import Data.Char                ( isDigit )
+import Data.List                ( nub )
 
 import System.Exit
 
@@ -36,7 +37,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.4.0"
+      , version  = "0.1.5.0"
       }
 
 oAll :: Term (Env -> Env)
@@ -53,6 +54,7 @@ oAll = oVerbose
        <.> oMinLevel   <.> oMaxLevel
        <.> oSpecial
        <.> oScan
+       <.> oFollowSymLink
        <.> oTypes
        <.> oFind
        <.> oGrep
@@ -69,12 +71,10 @@ oVerbose
       $ (optInfo ["verbose"])
             { optDoc = "Turn on trace output." }
     where
-      setVerbose True e
-          = e { theTraceFlag   = True
-              , theWarningFlag = True
-              }
-      setVerbose False e
-          = e
+      setVerbose True  e = e { theTraceFlag   = True
+                             , theWarningFlag = True
+                             }
+      setVerbose False e = e
 
 oQuiet :: Term (Env -> Env)
 oQuiet
@@ -82,12 +82,19 @@ oQuiet
       $ (optInfo ["quiet"])
             { optDoc = "Turn off warnings and trace output." }
     where
-      setQuiet True e
-          = e { theTraceFlag   = False
-              , theWarningFlag = False
-              }
-      setQuiet False e
-          = e
+      setQuiet True  e = e { theTraceFlag   = False
+                           , theWarningFlag = False
+                           }
+      setQuiet False e = e
+
+oFollowSymLink :: Term (Env -> Env)
+oFollowSymLink
+    = convFlag setSymLink
+      $ (optInfo ["follow-symlink"])
+            { optDoc = "Follow symbolic links." }
+    where
+      setSymLink True  e = e { theFollowSymlink = True }
+      setSymLink False e = e
 
 oUtf8 :: Term (Env -> Env)
 oUtf8
@@ -150,23 +157,30 @@ oTypes
             , optDoc  = unwords
                         [ "Test whether entry is one of the types specified in TYPES."
                         , "Every char in TYPES stands for a type,"
-                        , "'d' stands for directory, 'f' for file."
-                        , "Other types are not yet supported."
+                        , "'d' stands for directory, 'f' for file, 'l' for symbolic link,"
+                        , "'c' for character device. 'b' for block device,"
+                        , "'s' for socket, 'p' for named pipe."
                         ]
             }
     where
       setTypes s
           | null s
               = Just id
-          | all (`elem` "fd") s
+          | all (`elem` "bcdflps") s
               = Just $ addFindExpr typeExpr
           | otherwise
               = Nothing
           where
-            c2e 'f' = IsFile
-            c2e 'd' = IsDir
-            c2e _   = FFalse
-            typeExpr = orExprSeq . map c2e $ s
+            c2e 'b'  = HasType IsBlockDev
+            c2e 'c'  = HasType IsCharDev
+            c2e 'd'  = HasType IsDir
+            c2e 'f'  = HasType IsFile
+            c2e 'l'  = HasType IsSymLink
+            c2e 'p'  = HasType IsNamedPipe
+            c2e 's'  = HasType IsSocket
+            c2e _    = FFalse
+
+            typeExpr = orExprSeq . map c2e . nub $ s
 
 -- ----------------------------------------
 
@@ -548,7 +562,7 @@ oHash
                        ]
             }
       where
-        setHash True  e = addFindExpr IsFile $
+        setHash True  e = addFindExpr (HasType IsFile) $
                           e { theProcessor = genChecksumProcessor
                             }
         setHash False e = e

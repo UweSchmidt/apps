@@ -24,29 +24,30 @@ type ByteString  = B.ByteString
 
 data Env
     = Env
-      { theProgName     :: String
-      , theRootDir      :: String
-      , theCwd          :: String
-      , theLevel        :: Int
-      , theUserFindExpr :: FindExpr
-      , theSysFindExpr  :: FindExpr
-      , theDirFindExpr  :: FindExpr
-      , theFindPred     :: FindPred
-      , theDirPred      :: FindPred
-      , theGrepPred     :: String -> Bool
-      , theSedFct       :: String -> String
-      , theProcessor    :: Cmd (Cmd (), String -> Cmd (), Cmd ())
-      , theTraceFlag    :: Bool
-      , theWarningFlag  :: Bool
-      , theErrorFlag    :: Bool
-      , theStdErrFlag   :: Bool
-      , theUtf8DecFlag  :: Bool
-      , theUtf8EncFlag  :: Bool
-      , theCreateBackup :: Bool
-      , theBackupName   :: String -> String
-      , theHashUpdate   :: Bool
-      , theHashFct      :: HashFct
-      , theChecksumFile :: String
+      { theProgName      :: String
+      , theRootDir       :: String
+      , theCwd           :: String
+      , theLevel         :: Int
+      , theUserFindExpr  :: FindExpr
+      , theSysFindExpr   :: FindExpr
+      , theDirFindExpr   :: FindExpr
+      , theFindPred      :: FindPred
+      , theDirPred       :: FindPred
+      , theGrepPred      :: String -> Bool
+      , theSedFct        :: String -> String
+      , theProcessor     :: Cmd (Cmd (), String -> Cmd (), Cmd ())
+      , theFollowSymlink :: Bool
+      , theTraceFlag     :: Bool
+      , theWarningFlag   :: Bool
+      , theErrorFlag     :: Bool
+      , theStdErrFlag    :: Bool
+      , theUtf8DecFlag   :: Bool
+      , theUtf8EncFlag   :: Bool
+      , theCreateBackup  :: Bool
+      , theBackupName    :: String -> String
+      , theHashUpdate    :: Bool
+      , theHashFct       :: HashFct
+      , theChecksumFile  :: String
       }
 
 instance Config Env where
@@ -72,13 +73,15 @@ data FindExpr
     | MatchPathRE Regex
     | FTrue
     | FFalse
-    | IsFile
-    | IsDir
+    | HasType     EntryType
     | HasFeature  String   FindPred
     | HasCont     String   FindPred
     | AndExpr     FindExpr FindExpr
     | OrExpr      FindExpr FindExpr
     | NotExpr     FindExpr
+
+data EntryType = IsFile | IsDir | IsSymLink | IsCharDev | IsBlockDev | IsSocket | IsNamedPipe
+                 deriving (Eq)
 
 type FindPred = String -> Cmd Bool
 
@@ -90,8 +93,7 @@ fCost (FFalse        ) = 0
 fCost (MatchRE      _) = 1
 fCost (MatchExtRE   _) = 1
 fCost (MatchPathRE  _) = 1
-fCost (IsFile        ) = 2
-fCost (IsDir         ) = 2
+fCost (HasType      _) = 2
 fCost (HasFeature _ _) = 3
 fCost (HasCont    _ _) = 4
 fCost (AndExpr  e1 e2) = fCost e1 `max` fCost e2

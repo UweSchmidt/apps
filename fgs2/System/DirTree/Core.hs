@@ -18,29 +18,30 @@ import System.DirTree.Hash
 
 initEnv :: Env
 initEnv = Env
-          { theProgName     = "processDirTree"
-          , theRootDir      = "."
-          , theCwd          = "."
-          , theLevel        = 0
-          , theUserFindExpr = FTrue
-          , theSysFindExpr  = FTrue
-          , theDirFindExpr  = FTrue
-          , theFindPred     = falsePred
-          , theDirPred      = falsePred
-          , theGrepPred     = const False
-          , theSedFct       = id
-          , theProcessor    = genFindProcessor "{path}"
-          , theTraceFlag    = False
-          , theWarningFlag  = True
-          , theErrorFlag    = True
-          , theStdErrFlag   = True
-          , theUtf8DecFlag  = False
-          , theUtf8EncFlag  = False
-          , theCreateBackup = True
-          , theBackupName   = (++ "~")
-          , theHashFct      = sha1Hash
-          , theHashUpdate   = False
-          , theChecksumFile = ".sha1"
+          { theProgName      = "processDirTree"
+          , theRootDir       = "."
+          , theCwd           = "."
+          , theLevel         = 0
+          , theUserFindExpr  = FTrue
+          , theSysFindExpr   = FTrue
+          , theDirFindExpr   = FTrue
+          , theFindPred      = falsePred
+          , theDirPred       = falsePred
+          , theGrepPred      = const False
+          , theSedFct        = id
+          , theProcessor     = genFindProcessor "{path}"
+          , theFollowSymlink = False
+          , theTraceFlag     = False
+          , theWarningFlag   = True
+          , theErrorFlag     = True
+          , theStdErrFlag    = True
+          , theUtf8DecFlag   = False
+          , theUtf8EncFlag   = False
+          , theCreateBackup  = True
+          , theBackupName    = (++ "~")
+          , theHashFct       = sha1Hash
+          , theHashUpdate    = False
+          , theChecksumFile  = ".sha1"
           }
 
 initGrepPred :: Env -> Env

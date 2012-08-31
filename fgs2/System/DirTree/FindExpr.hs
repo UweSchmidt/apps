@@ -43,11 +43,8 @@ findExpr2FindPred FTrue f
 findExpr2FindPred FFalse f
     = falsePred f
 
-findExpr2FindPred IsFile f
-    = isFile f
-
-findExpr2FindPred IsDir f
-    = isDir f
+findExpr2FindPred (HasType t) f
+    = typeTest t f
 
 findExpr2FindPred (HasFeature s p) f
     = do trc $ unwords ["hasFeature:", s ++ ":", show f]
@@ -65,6 +62,15 @@ findExpr2FindPred (OrExpr e1 e2) f
 
 findExpr2FindPred (NotExpr e) f
     = not <$> findExpr2FindPred e f
+
+typeTest :: EntryType -> FindPred
+typeTest IsFile      = isFile
+typeTest IsDir       = isDir
+typeTest IsSymLink   = isSymLink
+typeTest IsCharDev   = isCharDev
+typeTest IsBlockDev  = isBlockDev
+typeTest IsSocket    = isSock
+typeTest IsNamedPipe = isPipe
 
 -- ------------------------------
 
@@ -176,23 +182,37 @@ isAlbumFile f
           where
             p' = (`joinExt` "xml") . remExt $ p
 
+{-
+isInAlbum :: FindPred
+isInAlbum f
+    = do ap <- asks ( joinFileName ".." . (`joinExt` "xml") . getFileName . theCwd)
+         pp <- remDir1 <$> pathName f
+         trc $ "isInAlbum: looking for " ++ show pp ++ " in album file: " ++ show ap
+         ex <- isFile pp
+         if not ex
+            then return False
+            else do
+                    return undefined
+
+-- -}
+
 -- ------------------------------
 
 imageFiles     :: FindExpr
 imageFiles
-    = andExprSeq [ IsFile
+    = andExprSeq [ HasType IsFile
                  , matchExtRE "bmp|gif|jpg|jpeg|mov|nef|pbm|pgm|png|ppm|psd|rw2|tif|tiff|xmb|xcf"
                  ]
 
 soundFiles :: FindExpr
 soundFiles
-    = andExprSeq [ IsFile
+    = andExprSeq [ HasType IsFile
                  , matchExtRE "mp3|wav|midi"
                  ]
 
 makeFiles :: FindExpr
 makeFiles
-    = andExprSeq [ IsFile
+    = andExprSeq [ HasType IsFile
                  , orExprSeq [ matchNameRE "[Mm]akefile"
                              , matchExtRE  "mk"
                              ]

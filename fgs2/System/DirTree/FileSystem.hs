@@ -60,20 +60,38 @@ pathName :: FilePath -> Cmd FilePath
 pathName name
     = (`joinFile` name) <$> asks theCwd
 
-isDir :: FilePath -> Cmd Bool
-isDir f
-    = (isDirectory <$> (io $ getSymbolicLinkStatus f))
-      `withDefault` return False
+-- file status tests
 
-isFile :: FilePath -> Cmd Bool
-isFile f
-    = (isRegularFile <$> (io $ getSymbolicLinkStatus f))
-      `withDefault` return False
+isDir :: FindPred
+isDir = isEntryType isDirectory
 
-isSymLink :: FilePath -> Cmd Bool
-isSymLink f
-    = (isSymbolicLink <$> (io $ getSymbolicLinkStatus f))
-      `withDefault` return False
+isFile :: FindPred
+isFile = isEntryType isRegularFile
+
+isSymLink :: FindPred
+isSymLink = isEntryType isSymbolicLink
+
+isCharDev :: FindPred
+isCharDev = isEntryType isCharacterDevice
+
+isBlockDev :: FindPred
+isBlockDev = isEntryType isBlockDevice
+
+isPipe :: FindPred
+isPipe = isEntryType isNamedPipe
+
+isSock :: FindPred
+isSock = isEntryType isSocket
+
+isEntryType :: (FileStatus -> Bool) -> FindPred
+isEntryType isType f
+    = do getStatus <- (\ b -> if b
+                              then getFileStatus
+                              else getSymbolicLinkStatus
+                      ) <$> asks theFollowSymlink
+
+         (isType <$> (io $ getStatus f))
+         `withDefault` return False
 
 -- return the file owner name or the owner id as string
 
