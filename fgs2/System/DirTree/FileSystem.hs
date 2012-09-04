@@ -93,6 +93,26 @@ isEntryType isType f
          (isType <$> (io $ getStatus f))
          `withDefault` return False
 
+-- return the file modes as string in format like ls -l
+
+getFileMode :: FilePath -> Cmd String
+getFileMode f
+    = do fm <- io $ fileMode <$> getSymbolicLinkStatus f
+         trc $ unwords ["getFileMode: mode for", show f, "is", show $ showMode fm]
+         return $ showMode fm
+    where
+      showMode m
+          = zipWith showM ms cs
+          where
+            ms = [ ownerReadMode, ownerWriteMode, ownerExecuteMode
+                 , groupReadMode, groupWriteMode, groupExecuteMode
+                 , otherReadMode, otherWriteMode, otherExecuteMode
+                 ]
+            cs = "rwxrwxrwx"
+            showM m' c'
+                | m `intersectFileModes` m' == m' = c'
+                | otherwise                       = '-'
+
 -- return the file owner name or the owner id as string
 
 getFileOwner :: FilePath -> Cmd String

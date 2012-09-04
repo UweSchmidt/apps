@@ -37,7 +37,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.5.0"
+      , version  = "0.1.6.0"
       }
 
 oAll :: Term (Env -> Env)
@@ -48,6 +48,7 @@ oAll = oVerbose
        <.> oMatchDir   <.> oNotMatchDir
        <.> oMatchOwner <.> oNotMatchOwner
        <.> oMatchGroup <.> oNotMatchGroup
+       <.> oMatchPerm  <.> oNotMatchPerm
        <.> oMatchName  <.> oNotMatchName
        <.> oMatchPath  <.> oNotMatchPath
        <.> oMatchExt   <.> oNotMatchExt
@@ -274,43 +275,70 @@ matchPathPred bf re
 
 oMatchOwner :: Term (Env -> Env)
 oMatchOwner
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["owner"])
             { optName = "REGEXP"
             , optDoc  = "Test whether owner of entry matches REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred "owner" id getFileOwner
+      setMatch = setFindRegex $ hasFSPred "owner" id getFileOwner
 
 oNotMatchOwner :: Term (Env -> Env)
 oNotMatchOwner
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["not-owner"])
             { optName = "REGEXP"
             , optDoc  = "Test whether owner of entry does not match REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred "not-owner" not getFileOwner
+      setMatch = setFindRegex $ hasFSPred "not-owner" not getFileOwner
 
 oMatchGroup :: Term (Env -> Env)
 oMatchGroup
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["group"])
             { optName = "REGEXP"
             , optDoc  = "Test whether group of entry matches REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred "group" id getFileGroup
+      setMatch = setFindRegex $ hasFSPred "group" id getFileGroup
 
 oNotMatchGroup :: Term (Env -> Env)
 oNotMatchGroup
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["not-group"])
             { optName = "REGEXP"
             , optDoc  = "Test whether group of entry does not match REGEXP."
             }
     where
-      setMatchName = setFindRegex $ hasFSPred "not-group" not getFileGroup
+      setMatch = setFindRegex $ hasFSPred "not-group" not getFileGroup
+
+oMatchPerm :: Term (Env -> Env)
+oMatchPerm
+    = convRegexSeq setMatch
+      $ (optInfo ["perm"])
+            { optName = "REGEXP"
+            , optDoc  = unwords
+                        [ "Test whether file permissions match REGEXP."
+                        , "Permissions are given in format like in 'ls -l'"
+                        , "as 'rwxrwxrwx' if all rights are set, '---------' if no right is set."
+                        ]
+            }
+    where
+      setMatch = setFindRegex $ hasFSPred "perm" id getFileMode
+
+oNotMatchPerm :: Term (Env -> Env)
+oNotMatchPerm
+    = convRegexSeq setMatch
+      $ (optInfo ["not-perm"])
+            { optName = "REGEXP"
+            , optDoc  = unwords
+                        [ "Test whether file permissions do not match REGEXP."
+                        , "For format see 'perm'."
+                        ]
+            }
+    where
+      setMatch = setFindRegex $ hasFSPred "not-perm" not getFileMode
 
 hasFSPred :: String -> (Bool -> Bool) -> (FilePath -> Cmd String) -> Regex -> FindExpr
 hasFSPred s bf getf re
@@ -320,63 +348,65 @@ hasFSPred s bf getf re
 
 oMatchName :: Term (Env -> Env)
 oMatchName
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["name"])
             { optName = "REGEXP"
             , optDoc  = "Test whether file name matches REGEXP."
             }
     where
-      setMatchName = setFindRegex MatchRE
+      setMatch = setFindRegex MatchRE
 
 oNotMatchName :: Term (Env -> Env)
 oNotMatchName
-    = convRegexSeq setMatchName
+    = convRegexSeq setMatch
       $ (optInfo ["not-name"])
             { optName = "REGEXP"
             , optDoc  = "Test whether file name does not match REGEXP."
             }
     where
-      setMatchName = setFindRegex (NotExpr . MatchRE)
+      setMatch = setFindRegex (NotExpr . MatchRE)
 
 oMatchPath :: Term (Env -> Env)
 oMatchPath
-    = convRegexSeq setMatchPath
+    = convRegexSeq setMatch
       $ (optInfo ["path"])
             { optName = "REGEXP"
             , optDoc  = "Test whether whole path matches REGEXP."
             }
     where
-      setMatchPath = setFindRegex MatchPathRE
+      setMatch = setFindRegex MatchPathRE
 
 oNotMatchPath :: Term (Env -> Env)
 oNotMatchPath
-    = convRegexSeq setMatchPath
+    = convRegexSeq setMatch
       $ (optInfo ["not-path"])
             { optName = "REGEXP"
             , optDoc  = "Test whether whole path does not match REGEXP."
             }
     where
-      setMatchPath = setFindRegex (NotExpr . MatchPathRE)
+      setMatch = setFindRegex (NotExpr . MatchPathRE)
 
 oMatchExt :: Term (Env -> Env)
 oMatchExt
-    = convRegexSeq setMatchExt
+    = convRegexSeq setMatch
       $ (optInfo ["ext"])
             { optName = "REGEXP"
             , optDoc  = "Test whether whole path matches REGEXP."
             }
     where
-      setMatchExt = setFindRegex MatchExtRE
+      setMatch = setFindRegex MatchExtRE
 
 oNotMatchExt :: Term (Env -> Env)
 oNotMatchExt
-    = convRegexSeq setMatchExt
+    = convRegexSeq setMatch
       $ (optInfo ["not-ext"])
             { optName = "REGEXP"
             , optDoc  = "Test whether whole path does not match REGEXP."
             }
     where
-      setMatchExt = setFindRegex (NotExpr . MatchExtRE)
+      setMatch = setFindRegex (NotExpr . MatchExtRE)
+
+-- ----------------------------------------
 
 oSpecial :: Term (Env -> Env)
 oSpecial
