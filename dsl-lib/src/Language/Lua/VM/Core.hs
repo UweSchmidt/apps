@@ -399,12 +399,6 @@ execInstr1 (LoadBool b)
 execInstr1 (LoadNil)
     = pushES nil
 
-execInstr1 (LoadEmpty)
-    = pushES emptyTuple
-
-execInstr1 (Pop)
-    = popES >> return ()
-
 execInstr1 (Copy i)
     = do v <- getES i
          pushES v
@@ -414,16 +408,83 @@ execInstr1 (Move i)
          remES i
          pushES v
 
+-- ----------------------------------------
+--
+-- {- -- the new tuple instructions
+
+execInstr1 (MkTup n)
+    = execMkTup n
+      where
+        execMkTup i
+            | i >= 2
+                = execBinary (\ v -> return . consValues v)
+                  >> execMkTup (i - 1)
+            | i == 1
+                = return ()
+            | i == 0
+                = pushES emptyTuple
+            | otherwise
+                = luaError $ "mktup with negative arg: " ++ show i
+
+execInstr1 (UnTup n)
+    = popES >>= execUnTup n
+      where
+        execUnTup i t
+            | i >= 2
+                = execUnTup (i - 1) v2
+                  >> pushES v1
+            | i == 1
+                = pushES v1
+            | i == 0
+                = return ()
+            | otherwise
+                = luaError $ "untup with negative arg: " ++ show i
+            where
+              (v1, v2) = uncons t
+
+execInstr1 (UnTup' n)
+    = popES >>= execUnTup n
+      where
+        execUnTup i t
+            | i == 1
+                = pushES t
+            | i >= 2
+                = do execUnTup (i - 1) v2
+                     pushES v1
+            | otherwise
+                = luaError $ "untup... with non positive arg: " ++ show i
+            where
+              (v1, v2) = uncons t
+
+-- -}
+-- ----------------------------------------
+--
+{- -- the old tuple instructions
+
+-- LoadEmpty becomes MkTup 0
+execInstr1 (LoadEmpty)
+    = pushES emptyTuple
+
+-- MkTuple becomes MkTup 2 
 execInstr1 (MkTuple)
     = execBinary (\ v -> return . consValues v)
 
+-- Pop becomes UnTup 0
+execInstr1 (Pop)
+    = popES >> return ()
+
+-- UnTuple becomes UnTup... 2
 execInstr1 (UnTuple)
     = do (v1, v2) <- uncons <$> popES
          pushES v2
          pushES v1
 
+-- Take1 becomes UnTup 1
 execInstr1 (Take1)
     = execUnary (return . singleValue)
+
+-- -}
+-- ----------------------------------------
 
 -- table instructions
 
@@ -500,47 +561,21 @@ execUnary f
 -- ------------------------------------------------------------
 
 lookupOp2 :: BOp -> LuaAction (Value -> Value -> LuaAction Value)
-lookupOp2 Add
-    = numOp2 (+)
-
-lookupOp2 Sub
-    = numOp2 (-)
-
-lookupOp2 Mult
-    = numOp2 (*)
-
-lookupOp2 Exp
-    = numOp2 (**)
-
-lookupOp2 Div
-    = numOp2 (/)
-
-lookupOp2 Mod
-    = numOp2 $ \ x y -> x - fromIntegral (floor (x / y ) :: Int) * y
-
-lookupOp2 EQU
-    = eqOp (==)
-
-lookupOp2 NEQ
-    = eqOp (/=)
-
-lookupOp2 GRT
-    = cmpOp (>)
-
-lookupOp2 GRE
-    = cmpOp (>=)
-
-lookupOp2 LSE
-    = cmpOp (<=)
-
-lookupOp2 LST
-    = cmpOp (<)
-
-lookupOp2 Conc
-    = return $
-      \ x y -> do checkNumOrString x
-                  checkNumOrString y
-                  return $ S (value2str x ++ value2str y)
+lookupOp2 Add  = numOp2 (+)
+lookupOp2 Sub  = numOp2 (-)
+lookupOp2 Mult = numOp2 (*)
+lookupOp2 Exp  = numOp2 (**)
+lookupOp2 Div  = numOp2 (/)
+lookupOp2 Mod  = numOp2 $ \ x y -> x - fromIntegral (floor (x / y ) :: Int) * y
+lookupOp2 EQU  = eqOp   (==)
+lookupOp2 NEQ  = eqOp   (/=)
+lookupOp2 GRT  = cmpOp  (>)
+lookupOp2 GRE  = cmpOp  (>=)
+lookupOp2 LSE  = cmpOp  (<=)
+lookupOp2 LST  = cmpOp  (<)
+lookupOp2 Conc = return $ \ x y -> checkNumOrString x
+                                   >> checkNumOrString y
+                                   >> (return . S) (value2str x ++ value2str y)
 
 {- all binary ops are implemented
 lookupOp2 op
@@ -561,9 +596,9 @@ eqOp op
 cmpOp :: (Value -> Value -> Bool) -> LuaAction (Value -> Value -> LuaAction Value)
 cmpOp op
     = return $
-      \ x y -> do checkEqType "compare" x y
-                  checkNumOrString x
-                  return $ B (x `op` y)
+      \ x y -> checkEqType "compare" x y
+               >> checkNumOrString x
+               >> (return . B) (x `op` y)
 
 -- ------------------------------------------------------------
 

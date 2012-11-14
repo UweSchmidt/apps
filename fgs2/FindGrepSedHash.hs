@@ -391,7 +391,7 @@ oMatchExt
     = convRegexSeq setMatch
       $ (optInfo ["ext"])
             { optName = "REGEXP"
-            , optDoc  = "Test whether whole path matches REGEXP."
+            , optDoc  = "Test whether extension (without .) matches REGEXP."
             }
     where
       setMatch = setFindRegex MatchExtRE
@@ -401,7 +401,7 @@ oNotMatchExt
     = convRegexSeq setMatch
       $ (optInfo ["not-ext"])
             { optName = "REGEXP"
-            , optDoc  = "Test whether whole path does not match REGEXP."
+            , optDoc  = "Test whether extension (without .) does not match REGEXP."
             }
     where
       setMatch = setFindRegex (NotExpr . MatchExtRE)

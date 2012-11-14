@@ -216,7 +216,6 @@ data Instr
     | LoadStr String
     | LoadBool Bool
     | LoadNil
-    | LoadEmpty		-- load empty result tuple
     | LoadVar VName
     | LoadField         -- top: the table, 2.: the index
     | NewTable
@@ -226,10 +225,7 @@ data Instr
     | StoreVar VName
     | StoreField        -- top: the table, 2.: the index, 3. the value
     | AppendField       -- top: the table, 2.: the value(-list)
-    | MkTuple		-- top: the tail (single value or list), 2. the head value
-    | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
-    | Take1             -- top: take the head or nil, discard the rest
-    | Pop               -- throw away the topmost value
+
     | Copy Int          -- push the i. value onto the stack, 0 == top of stack, stack growes by 1
     | Move Int          -- move the i. value to the top, i == 1: swap the 2 topmost values, stack remains size
     | BinOp BOp         -- top: right arg, 2.: left arg
@@ -242,6 +238,21 @@ data Instr
     | TailCall          -- top: closure, 2. args
     | Leave             -- remove current env and return to saved stored closure
     | Intr String       -- interrupt
+
+    -- {- the new tuple instructions
+    | MkTup Int		-- takes n arguments from stack, builds a tuple and pushes the result onto the stack
+    | UnTup Int         -- take a tuple from the stack and pushes n components of this tuple onto the stack
+    | UnTup' Int	-- takes a tuple from the stack and pushes n components onto stack,
+                        -- the last component contains a tuple with all remaining components
+    -- -}
+
+    {- the old tuple instructions
+    | MkTuple		-- top: the tail (single value or list), 2. the head value
+    | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
+    | Take1             -- top: take the head or nil, discard the rest
+    | LoadEmpty		-- load empty result tuple
+    | Pop               -- throw away the topmost value
+    -- -}
 
 -- ------------------------------------------------------------
 

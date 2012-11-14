@@ -34,7 +34,6 @@ instance Show Instr where
     show (LoadStr s   ) = fmt1 "load" (show s)
     show (LoadBool b  ) = fmt1 "load" (if b then "true" else "false")
     show (LoadNil     ) = fmt1 "load" "nil"
-    show (LoadEmpty   ) = fmt1 "load" "()"
     show (LoadVar n   ) = fmt1 "load" n
     show (LoadField   ) = fmt1 "load" ".[.]"
     show (NewTable    ) = fmt0 "newtab"
@@ -44,10 +43,7 @@ instance Show Instr where
     show (StoreVar n  ) = fmt1 "store" n
     show (StoreField  ) = fmt1 "store" ".[.]"
     show (AppendField ) = fmt0 "append"
-    show (MkTuple     ) = fmt0 "mktuple"
-    show (UnTuple     ) = fmt0 "untuple"
-    show (Take1       ) = fmt0 "take1"
-    show (Pop         ) = fmt0 "pop"
+
     show (Copy i      ) = fmt1 "copy"  $ show i
     show (Move i      ) = fmt1 "move"  $ show i
     show (BinOp op    ) = fmt0 $ fmtOp $ show op
@@ -60,6 +56,25 @@ instance Show Instr where
     show (TailCall    ) = fmt0 "tailcall"
     show (Leave       ) = fmt0 "return"
     show (Intr msg    ) = fmt1 "intr" (show msg)
+
+    -- {- the new tuple instructions
+    show (MkTup      0) = fmt1 "mktup"     "()"
+    show (MkTup      1) = fmt0 "noop"
+    show (MkTup      n) = fmt1 "mktup"    (tpl n)
+    show (UnTup      0) = fmt0 "pop"
+    show (UnTup      1) = fmt0 "fst"
+    show (UnTup      n) = fmt1 "untup"    (tpl n)
+    show (UnTup'     n) = fmt1 "untup"    (tpl''' n)
+    -- -}
+
+    {- the old tuple instructions
+    show (MkTuple     ) = fmt0 "mktuple"
+    show (UnTuple     ) = fmt0 "untuple"
+    show (Take1       ) = fmt0 "take1"
+    show (LoadEmpty   ) = fmt1 "load" "()"
+    show (Pop         ) = fmt0 "pop"
+    -- -}
+
 
 indent     :: String -> String
 indent s   = replicate 8 ' ' ++ s
@@ -84,6 +99,13 @@ fill' n s
     = fill n' s
     where
       n' = ((length s - 1) `div` n + 1) * n
+
+tpl, tpl''' :: Int -> String
+tpl         = tpl' ""
+tpl'''      = tpl' "..."
+
+tpl'        :: String -> Int -> String
+tpl' s n    = "(" ++ replicate (n - 1) ',' ++ s ++ ")"
 
 -- ------------------------------------------------------------
 
@@ -111,18 +133,114 @@ showMachineInstr ic instr
 
 -- ------------------------------------------------------------
 
-mkInstr     :: Instr -> Code
-mkInstr     = Code . (:[])
+mkCode      :: Instr -> Code
+mkCode      = Code . (:[])
 
-branch      :: Bool -> Label -> Instr
-branch c l  = Branch c (M l)
+mkNoop      :: Code
+mkNoop      = Code []
 
-jump        :: Label -> Instr
-jump        = Jump . M
+-- ------------------------------------------------------------
+--
+-- smart constructors
 
-closure     :: Label -> Instr
-closure     = Closure . M
+mkBranch    :: Bool -> Label -> Code
+mkBranch c l = mkCode $ Branch c (M l)
 
+mkJump,
+  mkLabel,
+  mkClosure   :: Label -> Code
+
+mkJump      = mkCode . Jump . M
+mkLabel     = mkCode . Label
+mkClosure   = mkCode . Closure . M
+
+mkLoadNum   :: Double -> Code
+mkLoadNum   = mkCode . LoadNum
+
+mkLoadBool  :: Bool -> Code
+mkLoadBool  = mkCode . LoadBool
+
+mkBinOp     :: BOp -> Code
+mkBinOp     = mkCode . BinOp
+
+mkUnOp      :: UOp -> Code
+mkUnOp      = mkCode . UnOp
+
+mkLoadStr,
+  mkIntr      :: String -> Code
+
+mkLoadStr   = mkCode . LoadStr
+mkIntr      = mkCode . Intr
+
+mkNewEnv,
+  mkDelEnv,
+  mkCall,
+  mkTailCall,
+  mkLeave,
+  mkLoadField,
+  mkStoreField,
+  mkAppendField,
+  mkLoadNil,
+  mkNewTable    :: Code
+
+mkCall      = mkCode Call
+mkTailCall  = mkCode TailCall
+mkLeave     = mkCode Leave
+mkNewEnv    = mkCode NewEnv
+mkDelEnv    = mkCode DelEnv
+mkLoadField = mkCode LoadField
+mkStoreField= mkCode StoreField
+mkAppendField= mkCode AppendField
+mkLoadNil   = mkCode LoadNil
+mkNewTable  = mkCode NewTable
+
+mkDelEnvN,
+  mkMove,
+  mkCopy   :: Int -> Code
+
+mkDelEnvN n = Code $ replicate n DelEnv
+mkMove      = mkCode . Move
+mkCopy      = mkCode . Copy
+
+mkNewLocal,
+  mkLoadVar,
+  mkStoreVar  :: VName -> Code
+
+mkNewLocal  = mkCode . NewLocal
+mkLoadVar   = mkCode . LoadVar
+mkStoreVar  = mkCode . StoreVar
+
+-- ----------
+
+mkEmptyTup,
+  mkPop,
+  mkUnTup2,
+  mkUnTup1    :: Code
+
+mkTupN, mkUnTupN, mkUnTupN'      :: Int -> Code
+
+-- {-- new tuple instructions
+
+mkEmptyTup  = mkCode $ MkTup 0
+mkPop       = mkCode $ UnTup 0
+mkUnTup2    = mkCode $ UnTup 2
+mkUnTup1    = mkCode $ UnTup 1
+
+mkUnTupN    = mkCode . UnTup
+mkUnTupN'   = mkCode . UnTup'
+
+mkTupN 1    = mkNoop
+mkTupN n    = mkCode . MkTup $ n 
+-- -}
+
+{- -- old tuple instructions
+
+mkEmptyTup  = mkCode $ LoadEmpty
+mkPop       = mkCode $ Pop
+mkUnTup2    = mkCode $ UnTuple
+mkUnTup1    = mkCode $ Take1
+mkTupN n    = Code   $ replicate (n - 1) MkTuple
+-- -}
 -- ------------------------------------------------------------
 
 --

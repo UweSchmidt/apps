@@ -21,14 +21,14 @@ compileProg block = runCompile (compProg block)
 compProg :: Block -> Compile ()
 compProg block
     = do start     <- newLabel
-         emitCode $ mkInstr $ jump start
+         emitCode $ mkJump start
          code_prog <- compExpr prog
-         code_cls  <- genCode [ mkInstr $ Label start
-                              , mkInstr $ LoadEmpty	-- push an empty param tuple
+         code_cls  <- genCode [ mkLabel start
+                              , mkEmptyTup 		-- push an empty param tuple
                               , code_prog		-- push the closure
-                              , mkInstr $ Call
-                              , mkInstr $ Pop
-                              , mkInstr $ Intr "terminate program"
+                              , mkCall
+                              , mkPop
+                              , mkIntr "terminate program"
                               ]
          emitCode code_cls
          return ()
@@ -43,8 +43,7 @@ compBlock (Block sl)
         = compStmtL sl
 
 compStmtL :: [Stmt] -> Compile Code
-compStmtL sl
-    = mconcat <$> mapM compStmt sl
+compStmtL = compSeq compStmt
 
 -- ------------------------------------------------------------
 
@@ -83,16 +82,16 @@ compStmt (SIf thenParts elsePart)
     = do lEnd <- newLabel
          (code_thps, end_thps) <- compThenParts lEnd thenParts
          maybe ( genCode [ code_thps
-                         , mkInstr $ Label end_thps
-                         , mkInstr $ Label lEnd
+                         , mkLabel end_thps
+                         , mkLabel lEnd
                          ]
                ) (\ ep ->
                       do code_elsePart <- compBlock ep
                          genCode [ code_thps
-                                 , mkInstr $ jump lEnd
-                                 , mkInstr $ Label end_thps
+                                 , mkJump lEnd
+                                 , mkLabel end_thps
                                  , code_elsePart
-                                 , mkInstr $ Label lEnd
+                                 , mkLabel lEnd
                                  ]
                  ) elsePart
     where
@@ -103,8 +102,8 @@ compStmt (SIf thenParts elsePart)
           = do (code_tp,  lab_tp ) <- compThenPart  tp
                (code_tps, lab_tps) <- compThenParts lEnd tps
                code <- genCode [ code_tp
-                               , mkInstr $ jump  lEnd
-                               , mkInstr $ Label lab_tp
+                               , mkJump  lEnd
+                               , mkLabel lab_tp
                                , code_tps
                                ]
                return (code, lab_tps)
@@ -126,12 +125,12 @@ compStmt (SWhile cond body)
          codeCond <- compCond True lBody cond
          codeBody <- compWithNewLoopLevel lEnd $
                      compBlock body
-         genCode [ mkInstr $ jump  lCond
-                 , mkInstr $ Label lBody
+         genCode [ mkJump  lCond
+                 , mkLabel lBody
                  , codeBody
-                 , mkInstr $ Label lCond
+                 , mkLabel lCond
                  , codeCond
-                 , mkInstr $ Label lEnd
+                 , mkLabel lEnd
                  ]
 
 compStmt (SUntil cond body)
@@ -140,19 +139,19 @@ compStmt (SUntil cond body)
          codeCond <- compCond False lBody cond
          codeBody <- compWithNewLoopLevel lEnd $
                      compBlock body
-         genCode [ mkInstr $ Label lBody
+         genCode [ mkLabel lBody
                  , codeBody
                  , codeCond
-                 , mkInstr $ Label lEnd
+                 , mkLabel lEnd
                  ]
 
 compStmt SBreak
     = getLoopLevel >>=
       maybe (do cerr "compiling break statement" "no surrounding loop found"
                 return mempty
-            ) (\ (i, lab) -> genCode $ replicate i (mkInstr DelEnv)
-                                       ++
-                                       [mkInstr $ jump lab]
+            ) (\ (i, lab) -> genCode [ mkDelEnvN i
+                                     , mkJump lab
+                                     ]
               )
 
 compStmt (SReturn es)
@@ -161,7 +160,7 @@ compStmt (SReturn es)
     | otherwise
         = do code_es  <- compExprL es
              genCode [ code_es
-                     , mkInstr Leave
+                     , mkLeave
                      ]
 
 compStmt (SDo block)
@@ -229,8 +228,8 @@ compStmt (SFor [v] (ForNum e1 e2 e3) block)
      end
 -}
 
-compStmt (SFor _ (ForNum _ _ _) _)
-    = error "compStmt: error in AST: single loop variable required for counting loops"
+compStmt s@(SFor _ (ForNum _ _ _) _)
+    = cerror "compStmt" ("error in AST: single loop variable required for counting loops:" ++ show s)
 
 compStmt (SFor vs@(v1 : _) (ForIter explist) block)
     = compBlock forBlock
@@ -273,8 +272,8 @@ compStmt (SFor vs@(v1 : _) (ForIter explist) block)
 
 -}
 
-compStmt (SFor _ (ForIter _) _)
-    = error "compStmt: error in AST: loop variable required for general loops"
+compStmt s@(SFor _ (ForIter _) _)
+    = cerror "compStmt" ("error in AST: loop variable required for general loops: " ++ show s)
 
 {- compStmt is complete
 
@@ -285,7 +284,7 @@ compStmt s
 
 compNewLocals :: [Name] -> Compile Code
 compNewLocals lvs
-    = genCode $ map (mkInstr . NewLocal) lvs
+    = genCode $ map mkNewLocal lvs
 
 compStoreLocals :: [Name] -> Compile Code
 compStoreLocals lvs
@@ -295,7 +294,22 @@ compStoreLocals lvs
 
 compStoreL :: [LValue] -> Compile Code
 compStoreL []
-    = genCode [ mkInstr Pop ]
+    = genCode [ mkPop ]
+
+-- {- new tuple instructions
+
+compStoreL lvs
+    = do code_lvs <- compSeq (compStore mempty) lvs
+         genCode [ mkUnT (length lvs)
+                 , code_lvs
+                 ]
+    where
+      mkUnT
+          | isEllipsis (last lvs) = mkUnTupN'
+          | otherwise             = mkUnTupN
+
+-- -}
+{- old tuple instructions
 
 compStoreL lvs
     = do code_lvs' <- mapM compStore1 lvs'
@@ -306,20 +320,18 @@ compStoreL lvs
   where
     len1 = length lvs - 1
     (lvs', lv) = splitAt len1 lvs
+-- -}
 
 compStore1 :: LValue -> Compile Code
 compStore1
-    = compStore $ mkInstr UnTuple
+    = compStore $ mkUnTup2
 
 compStoreLast :: LValue -> Compile Code
 compStoreLast lv
     | isEllipsis lv
         = compStore mempty lv
     | otherwise
-        = compStore (mkInstr Take1) lv
-    where
-      isEllipsis (LVar "...") = True
-      isEllipsis _            = False
+        = compStore mkUnTup1 lv
 
 -- gen code for storing a single value from the eval stack into a variable
 -- into a field of a table, in the 1 case stack size is decreased by 1
@@ -329,7 +341,7 @@ compStoreLast lv
 compStore :: Code -> LValue -> Compile Code
 compStore instr (LVar n)
     = genCode [ instr
-              , mkInstr $ StoreVar n
+              , mkStoreVar n
               ]
 
 compStore instr (LFieldRef tb ix)
@@ -338,15 +350,15 @@ compStore instr (LFieldRef tb ix)
          genCode [ instr
                  , code_ix
                  , code_tb
-                 , mkInstr StoreField
+                 , mkStoreField
                  ]
 
 compWithLocalEnv :: Compile Code -> Compile Code
 compWithLocalEnv compPart
     = do part <- local incrEnvCnt compPart
-         genCode [ mkInstr NewEnv
+         genCode [ mkNewEnv
                  , part
-                 , mkInstr DelEnv
+                 , mkDelEnv
                  ]
 
 compWithNewEnv :: Compile Code -> Compile Code
@@ -364,17 +376,18 @@ compWithNewLoopLevel lEnd compPart
 
 compExprL :: [Expr] -> Compile Code
 compExprL []
-    = return $ mkInstr $ LoadEmpty
+    = return mkEmptyTup
+
 compExprL es
-    = do code_es' <- mapM compExpr1 es'
+    = do code_es' <- compSeq compExpr1 es'
          code_le  <- compExpr (head le)
-         genCode $ code_es'
-                   ++
-                   [ code_le ]
-                   ++
-                   replicate len1 (mkInstr MkTuple)
+         genCode $ [ code_es'
+                   , code_le
+                   , mkTupN len
+                   ]
       where
-        len1 = length es -1
+        len  = length es
+        len1 = len -1
         (es', le) = splitAt len1 es
 
 -- gen code such that a single value, not a tuple is pushed onto the eval stack
@@ -387,7 +400,7 @@ compExpr1 e
     | otherwise
         = do code_e <- compExpr e
              genCode [ code_e
-                     , mkInstr Take1
+                     , mkUnTup1
                      ]
 
 -- gen code such that a single value is pushed onto the evaluation stack
@@ -395,29 +408,29 @@ compExpr1 e
 
 compExpr :: Expr -> Compile Code
 compExpr (ENumber d)
-    = genCode [mkInstr $ LoadNum d]
+    = genCode [mkLoadNum d]
 
 compExpr (EString s)
-    = genCode [mkInstr $ LoadStr s]
+    = genCode [mkLoadStr s]
 
 compExpr (EBool b)
-    = genCode [mkInstr $ LoadBool b]
+    = genCode [mkLoadBool b]
 
 compExpr (ENil)
-    = genCode [mkInstr $ LoadNil]
+    = genCode [mkLoadNil]
 
 compExpr (EEllipsis)
-    = genCode [mkInstr $ LoadVar "..."]
+    = genCode [mkLoadVar "..."]
 
 compExpr (EVar n)
-    = genCode [mkInstr $ LoadVar n]
+    = genCode [mkLoadVar n]
 
 compExpr (EFieldRef table key)
     = do code_key   <- compExpr1 key
          code_table <- compExpr1 table
          genCode [ code_key
                  , code_table
-                 , mkInstr $ LoadField
+                 , mkLoadField
                  ]
 
 compExpr e@(EBinOp op e1 e2)
@@ -434,7 +447,7 @@ compExpr e@(EBinOp op e1 e2)
     where
       compOpcode
           = maybe ( todo "unimplemented" (" binary op " ++ show op) )
-                  ( \ o -> genCode [ mkInstr $ BinOp o ] ) $
+                  ( \ o -> genCode [ mkBinOp o ] ) $
             lookup op optable
           where
             optable = [ ("+",  Add)
@@ -458,32 +471,32 @@ compExpr (EUnOp op e1)
     | op == "#"
         = do code_e1 <- compExpr e1
              genCode [ code_e1
-                     , mkInstr $ UnOp NumberOf
+                     , mkUnOp NumberOf
                      ]
     | op == "not"
         = do code_e1 <- compExpr e1
              l1      <- newLabel
              l2      <- newLabel
              genCode [ code_e1
-                     , mkInstr $ branch False l1
-                     , mkInstr $ LoadBool True
-                     , mkInstr $ jump l2
-                     , mkInstr $ Label l1
-                     , mkInstr $ LoadBool False
-                     , mkInstr $ Label l2
+                     , mkBranch False l1
+                     , mkLoadBool True
+                     , mkJump l2
+                     , mkLabel l1
+                     , mkLoadBool False
+                     , mkLabel l2
                      ]
     | otherwise
         = todo "unimplemented" (" unary op " ++ show op)
 
 compExpr (ECall fct args)
-    = compCall (mkInstr Call) fct args
+    = compCall mkCall fct args
 
 -- Lua reference: arguments are evaluated before function
 -- this needs some swapping on the stack, because the table is used
 -- twice, once as a extra 1. arg and as lookup table for the method
 
 compExpr (EMemberCall table name args)
-    = compMemberCall (mkInstr Call) table name args
+    = compMemberCall mkCall table name args
 
 compExpr (EFunction fps varargs block)
     = do lStart <- newLabel
@@ -495,12 +508,12 @@ compExpr (EFunction fps varargs block)
                               , code_body
                               ]
          code_e <- exitCode
-         code_c <- genCode [ mkInstr $ Label lStart
+         code_c <- genCode [ mkLabel lStart
                            , code_f
                            , code_e
                            ]
          emitCode code_c
-         genCode [ mkInstr $ closure lStart ]
+         genCode [ mkClosure lStart ]
     where
       fps'
           | varargs   = fps ++ ["..."]
@@ -510,14 +523,14 @@ compExpr (EFunction fps varargs block)
           | isReturnBlock block
               = genCode []
           | otherwise
-              = genCode [ mkInstr $ LoadEmpty
-                        , mkInstr $ Leave
+              = genCode [ mkEmptyTup
+                        , mkLeave
                         ]
 
 compExpr (ETableCons fs)
     = do code_es <- compFieldList 0 fs
          code_ap <- codeAppends (noOfAppends fs)
-         genCode $ [ mkInstr $ NewTable
+         genCode $ [ mkNewTable
                    , code_es
                    , code_ap
                    ]
@@ -525,11 +538,10 @@ compExpr (ETableCons fs)
       codeAppends 0
           = genCode []
       codeAppends n
-          = do code_tp <- genCode $ map (const (mkInstr MkTuple)) [2..n]
-               genCode [ code_tp
-                       , mkInstr $ Copy 1
-                       , mkInstr $ AppendField
-                       ]
+          = genCode [ mkTupN n
+                    , mkCopy 1
+                    , mkAppendField
+                    ]
 
       compField n compEx key val
           = maybe (compAppend compEx val)
@@ -544,8 +556,8 @@ compExpr (ETableCons fs)
                code_key <- compExpr1 key
                genCode [ code_val
                        , code_key
-                       , mkInstr $ Copy (n + 2)
-                       , mkInstr $ StoreField
+                       , mkCopy (n + 2)
+                       , mkStoreField
                        ]
       
       compFieldList _ []
@@ -572,13 +584,13 @@ compExpr e
 
 compTailCall :: Expr -> Compile Code
 compTailCall (ECall fct args)
-    = compCall (mkInstr TailCall) fct args
+    = compCall mkTailCall fct args
 
 compTailCall (EMemberCall table name args)
-    = compMemberCall (mkInstr TailCall) table name args
+    = compMemberCall mkTailCall table name args
 
-compTailCall _
-    = error "compTailCall: illegal arg, not a call expr"
+compTailCall e
+    = cerror "compTailCall" ("illegal arg, not a call expr: " ++ show e)
 
 -- ------------------------------------------------------------
 
@@ -597,12 +609,12 @@ compMemberCall callInstr table name args
          code_args  <- compExprL args
          genCode [ code_args                    -- evaluate args first
                  , code_table			-- eval table, this value is used twice
-                 , mkInstr $ Copy 0             -- so copy it
-                 , mkInstr $ Move 2             -- move the arg list to the top
-                 , mkInstr $ MkTuple            -- and cons the table as 1. arg in front of the arg list
-                 , mkInstr $ LoadStr name       -- load table index
-                 , mkInstr $ Move 2             -- move table to the top
-                 , mkInstr $ LoadField          -- compute the function (method) to be called by table lookup
+                 , mkCopy 0                     -- so copy it
+                 , mkMove 2                     -- move the arg list to the top
+                 , mkTupN 2                     -- and cons the table as 1. arg in front of the arg list
+                 , mkLoadStr name               -- load table index
+                 , mkMove 2                     -- move table to the top
+                 , mkLoadField                  -- compute the function (method) to be called by table lookup
                  , callInstr                    -- everthing is ready for calling the function
                  ]
 
@@ -637,7 +649,7 @@ compCond c l (EBinOp "and" e1 e2)
              code_e2 <- compCond True  l  e2
              genCode [ code_e1
                      , code_e2
-                     , mkInstr $ Label nl
+                     , mkLabel nl
                      ]
     | otherwise
         = do code_e1 <- compCond False l  e1
@@ -649,7 +661,7 @@ compCond c l (EBinOp "and" e1 e2)
 compCond c l e
     = do codeExpr <- compExpr e
          genCode [ codeExpr
-                 , mkInstr $ branch c l
+                 , mkBranch c l
                  ]
 
 compAndOr :: Expr -> Compile Code
@@ -658,25 +670,31 @@ compAndOr (EBinOp op e1 e2)
          code_e2 <- compExpr1 e2
          lEnd    <- newLabel
          genCode [ code_e1
-                 , mkInstr $ Copy 0
-                 , mkInstr $ branch (op == "or") lEnd
-                 , mkInstr $ Pop
+                 , mkCopy 0
+                 , mkBranch (op == "or") lEnd
+                 , mkPop
                  , code_e2
-                 , mkInstr $ Label lEnd
+                 , mkLabel lEnd
                  ]
-compAndOr _
-    = error "compAndOr: called with illegal expr"
+compAndOr e
+    = cerror "compAndOr:" ("called with illegal expr: " ++ show e)
 
 -- ------------------------------------------------------------
 --
 -- mothers little helpers
 
 todo :: String -> String -> Compile Code
-todo s msg
+todo = compErr "Codegen TODO:"
+
+cerror :: String -> String -> Compile Code
+cerror = compErr "Codegen internal error:"
+
+compErr :: String -> String -> String -> Compile Code
+compErr what s msg
     = do emitErr msg'
-         return $ mkInstr $ Intr msg'
+         return $ mkIntr msg'
     where
-      msg' = unwords ["TODO:", s, msg]
+      msg' = unwords [what, s, msg]
 
 cerr :: (Show a) => String -> a -> Compile ()
 cerr s msg
@@ -684,6 +702,9 @@ cerr s msg
 
 genCode :: [Code] -> Compile Code
 genCode = return . mconcat
+
+compSeq :: (a -> Compile Code) -> [a] -> Compile Code
+compSeq comp xs = mconcat <$> mapM comp xs
 
 -- ------------------------------------------------------------
 --

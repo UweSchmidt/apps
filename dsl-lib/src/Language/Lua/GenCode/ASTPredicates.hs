@@ -48,4 +48,8 @@ isTailCall _                         = False
 noOfAppends                          :: [(Maybe Expr, Expr)] -> Int
 noOfAppends                          = length . filter (isNothing . fst)
 
+isEllipsis                           :: LValue -> Bool
+isEllipsis (LVar "...")              = True
+isEllipsis _                         = False
+
 -- ------------------------------------------------------------

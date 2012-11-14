@@ -124,14 +124,14 @@ skip chs
     
 ml_string :: TokenParser
 ml_string = do
-    try $ string "[["
+    _ <- try $ string "[["
     skip "\n"
     s <- dcs
     return $ TokString s
     where
-        dcs   = do try $ string "]]"
-	           return []
-	    <|> do try $ string "[["
+        dcs   = do _ <- try $ string "]]"
+                   return []
+	    <|> do _ <- try $ string "[["
 	           s <- dcs
 		   s2 <- dcs
 		   return $ concat ["[[", s, "]]", s2]
@@ -142,14 +142,14 @@ ml_string = do
     
 q_string :: Char -> TokenParser
 q_string q = do
-    char q
+    _ <- char q
     s <- dcs
     return $ TokString s
     where
-        dcs =   do { char q; return [] }
+        dcs =   do { char q >> return [] }
 	    <|> do { c <- escaped <|> noneOf "\n"; s <- dcs; return (c:s) }
 	escaped = do
-	    char '\\'
+	    _  <- char '\\'
 	    c_ <- anyChar
 	    unescape c_
 
@@ -174,7 +174,7 @@ unescape _   = fail "Invalid escaped character"
 
 comment :: TokenParser
 comment = do
-    try $ string "--"
+    _ <- try $ string "--"
     c <-    do { (TokString s) <- ml_string; return s }
         <|> do { many (noneOf "\n") }
     return $ TokComment c
@@ -206,8 +206,8 @@ decimal_part = do
 
 exponent_part :: Parser Int
 exponent_part = do
-    sign <- do { char '+'; return 1 }
-        <|> do { char '-'; return (-1) }
+    sign <- do { char '+' >> return 1 }
+        <|> do { char '-' >> return (-1) }
         <|> do { return 1 }
     i <- integer
     return $ sign*i
