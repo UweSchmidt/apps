@@ -4,10 +4,10 @@ module Language.Lua.VM.Types
 where
 
 import Data.Array.IArray
-import Data.Function        	( on )
+import Data.Function            ( on )
 import Data.IORef
-import Data.Map             	( Map )
-import Data.Maybe           	( fromJust )
+import Data.Map                 ( Map )
+import Data.Maybe               ( fromJust )
 import Data.Monoid
 import Data.Typeable
 import Data.Unique
@@ -30,7 +30,7 @@ data Value
     | C Closure
     | F NativeFct
     | U UserData
-    | P Values		-- tuple of values are used internally with the ... varargs "variable"
+    | P Values          -- tuple of values are used internally with the ... varargs "variable"
                         -- tuples must not be nested
     deriving (Eq, Ord)
 
@@ -155,7 +155,7 @@ data LuaState
       , theIntrReg    :: Maybe LuaError
       , theEvalStack  :: Values
       , theCallStack  :: [Closure]
-      , theProg       :: LuaCode	-- for dynamic loading the code is part of the state, else the prog could be a part of the env
+      , theProg       :: LuaCode        -- for dynamic loading the code is part of the state, else the prog could be a part of the env
       , theLogger     :: LuaLogger
       }
 
@@ -228,6 +228,7 @@ data Instr
 
     | Copy Int          -- push the i. value onto the stack, 0 == top of stack, stack growes by 1
     | Move Int          -- move the i. value to the top, i == 1: swap the 2 topmost values, stack remains size
+    | Save Int          -- pop the top of stack and store it above i'th element, i == 1: swap the 2 topmost values
     | BinOp BOp         -- top: right arg, 2.: left arg
     | UnOp UOp          -- top: single arg
     | Jump Dest
@@ -240,17 +241,17 @@ data Instr
     | Intr String       -- interrupt
 
     -- {- the new tuple instructions
-    | MkTup Int		-- takes n arguments from stack, builds a tuple and pushes the result onto the stack
+    | MkTup Int         -- takes n arguments from stack, builds a tuple and pushes the result onto the stack
     | UnTup Int         -- take a tuple from the stack and pushes n components of this tuple onto the stack
-    | UnTup' Int	-- takes a tuple from the stack and pushes n components onto stack,
+    | UnTup' Int        -- takes a tuple from the stack and pushes n components onto stack,
                         -- the last component contains a tuple with all remaining components
     -- -}
 
     {- the old tuple instructions
-    | MkTuple		-- top: the tail (single value or list), 2. the head value
+    | MkTuple           -- top: the tail (single value or list), 2. the head value
     | UnTuple           -- top: the head or nil, 2. the rest, maybe the empty tuple
     | Take1             -- top: take the head or nil, discard the rest
-    | LoadEmpty		-- load empty result tuple
+    | LoadEmpty         -- load empty result tuple
     | Pop               -- throw away the topmost value
     -- -}
 

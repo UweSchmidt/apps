@@ -220,6 +220,30 @@ leaveFct
 --
 -- evaluation stack primitives
 
+pushES :: Value -> LuaAction ()
+pushES v
+    = do modify $ \ s -> s { theEvalStack = v : theEvalStack s }
+         logValue "push" v
+     
+
+saveES :: Int -> Value -> LuaAction ()
+saveES i v
+    = do (vs0, es) <- gets (splitAt i . theEvalStack)
+         if length vs0 == i
+            then do logValue ("save " ++ show i) v
+                    modify $ \ s -> s { theEvalStack = vs0 ++ v : es }
+            else luaError . unwords $
+                 ["not", show i, "values on evaluation stack"]
+
+remES :: Int -> LuaAction ()
+remES i
+    = do (vs0, es) <- gets (splitAt i . theEvalStack)
+         case es of
+           (v : vs) -> do logValue ("rem " ++ show i) v
+                          modify $ \ s -> s { theEvalStack = vs0 ++ vs }
+           []        -> luaError $
+                        "no value on evaluation stack at position " ++ show i
+
 popES :: LuaAction Value
 popES
     = do es <- gets theEvalStack
@@ -228,12 +252,6 @@ popES
                           logValue "pop" v
                           return v
            []       -> luaError "no value on evaluation stack"
-
-pushES :: Value -> LuaAction ()
-pushES v
-    = do modify $ \ s -> s { theEvalStack = v : theEvalStack s }
-         logValue "push" v
-     
 
 getES :: Int -> LuaAction Value
 getES i
@@ -244,14 +262,11 @@ getES i
            []      -> luaError $
                       "no value on evaluation stack at position " ++ show i
 
-remES :: Int -> LuaAction ()
-remES i
-    = do (vs0, es) <- gets (splitAt i . theEvalStack)
-         case es of
-           (v : vs) -> do logValue ("rem " ++ show i) v
-                          modify $ \ s -> s { theEvalStack = vs0 ++ vs }
-           []        -> luaError $
-                        "no value on evaluation stack at position " ++ show i
+takeES :: Int -> LuaAction Value
+takeES i
+    = do v <- getES i
+         remES i
+         return v
 
 -- ------------------------------------------------------------
 
@@ -350,7 +365,8 @@ execInstr (Branch c (D displ))
                   else 1
 
 execInstr (Call)
-    = do v1   <- popES
+    = do                -- old: v1   <- popES
+         v1 <- takeES 1 -- new: top of stack: paramlist, top -1: closure
          fct  <- checkFctValue v1
          case fct of
            (C cls) -> callClosure  cls
@@ -358,7 +374,7 @@ execInstr (Call)
            _       -> luaError $ "function value expected in function call, but got a " ++ show (luaType fct)
 
 execInstr (TailCall)
-    = do v1   <- popES
+    = do v1   <- takeES 1       -- old popES
          fct  <- checkFctValue v1
          case fct of
            (C cls) -> jumpClosure  cls
@@ -400,13 +416,13 @@ execInstr1 (LoadNil)
     = pushES nil
 
 execInstr1 (Copy i)
-    = do v <- getES i
-         pushES v
+    = getES i >>= pushES
 
 execInstr1 (Move i)
-    = do v <- getES i
-         remES i
-         pushES v
+    = takeES i >>= pushES
+
+execInstr1 (Save i)
+    = popES >>= saveES i
 
 -- ----------------------------------------
 --
@@ -496,14 +512,13 @@ execInstr1 (LoadField)
     = execBinary loadField
       where
         loadField v1 v2
-            = do (T t) <- checkTable v2
-                 readTable v1 t 
+            = do (T t) <- checkTable v1         -- top of stack: index
+                 readTable v2 t                 -- top -1:       table
 
 execInstr1 (StoreField)
-    = do v1    <- popES
-         ix    <- popES
-         val   <- popES
-         (T t) <- checkTable v1
+    = do val   <- popES                         -- top of stack: value
+         ix    <- popES                         -- top -1:       index
+         (T t) <- popES >>= checkTable          -- top -2:       table
          writeTable ix val t
 
 execInstr1 (AppendField)

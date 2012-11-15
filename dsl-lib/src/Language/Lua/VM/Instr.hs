@@ -11,7 +11,7 @@ where
 
 import Control.Monad.Trans      ( MonadIO )
 
-import Data.Char            	( toLower )
+import Data.Char                ( toLower )
 import Data.List                ( intercalate )
 
 import Language.Lua.VM.Types
@@ -46,6 +46,7 @@ instance Show Instr where
 
     show (Copy i      ) = fmt1 "copy"  $ show i
     show (Move i      ) = fmt1 "move"  $ show i
+    show (Save i      ) = fmt1 "save"  $ show i
     show (BinOp op    ) = fmt0 $ fmtOp $ show op
     show (UnOp op     ) = fmt0 $ fmtOp $ show op
     show (Jump l      ) = fmt1 "jump" (show l)
@@ -196,11 +197,14 @@ mkNewTable  = mkCode NewTable
 
 mkDelEnvN,
   mkMove,
-  mkCopy   :: Int -> Code
+  mkCopy,
+  mkSave   :: Int -> Code
 
 mkDelEnvN n = Code $ replicate n DelEnv
 mkMove      = mkCode . Move
 mkCopy      = mkCode . Copy
+mkSave 0    = mkNoop
+mkSave n    = mkCode . Save $ n
 
 mkNewLocal,
   mkLoadVar,
@@ -314,7 +318,7 @@ dumpLoc env
 -}
 dumpLocEnv :: (MonadIO m) => Env -> m String
 dumpLocEnv
-    = dumpTables . init . theEnv		-- the global env is not dumped, only the nested env tables
+    = dumpTables . init . theEnv                -- the global env is not dumped, only the nested env tables
     where
       indents = (fill 8 "locals" ++ ": ") : repeat (replicate 10 ' ')
       dumpTables ts

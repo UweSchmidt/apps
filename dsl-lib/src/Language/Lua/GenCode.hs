@@ -24,8 +24,8 @@ compProg block
          emitCode $ mkJump start
          code_prog <- compExpr prog
          code_cls  <- genCode [ mkLabel start
-                              , mkEmptyTup 		-- push an empty param tuple
-                              , code_prog		-- push the closure
+                              , code_prog               -- push the closure
+                              , mkEmptyTup              -- push an empty param tuple
                               , mkCall
                               , mkPop
                               , mkIntr "terminate program"
@@ -39,7 +39,7 @@ compBlock :: Block -> Compile Code
 compBlock (Block sl)
     | hasLocalDefs sl
         = compWithLocalEnv $ compStmtL sl
-    | otherwise			-- optimization: unnecessay env creation thrown away
+    | otherwise                 -- optimization: unnecessay env creation thrown away
         = compStmtL sl
 
 compStmtL :: [Stmt] -> Compile Code
@@ -54,29 +54,30 @@ compStmt (SLocalDef lv f@[EFunction _ _ _])
          c2 <- compStmt (SAssignment (map LVar lv) f)
          genCode [c1, c2]
 
-compStmt (SLocalDef lvs [])
+compStmt (SLocalDef lvs [])             -- locals without initialisation
     = compNewLocals lvs
 
-compStmt (SLocalDef [lv] [e])
-    = do c1 <- compExpr1  e
-         nv <- compNewLocals [lv]
-         c2 <- compStore mempty (LVar lv)
-         genCode [c1, nv, c2]
+compStmt (SLocalDef lvs@[lv] [e])       -- single local var with init
+    = do nv <- compNewLocals lvs
+         c1 <- compExpr1  e
+         c2 <- compStoreList c1 mempty [LVar lv]
+         genCode [nv, c2]
 
-compStmt (SLocalDef lvs es)
-    = do c1 <- compExprL  es
-         c2 <- compStoreLocals lvs
-         genCode [c1, c2]
+compStmt (SLocalDef lvs es)             -- multiple local vars with init
+    = do nvs <- compNewLocals lvs 
+         c1  <- compExprL  es
+         c2  <- compStoreList c1 (compUntuple lvs') lvs'
+         genCode [nvs, c2]
+    where
+      lvs' = map LVar lvs
 
-compStmt (SAssignment [lv] [e])
+compStmt (SAssignment lvs@[_lv] [e])            -- single assignment
     = do c1 <- compExpr1 e
-         c2 <- compStore mempty lv
-         genCode [c1, c2]
+         compStoreList c1 mempty lvs
 
-compStmt (SAssignment lvs es)
+compStmt (SAssignment lvs es)                   -- multiple assignment
     = do c1 <- compExprL  es
-         c2 <- compStoreL lvs
-         genCode [c1, c2]
+         compStoreList c1 (compUntuple lvs) lvs
 
 compStmt (SIf thenParts elsePart)
     = do lEnd <- newLabel
@@ -169,7 +170,7 @@ compStmt (SDo block)
 compStmt (SFor [v] (ForNum e1 e2 e3) block)
     = compBlock forBlock
     where
-      var          = "$var"		-- generated variables
+      var          = "$var"             -- generated variables
       limit        = "$limit"
       step         = "$step"
       var'         = EVar var
@@ -234,7 +235,7 @@ compStmt s@(SFor _ (ForNum _ _ _) _)
 compStmt (SFor vs@(v1 : _) (ForIter explist) block)
     = compBlock forBlock
     where
-      f         = "$f"		-- generated variables
+      f         = "$f"          -- generated variables
       s         = "$s"
       var       = "$var"
       f'        = EVar f
@@ -286,72 +287,52 @@ compNewLocals :: [Name] -> Compile Code
 compNewLocals lvs
     = genCode $ map mkNewLocal lvs
 
-compStoreLocals :: [Name] -> Compile Code
-compStoreLocals lvs
-    = do nv <- compNewLocals lvs
-         c2 <- compStoreL (map LVar lvs)
-         genCode [nv, c2]
+compUntuple :: [LValue] -> Code
+compUntuple lvs
+    | not (null lvs) && isEllipsis (last lvs)
+        = mkUnTupN' n
+    | otherwise
+        = mkUnTupN  n
+    where
+      n = length lvs
 
-compStoreL :: [LValue] -> Compile Code
-compStoreL []
-    = genCode [ mkPop ]
-
--- {- new tuple instructions
-
-compStoreL lvs
-    = do code_lvs <- compSeq (compStore mempty) lvs
-         genCode [ mkUnT (length lvs)
-                 , code_lvs
+compStoreList :: Code -> Code -> [LValue] -> Compile Code
+compStoreList code_rhs code_untuple lvs
+    = do code_ix <- compSeq compIx lvs
+         code_st <- compStores len lenFR lvs
+         code_sf <- compSeq (const $ return mkStoreField) [1..lenFR]
+         genCode [ code_ix
+                 , code_rhs
+                 , code_untuple
+                 , code_st
+                 , code_sf
                  ]
     where
-      mkUnT
-          | isEllipsis (last lvs) = mkUnTupN'
-          | otherwise             = mkUnTupN
+      len   = length lvs
+      lenFR = length (filter isFieldRef lvs)
 
--- -}
-{- old tuple instructions
-
-compStoreL lvs
-    = do code_lvs' <- mapM compStore1 lvs'
-         code_lv   <- compStoreLast $ head lv
-         genCode $ code_lvs'
-                   ++
-                   [ code_lv ]
-  where
-    len1 = length lvs - 1
-    (lvs', lv) = splitAt len1 lvs
--- -}
-
-compStore1 :: LValue -> Compile Code
-compStore1
-    = compStore $ mkUnTup2
-
-compStoreLast :: LValue -> Compile Code
-compStoreLast lv
-    | isEllipsis lv
-        = compStore mempty lv
-    | otherwise
-        = compStore mkUnTup1 lv
-
--- gen code for storing a single value from the eval stack into a variable
--- into a field of a table, in the 1 case stack size is decreased by 1
--- in the 2. case the top value is a ref to the table, the 2. the field and
--- the 3. the value, so the eval stack is decreased by 3
-
-compStore :: Code -> LValue -> Compile Code
-compStore instr (LVar n)
-    = genCode [ instr
-              , mkStoreVar n
-              ]
-
-compStore instr (LFieldRef tb ix)
-    = do code_ix <- compExpr1 ix
-         code_tb <- compExpr1 tb
-         genCode [ instr
-                 , code_ix
-                 , code_tb
-                 , mkStoreField
-                 ]
+      compIx (LVar _)
+          = genCode []
+      compIx (LFieldRef tb ix)
+          = do code_tb <- compExpr1 tb
+               code_ix <- compExpr1 ix
+               genCode [ code_tb
+                       , code_ix
+                       ]
+      compStores _vc _fc []
+          = genCode []
+      compStores vc fc (LVar n : lvs')
+          = do code_lvs <- compStores (vc - 1) fc lvs'
+               genCode [ mkStoreVar n
+                       , code_lvs
+                       ]
+      compStores vc fc (LFieldRef _ _ : lvs')
+          = do code_lvs <- compStores (vc - 1) (fc - 1) lvs'
+               genCode [ mkSave offset
+                       , code_lvs
+                       ]
+          where
+            offset = (vc - 1) + 2 * (fc - 1)
 
 compWithLocalEnv :: Compile Code -> Compile Code
 compWithLocalEnv compPart
@@ -426,10 +407,10 @@ compExpr (EVar n)
     = genCode [mkLoadVar n]
 
 compExpr (EFieldRef table key)
-    = do code_key   <- compExpr1 key
-         code_table <- compExpr1 table
-         genCode [ code_key
-                 , code_table
+    = do code_table <- compExpr1 table
+         code_key   <- compExpr1 key
+         genCode [ code_table
+                 , code_key
                  , mkLoadField
                  ]
 
@@ -466,7 +447,7 @@ compExpr e@(EBinOp op e1 e2)
                       ]
 
 compExpr (EUnOp op e1)
-    | op == "-"					-- (- e) = (0 - e)
+    | op == "-"                                 -- (- e) = (0 - e)
         = compExpr (EBinOp op (ENumber 0.0) e1)
     | op == "#"
         = do code_e1 <- compExpr e1
@@ -498,11 +479,11 @@ compExpr (ECall fct args)
 compExpr (EMemberCall table name args)
     = compMemberCall mkCall table name args
 
-compExpr (EFunction fps varargs block)
+compExpr e@(EFunction fps varargs block)
     = do lStart <- newLabel
-         code_f <- compWithNewEnv $
-                   compWithLocalEnv $
-                   do code_par  <- compStoreLocals fps'
+         code_f <- compWithNewEnv   $
+                   compWithParamEnv $
+                   do code_par  <- compStoreList mempty (compUntuple fps'') fps''
                       code_body <- compBlock block
                       genCode [ code_par
                               , code_body
@@ -515,9 +496,16 @@ compExpr (EFunction fps varargs block)
          emitCode code_c
          genCode [ mkClosure lStart ]
     where
+      compWithParamEnv
+          | noFctParams e       -- new function env only if there are any params
+              = id
+          | otherwise
+              = compWithLocalEnv
       fps'
           | varargs   = fps ++ ["..."]
           | otherwise = fps
+
+      fps'' = map LVar fps'
 
       exitCode
           | isReturnBlock block
@@ -554,9 +542,9 @@ compExpr (ETableCons fs)
       compStoreField n val key
           = do code_val <- compExpr1 val
                code_key <- compExpr1 key
-               genCode [ code_val
+               genCode [ mkCopy n
                        , code_key
-                       , mkCopy (n + 2)
+                       , code_val
                        , mkStoreField
                        ]
       
@@ -564,7 +552,7 @@ compExpr (ETableCons fs)
           = genCode []
 
       compFieldList n [fLast]
-          = uncurry (compField n compExpr) fLast	-- last field must be compiled with compExpr
+          = uncurry (compField n compExpr) fLast        -- last field must be compiled with compExpr
 
       compFieldList n (f1 : fs')                        -- all others with compExpr1
           = do code_f1  <- uncurry (compField n compExpr1) f1
@@ -596,10 +584,10 @@ compTailCall e
 
 compCall :: Code -> Expr -> [Expr] -> Compile Code
 compCall callInstr fct args
-    = do code_args <- compExprL args
-         code_fct  <- compExpr1 fct
-         genCode [ code_args
-                 , code_fct
+    = do code_fct  <- compExpr1 fct
+         code_args <- compExprL args
+         genCode [ code_fct                     -- eval function value
+                 , code_args                    -- build param list
                  , callInstr
                  ]
 
@@ -607,14 +595,13 @@ compMemberCall :: Code -> Expr -> String -> [Expr] -> Compile Code
 compMemberCall callInstr table name args
     = do code_table <- compExpr1 table
          code_args  <- compExprL args
-         genCode [ code_args                    -- evaluate args first
-                 , code_table			-- eval table, this value is used twice
+         genCode [ code_table                   -- eval table, this value is used twice
                  , mkCopy 0                     -- so copy it
-                 , mkMove 2                     -- move the arg list to the top
-                 , mkTupN 2                     -- and cons the table as 1. arg in front of the arg list
                  , mkLoadStr name               -- load table index
-                 , mkMove 2                     -- move table to the top
-                 , mkLoadField                  -- compute the function (method) to be called by table lookup
+                 , mkLoadField                  -- compute the function to be called by table lookup
+                 , mkMove 1                     -- move table to the top (swap table and fct)
+                 , code_args                    -- evaluate args
+                 , mkTupN 2                     -- and cons the table as 1. arg in front of the args
                  , callInstr                    -- everthing is ready for calling the function
                  ]
 
@@ -637,7 +624,7 @@ compCond :: Bool -> Label -> Expr -> Compile Code
 compCond c l (EUnOp "not" e1)
     = compCond (not c) l e1
 
-compCond c l (EBinOp "or" e1 e2)		-- de Morgan
+compCond c l (EBinOp "or" e1 e2)                -- de Morgan
     = compCond (not c) l (EBinOp "and" (not' e1) (not' e2))
     where
       not' = EUnOp "not"

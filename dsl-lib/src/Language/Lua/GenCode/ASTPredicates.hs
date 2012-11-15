@@ -18,6 +18,10 @@ isSingleResExpr _                    = True
 hasLocalDefs                         :: [Stmt] -> Bool
 hasLocalDefs                         = any isLocalDef
 
+noFctParams                          :: Expr -> Bool
+noFctParams (EFunction [] False _)   = True
+noFctParams _                        = False
+
 isLocalDef                           :: Stmt -> Bool
 isLocalDef (SLocalDef _ _)           = True
 isLocalDef _                         = False
@@ -51,5 +55,9 @@ noOfAppends                          = length . filter (isNothing . fst)
 isEllipsis                           :: LValue -> Bool
 isEllipsis (LVar "...")              = True
 isEllipsis _                         = False
+
+isFieldRef                           :: LValue -> Bool
+isFieldRef (LFieldRef _ _)           = True
+isFieldRef _                         = False
 
 -- ------------------------------------------------------------
