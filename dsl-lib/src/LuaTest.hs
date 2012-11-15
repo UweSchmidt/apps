@@ -8,10 +8,11 @@ import Control.Monad.Error
 import Language.Lua.Parser
 import Language.Lua.Token
 import Language.Lua.AST
-import Language.Lua.VM.Value
+import Language.Lua.VM
+-- import Language.Lua.VM.Value
 import Language.Lua.VM.Instr
-import Language.Lua.VM.Types
-import Language.Lua.VM.Core
+-- import Language.Lua.VM.Types
+-- import Language.Lua.VM.Core
 import Language.Lua.GenCode
 import Language.Lua.GenCode.State
 import Language.Lua.GenCode.Assemble
@@ -84,6 +85,8 @@ ex :: String -> IO (Either String ())
 ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 -- ------------------------------------------------------------
+
+p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16 :: String
 
 p0 = "do vm.traceOn(); x = 0; while x < 5 do x = x + 1 end end"
 p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\"..x) end"
