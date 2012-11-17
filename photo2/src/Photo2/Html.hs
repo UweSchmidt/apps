@@ -247,8 +247,11 @@ genHtml rec formats conf p0
             theDuration         = valOf' "1.0" durationKey
             theHeadTitle        = removeMarkup theTitle
             theHeadTitle'
-                | null theHeadTitle     = "\160"
-                | otherwise             = theHeadTitle
+                | null theHeadTitle && null imgId     = "\160"
+                | null theHeadTitle                   = imgId
+                | otherwise                           = theHeadTitle
+                where
+                  imgId = concat . take 1 . reverse $ p
 
             checkSet _ ""       = ""
             checkSet f s        = f s
