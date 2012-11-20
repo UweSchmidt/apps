@@ -54,20 +54,20 @@ compStmt (SLocalDef lv f@[EFunction _ _ _])
          c2 <- compStmt (SAssignment (map LVar lv) f)
          genCode [c1, c2]
 
-compStmt (SLocalDef lvs [])             -- locals without initialisation
+compStmt (SLocalDef lvs [])             	-- locals without initialisation
     = compNewLocals lvs
 
-compStmt (SLocalDef lvs@[lv] [e])       -- single local var with init
-    = do nv <- compNewLocals lvs
-         c1 <- compExpr1  e
-         c2 <- compStoreList c1 mempty [LVar lv]
-         genCode [nv, c2]
+compStmt (SLocalDef lvs@[lv] [e])       	-- single local var with init
+    = do c <- do c1 <- compExpr1  e
+                 nv <- compNewLocals lvs
+                 genCode [c1, nv]
+         compStoreList c mempty [LVar lv]
 
-compStmt (SLocalDef lvs es)             -- multiple local vars with init
-    = do nvs <- compNewLocals lvs 
-         c1  <- compExprL  es
-         c2  <- compStoreList c1 (compUntuple lvs') lvs'
-         genCode [nvs, c2]
+compStmt (SLocalDef lvs es)             	-- multiple local vars with init
+    = do c <- do nvs <- compNewLocals lvs 
+                 c1  <- compExprL  es
+                 genCode [c1, nvs]
+         compStoreList c (compUntuple lvs') lvs'
     where
       lvs' = map LVar lvs
 
@@ -483,9 +483,11 @@ compExpr e@(EFunction fps varargs block)
     = do lStart <- newLabel
          code_f <- compWithNewEnv   $
                    compWithParamEnv $
-                   do code_par  <- compStoreList mempty (compUntuple fps'') fps''
+                   do code_loc  <- compNewLocals fps'
+                      code_par  <- compStoreList mempty (compUntuple fps'') fps''
                       code_body <- compBlock block
-                      genCode [ code_par
+                      genCode [ code_loc
+                              , code_par
                               , code_body
                               ]
          code_e <- exitCode

@@ -86,7 +86,7 @@ ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 -- ------------------------------------------------------------
 
-p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16 :: String
+p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17 :: String
 
 p0 = "do vm.traceOn(); x = 0; while x < 5 do x = x + 1 end end"
 p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\"..x) end"
@@ -130,6 +130,39 @@ p15 = unlines
       , "end"
       ]
 p16 = "function f(x) return g(x-1) end"
+p17 = unlines
+      [ "do"
+      , " function f(x) print(x); return x; end;"
+      , " a = {};"
+      , " f(a)[f(1)],f(a)[f(2)]=f(3),f(4),f(5);"
+      , "end"
+      ]
+
+pairs, printtable :: String
+pairs
+    = unlines
+      [ "function pairs(t)"
+      , "  local nextKey"
+      , "  return"
+      , "    function ()"
+      , "      local key, val = next(t, nextKey)"
+      , "      if key"
+      , "        then nextKey = key"
+      , "      end"
+      , "      return key, val"
+      , "    end"
+      , "end"
+      ]
+
+printtable
+    = unlines
+      [ "function printtable(t)"
+      , "  local k, v"
+      , "  for k, v in pairs(t) do"
+      , "    print(k, v)"
+      , "  end"
+      , "end"
+      ]
 
 cc :: String -> Either String (Code, CErrs)
 cc inp
