@@ -23,5 +23,7 @@ loadFcts
 loadString :: NativeAction
 loadString [v]
     = loadString [v, v]
-loadString (vs : vmsg : _)
-    = undefined
+loadString (vs : vmsg0 : _)
+    = do vmsg <- (checkString `orElse` return) vmsg0
+         return undefined
+

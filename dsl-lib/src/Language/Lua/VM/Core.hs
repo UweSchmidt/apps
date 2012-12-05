@@ -270,6 +270,10 @@ takeES i
 
 -- ------------------------------------------------------------
 
+orElse :: (Value -> LuaAction Value) -> (Value -> LuaAction Value) -> (Value -> LuaAction Value)
+orElse a1 a2 v
+    = catchError (a1 v) (\ _ -> a2 v)
+
 checkNum :: Value -> LuaAction Value
 checkNum v
     = checkValue isNum "number" v
