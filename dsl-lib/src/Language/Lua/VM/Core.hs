@@ -80,10 +80,25 @@ getInstr pc
               = getI ic prog'
 
 -- ------------------------------------------------------------
+--
+-- | reset the eval stack, the call stack and the interrupt register
+-- and reinitialize the PC
+-- used when restarting the VM after loading a piece of code
 
--- load a module into the program store
--- for every code module, a segement implemeted as array is allocated
--- a new segment is allocated at the end of the segment list
+resetLuaRegisters :: CodeAddress -> LuaAction ()
+resetLuaRegisters pc
+    = modify $
+      \ s -> s { thePC        = pc
+               , theIntrReg   = Nothing
+               , theEvalStack = []
+               , theCallStack = []
+               }
+
+-- ------------------------------------------------------------
+
+-- | load a module into the program store
+-- for every code module, a segement implemented as array is allocated
+-- and stored at the end of the segment list
 
 loadCode :: LuaModule -> LuaAction CodeAddress
 loadCode (MCode cs)
@@ -261,6 +276,13 @@ checkNum v
     where
       isNum (N _) = True
       isNum _     = False
+
+checkString :: Value -> LuaAction Value
+checkString v
+    = checkValue isStr "string" v
+    where
+      isStr (S _) = True
+      isStr _     = False
 
 checkNumOrString :: Value -> LuaAction Value
 checkNumOrString v

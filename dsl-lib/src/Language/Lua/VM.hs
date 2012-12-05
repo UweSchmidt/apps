@@ -16,6 +16,7 @@ import Language.Lua.VM.Types
 import Language.Lua.VM.Value
 import Language.Lua.VM.Core
 import Language.Lua.VM.CoreFct
+import Language.Lua.VM.Load
 
 -- ------------------------------------------------------------
 
