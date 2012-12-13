@@ -7,9 +7,11 @@ module Language.Lua.VM
     )
 where
 
+-- import Control.Applicative      ( (<$>) )
+
 -- import Control.Monad.Error
 -- import Control.Monad.Reader
-import Control.Monad.State
+-- import Control.Monad.State
 
 -- import Language.Lua.VM.Instr
 import Language.Lua.VM.Types
@@ -33,10 +35,11 @@ initLua
 initLuaEnv :: LuaAction ()
 initLuaEnv
     = do openEnv        -- create global env table
-         ge <- gets theCurrEnv
-         writeVariable (S "_G") (T . head . theEnv $ ge) ge     -- insert the global env table into itself
+         ge <- theGlobalEnv
+         writeTable (S "_G") (T ge) ge                          -- insert the global env table into itself
                                                                 -- under name "_G"
          addCoreFunctions                                       -- add the core native functions
+         addLoadFunctions
          addVMFunctions                                         -- add native functions for observing the VM
 
 -- ------------------------------------------------------------

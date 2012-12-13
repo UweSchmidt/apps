@@ -63,8 +63,8 @@ true          = B True
 false         :: Value
 false         = B False
 
-emptyTuple     :: Value
-emptyTuple     = P []
+emptyTuple    :: Value
+emptyTuple    = P []
 
 isNil         :: Value -> Bool
 isNil Nil     = True

@@ -13,6 +13,15 @@ import Control.Monad.RWS
 
 -- ------------------------------------------------------------
 
+gencode_chunk :: String -> Block -> Either String Code
+gencode_chunk srcName block
+    | null . theCErrs $ errs
+        = Right code
+    | otherwise
+        = Left . (show srcName ++) . show $ errs
+    where
+      (code, errs) = compileProg block
+
 compileProg :: Block -> (Code, CErrs)
 compileProg block = runCompile (compProg block)
 

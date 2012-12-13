@@ -163,6 +163,12 @@ closeEnv
            (_ : ts') -> modify $  \ s -> s { theCurrEnv = Env ts' }
            []        -> luaError "no local env to close"
 
+theLocalEnv :: LuaAction Table
+theLocalEnv = gets (head . theEnv . theCurrEnv)
+
+theGlobalEnv :: LuaAction Table
+theGlobalEnv = gets (last . theEnv . theCurrEnv)
+
 -- ------------------------------------------------------------
 
 callClosure :: Closure -> LuaAction ()
@@ -171,13 +177,13 @@ callClosure cls
       where
         call s
             = s { theCurrEnv   = theClosureEnv cls
-                , thePC        = theCodeAddr cls
+                , thePC        = theCodeAddr   cls
                 , theCallStack = retCls : theCallStack s
                 }
             where
               retCls
                   = CL { theClosureEnv = theCurrEnv s
-                       , theCodeAddr   = CA ((theCA . thePC) s + 1)
+                       , theCodeAddr   = thePC      s
                        }
 
 jumpClosure :: Closure -> LuaAction ()
@@ -186,7 +192,7 @@ jumpClosure cls
       where
         jmp s
             = s { theCurrEnv   = theClosureEnv cls
-                , thePC        = theCodeAddr cls
+                , thePC        = theCodeAddr   cls
                 }
 
 execInternal :: NativeFct -> LuaAction ()
@@ -197,11 +203,11 @@ execInternal nf
 
 callInternal :: NativeFct -> LuaAction ()
 callInternal nf
-    = execInternal nf >> incrPC 1
+    = execInternal nf
 
 jumpInternal :: NativeFct -> LuaAction ()
 jumpInternal nf
-    = execInternal nf >> leaveFct
+    = leaveFct >> execInternal nf
 
 leaveFct :: LuaAction ()
 leaveFct
@@ -269,10 +275,6 @@ takeES i
          return v
 
 -- ------------------------------------------------------------
-
-orElse :: (Value -> LuaAction Value) -> (Value -> LuaAction Value) -> (Value -> LuaAction Value)
-orElse a1 a2 v
-    = catchError (a1 v) (\ _ -> a2 v)
 
 checkNum :: Value -> LuaAction Value
 checkNum v
@@ -376,8 +378,8 @@ execInstr (Branch c (D displ))
                   else 1
 
 execInstr (Call)
-    = do                -- old: v1   <- popES
-         v1 <- takeES 1 -- new: top of stack: paramlist, top -1: closure
+    = do incrPC 1
+         v1 <- takeES 1
          fct  <- checkFctValue v1
          case fct of
            (C cls) -> callClosure  cls
@@ -399,7 +401,7 @@ execInstr (Intr msg)
     = luaError msg
 
 execInstr instr
-    = execInstr1 instr >> incrPC 1
+    = incrPC 1 >> execInstr1 instr
 
 -- ------------------------------------------------------------
 --

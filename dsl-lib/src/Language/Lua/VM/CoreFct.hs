@@ -23,15 +23,21 @@ import Language.Lua.VM.Value
 
 -- ------------------------------------------------------------
 
-addVMFunctions :: LuaAction ()
-addVMFunctions
-    = do t <- newTable
-         sequence_ . map (uncurry $ addFct t) $ vmFcts
-         ge <- gets theCurrEnv
-         writeVariable (S "vm") (T t) ge
+addFunctions :: [(String, NativeAction)] -> Table -> LuaAction Table
+addFunctions fcts t 
+    = do sequence_ . map (uncurry $ addFct t) $ fcts
+         return t
     where
       addFct tab name fct
           = writeTable (S name) (F $ newNativeFct name fct) tab
+
+-- ------------------------------------------------------------
+
+addVMFunctions :: LuaAction ()
+addVMFunctions
+    = do t <-  newTable >>= addFunctions vmFcts
+         ge <- theGlobalEnv
+         writeTable (S "vm") (T t) ge
 
 vmFcts :: [(String, NativeAction)]
 vmFcts
@@ -61,11 +67,7 @@ vmFcts
 
 addCoreFunctions :: LuaAction ()
 addCoreFunctions
-    = do ge <- gets theCurrEnv
-         sequence_ . map (uncurry $ addFct ge) $ coreFcts
-    where
-      addFct env name fct
-          = writeVariable (S name) (F $ newNativeFct name fct) env
+    = theGlobalEnv >>= addFunctions coreFcts >> return ()
 
 coreFcts :: [(String, NativeAction)]
 coreFcts
