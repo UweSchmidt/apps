@@ -125,7 +125,8 @@ logInstr pc instr
 
 logValue :: String -> Value -> LuaAction ()
 logValue msg val
-    = logMsg evalLog $ dumpTOS msg val
+    = do z <- gets $ length . theEvalStack
+         logMsg evalLog $ dumpTOS z msg val
 
 setLoggingOn :: LuaAction ()
 setLoggingOn
@@ -213,7 +214,7 @@ leaveFct :: LuaAction ()
 leaveFct
     = do cs <- gets theCallStack
          case cs of
-           []          -> luaError "call stack underflow in leave instr"
+           []          -> luaError "terminate program"
            (cls : cs') -> modify $ leave cls cs'
     where
       leave cls cs s
@@ -236,8 +237,8 @@ saveES :: Int -> Value -> LuaAction ()
 saveES i v
     = do (vs0, es) <- gets (splitAt i . theEvalStack)
          if length vs0 == i
-            then do logValue ("save " ++ show i) v
-                    modify $ \ s -> s { theEvalStack = vs0 ++ v : es }
+            then do modify $ \ s -> s { theEvalStack = vs0 ++ v : es }
+                    logValue ("save " ++ show i) v
             else luaError . unwords $
                  ["not", show i, "values on evaluation stack"]
 
@@ -245,8 +246,8 @@ remES :: Int -> LuaAction ()
 remES i
     = do (vs0, es) <- gets (splitAt i . theEvalStack)
          case es of
-           (v : vs) -> do logValue ("rem " ++ show i) v
-                          modify $ \ s -> s { theEvalStack = vs0 ++ vs }
+           (v : vs) -> do modify $ \ s -> s { theEvalStack = vs0 ++ vs }
+                          logValue ("rem " ++ show i) v
            []        -> luaError $
                         "no value on evaluation stack at position " ++ show i
 
@@ -565,7 +566,7 @@ execInstr1 (Closure (D displ))
     = do (CA ic) <- gets thePC
          env     <- gets theCurrEnv
          pushES $ C $ CL { theClosureEnv = env
-                         , theCodeAddr   = CA $ ic + displ
+                         , theCodeAddr   = CA $ ic - 1 + displ	-- ic is already incremented, decrement and add displacement
                          }
 
 execInstr1 instr

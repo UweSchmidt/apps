@@ -50,7 +50,7 @@ instance Show Value where
              value2String (C c)     = "function: " ++ ( show . theCodeAddr $ c)
              value2String (F f)     = "native function: " ++ ( show . theNativeFctId $ f)
              value2String (U _)     = "<userdata>"
-             value2String (P l)     = ("{" ++) . (++ "}") . intercalate "," . map value2String $ l
+             value2String (P l)     = ("(" ++) . (++ ")") . intercalate "," . map value2String $ l
 
 -- ------------------------------------------------------------
 
@@ -407,8 +407,8 @@ emptyLuaLogger :: LuaLogger
 emptyLuaLogger
     = LuaLogger
       { logCmd   = \ xs -> liftIO (hPutStrLn stderr xs)
-      , instrLog = False
-      , evalLog  = False
+      , instrLog = True -- False
+      , evalLog  = True -- False
       }
 
 -- ------------------------------------------------------------

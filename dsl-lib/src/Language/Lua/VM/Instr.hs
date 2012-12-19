@@ -351,9 +351,9 @@ dumpLuaState s
 
 -- ------------------------------------------------------------
 
-dumpTOS :: String -> Value -> String
-dumpTOS msg v
-    = fmt1 ("+      " ++ msg) $ show v
+dumpTOS :: Int -> String -> Value -> String
+dumpTOS z msg v
+    = fmt1 (fill 8 (show z ++ ":") ++ msg) $ show v
 
 -- ------------------------------------------------------------
 

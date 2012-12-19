@@ -28,7 +28,7 @@ loadFcts :: [(String, NativeAction)]
 loadFcts
     = [ ( "loadstring"
         , oneOrMoreArgs "loadstring"
-          >=> checkArgs "loadString" [check1 checkString, anyArg]
+          >=> checkArgs "loadString" [check1 checkString]
           >=> loadString
         )
       ]

@@ -39,7 +39,7 @@ initLuaEnv
          writeTable (S "_G") (T ge) ge                          -- insert the global env table into itself
                                                                 -- under name "_G"
          addCoreFunctions                                       -- add the core native functions
-         addLoadFunctions
+         addLoadFunctions					-- add dynamic loading
          addVMFunctions                                         -- add native functions for observing the VM
 
 -- ------------------------------------------------------------

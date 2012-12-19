@@ -37,7 +37,7 @@ compProg block
                               , mkEmptyTup              -- push an empty param tuple
                               , mkCall
                               , mkPop
-                              , mkIntr "terminate program"
+                              , mkLeave                 -- old: mkIntr "terminate program"
                               ]
          emitCode code_cls
          return ()

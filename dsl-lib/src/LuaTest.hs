@@ -86,7 +86,7 @@ ex = runProcess $ scan >=> parse >=> gencode >=> assemble >=> exec >=> dumpState
 
 -- ------------------------------------------------------------
 
-p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17 :: String
+p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18 :: String
 
 p0 = "do vm.traceOn(); x = 0; while x < 5 do x = x + 1 end end"
 p1 = "do x = 0; while x < 5 do x = x + 1 end; print(\"x=\"..x) end"
@@ -137,6 +137,7 @@ p17 = unlines
       , " f(a)[f(1)],f(a)[f(2)]=f(3),f(4),f(5);"
       , "end"
       ]
+p18 = "do vm.traceOn(); loadstring(\"print(1)\") end"
 
 pairs, printtable :: String
 pairs
