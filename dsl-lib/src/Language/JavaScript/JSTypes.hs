@@ -1,3 +1,5 @@
+{- not enabled LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Language.JavaScript.JSTypes
 where
 
@@ -40,7 +42,7 @@ data Value
     | Vobj    ! Ref
     | Vref    ! Ref ! PropName
     | Vlist   [Value]
-    | Vmethod Method
+    | Vmethod Function
 
 -- | Completions are used for interrupting a computation and
 -- contiuation at another point.
@@ -81,12 +83,12 @@ data Attribute
 -- and normal properties, which are all represented by strings
 
 data PropName
-    = PN ! String
-    | PI ! InternalPropName
+    = PN { _pn :: ! String }
+    | PI { _pi :: ! InternalPropName}
       deriving (Eq, Ord)
 
 data InternalPropName
-    = Name | Prototype | Scope | Source | This
+    = Method | Name | Prototype | Scope | Source | This
       deriving (Eq, Ord, Show)
 
 -- | The object store is a map from references to objects,
@@ -102,7 +104,7 @@ type LabelName
 
 -- | An (internal) method is a monadic function with this and arguments as parameter
 
-type Method
+type Function
     = Value -> [Value] -> JS Value
 
 -- | The JS monad has as state the object store,
@@ -140,8 +142,9 @@ pn_valueOf        = PN "valueOf"
 
 -- predefined internal property names
 
-__name__, __proto__, __scope__, __source__, __this__ :: PropName
+__method__, __name__, __proto__, __scope__, __source__, __this__ :: PropName
 
+__method__     = PI Method
 __name__       = PI Name
 __proto__      = PI Prototype
 __scope__      = PI Scope
@@ -228,11 +231,8 @@ instance Error Completion where
 --
 -- initial values
 
-nullAttr
- , undefAttr :: Attribute
-
-undefAttr = Attr Vundef False False
-nullAttr  = Attr Vnull  False False
+nullValue :: Value
+nullValue = Vnull
 
 nullRef
  , globalRef :: Ref
@@ -242,6 +242,9 @@ globalRef = Ref 1       -- the ref to the global object
 
 nullObject :: Object
 nullObject = Object { props = M.empty }
+
+mkObject :: [(PropName, Value)] -> Object
+mkObject = Object . M.fromList . map (\ (x, y) -> (x, mkAttr y))
 
 nullObjStore :: ObjStore
 nullObjStore
@@ -254,22 +257,54 @@ nullObjStore
 
 initObjStore :: JS ()
 initObjStore
-    = do 
-         undefined
+    = do -- generate the prototype objects
+         object_pref   <- createO nullRef              nullObject
+         array_pref    <- createO object_pref nullObject
+         boolean_pref  <- createO object_pref nullObject
+         function_pref <- createO object_pref nullObject
+         number_pref   <- createO object_pref nullObject
+         string_pref   <- createO object_pref nullObject
+
+         let setMethod pref pn len method
+                 = do v <- createFunctionO (_pn pn) len method
+                      putPropVal (Vobj function_pref) __proto__ v
+                      putPropVal (Vobj             v) pn        pref
+
+         let setObjMethod = setMethod object_pref
+         let setFctMethod = setMethod function_pref
+
+         -- register buildin object prototype properties
+         setObjMethod pn_hasOwnProperty 1 hasOwnProperty
+         setObjMethod pn_toString       0 toString
+         setObjMethod pn_valueOf        0 valueOf
+
+
 
 -- ----------------------------------------
 
-attr :: Value -> Attribute
-attr v = undefAttr {_val = v}
+mkAttr :: Value -> Attribute
+mkAttr v = Attr v False False
 
-sAttr :: String -> Attribute
-sAttr = attr . Vstring
+vUndef :: Attribute
+vUndef = mkAttr Vundef
 
-nAttr :: Double -> Attribute
-nAttr = attr . Vnumber
+vNull :: Attribute
+vNull = mkAttr Vnull
 
-oAttr :: Ref -> Attribute
-oAttr = attr . Vobj
+vString :: String -> Attribute
+vString = mkAttr . Vstring
+
+vNumber :: Double -> Attribute
+vNumber = mkAttr . Vnumber
+
+vBool :: Bool -> Attribute
+vBool = mkAttr . Vbool
+
+vObj :: Ref -> Attribute
+vObj = mkAttr . Vobj
+
+vMethod :: Function -> Attribute
+vMethod = mkAttr . Vmethod
 
 -- ----------------------------------------
 
@@ -288,11 +323,11 @@ newObj o (ObjStore os r@(Ref i))
       r'  = Ref $ i + 1
       os' = ObjStore (IM.insert i o os) r'
 
-createObj :: Value -> Object -> ObjStore -> (Ref, ObjStore)
+createObj :: Ref -> Object -> ObjStore -> (Ref, ObjStore)
 createObj proto o os
     = newObj o' os
     where
-      o' = setVal proto __proto__ o
+      o' = setVal (Vobj proto) __proto__ o
 
 -- ----------------------------------------
 
@@ -324,7 +359,7 @@ setPropertyAttr :: (Attribute -> Attribute) -> PropName -> Object -> Object
 setPropertyAttr af n o
     = Object . M.insert n (af a) . props $ o
     where
-      a = fromMaybe undefAttr . M.lookup n . props $ o
+      a = fromMaybe vUndef . M.lookup n . props $ o
 
 -- | get the value of a property
 
@@ -343,23 +378,28 @@ setDontEnum b = setPropertyAttr (\ a -> a { _denum = b })
 --
 -- primitive monadic object store actions
 
-newO :: Object -> JS Value
+newO :: Object -> JS Ref
 newO o
     = do (r, s) <- newObj o <$> get
          put s
-         return $ Vobj r
+         return r
 
-createO :: Value -> Object -> JS Value
-createO v o
-    = do v' <- checkObjectOrNull (typeError "Object prototype may only be an Object or null") v
+createO :: Ref -> Object -> JS Ref
+createO v' o
+    = do -- v' <- assertObjectOrNull (typeError "Object prototype may only be an Object or null") v
          (r, s) <- createObj v' o <$> get
          put s
-         return $ Vobj r
+         return r
 
-createMethodO :: String -> JS Value
-createMethodO name
-    = do -- mproto <- newO 
-         undefined
+createFunctionO :: String -> Int -> Function -> JS Ref
+createFunctionO name len method
+    = newO o
+    where
+      o = mkObject
+          [ (pn_name,    Vstring name)
+          , (pn_length,  Vnumber $ undefined len)
+          , (__method__, Vmethod method)
+          ]
 
 -- | for a reference get the object from the object store.
 -- If there is not associated object, the JS machine is in a bad state,
@@ -373,6 +413,12 @@ getO ref = do o <- getObj ref <$> get
 
 putO :: Ref -> Object -> JS ()
 putO ref o = modify $ putObj ref o
+
+putPropVal :: Value -> PropName -> Ref -> JS ()
+putPropVal v pn ref
+    = do o <- getO ref
+         let a = fromMaybe vUndef . M.lookup pn . props $ o
+         putO ref (Object . M.insert pn (a {_val = v}) . props $ o)
 
 getPropValue :: PropName -> Ref -> JS Value
 getPropValue n ref
@@ -388,7 +434,7 @@ protoChain :: (PropName -> Ref -> JS Value) -> PropName -> Object -> JS Value
 protoChain getFct n o
     = case getVal __proto__ o of
         Just v
-            -> do v' <- checkNotUndef (typeError $ "Cannot read property " ++ show n ++ " of undefined") v
+            -> do v' <- assertNotUndef (typeError $ "Cannot read property " ++ show n ++ " of undefined") v
                   case v' of
                     Vobj ref -> getFct n ref
                     _        -> return Vnull
@@ -401,9 +447,9 @@ protoChain getFct n o
 
 getPropVal :: PropName -> Value -> JS Value
 getPropVal pn v
-    = do v' <- checkNotUndef (typeError $ "Cannot read property " ++ show pn ++ " of undefined")
+    = do v' <- assertNotUndef (typeError $ "Cannot read property " ++ show pn ++ " of undefined")
                >=>
-               checkNotNull  (typeError $ "Cannot read property " ++ show pn ++ " of null") $ v
+               assertNotNull  (typeError $ "Cannot read property " ++ show pn ++ " of null") $ v
          case v' of
            Vobj ref  -> getPropValue pn ref
            Vbool _   -> getPropBasic pn_Boolean pn
@@ -423,20 +469,20 @@ getPropBasic basicType pn
 
 -- ----------------------------------------
 
-checkNotUndef :: JS Value -> Value -> JS Value
-checkNotUndef err v
+assertNotUndef :: JS Value -> Value -> JS Value
+assertNotUndef err v
     = case v of
         Vundef -> err
         _      -> return v
 
-checkNotNull :: JS Value -> Value -> JS Value
-checkNotNull err v
+assertNotNull :: JS Value -> Value -> JS Value
+assertNotNull err v
     = case v of
         Vnull  -> err
         _      -> return v
 
-checkObjectOrNull :: JS Value -> Value -> JS Value
-checkObjectOrNull err v
+assertObjectOrNull :: JS Value -> Value -> JS Value
+assertObjectOrNull err v
     = case v of
         Vobj _ -> return v
         Vnull  -> return v
@@ -459,8 +505,32 @@ throwJS n s
 
 excVal :: String -> String -> JS Completion
 excVal n s
-    = Cthrow <$> newO o
+    = Cthrow . Vobj <$> newO o
     where
-      o = Object $ M.fromList [(pn_name, sAttr n), (pn_msg, sAttr s)]
+      o = mkObject [ (pn_name, Vstring n)
+                   , (pn_msg,  Vstring s)
+                   ]
+
+-- ----------------------------------------
+
+hasOwnProperty :: Function
+hasOwnProperty _this _arguments
+    = do
+         abortJS ["function hasOwnProperty () not yet implemented"]
+
+toString :: Function
+toString _this _arguments
+    = do 
+         abortJS ["function toString () not yet implemented"]
+
+valueOf :: Function
+valueOf _this _arguments
+    = do 
+         abortJS ["function valueOf () not yet implemented"]
+
+_Object :: Function
+_Object _this _arguments
+    = do 
+         abortJS ["function Object () not yet implemented"]
 
 -- ----------------------------------------
