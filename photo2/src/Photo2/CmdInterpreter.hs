@@ -304,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.6.1 from 2012-11-17"
+    = outputCmd $ "Photo2 version 0.2.7 from 2013-02-22"
       -- for photoEdit please change the version in config/photoEdit/MainWindow.glade
 
 parseCmd "exit" _       = fail ""

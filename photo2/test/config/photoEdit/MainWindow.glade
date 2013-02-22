@@ -3,9 +3,9 @@
 <!--Generated with glade3 3.4.5 on Mon Apr 20 20:14:57 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="main">
-    <property name="title" translatable="yes">Photo2 Album Editor 0.2.6.1 (2012-11-17)</property>
-    <property name="default_width">1600</property>
-    <property name="default_height">800</property>
+    <property name="title" translatable="yes">Photo2 Album Editor 0.2.7 (2013-02-22)</property>
+    <property name="default_width">1920</property>
+    <property name="default_height">1200</property>
     <child>
       <widget class="GtkVBox" id="vbox1">
         <property name="visible">True</property>

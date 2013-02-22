@@ -15,8 +15,8 @@
   <attr name="import-pattern">.*</attr>
   <attr name="import-since">1970-01-01</attr>
   <attr name="layout">html-1400x1050</attr>
-  <attr name="layout-icon">160x120-photoEdit</attr>
-  <attr name="layout-image">1400x1050</attr>
+  <attr name="layout-icon">160x120</attr>
+  <attr name="layout-image">1600x1200</attr>
   <attr name="store-format">picture</attr>
   <picture-attributes>
     <attr name="cam:CameraModelName">(.*:)?CameraModelName|model</attr>

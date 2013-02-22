@@ -16,6 +16,7 @@ import qualified Data.ByteString.Char8  as C
 import           Data.List
 import qualified Data.Map as M
 import           Data.Maybe
+import           Data.Time
 
 import           Photo2.ArchiveTypes
 import           Photo2.Config
@@ -29,11 +30,13 @@ import           System.IO
 import           System.Posix   ( createLink
                                 , getProcessID
                                 )
+{-
 import           System.Time    ( ClockTime
                                 , toCalendarTime
                                 , formatCalendarTime
                                 , getClockTime
                                 )
+-- -}
 import           System.Locale  ( defaultTimeLocale )
 
 import           Text.Regex.XMLSchema.String
@@ -551,19 +554,21 @@ mkBackupFile bak f
 -- ------------------------------------------------------------
 --
 -- simple IO actions for time stamps and date and time functions
+-- time is always tranformed into local time
 
-formatDateTime  :: IO ClockTime -> IO String
+formatDateTime  :: IO UTCTime -> IO String
 formatDateTime timeStamp
     = catch'
       ( do
         ctime <- timeStamp
-        time  <- toCalendarTime ctime
-        return $ formatCalendarTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" time
+        tzone <- getCurrentTimeZone
+        let ltime = utcToLocalTime tzone ctime
+        return $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" ltime
       )
       ( \_ -> return "" )
 
 getTimeStamp    :: IO String
-getTimeStamp    = formatDateTime getClockTime
+getTimeStamp    = formatDateTime getCurrentTime
 
 -- | read the last modified time stamp of a file
 
