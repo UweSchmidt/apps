@@ -2,19 +2,19 @@ module Photo2.ImageOperations
 where
 
 import           Control.Arrow
-import qualified Control.Exception      as CE
+import qualified Control.Exception           as CE
 
-import           Control.Monad.Error    hiding ( liftIO )
-import qualified Control.Monad.Error    as ME
+import           Control.Monad.Error         hiding (liftIO)
+import qualified Control.Monad.Error         as ME
 
-import           Control.DeepSeq        ( rnf )
+import           Control.DeepSeq             (rnf)
 
 
 import           Data.Atom
-import qualified Data.ByteString        as B
-import qualified Data.ByteString.Char8  as C
+import qualified Data.ByteString             as B
+import qualified Data.ByteString.Char8       as C
 import           Data.List
-import qualified Data.Map as M
+import qualified Data.Map                    as M
 import           Data.Maybe
 import           Data.Time
 
@@ -23,13 +23,11 @@ import           Photo2.Config
 import           Photo2.ExifData
 import           Photo2.FilePath
 
-import           System.Cmd     ( system )
+import           System.Cmd                  (system)
 import           System.Directory
 import           System.Exit
 import           System.IO
-import           System.Posix   ( createLink
-                                , getProcessID
-                                )
+import           System.Posix                (createLink, getProcessID)
 {-
 import           System.Time    ( ClockTime
                                 , toCalendarTime
@@ -37,13 +35,9 @@ import           System.Time    ( ClockTime
                                 , getClockTime
                                 )
 -- -}
-import           System.Locale  ( defaultTimeLocale )
+import           System.Locale               (defaultTimeLocale)
 
-import           Text.Regex.XMLSchema.String
-                                ( match
-                                , matchSubex
-                                , sed
-                                )
+import           Text.Regex.XMLSchema.String (match, matchSubex, sed)
 
 -- ------------------------------------------------------------
 
@@ -111,7 +105,7 @@ mergeKeywords ws a
     insertKeyw ws'      w'      = union [w'] ws'
 
 mergeGeoTags            :: String -> Attrs -> Attrs
-mergeGeoTags url a      = merge (matchSubex "http://maps.google.*[?&]ll=({ll}[-,.0-9]+)&(.*&)?z=({z}[0-9]+)([^0-9].*)?" url)
+mergeGeoTags url a      = merge (matchSubex "https?://maps.google.*[?&]ll=({ll}[-,.0-9]+)&(.*&)?z=({z}[0-9]+)([^0-9].*)?" url)
     where
     merge p@[("ll",pos),("z",_zoom)]    = M.insert keyGoogleMaps ( "http://maps.google.com/maps?"
                                                                    ++
@@ -731,7 +725,7 @@ findXmp         = findRelFile
                   ( \ fn -> (</> fn) . dirPath . dirPath )
 
 removeRawVersion :: String -> String
-removeRawVersion                                    -- remove raw conversion version 
+removeRawVersion                                    -- remove raw conversion version
                 = sed remSubNo "([_a-zA-Z]+[0-9]+)-[0-9]+"
                   where
                   remSubNo = takeWhile (/= '-')

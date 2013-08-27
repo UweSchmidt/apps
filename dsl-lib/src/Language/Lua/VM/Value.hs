@@ -6,31 +6,22 @@
 module Language.Lua.VM.Value
 where
 
-import Control.Applicative      ( (<$>) )
+import           Control.Applicative   ((<$>))
 
-import Control.Monad.Trans      ( MonadIO
-                                , liftIO
-                                )
+import           Control.Monad.Trans   (MonadIO, liftIO)
 
-import Data.IORef               ( newIORef
-                                , readIORef
-                                , writeIORef
-                                , modifyIORef
-                                )
-import Data.List                ( intercalate )
-import Data.Maybe               ( fromMaybe )
-import Data.Unique              ( newUnique
-                                , hashUnique
-                                )
+import           Data.IORef            (modifyIORef, newIORef, readIORef,
+                                        writeIORef)
+import           Data.List             (intercalate)
+import           Data.Maybe            (fromMaybe)
+import           Data.Unique           (hashUnique, newUnique)
 
-import Language.Lua.VM.Types
-import Language.Lua.Token       ( string2Number )
+import           Language.Lua.Token    (string2Number)
+import           Language.Lua.VM.Types
 
-import System.IO                ( stderr
-                                , hPutStrLn
-                                )
+import           System.IO             (hPutStrLn, stderr)
 
-import qualified Data.Map as M
+import qualified Data.Map              as M
 
 -- ------------------------------------------------------------
 
@@ -160,9 +151,10 @@ consValues v1       v2     = P [v1,v2]
 -- splitting a single value from a list value
 
 uncons                     :: Value -> (Value, Value)
-uncons (P [])              = (nil, emptyTuple)
+uncons (P [])              = (nil, nil)
+uncons (P [x,  x2])        = (x, x2)
 uncons (P (x : xs))        = (x, P xs)
-uncons v                   = (v, emptyTuple)
+uncons v                   = (v, nil)
 
 -- a multiple assignment can be implemented with these primitive functions
 --

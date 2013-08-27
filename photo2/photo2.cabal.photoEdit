@@ -1,7 +1,9 @@
 Name:                photo2
-Version:             0.2.7
+Version:             0.2.7.1
 Synopsis:            Photo Album Editor
 Description:         Photo Album Editor: Command line app photo2 and gtk app photoEdit
+                     .
+                     Changes to 0.2.7: google maps regex changed to accept https
                      .
                      Changes to 0.2.6.1: Update to ghc-7.6
 License:             BSD3

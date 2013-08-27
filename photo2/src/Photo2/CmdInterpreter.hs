@@ -6,19 +6,19 @@ import           Control.DeepSeq
 import           Data.Atom
 import           Data.Char
 import           Data.List
+import qualified Data.Map                    as M
 import           Data.Maybe
-import qualified Data.Map as M
 
 import           Photo2.ArchiveTypes
 import           Photo2.Arrow
-import           Photo2.Html
 import           Photo2.FilePath
+import           Photo2.Html
 import           Photo2.ImportDialog
 
 import           System.Cmd
 
-import           Text.XML.HXT.Core
 import           Text.Regex.XMLSchema.String
+import           Text.XML.HXT.Core
 
 -- ------------------------------------------------------------
 
@@ -128,8 +128,8 @@ parseCmd "config" []                                    = mkCmd ( get theConfig
 parseCmd "options" []                                  = parseCmd "options" [".*"]
 parseCmd "options" [pat]                               = mkCmd ( get theConfigAttrs
                                                                   >>>
-                                                                  arr dumpOptions 
-                                                                  >>> 
+                                                                  arr dumpOptions
+                                                                  >>>
                                                                   putRes
                                                                 )
                                                           where
@@ -304,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.7 from 2013-02-22"
+    = outputCmd $ "Photo2 version 0.2.7.1 from 2013-08-23"
       -- for photoEdit please change the version in config/photoEdit/MainWindow.glade
 
 parseCmd "exit" _       = fail ""
@@ -373,11 +373,11 @@ parseWdCmd'     :: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
 parseWdCmd' pa  = parseWdCmd (loadAndCheckAlbum />>>/ pa)
 
 parseWdCmds'    :: PathArrow AlbumTree b -> String -> [String] -> [Cmd]
-parseWdCmds' pa n [] 
+parseWdCmds' pa n []
                 = parseWdCmd (loadAndCheckAlbum />>>/ pa) n []
 parseWdCmds' pa n ps
                 = concatMap (\ p -> parseWdCmd' pa n [p]) ps
-                   
+
 -- ------------------------------------------------------------
 
 findEntries     :: PathArrow a AlbumTree ->
@@ -503,7 +503,7 @@ parseStorePics          :: String -> [String] -> [Cmd]
 parseStorePics c        = parseWdCmd' storeAllChangedEntries c
 
 parseSort               :: String -> [String] -> [Cmd]
-parseSort c             = parseWdCmd' srt c 
+parseSort c             = parseWdCmd' srt c
                           where
                           srt = changeAlbums $
                                 processTree (withConfig sortPics)

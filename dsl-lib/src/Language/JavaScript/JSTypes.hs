@@ -1,9 +1,12 @@
 {- not enabled LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoMonomorphismRestriction, TemplateHaskell, Rank2Types #-}
 
 module Language.JavaScript.JSTypes
 where
 
 import Control.Applicative ((<$>))
+
+import Control.Lens
 
 -- import Control.Monad (mplus)
 import Control.Monad.Error
@@ -27,6 +30,9 @@ import Data.Maybe
 
 data Undefined = Undefined
                  deriving (Show)
+
+type LabelName
+    = String
 
 -- | A JS value is one of undef or null, a value of one of the simple types
 -- boolean, number, string, or a reference to an object
@@ -58,7 +64,7 @@ data Completion
 
 -- | References to objects are represented by wrapped ints
 
-newtype Ref = Ref { unRef :: Int }
+newtype Ref = Ref { _getRef :: Int } deriving (Show)
 
 -- | An object is just a map from property names to attributes
 
@@ -99,9 +105,6 @@ data ObjStore
                , refgen  :: ! Ref
                }
 
-type LabelName
-    = String
-
 -- | An (internal) method is a monadic function with this and arguments as parameter
 
 type Function
@@ -113,6 +116,27 @@ type Function
 -- these exeptions are represented by the 'Completion' type
 type JS
     = ErrorT Completion (StateT ObjStore IO)
+
+-- ----------------------------------------
+--
+-- lenses
+
+theRef :: Iso' Ref Int
+theRef = iso _getRef Ref
+
+theProps :: Iso' Object Properties
+theProps = iso props Object
+
+type AttrLens a = Simple Lens Attribute a
+
+attrVal :: AttrLens Value
+attrVal = lens _val (\ a x -> a {_val = x})
+
+dontDelete :: AttrLens Bool
+dontDelete = lens _ddel  (\ a x -> a {_ddel  = x})
+
+dontEnum :: AttrLens Bool
+dontEnum   = lens _denum (\ a x -> a {_denum = x})
 
 -- ----------------------------------------
 --
@@ -194,8 +218,10 @@ showNumber n
     -- refinement needed: integral numbers
     | otherwise = show n
 
+{-
 instance Show Ref where
     show (Ref x) = show x
+-- -}
 
 instance Show PropName where
     show (PN x) = showPN x
@@ -226,6 +252,25 @@ showIP x = "[[" ++ show x ++ "]]"
 instance Error Completion where
     noMsg  = strMsg "unknown error"
     strMsg = Cabort . Vstring
+
+-- ----------------------------------------
+--
+-- test: lenses for sum types
+
+data S = S1 {_s1 :: Int}
+       | S2 {_s2 :: Bool}
+         deriving (Show)
+
+makeLenses ''S
+
+theS1 :: Lens S (Maybe S) (Maybe Int) Int
+theS1 = lens g s
+    where
+      g (S1 x) = Just x
+      g _      = Nothing
+      s (S1 _) x = Just $ S1 x
+      s _      _ = Nothing
+
 
 -- ----------------------------------------
 --
@@ -343,6 +388,7 @@ getPropertyAttr af n o
 getVal :: PropName -> Object -> Maybe Value
 getVal = getPropertyAttr _val
 
+{-
 -- | get the value of the DontDelete attribute of a property
 
 dontDelete :: PropName -> Object -> Maybe Bool
@@ -352,7 +398,7 @@ dontDelete = getPropertyAttr _ddel
 
 dontEnum :: PropName -> Object -> Maybe Bool
 dontEnum = getPropertyAttr _denum
-
+-- -}
 -- ----------------------------------------
 
 setPropertyAttr :: (Attribute -> Attribute) -> PropName -> Object -> Object
