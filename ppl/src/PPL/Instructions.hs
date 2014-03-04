@@ -1,5 +1,3 @@
--- $Id: Instructions.hs,v 1.15 2007-01-11 21:29:59 uwe Exp $
-
 module PPL.Instructions where
 
 type Code       = [Instr]

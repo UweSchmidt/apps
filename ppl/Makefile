@@ -1,5 +1,3 @@
-# $Id: Makefile,v 1.34 2006/01/08 14:20:13 uwe Exp $
-
 ##
 ##help
 ##	this target
@@ -12,7 +10,8 @@ help	:
 ##	make pplc compiler
 
 all	:
-	$(MAKE) -C src all
+	cabal configure && cabal build && cabal install
+	cp ./dist/build/pplc/pplc .
 
 ##
 ##ex
@@ -29,17 +28,19 @@ profile	:
 ##dist
 ##	make all, ex, all pictures and tar archive
 
+VERSION := $(shell grep '^version' ppl.cabal | sed 's|^version:[ ]*||')
+
 dist	:
-	$(MAKE) all ex
-	$(MAKE) -C src      dist
-	$(MAKE) -C examples dist
-	$(MAKE) tgz
+	cabal sdist
+	cp ./dist/ppl-$(VERSION).tar.gz ppl.tar.gz
+
 
 ##
 ##clean
 ##	delete all generated files
 
 clean	:
+	cabal clean
 	$(MAKE) -C src      clean
 	$(MAKE) -C examples clean
 	rm -rf $(wildcard dist/*)

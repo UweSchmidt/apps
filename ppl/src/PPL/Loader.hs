@@ -1,5 +1,3 @@
--- $Id: Loader.hs,v 1.4 2001/06/01 10:47:08 uwe Exp $
-
 module PPL.Loader
     (loadExecutable
     )

@@ -1,5 +1,3 @@
--- $Id: Error.hs,v 1.4 2001/12/11 22:30:14 uwe Exp $
-
 module PPL.Error where
 
 data Error a
@@ -8,7 +6,7 @@ data Error a
       deriving (Show)
 
 instance Monad Error where
-    (OK x)    >>= k	= k x
-    (Error e) >>= _	= Error e
-    return x		= OK x
+    (OK x)    >>= k     = k x
+    (Error e) >>= _     = Error e
+    return x            = OK x
 

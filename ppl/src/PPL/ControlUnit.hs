@@ -18,9 +18,7 @@ execProg
 
 runProg :: MST () -> MS -> IO ()
 runProg (MST fct) initState
-    = do
-      fct initState
-      return ()
+    = fct initState >> return ()
 
 startProg       :: MST ()
 startProg

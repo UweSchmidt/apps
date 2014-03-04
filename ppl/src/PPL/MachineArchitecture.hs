@@ -1,5 +1,3 @@
--- $Id: MachineArchitecture.hs,v 1.12 2006/01/08 14:20:12 uwe Exp $
-
 module PPL.MachineArchitecture where
 
 import PPL.Instructions

@@ -167,9 +167,7 @@ svcs = map ( \ (op, (get, eval)) -> (op, (get, liftSvc eval)))
 -- -------------------------------------------------------------------
 
 evalWrite put [VString s]
-    = do
-      put s
-      return (OK VUndef)
+    = put s >> return (OK VUndef)
 
 evalGetArgs []
     = do

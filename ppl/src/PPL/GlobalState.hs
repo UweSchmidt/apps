@@ -1,54 +1,52 @@
--- $Id: GlobalState.hs,v 1.5 2001/03/01 14:31:53 uwe Exp $
-
 module PPL.GlobalState where
 
 import PPL.Instructions
 
-type State	= [(Attr, Value)]
+type State      = [(Attr, Value)]
 
-type Attr	= String
+type Attr       = String
 
 data Value
-    = LabCnt	Int
+    = LabCnt    Int
     | Allocator Alloc
-    | AddrCnt	Int
-    | AddrList	AddrList
+    | AddrCnt   Int
+    | AddrList  AddrList
     | Unknown
 --    deriving Show
 
-type Alloc	= Int -> Address
+type Alloc      = Int -> Address
 
-type AddrList	= [(String, Address)]
+type AddrList   = [(String, Address)]
 
-newtype GS v	= GS (State -> (State, v))
+newtype GS v    = GS (State -> (State, v))
 
 -- the state monad
 
 instance Monad GS where
     return v
-	= GS (\s -> (s,v))
+        = GS (\s -> (s,v))
 
     GS sm0 >>= fsm1
-	= GS (\s0 ->
+        = GS (\s0 ->
               let
-	      (s1,v1) = sm0 s0
-	      GS sm1  = fsm1 v1
-	      (s2,v2) = sm1 s1
-	      in (s2, v2)
-	     )
+              (s1,v1) = sm0 s0
+              GS sm1  = fsm1 v1
+              (s2,v2) = sm1 s1
+              in (s2, v2)
+             )
 
 -- the initial state
 
 initialState :: State
 initialState = []
 
-lookupAttr	:: Attr -> State -> Value
+lookupAttr      :: Attr -> State -> Value
 lookupAttr a s
     = case lookup a s of
-      Nothing	-> Unknown
-      Just val	-> val
+      Nothing   -> Unknown
+      Just val  -> val
 
-updateValue	:: Attr -> Value -> State -> State
+updateValue     :: Attr -> Value -> State -> State
 updateValue a v s
     = (a, v) : filter (\(a', _) -> a' /= a) s
 

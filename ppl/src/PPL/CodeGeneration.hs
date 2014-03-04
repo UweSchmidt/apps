@@ -129,7 +129,7 @@ compProg'' (Opr "sequence" (body : decll), _)
                                 -- allocate global variables
       initAddr
       setAllocator AbsA
-      sequence (map compGlobDecl (filter isGlobDecl decll))
+      sequence_ (map compGlobDecl (filter isGlobDecl decll))
 
                                 -- code for global variable init
       initCode  <- sequence (map compExpr (filter isGlobInit decll))

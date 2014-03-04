@@ -1,5 +1,3 @@
--- $Id: ShowCode.hs,v 1.13 2002/12/02 17:51:12 uwe Exp $
-
 module PPL.ShowCode where
 
 import PPL.Instructions

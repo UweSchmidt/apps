@@ -1,5 +1,3 @@
--- $Id: StateTrans.hs,v 1.2 2001/03/01 14:31:53 uwe Exp $
-
 module PPL.StateTrans where
 
 newtype StateTrans s a = ST ( s -> (s, Maybe a))

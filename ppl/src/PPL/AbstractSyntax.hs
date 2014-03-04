@@ -1,5 +1,3 @@
--- $Id: AbstractSyntax.hs,v 1.14 2001/03/06 21:36:39 uwe Exp $
-
 module PPL.AbstractSyntax where
 
 data Program
@@ -7,27 +5,27 @@ data Program
       deriving (Eq, Show)
 
 data Stmt
-    = Assignment	[Var] [Expr]
-    | Decl		Var Type
-    | FctDecl		FctName [ParamDecl] ResType FctBody
-    | ProcDecl		FctName [ParamDecl] Stmt
-    | ProcCall		Expr
-    | Block		[Stmt]
-    | While		Expr Stmt
-    | Repeat		Stmt Expr
-    | If		Expr Stmt Stmt
+    = Assignment        [Var] [Expr]
+    | Decl              Var Type
+    | FctDecl           FctName [ParamDecl] ResType FctBody
+    | ProcDecl          FctName [ParamDecl] Stmt
+    | ProcCall          Expr
+    | Block             [Stmt]
+    | While             Expr Stmt
+    | Repeat            Stmt Expr
+    | If                Expr Stmt Stmt
       deriving (Eq, Show)
 
 data Expr
     = UndefVal
-    | IntVal	Int
-    | BoolVal	Bool
-    | FloatVal	Double
-    | StringVal	String
+    | IntVal    Int
+    | BoolVal   Bool
+    | FloatVal  Double
+    | StringVal String
     | EmptyList
-    | Ident	String
-    | Call	String [Expr]
-    | Opr	String [AttrTree]
+    | Ident     String
+    | Call      String [Expr]
+    | Opr       String [AttrTree]
     | BlockExpr [Stmt] Expr
       deriving (Eq, Show)
 
@@ -40,16 +38,16 @@ data Type
     | FloatType
     | PictureType
     | StringType
-    | ListType	Type
-    | FctType	Type [Type]
+    | ListType  Type
+    | FctType   Type [Type]
       deriving (Eq, Show)
 
-type Var	= Expr
-type FctName	= Expr
-type ParamDecl	= Stmt
-type ResType	= Type
-type FctBody	= Expr
-type GlobDecl	= Stmt
+type Var        = Expr
+type FctName    = Expr
+type ParamDecl  = Stmt
+type ResType    = Type
+type FctBody    = Expr
+type GlobDecl   = Stmt
 
 type AttrTree = (Expr, Type)
 

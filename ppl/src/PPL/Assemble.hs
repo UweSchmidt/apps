@@ -1,26 +1,24 @@
--- $Id: Assemble.hs,v 1.7 2006/01/08 14:20:10 uwe Exp $
-
 module PPL.Assemble where
 
 import PPL.Instructions
 
-type LabTab	= [(Label, Int)]
+type LabTab     = [(Label, Int)]
 
-assemble	:: Executable -> Executable
+assemble        :: Executable -> Executable
 assemble (is, ds)
     = (assemble1 is, ds)
 
-assemble1	:: Code -> Code
+assemble1       :: Code -> Code
 assemble1 is
     = let
-      labTab	= buildLabTab [] 0 is
-      is'	= filter noLabelInstr is
+      labTab    = buildLabTab [] 0 is
+      is'       = filter noLabelInstr is
       in
       zipWith (compDispl labTab) [0..] is'
 
 --
 
-buildLabTab	:: LabTab -> Int -> Code -> LabTab
+buildLabTab     :: LabTab -> Int -> Code -> LabTab
 
 buildLabTab lt _ []
     = lt
@@ -33,17 +31,17 @@ buildLabTab lt i (_ : is)
 
 -- lookup label table
 
-labVal		:: Label -> LabTab -> Int
+labVal          :: Label -> LabTab -> Int
 labVal lab lt
     = maybe 0 id (lookup lab lt)
 
 
-noLabelInstr		:: Instr -> Bool
+noLabelInstr            :: Instr -> Bool
 
-noLabelInstr (Label _)	= False
-noLabelInstr _		= True
+noLabelInstr (Label _)  = False
+noLabelInstr _          = True
 
-compDispl	:: LabTab -> Int -> Instr -> Instr
+compDispl       :: LabTab -> Int -> Instr -> Instr
 
 compDispl lt i (Branch cond (Symb l))
     = Branch cond (Disp (labVal l lt - i))

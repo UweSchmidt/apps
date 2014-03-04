@@ -1,5 +1,3 @@
--- $Id: PPLInterpreter.hs,v 1.10 2001/12/27 15:59:32 uwe Exp $
-
 module PPL.PPLInterpreter where
 
 import PPL.Instructions

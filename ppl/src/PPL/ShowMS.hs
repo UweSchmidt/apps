@@ -1,5 +1,3 @@
--- $Id: ShowMS.hs,v 1.12 2001/12/27 15:59:32 uwe Exp $
-
 module PPL.ShowMS where
 
 import PPL.Instructions
@@ -13,7 +11,7 @@ import Data.Array
 
 -- dump machine state
 
-showMS		:: MS -> String
+showMS          :: MS -> String
 showMS ms
     =  "\nprogram dump\n"
       ++ "============\n\n"
@@ -29,7 +27,7 @@ showMS ms
       ++ showPC (pc ms)
       ++ "\n"
 
-showMSI		:: MS -> String
+showMSI         :: MS -> String
 showMSI ms
     = showMS ms
       ++ "\ninstructions\n"
@@ -37,22 +35,22 @@ showMSI ms
 
 -- dump main memory
 
-showMem		:: Mem -> String
+showMem         :: Mem -> String
 showMem
     = concat . map showCell . zip [0..]
 
-showCell	:: (Int, MV) -> String
+showCell        :: (Int, MV) -> String
 showCell (i,v)
     = showTag (show i) ++ showMV v ++ "\n"
 
-showFrames	:: [Mem] -> String
+showFrames      :: [Mem] -> String
 showFrames []
     = "\t\t<empty>\n"
 
 showFrames fs
     = concat . map showFrame . zip [0..] $ fs
 
-showFrame	:: (Int, Mem) -> String
+showFrame       :: (Int, Mem) -> String
 showFrame (i,f)
     = "frame "
       ++ show i
@@ -61,13 +59,13 @@ showFrame (i,f)
 
 -- dump program counter
 
-showPC		:: Int -> String
+showPC          :: Int -> String
 showPC pc1
     = showTag "pc" ++ show pc1 ++ "\n"
 
 -- dump evaluation stack
 
-showStack	:: Stack -> String
+showStack       :: Stack -> String
 showStack []
     = "\t\t<empty>\n"
 
@@ -76,31 +74,31 @@ showStack s
 
 -- dump program segment
 
-showMInstr	:: MProg -> String
+showMInstr      :: MProg -> String
 showMInstr
     = showCode1 . elems
 
 -- dump machine values
 
-showMV		:: MV -> String
+showMV          :: MV -> String
 
-showMV VUndef		= "undef"
-showMV (VInt i)		= show i
-showMV (VFloat f)	= show f
-showMV (VString s)	= show s
-showMV (VPic p)		= "<" ++ show (widthMx p) ++ "x" ++ show (heightMx p) ++ ">"
-showMV (VList [])	= "[]"
-showMV (VList l)	= "[" ++ (foldr1 (\x y -> x ++ ", " ++ y) (map showMV l)) ++ "]"
-showMV (VCodeAddr a)	= "instr[" ++ show a ++ "]"
+showMV VUndef           = "undef"
+showMV (VInt i)         = show i
+showMV (VFloat f)       = show f
+showMV (VString s)      = show s
+showMV (VPic p)         = "<" ++ show (widthMx p) ++ "x" ++ show (heightMx p) ++ ">"
+showMV (VList [])       = "[]"
+showMV (VList l)        = "[" ++ (foldr1 (\x y -> x ++ ", " ++ y) (map showMV l)) ++ "]"
+showMV (VCodeAddr a)    = "instr[" ++ show a ++ "]"
 
-showTag		:: String -> String
+showTag         :: String -> String
 showTag s
     = drop ls s'
     where
     s' = "         " ++ s ++ ":\t"
     ls = length s' - 9
 
-showStatus	:: MStatus -> String
+showStatus      :: MStatus -> String
 showStatus Ok
     = "\tok\n\n"
 
@@ -114,12 +112,12 @@ showStatus (Exc err)
 -- error messages
 -- called when machine runs in an exceptional state
 
-showCurInstr	:: MS -> String
+showCurInstr    :: MS -> String
 showCurInstr ms
     | legalPc ms = showInstrCnt (pc ms) (instr ms ! pc ms)
     | otherwise  = "\n"
 
-showIllegalPC	:: MS -> String
+showIllegalPC   :: MS -> String
 showIllegalPC ms
     = "pc out ouf code segment: pc = "
       ++ show (pc ms)
@@ -133,12 +131,12 @@ showIllegalPC ms
 
 
 showIllegalRead,
- showIllegalWrite	:: Address -> MS -> String
+ showIllegalWrite       :: Address -> MS -> String
 
-showIllegalRead		= showIllegalAddr "read"
-showIllegalWrite	= showIllegalAddr "write"
+showIllegalRead         = showIllegalAddr "read"
+showIllegalWrite        = showIllegalAddr "write"
 
-showIllegalAddr		:: String -> Address -> MS -> String
+showIllegalAddr         :: String -> Address -> MS -> String
 showIllegalAddr err addr@(AbsA _) ms
     = err 
       ++ " absolut"
@@ -155,7 +153,7 @@ showIllegalAddr err addr@(LocA _) ms
     ub    = length frame - 1
     frame = head (frames ms)
 
-showIllegalAddr1	:: Address -> Int -> Int -> String
+showIllegalAddr1        :: Address -> Int -> Int -> String
 showIllegalAddr1 addr lb ub
     = " address out of data segment: addr = "
       ++ showAddr addr
@@ -166,19 +164,19 @@ showIllegalAddr1 addr lb ub
       ++ " ) "
 
 
-showStackUnderflow	:: String
+showStackUnderflow      :: String
 showStackUnderflow
     = "evaluation stack underflow"
 
-showFrameStackUnderflow	:: String
+showFrameStackUnderflow :: String
 showFrameStackUnderflow
     = "underflow of stack of procedure frames"
 
-showIllegalInstr	:: Instr -> String
+showIllegalInstr        :: Instr -> String
 showIllegalInstr instr1
     = "unimplemented instr: " ++ showInstr instr1
 
-showIllegalOperand	:: String -> MV -> String
+showIllegalOperand      :: String -> MV -> String
 showIllegalOperand err v
     = "illegal operand: "
       ++ err
