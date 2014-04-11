@@ -1,27 +1,27 @@
 module Main where
 
-import PPL.Lexer
-import PPL.Parser
-import PPL.SemanticAnalysis
+import           PPL.Lexer
+import           PPL.Parser
+import           PPL.SemanticAnalysis
 
-import PPL.CodeGeneration
-import PPL.OptimizeInstr
-import PPL.Assemble
+import           PPL.Assemble
+import           PPL.CodeGeneration
+import           PPL.OptimizeInstr
 
-import PPL.ShowAbstractSyntaxTree
-import PPL.ShowAttrTree
-import PPL.ShowCode
+import           PPL.ShowAbstractSyntaxTree
+import           PPL.ShowAttrTree
+import           PPL.ShowCode
 
-import PPL.ShowJavaCode
-import PPL.ShowCCode
+import           PPL.ShowCCode
+import           PPL.ShowJavaCode
 
-import PPL.Loader
-import PPL.ControlUnit
+import           PPL.ControlUnit
+import           PPL.Loader
 
-import Data.Char
+import           Data.Char
 
-import System.IO
-import System.Environment
+import           System.Environment
+import           System.IO
 
 processFile :: ([Char] -> IO a) -> [Char] -> IO ()
 processFile p fn
@@ -105,7 +105,8 @@ usage :: IO ()
 usage
     = hPutStrLn
         stderr ( "Usage:\n\tpplc Option [file]\n\n"
-                 ++ "process a ppl program from file or from stdin\n\n"
+                 ++ "process a ppl program from file or from stdin\n"
+                 ++ "version 0.1.0.1\n\n"
                  ++ "Options:\n"
                  ++ "\t-s, --scan\tlexical analysis\n"
                  ++ "\t-p, --parse\tsyntax analysis\n"

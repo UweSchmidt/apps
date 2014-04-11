@@ -1,6 +1,9 @@
 module PPL.GlobalState where
 
-import PPL.Instructions
+import           Control.Applicative (Applicative (..))
+import           Control.Monad
+
+import           PPL.Instructions
 
 type State      = [(Attr, Value)]
 
@@ -21,6 +24,13 @@ type AddrList   = [(String, Address)]
 newtype GS v    = GS (State -> (State, v))
 
 -- the state monad
+
+instance Functor GS where
+    fmap = liftM
+
+instance Applicative GS where
+    pure  = return
+    (<*>) = ap
 
 instance Monad GS where
     return v

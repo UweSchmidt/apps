@@ -1,17 +1,27 @@
 module PPL.MicroCode where
 
-import PPL.Instructions
-import PPL.MachineArchitecture
-import PPL.Error
-import PPL.ShowMS
+import           Control.Applicative     (Applicative (..))
+import           Control.Monad
 
-import System.IO
+import           PPL.Error
+import           PPL.Instructions
+import           PPL.MachineArchitecture
+import           PPL.ShowMS
+
+import           System.IO
 
 -- -------------------------------------------------------------------
 --
 -- machine state transitions
 
 newtype MST a = MST { trans :: MS -> IO (MS, Maybe a) }
+
+instance Functor MST where
+    fmap = liftM
+
+instance Applicative MST where
+    pure  = return
+    (<*>) = ap
 
 instance Monad MST where
     return v
@@ -115,7 +125,7 @@ trc fct
 run :: MS -> MST () -> IO()
 run initState (MST cmd)
     = cmd initState >> return ()
-      
+
 -- --------------------
 --
 -- throw an exception: set status and abort further computation
