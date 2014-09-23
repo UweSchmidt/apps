@@ -233,6 +233,14 @@ prefixMap
       , ( "UserComment",                "descr" )
       , ( "VibrationReduction",         "exif"  )
       , ( "WhiteBalance",               "exif"  )
+      , ( "GPSLatitude",                "geo"   )
+      , ( "GPSLatitudeRef",             "geo"   )
+      , ( "GPSLongitude",               "geo"   )
+      , ( "GPSLongitudeRef",            "geo"   )
+      , ( "GPSAltitude",                "geo"   )
+      , ( "GPSAltitudeRef",             "geo"   )
+      , ( "GPSDateStamp",               "geo"   )
+      , ( "GPSTimeStamp",               "geo"   )
       ]
 
 isAttrKey       :: String -> Bool
@@ -257,6 +265,11 @@ isAttrKey
               , "FocalLengthIn35mmFormat"
               , "FocusDistance"
               , "FocusMode"
+              , "GPSLatitude"
+              , "GPSLongitude"
+              , "GPSAltitude"
+              , "GPSDateStamp"
+              , "GPSTimeStamp"
               , "ISO"
               , "ImageSize"
               , "Keywords"
@@ -279,4 +292,5 @@ isAttrKey
               , "WhiteBalance"
               ]
       )
+      
 -- ------------------------------------------------------------

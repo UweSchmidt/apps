@@ -15,9 +15,9 @@ import           Photo2.FilePath
 import           Photo2.Html
 import           Photo2.ImportDialog
 
-import           System.Cmd
+import           System.Process              (system)
 
-import           Text.Regex.XMLSchema.String
+import           Text.Regex.XMLSchema.String (match, tokenize')
 import           Text.XML.HXT.Core
 
 -- ------------------------------------------------------------
@@ -304,7 +304,7 @@ parseCmd "?" []
             ]
 
 parseCmd "version" []
-    = outputCmd $ "Photo2 version 0.2.7.1 from 2013-08-23"
+    = outputCmd $ "Photo2 version 0.2.7.2 from 2014-09-23"
       -- for photoEdit please change the version in config/photoEdit/MainWindow.glade
 
 parseCmd "exit" _       = fail ""

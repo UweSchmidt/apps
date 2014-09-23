@@ -4,8 +4,8 @@ where
 import           Control.Arrow
 import qualified Control.Exception           as CE
 
-import           Control.Monad.Error         hiding (liftIO)
-import qualified Control.Monad.Error         as ME
+import           Control.Monad.Except        hiding (liftIO)
+import qualified Control.Monad.Except        as ME
 
 import           Control.DeepSeq             (rnf)
 
@@ -23,7 +23,7 @@ import           Photo2.Config
 import           Photo2.ExifData
 import           Photo2.FilePath
 
-import           System.Cmd                  (system)
+import           System.Process              (system)
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -41,7 +41,7 @@ import           Text.Regex.XMLSchema.String (match, matchSubex, sed)
 
 -- ------------------------------------------------------------
 
-type IOE a      = ErrorT String IO a
+type IOE a      = ExceptT String IO a
 
 -- ------------------------------------------------------------
 
