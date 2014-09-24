@@ -133,6 +133,32 @@ newAttrKey pl k
     matchFound :: PicAttrs -> Maybe Name
     matchFound = foldl foldMatch Nothing
 
+-- | "degrees minutes seconds" to "decimal degrees" (google url format)
+degToDecDeg :: String -> String
+degToDecDeg loc
+  = case matchSubex pattern loc of
+     [("deg", deg), ("min", mn), ("sec", sec), ("dir", dir)]
+       -> show $ conv (read deg) (read mn) (read sec) (head dir)
+     _ -> ""
+    where
+      pattern
+        = "({deg}[0-9]+) +deg +({min}[0-9]+)' +({sec}[.0-9]+)\" +({dir}[NWES])"
+
+      conv :: Double -> Double -> Double -> Char -> Double
+      conv d m s dir
+        = (d + m/60 + s/3600) * (if dir `elem` "WS" then (0-1) else 1)
+
+-- | build a google maps url from latitude and longitude
+toGoogleMaps :: String -> String -> String
+toGoogleMaps lat long
+  | null lat' || null long'
+    = ""
+  | otherwise
+    = "https://maps.google.com/maps?ll=" ++ lat' ++ "," ++ long' ++ "&z=17"
+  where
+    lat'  = degToDecDeg lat
+    long' = degToDecDeg long
+    
 -- ------------------------------------------------------------
 
 oldKeys :: [(String, String)]
