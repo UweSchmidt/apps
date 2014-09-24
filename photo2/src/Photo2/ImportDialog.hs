@@ -16,15 +16,9 @@ import           Photo2.FilePath
 import           Photo2.ImageOperations
 import           Photo2.SearchNewImages
 
-import System.Console.Haskeline
-import System.Console.Haskeline.IO
+import           System.Console.Haskeline
+import           System.Console.Haskeline.IO
 
-{-
-import           System.Console.Editline.Readline
-                                         ( readline
-                                         , addHistory
-                                         )
--}
 import           System.IO
 
 import           Text.XML.HXT.Core

@@ -7,7 +7,7 @@ import qualified Control.Exception           as CE
 import           Control.Monad.Except        hiding (liftIO)
 import qualified Control.Monad.Except        as ME
 
-import           Control.DeepSeq             (rnf)
+import           Control.DeepSeq             (($!!))
 
 
 import           Data.Atom
@@ -28,13 +28,6 @@ import           System.Directory
 import           System.Exit
 import           System.IO
 import           System.Posix                (createLink, getProcessID)
-{-
-import           System.Time    ( ClockTime
-                                , toCalendarTime
-                                , formatCalendarTime
-                                , getClockTime
-                                )
--- -}
 import           System.Locale               (defaultTimeLocale)
 
 import           Text.Regex.XMLSchema.String (match, matchSubex, sed)
@@ -141,17 +134,21 @@ mvPic newName c p pic
 -- ------------------------------------------------------------
 
 importExifAttrs :: Config -> Path -> Pic -> IOE Pic
-importExifAttrs c _p pic
+importExifAttrs c p pic
     = do
       orig <- findOrig base orig'
       when (null orig)
            ( throwError $ "importExifAttrs: original image " ++ show orig'' ++ " not found" )
-      up <- upToDate orig''
-      if up
+      xmp <- findXmp base orig
+      -- liftIO $ print (p, orig'', xmp, picpath)
+      up1 <- upToDate orig''      -- when original .jpg or .xmp have changed
+      up2 <- if null xmp          -- the exif data may not be up to date
+             then return True     -- e.g. by adding geo data via lightroom
+             else upToDate (base </-> xmp)
+      if up1 && up2
          then return pic
          else do
               raw <- findRaw base orig
-              xmp <- findXmp base orig
               newData <- allImgAttrs [] c base orig raw xmp
               let pic' = change theAttrs (mergeAttrs newData)
                          >>>
@@ -159,13 +156,12 @@ importExifAttrs c _p pic
                          >>>
                          store theXmp xmp
                          $ pic
-              rnf pic' `seq` return pic'
+              return $!! pic'
     where
     orig'       = picOrig pic
     orig''      = base </-> orig'
 
-    modified    = fromMaybe "" . M.lookup fileModificationKey . picAttrs $ pic
-
+    picpath     = albumPath p   c   -- the path to the .xml descr
     base        = getImportBase c
 
     force       = optON  optForceExif c
@@ -174,16 +170,16 @@ importExifAttrs c _p pic
     upToDate f
         | dry           = return True
         | force         = return False
-        | otherwise     = liftIO $ fileNewerThanDate modified f
+        | otherwise     = liftIO $ fileNewerThanFile f picpath
 
 -- ------------------------------------------------------------
 
 allImgAttrs     :: [String] -> Config -> String -> String -> String -> String -> IOE Attrs
 allImgAttrs opts c base orig raw xmp
     = do
-      exifDataOrig <- imgAttrs    (base </-> orig)
-      exifDataRaw  <- imgAttrs    (base </-> raw)
-      xmpData      <- imgAttrsXmp (base </-> xmp)
+      exifDataOrig <- imgAttrs (base </-> orig)
+      exifDataRaw  <- imgAttrs (base </-> raw)
+      xmpData      <- imgAttrs (base </-> xmp) -- exiftool knows about adobe .xmp files
       return ( ( ( exifDataRaw
                    `M.union` exifDataOrig
                  )
@@ -202,13 +198,13 @@ allImgAttrs opts c base orig raw xmp
           t <- execFct debug (["exiftool"] ++ opts ++ [f]) -- don't use "-s" option
           let res = exifAttrs t
           return $ res
-
+    {-
     imgAttrsXmp ""
         = return $ emptyAttrs
     imgAttrsXmp _f
         = do
           return $ emptyAttrs   -- parseXmp t
-
+    -- -}
     fileData
         = exifAttrs . unlines $
           [ "RefOrig : " ++ orig
@@ -235,7 +231,7 @@ importOrig c p pic
                  then return pic
                  else do
                       let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-                      return (rnf pic' `seq` pic')
+                      return $!! pic'
          else return pic
     where
     cpyKey      = newAtom dir
@@ -290,7 +286,7 @@ createCopy c p s pic
                  then return pic
                  else do
                       let pic' = change theCopies (M.insert cpyKey (Copy geo)) pic
-                      return (rnf pic' `seq` pic')
+                      return $!! pic'
          else return pic
     where
     cpyKey      = newAtom . sizeDir $ s
@@ -582,11 +578,11 @@ fileNewerThanFile ref f
       mf   <- fileLastModified f
       mref <- fileLastModified ref
       let n = ( not (null mf)
-               &&
-               not (null mref)
-               &&
-               mref <= mf
-             )
+                &&
+                not (null mref)
+                &&
+                mref <= mf
+              )
       -- putStrLn ("file newer file=" ++ show f ++ "," ++ show mf ++ " ref=" ++ show ref ++ "," ++ show mref ++ " status=" ++ show n)
       return n
 

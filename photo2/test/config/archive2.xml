@@ -4,14 +4,13 @@
   <attr name="album-dir">album2</attr>
   <attr name="base">../Diakaesten</attr>
   <attr name="copy-copy">0</attr>
-  <attr name="copy-exif">0</attr>
   <attr name="debug">1</attr>
   <attr name="dir">org</attr>
   <attr name="dtd">config/archive.dtd</attr>
   <attr name="imgtype">jpg</attr>
   <attr name="import-base">../Diakaesten</attr>
-  <attr name="import-dialog">0</attr>
-  <attr name="import-dir">2007/2007.03.11.Hagenbeck/uwe2</attr>
+  <attr name="import-dialog">1</attr>
+  <attr name="import-dir">NeueBilder/geo/srgb</attr>
   <attr name="import-pattern">.*</attr>
   <attr name="import-since">1970-01-01</attr>
   <attr name="layout">html-1400x1050</attr>
@@ -73,6 +72,11 @@
     <attr name="file:RefRaw">(.*:)?RefRaw|ref-raw</attr>
     <attr name="file:RefXmp">(.*:)?RefXmp|ref-xmp</attr>
     <attr name="show:Duration">(.*:)?[Dd]uration</attr>
+    <attr name="geo:GPSLatitude">(.*:)?GPSLatitude</attr>
+    <attr name="geo:GPSLongitude">(.*:)?GPSLongitude</attr>
+    <attr name="geo:GPSAltitude">(.*:)?GPSAltitude</attr>
+    <attr name="geo:GPSDateStamp">(.*:)?GPSDateStamp</attr>
+    <attr name="geo:GPSTimeStamp">(.*:)?GPSTimeStamp</attr>
   </picture-attributes>
   <layout id="html-1024x768" type="html-css2">
     <page type="album">
