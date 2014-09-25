@@ -84,6 +84,7 @@ genHtml rec formats conf p0
                           . M.lookup dictId
                           . confDict
                           $ conf
+    translateLoc val    = ("<a href='" ++ toGoogleMaps val ++ "'>" ++ val ++ "</a>")
     translateGM         = ("<a href='" ++) . (++ "'>google maps</a>")
     translateWikipedia  = ("<a href='" ++) . (++ "'>Wikipedia</a>")
     translateWeb url    = ("<a href='" ++ url ++ "'>" ++ url ++ "</a>")
@@ -150,6 +151,7 @@ genHtml rec formats conf p0
                 , insertText "[theSubTitle]"    theSubTitle
                 , insertText "[theResources]"   theResources
                 , insertText "[theGoogleMaps]"  theGoogleMaps
+                , insertText "[theLocation]"    theLocation
                 , insertText "[theWeb]"         theWeb
                 , insertText "[theWikipedia]"   theWikipedia
                 , insertText "[theHeadTitle]"   theHeadTitle'
@@ -238,6 +240,8 @@ genHtml rec formats conf p0
             theTitle            = valOf        titleKey
             theSubTitle         = valOf        subTitleKey
             theResources        = valOf        resourceKey
+            theLocation         = checkSet translateLoc $
+                                  unwords [valOf gpsLatitudeKey, valOf gpsLongitudeKey]
             theGoogleMaps       = checkSet translateGM .
                                   valOf $      googleMapsKey
             theWeb              = checkSet translateWeb' .
@@ -303,6 +307,7 @@ genHtml rec formats conf p0
                                           ||
                                           "cam:"  `isPrefixOf` item     = translateExif
                                         | item == show googleMapsKey    = translateGM
+                                        | item == show gpsLocationKey   = translateLoc
                                         | item == show webKey           = translateWeb
                                         | item == show wikipediaKey     = translateWikipedia
                                         | otherwise                     = id

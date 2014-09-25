@@ -19,7 +19,8 @@ import           Text.XML.HXT.DOM.Util ( stringTrim )
 
 titleKey, subTitleKey, resourceKey,
   googleMapsKey, webKey, wikipediaKey,
-  durationKey, fileModificationKey :: Atom
+  durationKey, gpsLatitudeKey,
+  fileModificationKey :: Atom
 
 titleKey                        = newAtom "descr:Title"
 subTitleKey                     = newAtom "descr:Subtitle"
@@ -28,12 +29,20 @@ googleMapsKey                   = newAtom "descr:GoogleMaps"
 webKey                          = newAtom "descr:Web"
 wikipediaKey                    = newAtom "descr:Wikipedia"
 durationKey                     = newAtom "show:Duration"
+gpsLocationKey                  = newAtom "geo:GPSLocation"
+gpsLatitudeKey                  = newAtom gpsLatitude
+gpsLongitudeKey                 = newAtom gpsLongitude
 fileModificationKey             = newAtom fileModificationDateTime
 
-fileModificationDateTime'       :: String
+gpsLatitude', gpsLongitude', fileModificationDateTime'       :: String
+gpsLatitude'                    = "GPSLatitude"
+gpsLongitude'                   = "GPSLongitude"
 fileModificationDateTime'       = "FileModificationDateTime"
 
-fileModificationDateTime        :: String
+
+gpsLatitude, gpsLongitude, fileModificationDateTime        :: String
+gpsLatitude                     = addPrefix gpsLatitude'
+gpsLongitude                    = addPrefix gpsLongitude'
 fileModificationDateTime        = addPrefix fileModificationDateTime'
 
 -- ------------------------------------------------------------
@@ -148,6 +157,16 @@ degToDecDeg loc
       conv d m s dir
         = (d + m/60 + s/3600) * (if dir `elem` "WS" then (0-1) else 1)
 
+locationToGoogleMaps :: String -> String
+locationToGoogleMaps loc
+  = case matchSubex pattern loc of
+     [("lat", lat), ("long", long)]
+       -> toGoogleMaps lat long
+     _ -> ""
+  where
+    pattern
+      = "({lat}[^NS]+[NS]) +({long}[^WE]+[WE])"
+
 -- | build a google maps url from latitude and longitude
 toGoogleMaps :: String -> String -> String
 toGoogleMaps lat long
@@ -261,9 +280,9 @@ prefixMap
       , ( "UserComment",                "descr" )
       , ( "VibrationReduction",         "exif"  )
       , ( "WhiteBalance",               "exif"  )
-      , ( "GPSLatitude",                "geo"   )
+      , ( gpsLatitude',                 "geo"   )
       , ( "GPSLatitudeRef",             "geo"   )
-      , ( "GPSLongitude",               "geo"   )
+      , ( gpsLongitude',                "geo"   )
       , ( "GPSLongitudeRef",            "geo"   )
       , ( "GPSAltitude",                "geo"   )
       , ( "GPSAltitudeRef",             "geo"   )
@@ -293,8 +312,8 @@ isAttrKey
               , "FocalLengthIn35mmFormat"
               , "FocusDistance"
               , "FocusMode"
-              , "GPSLatitude"
-              , "GPSLongitude"
+              , gpsLatitude'
+              , gpsLongitude'
               , "GPSAltitude"
               , "GPSDateStamp"
               , "GPSTimeStamp"
