@@ -59,6 +59,14 @@
               <th>Quellen</th>
               <td>[descr:Resource]</td>
             </tr>
+            <tr class="info" id="geo:GPSLatitude">
+              <th>Position</th>
+              <td>[theLocation]</td>
+            </tr>
+            <tr class="info" id="geo:GPSAltitude">
+              <th>H&ouml;he</th>
+              <td>[geo:GPSAltitude]</td>
+            </tr>
             <tr class="info" id="exif:CreateDate">
               <th>Aufnahmedatum</th>
               <td>[exif:CreateDate]</td>

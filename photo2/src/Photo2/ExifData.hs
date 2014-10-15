@@ -19,7 +19,8 @@ import           Text.XML.HXT.DOM.Util ( stringTrim )
 
 titleKey, subTitleKey, resourceKey,
   googleMapsKey, webKey, wikipediaKey,
-  durationKey, gpsLatitudeKey,
+  durationKey,
+  gpsLocationKey, gpsLatitudeKey, gpsLongitudeKey,
   fileModificationKey :: Atom
 
 titleKey                        = newAtom "descr:Title"
@@ -173,10 +174,11 @@ toGoogleMaps lat long
   | null lat' || null long'
     = ""
   | otherwise
-    = "https://maps.google.com/maps?ll=" ++ lat' ++ "," ++ long' ++ "&z=17"
+    = "https://maps.google.com/maps?ll=" ++ lat' ++ "," ++ long' ++ "&amp;z=" ++ zoom
   where
-    lat'  = degToDecDeg lat
-    long' = degToDecDeg long
+    zoom  = "17"
+    lat'  = degToDecDeg $ lat
+    long' = degToDecDeg $ long
     
 -- ------------------------------------------------------------
 

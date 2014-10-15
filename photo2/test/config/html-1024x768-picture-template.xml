@@ -53,6 +53,10 @@
               <th>Quellen</th>
               <td>[descr:Resource]</td>
             </tr>
+            <tr class="info" id="geo:GPSLocation">
+              <th>Position</th>
+              <td>[geo:GPSLocation]</td>
+            </tr>
             <tr class="info" id="exif:CreateDate">
               <th>Aufnahmedatum</th>
               <td>[exif:CreateDate]</td>

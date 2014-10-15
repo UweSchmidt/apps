@@ -84,7 +84,9 @@ genHtml rec formats conf p0
                           . M.lookup dictId
                           . confDict
                           $ conf
-    translateLoc val    = ("<a href='" ++ toGoogleMaps val ++ "'>" ++ val ++ "</a>")
+    translateLoc val    = "<a href='" ++ locationToGoogleMaps val ++ "'>"
+                          ++ sed (const "&deg;") " deg" val
+                          ++ "</a>"
     translateGM         = ("<a href='" ++) . (++ "'>google maps</a>")
     translateWikipedia  = ("<a href='" ++) . (++ "'>Wikipedia</a>")
     translateWeb url    = ("<a href='" ++ url ++ "'>" ++ url ++ "</a>")
@@ -298,6 +300,7 @@ genHtml rec formats conf p0
                                                               -- jquery does not like : in id values
                                                  , ( hasAttrValue "id" (== item) )
                                                    :-> addAttr "id" (filter isAlphaNum item)
+                                                 , insertText "[theLocation]"    theLocation
                                                  , this :-> this
                                                  ]
                                        )
@@ -307,7 +310,7 @@ genHtml rec formats conf p0
                                           ||
                                           "cam:"  `isPrefixOf` item     = translateExif
                                         | item == show googleMapsKey    = translateGM
-                                        | item == show gpsLocationKey   = translateLoc
+                                        | item == show gpsLatitudeKey   = translateLoc
                                         | item == show webKey           = translateWeb
                                         | item == show wikipediaKey     = translateWikipedia
                                         | otherwise                     = id

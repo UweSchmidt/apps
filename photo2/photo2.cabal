@@ -1,7 +1,9 @@
 Name:                photo2
-Version:             0.2.7.2
+Version:             0.2.7.3
 Synopsis:            Photo Album Editor
 Description:         Photo Album Editor: Command line app photo2 and gtk app photoEdit
+                     Chamges from 0.2.7.2: GPS location extracted from .xmp and added to .html
+                     .
                      Changes from 0.2.7.1: Update to ghc-7.8
                      .
                      Changes from 0.2.7: google maps regex changed to accept https
