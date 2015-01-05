@@ -1,3 +1,5 @@
+VERSION := $(shell grep '^version' ppl.cabal | sed 's|^version:[ ]*||')
+
 ##
 ##help
 ##	this target
@@ -21,16 +23,12 @@ all	:
 ex	:
 	$(MAKE) -C examples all
 
-profile	:
-	$(MAKE) -C src profile
-
 ##
 ##dist
 ##	make all, ex, all pictures and tar archive
 
-VERSION := $(shell grep '^version' ppl.cabal | sed 's|^version:[ ]*||')
-
 dist	:
+	$(MAKE) -C src/PPL sdist
 	cabal sdist
 	cp ./dist/ppl-$(VERSION).tar.gz ppl.tar.gz
 
@@ -41,22 +39,17 @@ dist	:
 
 clean	:
 	cabal clean
-	$(MAKE) -C src      clean
+	$(MAKE) -C src/PPL  clean
 	$(MAKE) -C examples clean
 	rm -rf $(wildcard dist/*)
 
 ##
-##tgz
-##	create ppl.tar.gz file
-##
+##version
+##	set version # in pplc main prog
 
-SRC	= $(wildcard src/Makefile src/Parser.* src/*.hs src/*/*.hs)
-EXS	= $(wildcard examples/org/*.* examples/*.ppl examples/Makefile examples/java/ppl/[A-Z]*.java examples/c/*.h)
+version	: src/PPL.hs
 
-tgz	:
-	[ -d dist/ppl ] || mkdir -p dist/ppl
-	tar cf - $(SRC) $(EXS) Makefile README | ( cd dist/ppl ; tar xf - )
-	[ -d dist/ppl/examples/gen ] || mkdir -p dist/ppl/examples/gen
-	( cd dist ; tar cvzf ../ppl.tar.gz ppl )
+src/PPL.hs : ppl.cabal
+	perl -i~ -p -e 's/version \d+\.\d+\.\d+\.\d+/version $(VERSION)/' $@
 
-.PHONY	: all ex profile dist clean tgz
+.PHONY	: all clean dist ex help version

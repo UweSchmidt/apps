@@ -1,16 +1,17 @@
 name:                ppl
-version:             0.1.0.1
--- please update version in PPL.hs
+version:             0.1.0.2
+-- please run: make version when incrementing the version number
 synopsis:            Compiler construction example for a DSL to process pictures
 author:              Uwe Schmidt
 maintainer:          si@fh-wedel.de
-copyright:           2006 - 2014 Uwe Schmidt
+copyright:           2006 - 2015 Uwe Schmidt
 category:            Graphics
 build-type:          Simple
 extra-source-files:
   README
   Makefile
-  src/Makefile
+  src/PPL/Makefile
+  src/PPL/Parser.info1
   examples/Makefile
   examples/org/*.jpg
   examples/org/*.pgm

@@ -106,7 +106,7 @@ usage
     = hPutStrLn
         stderr ( "Usage:\n\tpplc Option [file]\n\n"
                  ++ "process a ppl program from file or from stdin\n"
-                 ++ "version 0.1.0.1\n\n"
+                 ++ "version 0.1.0.2\n\n"
                  ++ "Options:\n"
                  ++ "\t-s, --scan\tlexical analysis\n"
                  ++ "\t-p, --parse\tsyntax analysis\n"

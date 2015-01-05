@@ -6,9 +6,9 @@ Die Quellen bestehen aus Haskell Dateien *.hs im Unterverzeichnis src.
 Eine Haskell Quelle Parser.hs ist mit dem happy Parsergenerator
 aus der Grammatikspezifikation Parser.y erzeugt worden.
 
-Um das System zu benutzen muss der GHC Haskell Compiler
+Um das System zu benutzen müssen der GHC Haskell Compiler und happy
 installiert sein (Version ghc-6.8.2 oder neuer)
-"http://www.haskell.org/ghc"
+"http://www.haskell.org/ghc" oder Haskell Platform
 
 zum Erzeugen des Compilers pplc
 	make all
@@ -30,7 +30,7 @@ sowohl im ascii als auch im raw format. Ausgegeben
 werden die Bilder im .ppm oder .pgm raw format mit 256 Farben oder Graustufen.
 
 pplc --help listet die Funktionen des pplc Compilers
-Dieser enthält auch einen eigebauten Interpretierer.
+Dieser enthält auch einen eingebauten Interpretierer.
 
 Mutige können
 
@@ -46,5 +46,3 @@ viel Spass (und wenig Frust) beim Ausprobieren
 Uwe Schmidt
 
 uwe@fh-wedel.de
-
-
