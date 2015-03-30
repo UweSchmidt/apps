@@ -125,7 +125,10 @@ withSubDir dir cmd
 
 genFindProcessor :: String -> Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
 genFindProcessor fmt
-    = return (return (), pathName >=> format >=> io . putStrLn, return ())
+    = return ( return ()
+             , pathName >=> format >=> io . putStrLn
+             , return ()
+             )
     where
       format path
           = return $ sedRE subst reParam fmt
@@ -150,12 +153,18 @@ genFindProcessor fmt
 genGrepProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
 genGrepProcessor
     = do grepPred <- asks theGrepPred
-         return (return (), contentGrep grepPred, return ())
+         return ( return ()
+                , contentGrep grepPred
+                , return ()
+                )
 
 genSedProcessor :: Cmd (Cmd (), FilePath -> Cmd (), Cmd ())
 genSedProcessor
     = do sedFct <- asks theSedFct
-         return (return (), editFileContents sedFct, return ())
+         return ( return ()
+                , editFileContents sedFct
+                , return ()
+                )
 
 contentGrep     :: (String -> Bool) -> FilePath -> Cmd ()
 contentGrep p f

@@ -37,7 +37,7 @@ fgsInfo :: TermInfo
 fgsInfo
     = defTI
       { termName = "fgs2"
-      , version  = "0.1.7.0"
+      , version  = "0.1.7.1"
       }
 
 oAll :: Term (Env -> Env)

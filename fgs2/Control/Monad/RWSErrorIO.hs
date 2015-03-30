@@ -1,20 +1,42 @@
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Control.Monad.RWSErrorIO
-    ( module Control.Monad.RWSErrorIO
-    , module Control.Monad.Error
-    , module Control.Monad.RWS
+    ( Action
+    , Msg
+    , runAction
+    , evalAction
+    , Config(..)
+    , abort
+    , always
+    , err
+    , exec
+    , execStr
+    , finally
+    , guards
+    , io
+    , orElse
+    , trc
+    , warn
+    , ask
+    , asks
+    , local
+    , liftIO
     , module Control.Monad
     )
 where
 
+import Control.Applicative
 import Control.Exception        ( SomeException
                                 , try
                                 )
 
 import Control.Monad.Error
-import Control.Monad.RWS
+import Control.Monad.RWS.Strict
 import Control.Monad
 
--- import Data.Monoid
 import System.Process           ( rawSystem )
 import System.Exit
 import System.IO                ( hPutStrLn
@@ -23,11 +45,21 @@ import System.IO                ( hPutStrLn
 
 -- ----------------------------------------
 
-type Action r s = ErrorT Msg (RWST r Log s IO)
+newtype Action r s a
+  = AC { runAction' :: ErrorT Msg (RWST r Log s IO) a }
+  deriving ( Functor
+           , Applicative
+           , Monad
+           , MonadReader r
+           , MonadState s
+           , MonadWriter Log
+           , MonadError Msg
+           , MonadIO
+           )
 
 runAction :: Action r s a -> r -> s -> IO (Either Msg a, s, Log)
 runAction action env0 state0
-    = runRWST (runErrorT action) env0 state0
+    = runRWST (runErrorT (runAction' action)) env0 state0
 
 evalAction :: Action r s a -> r -> s -> IO (Maybe a)
 evalAction action env0 state0
@@ -160,7 +192,9 @@ exec cmd args
     = do rc <- io $ rawSystem cmd args
          if rc == ExitSuccess
             then return ()
-            else abort $ unwords ["error in executing external program: ", cmd, show args]
+            else abort $
+                 unwords [ "error in executing external program: "
+                         , cmd, show args]
 
 -- convenience function for simple commands
 

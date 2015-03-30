@@ -6,11 +6,12 @@ name:                fgs2
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.7.0
+version:             0.1.7.1
 synopsis:            find, grep, sed, hash: processing directory trees
 description:         Program for processing whole directory trees.
                      Includes find, grep, sed functionality.
-                     Further functionality: Generation and check of hashes for file contents.
+                     Further functionality: Generation and check
+                     of hashes for file contents.
 license:             BSD3
 license-file:        LICENSE
 author:              Uwe Schmidt
