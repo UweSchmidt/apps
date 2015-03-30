@@ -14,7 +14,7 @@ import Data.Char                         ( isSpace )
 import Data.List                         ( mapAccumL )
 import Data.Maybe
 
-import Text.Regex.XMLSchema.String      -- ( match, matchRE, parseRegex, isZero )
+import Text.Regex.XMLSchema.Generic
 
 import Text.XML.HXT.Parser.XhtmlEntities ( xhtmlEntities )
 

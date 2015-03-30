@@ -6,7 +6,7 @@ name:                fgs2
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.6.0
+version:             0.1.7.0
 synopsis:            find, grep, sed, hash: processing directory trees
 description:         Program for processing whole directory trees.
                      Includes find, grep, sed functionality.
@@ -36,7 +36,7 @@ executable fgs2
                    , System.DirTree.FindExpr
                    , System.DirTree.Hash
                    , System.DirTree.Types
-
+                   , Control.Monad.RWSErrorIO
   
   -- Other library packages from which modules are imported.
   build-depends:     base                >= 4.5
@@ -45,11 +45,12 @@ executable fgs2
                    , containers          >= 0.4
                    , directory           >= 1.1
                    , hxt                 >= 9.3
-                   , hxt-regex-xmlschema >= 9.1
+                   , hxt-regex-xmlschema >= 9.2
                    , hxt-unicode         >= 9.0
                    , monad-error-rws-io  >= 0.0.2
                    , pureMD5             >= 2
                    , pretty              >= 1.1
+                   , process
                    , SHA                 >= 1.5
                    , unix                >= 2.5
   

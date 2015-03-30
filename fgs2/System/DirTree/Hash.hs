@@ -22,7 +22,7 @@ import Data.List                             ( partition
 import System.DirTree.Types
 import System.DirTree.FileSystem
 
-import Text.Regex.XMLSchema.String           ( match )
+import Text.Regex.XMLSchema.Generic          ( match )
 
 import qualified Data.Map                    as M
 import qualified Data.ByteString.Lazy        as L
@@ -54,7 +54,7 @@ sha1Hash           :: HashFct
 sha1Hash           = showDigest . sha1 . L.fromChunks . (:[])
 
 md5Hash            :: HashFct
-md5Hash            = show . md5 . L.fromStrict
+md5Hash            = show . md5 . L.fromChunks . (:[])
 
 -- ----------------------------------------
 --
