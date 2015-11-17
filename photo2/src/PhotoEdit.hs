@@ -35,7 +35,7 @@ import           System.Environment
 import           System.IO
 import           System.IO.Unsafe               ( unsafePerformIO )
 
-import qualified Text.Regex.XMLSchema.String    as RE
+import qualified Text.Regex.XMLSchema.Generic   as RE
 import qualified Text.XML.HXT.Core              as T
 
 -- ------------------------------------------------------------

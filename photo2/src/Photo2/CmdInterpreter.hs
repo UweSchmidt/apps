@@ -17,7 +17,7 @@ import           Photo2.ImportDialog
 
 import           System.Process              (system)
 
-import           Text.Regex.XMLSchema.String (match, tokenize')
+import           Text.Regex.XMLSchema.Generic (match, tokenize')
 import           Text.XML.HXT.Core
 
 -- ------------------------------------------------------------

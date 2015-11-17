@@ -30,7 +30,7 @@ import           System.IO
 import           System.Posix                (createLink, getProcessID)
 import           System.Locale               (defaultTimeLocale)
 
-import           Text.Regex.XMLSchema.String (match, matchSubex, sed)
+import           Text.Regex.XMLSchema.Generic (match, matchSubex, sed)
 
 -- ------------------------------------------------------------
 
@@ -677,9 +677,9 @@ cpCopies ext dst src copies
     where
     link dir
         = do
-          liftIO $ putStrLn $ unwords ["cp", srcFile, dstFile]
+          liftIO $ putStrLn $ unwords ["ln", srcFile, dstFile]
           mkDirectoryPath dstFile
-          cpFile srcFile  dstFile       -- lnFile replaced by cpFile, vmware volume don't support links
+          lnFile srcFile  dstFile
         where
         srcFile = dir </> listToPath src `addExtension` ext
         dstFile = dir </> listToPath dst `addExtension` ext

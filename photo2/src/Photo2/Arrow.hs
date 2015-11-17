@@ -23,7 +23,7 @@ import           Text.XML.HXT.Core
 import           Text.XML.HXT.Arrow.XmlState.RunIOStateArrow    ( initialState )
 import           Text.XML.HXT.Arrow.XmlState.TypeDefs           ( xioUserState )
 
-import           Text.Regex.XMLSchema.String
+import           Text.Regex.XMLSchema.Generic
 
 -- ------------------------------------------------------------
 
