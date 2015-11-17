@@ -15,7 +15,7 @@ import           Photo2.Arrow
 
 import           Text.XML.HXT.Core
 
-import           Text.Regex.XMLSchema.String
+import           Text.Regex.XMLSchema.Generic
 
 -- ------------------------------------------------------------
 

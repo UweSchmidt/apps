@@ -605,27 +605,6 @@ attrDialog as
                      ) el
           return $ filter (not . null . snd) al
 
-{- old: done in ImageOperations
-
-tableNormalizeAttrs     :: Attrs -> Attrs
-tableNormalizeAttrs
-    = concatMap (uncurry normAttr)
-    where
-    normAttr k v
-        | k == "descr:GoogleMaps"       = normGoogleMaps k v    -- normalize google maps URL
-        | null v                        = []                    -- remove empty fields
-        | otherwise                     = [(k,v)]               -- id
-
-    normGoogleMaps k v
-        | null r'       = []
-        | otherwise     = [(k,v'),("descr:GeoCode", fromMaybe "" . lookup "ll" $ r')]
-                          where
-                          v' = "http://maps.google.com/maps?"
-                               ++
-                               intercalate "&" (map (\ (x,y) -> x ++ "=" ++ y) r')
-                          r' = RE.matchSubex ".*[?&]ll=({ll}[-,.0-9]+)&.*&z=({z}[0-9]+)([^0-9].*)?" v
--}
-    
 tableGetEntries :: Table -> IO [Entry]
 tableGetEntries tbl
     = do

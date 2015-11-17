@@ -174,7 +174,7 @@ toGoogleMaps lat long
   | null lat' || null long'
     = ""
   | otherwise
-    = "https://maps.google.com/maps?ll=" ++ lat' ++ "," ++ long' ++ "&amp;z=" ++ zoom
+    = "https://maps.google.de/maps?ll=" ++ lat' ++ "," ++ long' ++ "&amp;z=" ++ zoom
   where
     zoom  = "17"
     lat'  = degToDecDeg $ lat
