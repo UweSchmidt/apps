@@ -71,8 +71,8 @@ Executable photo2
                     , find-grep-sed          >= 0.1  
                     , filepath               >= 1.2
                     , haskeline              >= 0.6.4
-                    , hxt                    >= 9.1 && < 10
-                    , hxt-regex-xmlschema    >= 9   && < 10
+                    , hxt                    >= 9.1
+                    , hxt-regex-xmlschema    >= 9.2
                     , mtl                    >= 2
                     , old-locale             >= 1
                     , time                   >= 1.4 && < 2
