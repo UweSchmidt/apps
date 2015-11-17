@@ -37,5 +37,6 @@ Executable find-grep-sed
   Main-Is: Find.hs
 
   build-depends: HUnit >= 1.2
+               , find-grep-sed
 
   GHC-Options: -Wall

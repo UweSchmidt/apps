@@ -2,7 +2,7 @@ module Photo2.Arrow
 where
 
 import           Control.DeepSeq
-import           Control.Monad.Except           ( runExceptT )
+import           Control.Monad.Error            ( runErrorT )
 
 import           Data.Function                  ( on )
 import           Data.Function.Selector
@@ -43,7 +43,7 @@ runCmd' cmd out
 
 arrIOE  :: (a -> IOE b) -> CmdArrow a b
 arrIOE io
-    = arrIO (runExceptT . io)
+    = arrIO (runErrorT . io)
       >>>
       ( ( errMsg $< this )
         |||
