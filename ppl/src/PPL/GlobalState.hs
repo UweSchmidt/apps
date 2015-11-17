@@ -1,6 +1,5 @@
 module PPL.GlobalState where
 
-import           Control.Applicative (Applicative (..))
 import           Control.Monad
 
 import           PPL.Instructions

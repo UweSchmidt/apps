@@ -1,6 +1,5 @@
 module PPL.Error where
 
-import           Control.Applicative (Applicative (..))
 import           Control.Monad
 
 data Error a
