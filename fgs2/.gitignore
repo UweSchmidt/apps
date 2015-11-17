@@ -1,3 +1,4 @@
 .sha1
 .md5
 dist/
+.stack-work/
