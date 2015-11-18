@@ -25,10 +25,8 @@ Library
                      , mtl           >= 2.1
                      , transformers  >= 0.3
 
-Executable rws-e-io
+test-suite rws-e-io
+  main-is:             RWSTest.hs
+  type:                exitcode-stdio-1.0
   hs-source-dirs:      .
-
-  Main-Is:             RWSTest.hs
-
-  GHC-Options: -Wall  -fwarn-tabs
-
+  ghc-options:         -Wall  -fwarn-tabs
