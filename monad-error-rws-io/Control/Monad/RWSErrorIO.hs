@@ -1,6 +1,6 @@
 module Control.Monad.RWSErrorIO
     ( module Control.Monad.RWSErrorIO
-    , module Control.Monad.Error
+    , module Control.Monad.Trans.Except
     , module Control.Monad.RWS
     , module Control.Monad
     )
@@ -10,12 +10,12 @@ import Control.Exception        ( SomeException
                                 , try
                                 )
 
-import Control.Monad.Error
+import Control.Monad.Trans.Except
 import Control.Monad.RWS
 import Control.Monad
 
 -- import Data.Monoid
-import System.Cmd               ( rawSystem )
+import System.Process           ( rawSystem )
 import System.Exit
 import System.IO                ( hPutStrLn
                                 , stderr
@@ -23,11 +23,11 @@ import System.IO                ( hPutStrLn
 
 -- ----------------------------------------
 
-type Action r s = ErrorT Msg (RWST r Log s IO)
+type Action r s = ExceptT Msg (RWST r Log s IO)
 
 runAction :: Action r s a -> r -> s -> IO (Either Msg a, s, Log)
 runAction action env0 state0
-    = runRWST (runErrorT action) env0 state0
+    = runRWST (runExceptT action) env0 state0
 
 evalAction :: Action r s a -> r -> s -> IO (Maybe a)
 evalAction action env0 state0
@@ -64,13 +64,10 @@ newtype Msg = Msg String
 unMsg :: Msg -> String
 unMsg (Msg s) = s
 
-instance Error Msg where
-    strMsg = Msg
-
 abort :: Config r => String -> Action r s a
 abort msg
     = do err msg
-         throwError . Msg $ msg
+         throwE . Msg $ msg
 
 -- ----------------------------------------
 
@@ -133,7 +130,7 @@ always x
 
 orElse :: Config r => Action r s a -> Action r s a -> Action r s a
 orElse x1 x2
-    = x1 `catchError` try2
+    = x1 `catchE` try2
     where
       try2 (Msg _s)
           = do -- warn $ "error ignored: " ++ s
@@ -144,7 +141,7 @@ finally x fin
     = ( do res <- x
            fin
            return res
-      ) `catchError` (\ e -> fin >> throwError e)
+      ) `catchE` (\ e -> fin >> throwE e)
 
 guards :: Monad m => m Bool -> m () -> m ()
 guards g x
