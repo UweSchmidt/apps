@@ -7,6 +7,7 @@ import Text.ParserCombinators.Parsec
 
 import Data.Maybe
 import Data.List
+import Data.Set.Simple (mkSet)
 
 allChars :: [Char]
 allChars = ['\0' .. '\255']             -- 8 bit alphabet
@@ -25,14 +26,14 @@ rePrime
       )
       <|>
       ( -- single char wildcard
-        char '.' >> return (REsymset allChars)
+        char '.' >> return (REsymset $ mkSet allChars)
       )
       <|>
       between (char '(') (char ')') reAlt
       <|>
       ( do
         cs <- between (char '[') (char ']') reSymSet
-        return $ REsymset cs
+        return $ REsymset (mkSet cs)
       )
       <?> "simple char"
 

@@ -5,8 +5,7 @@ where
   
 import Automaton.Types (I, Q, NFA', mkNFA)
 
-import Data.Set.Simple (mkSet)
-import Data.List
+import Data.Set.Simple (Set, mkSet, isEmpty, empty, singleton, union, toList)
 
 type Regex = RE
 
@@ -22,10 +21,16 @@ data RE
   | RErepNstar RE Int           -- r1{n,}
   | RErepN2M RE Int Int -- r1{n,m}
   | REopt RE            -- r1 ?
-  | REsymset [I]        -- [abc...]
+  | REsymset (Set I)    -- [abc...]
   | REsymseq [I]        -- "abc"
-  deriving (Read, Show)
+  deriving (Show)
 
+instance Monoid RE where
+  mempty                = REnull
+  
+  mappend REnull re2    = re2
+  mappend re1    REnull = re1
+  mappend re1    re2    = REalt re1 re2
 --
 
 -- estimate the # of states for a given RE
@@ -90,11 +95,9 @@ normalizeForNFA (RErepN2M re n m)
 
 normalizeForNFA (REopt re)      = REalt REepsilon (normalizeForNFA re)
 
-normalizeForNFA (REsymset ss)   = let
-                                  ss' = nub ss
-                                  in if null ss'
-                                     then REnull
-                                     else foldr1 REalt . map REsymbol $ ss'
+normalizeForNFA (REsymset ss)
+  | isEmpty ss                  = REnull
+  | otherwise                   = foldMap REsymbol ss
 
 normalizeForNFA (REsymseq "")   = REepsilon
 
@@ -104,10 +107,10 @@ normalizeForNFA re              = re
 
 -- compute all input symbols used in an R.E.
 
-allSymbols      :: RE -> [I]
-allSymbols (REnull)             = []
-allSymbols (REepsilon)          = []
-allSymbols (REsymbol i)         = [i]
+allSymbols      :: RE -> Set I
+allSymbols (REnull)             = empty
+allSymbols (REepsilon)          = empty
+allSymbols (REsymbol i)         = singleton i
 allSymbols (REseq re1 re2)      = allSymbols re1 `union` allSymbols re2
 allSymbols (REalt re1 re2)      = allSymbols re1 `union` allSymbols re2
 allSymbols (RErep re)           = allSymbols re
@@ -116,29 +119,27 @@ allSymbols (RErepN re _)        = allSymbols re
 allSymbols (RErepNstar re _)    = allSymbols re
 allSymbols (RErepN2M re _ _)    = allSymbols re
 allSymbols (REopt re)           = allSymbols re
-allSymbols (REsymset ss)        = nub ss
-allSymbols (REsymseq ss)        = nub ss
+allSymbols (REsymset ss)        = ss
+allSymbols (REsymseq ss)        = mkSet ss
 
 -- ----------------------------------------
 
-type Delta = Q -> Maybe I -> [Q]
+type Delta = Q -> Maybe I -> Set Q
 
 reToNFA :: RE -> NFA' Q ()
 reToNFA re
   = mkNFA states syms q0 finalStates delta
   where
     states      = [1..lastState]
-    syms        = sort . allSymbols $ re
+    syms        = toList . allSymbols $ re
     q0          = 1
     finalStates = [2]
-    delta q i   = mkSet $ delta'' q i
-    lastState   = fst delta'
-    delta'      = compDelta 1 2 2 (normalizeForNFA re)
-    delta''     = snd delta'
+    (lastState, delta)
+                = compDelta 1 2 2 (normalizeForNFA re)
     
-compDelta       :: Q -> Q -> Q -> RE -> (Q, Q -> Maybe I -> [Q])
+compDelta       :: Q -> Q -> Q -> RE -> (Q, Delta)
 compDelta _s _e mx (REnull)
-    = (mx, \ _q _i -> [])
+    = (mx, \ _q _i -> empty)
 
 compDelta s e mx (REepsilon)
     = (mx, epsilonTrans s e)
@@ -181,11 +182,15 @@ compDelta _ _ _ re
 
 epsilonTrans    :: Q -> Q -> Delta
 epsilonTrans s e
-    = \ q i -> if q == s && i == Nothing  then [e] else []
+    = \ q i -> if q == s && i == Nothing
+               then singleton e
+               else empty
 
 simpleTrans     :: Q -> I -> Q -> Delta
 simpleTrans s c e
-    = \ q i -> if q == s && i == (Just c) then [e] else []
+    = \ q i -> if q == s && i == (Just c)
+               then singleton e
+               else empty
 
 orTrans         :: Delta -> Delta -> Delta
 delta1 `orTrans` delta2
