@@ -28,7 +28,7 @@ import Regex.Parse ( parseRegex )
 
 import System.Console.CmdTheLine
 import System.Console.CmdTheLine.Utils
-import System.FilePath (replaceExtension)
+import System.FilePath ((</>), replaceExtension)
 import System.Exit
 
 -- imports for examples
@@ -74,6 +74,9 @@ data Env
       , theStdErrFlag    :: Bool
       , theName          :: String
       , theRegex         :: String
+      , theDotDir        :: String
+      , thePngDir        :: String
+      , theCodeDir       :: String
       , genNFA           :: (Bool, Bool)
       , genDFASet        :: (Bool, Bool)
       , genDFA           :: (Bool, Bool)
@@ -97,6 +100,9 @@ initEnv
     , theStdErrFlag    = True
     , theName          = ""
     , theRegex         = ""
+    , theDotDir        = "."
+    , thePngDir        = "."
+    , theCodeDir       = "."
     , genNFA           = (True, True)
     , genDFASet        = (True, True)
     , genDFA           = (True, True)
@@ -112,6 +118,7 @@ oAll
     <.> oQuiet
     <.> oName
     <.> oRegex
+    <.> oDotDir <.> oPngDir <.> oCodeDir
     
 -- ----------------------------------------
 --
@@ -148,6 +155,36 @@ oName
             }
   where
     setName n e = e { theName = n }
+
+oDotDir :: Term (Env -> Env)
+oDotDir
+  = fmap setName . value . opt "."
+    $ (optInfo ["dot-dir"])
+            { optName = "DIR"
+            , optDoc = "Output directory for .dot files."
+            }
+  where
+    setName n e = e { theDotDir = n }
+
+oPngDir :: Term (Env -> Env)
+oPngDir
+  = fmap setName . value . opt "."
+    $ (optInfo ["png-dir"])
+            { optName = "DIR"
+            , optDoc = "Output directory for .png files."
+            }
+  where
+    setName n e = e { thePngDir = n }
+
+oCodeDir :: Term (Env -> Env)
+oCodeDir
+  = fmap setName . value . opt "."
+    $ (optInfo ["code-dir"])
+            { optName = "DIR"
+            , optDoc = "Output directory for .hs source code files."
+            }
+  where
+    setName n e = e { thePngDir = n }
 
 oRegex :: Term (Env -> Env)
 oRegex
@@ -303,22 +340,33 @@ dfaMinToDot a
 
 writeDot :: FilePath -> String -> Cmd ()
 writeDot dotFile s
-  = do writeCode dotFile s
-       dotToPng  dotFile
+  = do trc $ "write dot source"
+       trc $ s
+       writeToFile theDotDir dotFile s
+       dotToPng dotFile
 
 writeCode :: FilePath -> String -> Cmd ()
 writeCode out d
-  = do trc $ "write file " ++ show out
+  = do trc $ "write haskell source"
        trc $ d
-       io $ writeFile out d
+       writeToFile theCodeDir out d
+       return ()
+
+writeToFile :: (Env -> FilePath) -> FilePath -> String -> Cmd ()
+writeToFile dir out d
+  = do f <- (</> out) <$> asks dir
+       trc $ "write file " ++ show f
+       io $ writeFile f d
        return ()
 
 dotToPng :: FilePath -> Cmd ()
-dotToPng dotFile
-  = do trc $ unwords ["convert", dotFile, "to", pngFile]
+dotToPng dot
+  = do dotFile <- (</> dot) <$> asks theDotDir
+       pngFile <- (</> png) <$> asks thePngDir
+       trc $ unwords ["convert", dotFile, "to", pngFile]
        RWS.exec "dot" ["-Tpng", "-o" ++ pngFile, dotFile]
   where
-    pngFile = replaceExtension dotFile "png"
+    png = replaceExtension dot "png"
 
 -- ----------------------------------------
 -- test stuff

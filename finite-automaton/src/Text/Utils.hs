@@ -55,6 +55,6 @@ pairsToInterval xs
   = case span (\ (l, u) -> l == u) xs of
      ([], [])       -> []
      ([], (y : ys)) -> Right y : pairsToInterval ys
-     (xs, ys)       -> Left (map fst xs) : pairsToInterval ys
+     (zs, ys)       -> Left (map fst zs) : pairsToInterval ys
 
 -- ----------------------------------------
