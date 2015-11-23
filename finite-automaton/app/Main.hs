@@ -1,45 +1,47 @@
 module Main where
 
-import Automaton.Types ( Q, NFA', DFA')
-import Automaton.Core ( convertNFAtoDFA
+import           Automaton.Types ( Q, NFA', DFA')
+import           Automaton.Core ( convertNFAtoDFA
                       , removeSetsDFA
                       , removeSetsDFAMin
                       , addStateAttr
                       , mapAttr
                       , mapSetAttr
                       )
-import Automaton.GenDot ( GenDotAttr(..)
+import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
                         , genDotDFA
                         )
 
-import Automaton.GenCode (GenCodeSet(..)
+import           Automaton.GenCode (GenCodeSet(..)
                          , GenCodePattern(..)
                          , genCodeNFA'
                          , genCodeDFA'
                          )
-import Control.Monad.RWSErrorIO
-import qualified  Control.Monad.RWSErrorIO as RWS(exec)
+import           Control.Monad.RWSErrorIO
+import qualified Control.Monad.RWSErrorIO as RWS(exec)
 
-import Data.Set.Simple ( Set )
+import           Data.Set.Simple ( Set )
 
-import Regex.Core ( Regex, reToNFA)
-import Regex.Parse ( parseRegex )
+import           Regex.Core ( Regex, statesRE, reToNFA)
+import           Regex.Parse ( parseRegex )
 
-import System.Console.CmdTheLine
-import System.Console.CmdTheLine.Utils
-import System.FilePath ((</>), replaceExtension)
-import System.Exit
+import           System.Console.CmdTheLine
+import           System.Console.CmdTheLine.Utils
+import           System.FilePath ((</>), replaceExtension)
+import           System.Exit
+
+import           Text.Read (readMaybe)
 
 -- imports for examples
-import Automaton.Types (mkDFA, mkNFA, Automaton(..))
+import           Automaton.Types (mkDFA, mkNFA, Automaton(..))
 import Automaton.Core ( convertDFAtoNFA
                       , addAttr
                       , minDFA
                         , scanDFA, scanNFA
                           )
-import Automaton.GenCode ( genCodeDFA, genCodeNFA )
-import Data.Set.Simple (empty, fromList, singleton)
+import           Automaton.GenCode ( genCodeDFA, genCodeNFA )
+import           Data.Set.Simple (empty, fromList, singleton)
 
 -- ----------------------------------------
 
@@ -73,7 +75,7 @@ data Env
       , theErrorFlag     :: Bool
       , theStdErrFlag    :: Bool
       , theName          :: String
-      , theRegex         :: String
+      , theRegex         :: Cmd String
       , theDotDir        :: String
       , thePngDir        :: String
       , theCodeDir       :: String
@@ -82,8 +84,9 @@ data Env
       , genDFA           :: (Bool, Bool)
       , genDFAMinSet     :: (Bool, Bool)
       , genDFAMin        :: (Bool, Bool)
+      , theInputLimit    :: Maybe Int
+      , theRegexLimit    :: Maybe Int
       }
-    deriving (Show)
              
 instance Config Env where
     traceOn   = theTraceFlag
@@ -99,7 +102,7 @@ initEnv
     , theErrorFlag     = True
     , theStdErrFlag    = True
     , theName          = ""
-    , theRegex         = ""
+    , theRegex         = abort "no regex given"
     , theDotDir        = "."
     , thePngDir        = "."
     , theCodeDir       = "."
@@ -108,6 +111,8 @@ initEnv
     , genDFA           = (True, True)
     , genDFAMinSet     = (True, True)
     , genDFAMin        = (True, True)
+    , theInputLimit    = Nothing
+    , theRegexLimit    = Nothing
     }
     
 -- ----------------------------------------
@@ -119,6 +124,7 @@ oAll
     <.> oName
     <.> oRegex
     <.> oDotDir <.> oPngDir <.> oCodeDir
+    <.> oInputLimit
     
 -- ----------------------------------------
 --
@@ -194,7 +200,36 @@ oRegex
             , optDoc = "the regular expression to be converted into an automaton."
             }
   where
-    setRegex r e = e { theRegex = r }
+    setRegex r e
+      = e { theRegex = if null r
+                       then abort "no regex given"
+                       else return r
+          }
+
+oInputLimit :: Term (Env -> Env)
+oInputLimit
+  = convDefaultStringValue "number >= 1 expected" setLimit "0"
+    $ (optInfo ["max-regex-length"])
+            { optName = "NUMBER"
+            , optDoc  = unwords
+                        [ "the maximum length of the string representing the regular expression,"
+                        , "default is \"0\" for no limit."
+                        ]
+            }
+  where
+    setLimit l
+      = fmap f $ readMaybe l
+      where
+        f :: Int -> (Env -> Env)
+        f i = \ e -> e { theInputLimit
+                           = if i > 0
+                             then Just i
+                             else Nothing
+                       , theRegexLimit
+                           = if i > 0
+                             then Just i
+                             else Nothing
+                       }
 
 -- ----------------------------------------
 
@@ -211,15 +246,16 @@ doIt :: Cmd ()
 doIt
     = do n <- asks theName
          trc $ "start processing automaton " ++ show n
-         env <- ask
-         trc $ "environment: " ++ show env
          inp <- asks theRegex
-         pipeline inp
+         xs  <- inp
+         trc ("input is " ++ show xs)
+         pipeline xs
          trc $ "end processing automaton "   ++ show n
 
 pipeline :: String -> Cmd ()
 pipeline
-  = stringToRegex
+  =     checkInputLimit
+    >=> stringToRegex     >=> checkRegexLimit
     >=> regexToNFA        >=> teeToDot nfaToDot
     >=> nfaToDFAset       >=> teeToDot dfaSetToDot
     >=> dfaSetToDFA       >=> teeToDot dfaToDot
@@ -227,7 +263,44 @@ pipeline
     >=> dfaMinSetToDFAMin >=> teeToDot dfaMinToDot
     >=> (return . const ())
     
-    
+checkInputLimit :: String -> Cmd String
+checkInputLimit xs
+  = do l <- asks theInputLimit
+       maybe
+         (return xs)
+         (\ mx ->
+           do trc $ "check input length, limit is " ++ show mx
+              checkLength mx
+         ) l
+  where
+    checkLength mx
+      | null zs   = return ys
+      | otherwise = abort $ "given input to complex, max length is " ++ show mx
+      where
+        (ys, zs) = splitAt mx xs
+
+checkRegexLimit :: Regex -> Cmd Regex
+checkRegexLimit re
+  = do l <- asks theRegexLimit
+       maybe
+         (return re)
+         (\ mx ->
+           do trc $ "check regex size, limit is " ++ show mx
+              checkSize mx
+         ) l
+  where
+    checkSize mx
+      | n <= mx   = return re
+      | otherwise = abort
+                    $ "given regex to complex, size is "
+                      ++ show n
+                      ++ ", max size is "
+                      ++ show mx
+      where
+        n = statesRE re
+
+
+        
 stringToRegex :: String -> Cmd Regex
 stringToRegex xs
   = do trc $ "parse regex: " ++ show xs
@@ -341,14 +414,14 @@ dfaMinToDot a
 writeDot :: FilePath -> String -> Cmd ()
 writeDot dotFile s
   = do trc $ "write dot source"
-       trc $ s
+--       trc $ s
        writeToFile theDotDir dotFile s
        dotToPng dotFile
 
 writeCode :: FilePath -> String -> Cmd ()
 writeCode out d
   = do trc $ "write haskell source"
-       trc $ d
+--       trc $ d
        writeToFile theCodeDir out d
        return ()
 
