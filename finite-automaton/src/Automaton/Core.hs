@@ -134,7 +134,9 @@ minDFA (A qs is q0 fs delta attr)
       | otherwise   = Just q1'
       where
         q1' = toPart $ fromList $ catMaybes $ foldMap (\ x -> [delta x i']) q' 
-        toPart p = lookupSubset p qs'
+        toPart p
+          | isEmpty p = empty
+          | otherwise = lookupSubset p qs'
 
     attr' q'
       = foldMap attr q'
