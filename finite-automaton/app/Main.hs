@@ -1,12 +1,14 @@
 module Main where
 
-import           Automaton.Types ( Q, NFA', DFA')
+import           Automaton.Types ( Q, NFA', DFA', Input)
 import           Automaton.Core ( convertNFAtoDFA
                       , removeSetsDFA
                       , removeSetsDFAMin
                       , addStateAttr
                       , mapAttr
                       , mapSetAttr
+                      , acceptDFA
+                      , acceptNFA
                       )
 import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
@@ -84,6 +86,9 @@ data Env
       , genDFAMin        :: (Bool, Bool)
       , theInputLimit    :: Maybe Int
       , theRegexLimit    :: Maybe Int
+      , acceptWithNFA    :: Maybe String
+      , acceptWithDFA    :: Maybe String
+      , acceptWithDFAMin :: Maybe String
       }
              
 instance Config Env where
@@ -112,6 +117,9 @@ initEnv
     , genDFAMin        = (True, True)
     , theInputLimit    = Nothing
     , theRegexLimit    = Nothing
+    , acceptWithNFA    = Nothing
+    , acceptWithDFA    = Nothing
+    , acceptWithDFAMin = Nothing
     }
     
 -- ----------------------------------------
@@ -122,6 +130,7 @@ oAll
     <.> oQuiet
     <.> oName
     <.> oRegex  <.> oRegexFile
+    <.> oAcceptWithNFA <.> oAcceptWithDFA <.> oAcceptWithDFAMin
     <.> oDotDir <.> oPngDir <.> oCodeDir
     <.> oInputLimit
     
@@ -162,35 +171,18 @@ oName
     setName "" = id
     setName n  = \ e -> e { theName = n }
 
-oDotDir :: Term (Env -> Env)
-oDotDir
-  = fmap setName . value . opt "."
-    $ (optInfo ["dot-dir"])
-            { optName = "DIR"
-            , optDoc = "Output directory for .dot files."
-            }
-  where
-    setName n e = e { theDotDir = n }
+oDotDir, oPngDir, oCodeDir :: Term (Env -> Env)
+oDotDir  = oDir "dot"  ".dot" (\ n e -> e { theDotDir  = n})
+oPngDir  = oDir "png"  ".png" (\ n e -> e { thePngDir  = n})
+oCodeDir = oDir "code" ".hs"  (\ n e -> e { theCodeDir = n}) 
 
-oPngDir :: Term (Env -> Env)
-oPngDir
-  = fmap setName . value . opt "."
-    $ (optInfo ["png-dir"])
+oDir :: String -> String -> (String -> Env -> Env) -> Term (Env -> Env)
+oDir s1 s2 set
+  = fmap set . value . opt "."
+    $ (optInfo [s1 ++ "-dir"])
             { optName = "DIR"
-            , optDoc = "Output directory for .png files."
+            , optDoc = "Output directory for " ++ s2 ++ " source code files."
             }
-  where
-    setName n e = e { thePngDir = n }
-
-oCodeDir :: Term (Env -> Env)
-oCodeDir
-  = fmap setName . value . opt "."
-    $ (optInfo ["code-dir"])
-            { optName = "DIR"
-            , optDoc = "Output directory for .hs source code files."
-            }
-  where
-    setName n e = e { thePngDir = n }
 
 oRegex :: Term (Env -> Env)
 oRegex
@@ -254,6 +246,37 @@ oInputLimit
                              else Nothing
                        }
 
+oAcceptWithDFAMin :: Term (Env -> Env)
+oAcceptWithDFAMin
+  = oAcceptWith "dfamin" "minimal DFA" (\ v e -> e { acceptWithDFAMin = v })
+
+oAcceptWithDFA :: Term (Env -> Env)
+oAcceptWithDFA
+  = oAcceptWith "dfa" "DFA" (\ v e -> e { acceptWithDFA = v })
+
+oAcceptWithNFA :: Term (Env -> Env)
+oAcceptWithNFA
+  = oAcceptWith "nfa" "NFA" (\ v e -> e { acceptWithNFA = v })
+
+oAcceptWith :: String -> String -> (Maybe String -> Env -> Env) -> Term (Env -> Env)
+oAcceptWith s1 s2 set
+  = convStringValue "no input given" (Just . setAccept)
+    $ (optInfo ["accept-" ++ s1])
+            { optName= "WORD"
+            , optDoc  = "Input for a word test with " ++ s2 ++ " constructed from a regex."
+            }
+  where
+    setAccept w = (set (Just w)) . resetGenDot
+
+resetGenDot :: Env -> Env
+resetGenDot e
+  = e { genNFA           = (False, False)
+      , genDFASet        = (False, False)
+      , genDFA           = (False, False)
+      , genDFAMinSet     = (False, False)
+      , genDFAMin        = (False, False)
+      }
+    
 -- ----------------------------------------
 
 type State = ()
@@ -277,11 +300,14 @@ processRegex
   = getTheRegex
     >>= checkInputLimit
     >>= stringToRegex     >>= checkRegexLimit
-    >>= regexToNFA        >>= teeToDot nfaToDot
-    >>= nfaToDFAset       >>= teeToDot dfaSetToDot
-    >>= dfaSetToDFA       >>= teeToDot dfaToDot
-    >>= dfaToDFAMinSet    >>= teeToDot dfaMinSetToDot
-    >>= dfaMinSetToDFAMin >>= teeToDot dfaMinToDot
+    >>= regexToNFA        >>= tee nfaToDot
+                          >>= tee runAcceptNFA
+    >>= nfaToDFAset       >>= tee dfaSetToDot
+    >>= dfaSetToDFA       >>= tee dfaToDot
+                          >>= tee runAcceptDFA
+    >>= dfaToDFAMinSet    >>= tee dfaMinSetToDot
+    >>= dfaMinSetToDFAMin >>= tee dfaMinToDot
+                          >>= tee runAcceptDFAMin
     >>= (return . const ())
 
 getTheRegex :: Cmd String
@@ -381,6 +407,29 @@ dfaMinSetToDFAMin a
 
 -- --------------------
 
+runAcceptNFA :: (Ord q) => NFA' q a -> Cmd ()
+runAcceptNFA = runAcceptAutomaton acceptNFA acceptWithNFA
+
+runAcceptDFA :: (Ord q) => DFA' q a -> Cmd ()
+runAcceptDFA = runAcceptAutomaton acceptDFA acceptWithDFA
+         
+runAcceptDFAMin :: (Ord q) => DFA' q a -> Cmd ()
+runAcceptDFAMin = runAcceptAutomaton acceptDFA acceptWithDFAMin
+
+runAcceptAutomaton :: (Ord q) =>
+                      (Automaton delta q a -> Input -> Bool) ->
+                      (Env -> Maybe String) ->
+                      Automaton delta q a   ->
+                      Cmd ()
+runAcceptAutomaton acceptFct acceptWith a
+  = do word <- asks acceptWith
+       maybe
+         (return ())
+         (\ w -> writeToStdout (acceptFct a w))
+         word
+
+-- --------------------
+
 whenFlag :: (Env -> Bool) -> Cmd () -> Cmd ()
 whenFlag f c
   = do b <- asks f
@@ -397,8 +446,8 @@ withName c
     getDef "" = "unknown"
     getDef n  = n
     
-teeToDot :: (a -> Cmd ()) -> a -> Cmd a
-teeToDot cmd a
+tee :: (a -> Cmd ()) -> a -> Cmd a
+tee cmd a
   = cmd a >> return a
 
 nfaToDot :: (Show a, GenDotAttr a) => NFA' Q a-> Cmd ()
@@ -462,6 +511,11 @@ writeToFile dir out d
        io $ writeFile f d
        return ()
 
+writeToStdout :: (Show a) => a -> Cmd ()
+writeToStdout x
+  = do trc $ "write to stdout " ++ show x
+       io $ putStrLn (show x)
+    
 dotToPng :: FilePath -> Cmd ()
 dotToPng dot
   = do dotFile <- (</> dot) <$> asks theDotDir
