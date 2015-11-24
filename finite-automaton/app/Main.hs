@@ -1,6 +1,6 @@
 module Main where
 
-import           Automaton.Types ( Q, NFA', DFA', Input)
+import           Automaton.Types ( Q, NFA', DFA', Input, Token)
 import           Automaton.Core ( convertNFAtoDFA
                       , removeSetsDFA
                       , removeSetsDFAMin
@@ -9,6 +9,8 @@ import           Automaton.Core ( convertNFAtoDFA
                       , mapSetAttr
                       , acceptDFA
                       , acceptNFA
+                      , scanDFA
+                      , scanNFA
                       )
 import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
@@ -17,6 +19,7 @@ import           Automaton.GenDot ( GenDotAttr(..)
 
 import           Automaton.GenCode ( genCodeNFA'
                                    , genCodeDFA'
+                                   , GenCodePattern(..)
                                    )
 import           Control.Monad.RWSErrorIO
 import qualified Control.Monad.RWSErrorIO as RWS(exec)
@@ -38,8 +41,7 @@ import           Automaton.Types (mkDFA, mkNFA, Automaton(..))
 import Automaton.Core ( convertDFAtoNFA
                       , addAttr
                       , minDFA
-                        , scanDFA, scanNFA
-                          )
+                      )
 import           Automaton.GenCode ( genCodeDFA, genCodeNFA )
 import           Data.Set.Simple (empty, fromList, singleton)
 
@@ -89,6 +91,9 @@ data Env
       , acceptWithNFA    :: Maybe String
       , acceptWithDFA    :: Maybe String
       , acceptWithDFAMin :: Maybe String
+      , scanWithNFA      :: Maybe (Cmd String)
+      , scanWithDFA      :: Maybe (Cmd String)
+      , scanWithDFAMin   :: Maybe (Cmd String)
       }
              
 instance Config Env where
@@ -120,6 +125,9 @@ initEnv
     , acceptWithNFA    = Nothing
     , acceptWithDFA    = Nothing
     , acceptWithDFAMin = Nothing
+    , scanWithNFA      = Nothing
+    , scanWithDFA      = Nothing
+    , scanWithDFAMin   = Nothing
     }
     
 -- ----------------------------------------
@@ -129,9 +137,10 @@ oAll
   = oVerbose
     <.> oQuiet
     <.> oName
-    <.> oRegex  <.> oRegexFile
+    <.> oRegex         <.> oRegexFile
     <.> oAcceptWithNFA <.> oAcceptWithDFA <.> oAcceptWithDFAMin
-    <.> oDotDir <.> oPngDir <.> oCodeDir
+    <.> oScanWithNFA   <.> oScanWithDFA   <.> oScanWithDFAMin
+    <.> oDotDir        <.> oPngDir        <.> oCodeDir
     <.> oInputLimit
     
 -- ----------------------------------------
@@ -246,17 +255,15 @@ oInputLimit
                              else Nothing
                        }
 
-oAcceptWithDFAMin :: Term (Env -> Env)
-oAcceptWithDFAMin
-  = oAcceptWith "dfamin" "minimal DFA" (\ v e -> e { acceptWithDFAMin = v })
 
-oAcceptWithDFA :: Term (Env -> Env)
-oAcceptWithDFA
-  = oAcceptWith "dfa" "DFA" (\ v e -> e { acceptWithDFA = v })
+oAcceptWithNFA, oAcceptWithDFA, oAcceptWithDFAMin :: Term (Env -> Env)
 
-oAcceptWithNFA :: Term (Env -> Env)
 oAcceptWithNFA
   = oAcceptWith "nfa" "NFA" (\ v e -> e { acceptWithNFA = v })
+oAcceptWithDFA
+  = oAcceptWith "dfa" "DFA" (\ v e -> e { acceptWithDFA = v })
+oAcceptWithDFAMin
+  = oAcceptWith "dfamin" "minimal DFA" (\ v e -> e { acceptWithDFAMin = v })
 
 oAcceptWith :: String -> String -> (Maybe String -> Env -> Env) -> Term (Env -> Env)
 oAcceptWith s1 s2 set
@@ -267,6 +274,26 @@ oAcceptWith s1 s2 set
             }
   where
     setAccept w = (set (Just w)) . resetGenDot
+
+
+oScanWithNFA, oScanWithDFA, oScanWithDFAMin :: Term (Env -> Env)
+
+oScanWithNFA
+  = oScanWith "nfa" "NFA" (\ v e -> e { scanWithNFA = v })
+oScanWithDFA
+  = oScanWith "dfa" "DFA" (\ v e -> e { scanWithDFA = v })
+oScanWithDFAMin
+  = oScanWith "dfamin" "minimal DFA" (\ v e -> e { scanWithDFAMin = v })
+
+oScanWith :: String -> String -> (Maybe (Cmd String) -> Env -> Env) -> Term (Env -> Env)
+oScanWith s1 s2 set
+  = convStringValue "no input given" (Just . setScan)
+    $ (optInfo ["scan-" ++ s1])
+            { optName= "WORD"
+            , optDoc  = "Input for a scanner run with " ++ s2 ++ " constructed from a regex."
+            }
+  where
+    setScan w = (set (Just $ return w)) . resetGenDot
 
 resetGenDot :: Env -> Env
 resetGenDot e
@@ -302,12 +329,15 @@ processRegex
     >>= stringToRegex     >>= checkRegexLimit
     >>= regexToNFA        >>= tee nfaToDot
                           >>= tee runAcceptNFA
+                          >>= tee runScanNFA
     >>= nfaToDFAset       >>= tee dfaSetToDot
     >>= dfaSetToDFA       >>= tee dfaToDot
                           >>= tee runAcceptDFA
+                          >>= tee runScanDFA
     >>= dfaToDFAMinSet    >>= tee dfaMinSetToDot
     >>= dfaMinSetToDFAMin >>= tee dfaMinToDot
                           >>= tee runAcceptDFAMin
+                          >>= tee runScanDFAMin
     >>= (return . const ())
 
 getTheRegex :: Cmd String
@@ -425,8 +455,40 @@ runAcceptAutomaton acceptFct acceptWith a
   = do word <- asks acceptWith
        maybe
          (return ())
-         (\ w -> writeToStdout (acceptFct a w))
+         (\ w -> writeToStdout . show $ acceptFct a w)
          word
+
+runScanNFA :: (Ord q, Show q, GenCodePattern (Set q)) => NFA' q a -> Cmd ()
+runScanNFA = runScanAutomaton scanNFA scanWithNFA
+
+runScanDFA :: (Ord q, Show q, GenCodePattern q) => DFA' q a -> Cmd ()
+runScanDFA = runScanAutomaton scanDFA scanWithDFA
+
+runScanDFAMin :: (Ord q, Show q, GenCodePattern q) => DFA' q a -> Cmd ()
+runScanDFAMin = runScanAutomaton scanDFA scanWithDFAMin
+
+runScanAutomaton :: (Ord q, GenCodePattern q1) =>
+                    (Automaton delta q a -> Input -> Either Input [(q1, Token)]) ->
+                    (Env -> Maybe (Cmd String)) ->
+                    Automaton delta q a   ->
+                    Cmd ()
+runScanAutomaton scanFct scanWith a
+  = do mc <- asks scanWith
+       maybe
+         (return ())
+         (\ inp ->
+           do w <- inp
+              writeToStdout $
+                either
+                  ("scanner error " ++)
+                  (unlines
+                   . map (\ (x, t) ->
+                           "(" ++ toPattern x ++ ", " ++ show t ++ ")"
+                         )
+                  )
+                  (scanFct a w)
+         )
+         mc
 
 -- --------------------
 
@@ -511,10 +573,10 @@ writeToFile dir out d
        io $ writeFile f d
        return ()
 
-writeToStdout :: (Show a) => a -> Cmd ()
-writeToStdout x
-  = do trc $ "write to stdout " ++ show x
-       io $ putStrLn (show x)
+writeToStdout :: String -> Cmd ()
+writeToStdout xs
+  = do -- trc $ "write to stdout " ++ xs
+       io $ putStrLn xs
     
 dotToPng :: FilePath -> Cmd ()
 dotToPng dot
