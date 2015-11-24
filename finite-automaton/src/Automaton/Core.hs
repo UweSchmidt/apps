@@ -43,9 +43,9 @@ scanDFA dfa input0
 -- split a single token from an input
                       
 scan1DFA :: Ord q => DFA' q a -> Input -> Tokens q
-scan1DFA (A { startState  = q0
-            , delta       = delta'
-            , finalStates = fs
+scan1DFA (A { _startState  = q0
+            , _delta       = delta'
+            , _finalStates = fs
             }) is
   
   | null is && q0 `member` fs
@@ -62,6 +62,7 @@ scan1DFA (A { startState  = q0
       |     finalState && not longestMatch = symbol (Just curState) nextState
       | not finalState &&     longestMatch = lastFinalState
       | not finalState && not longestMatch = symbol lastFinalState  nextState
+      | otherwise                          = error "the impossible happend"
 
       where
         finalState   = q `member` fs
@@ -96,20 +97,20 @@ renameDFA (f, f1) (A qs is q0 fs delta attr)
       
 convertDFAtoNFA :: DFA' q a -> NFA' q a
 convertDFAtoNFA (A qs is q0 fs delta attr)
-  = A { states         = qs
-      , alphabet       = is
-      , startState     = q0
-      , finalStates    = fs
-      , delta          = delta'
-      , attr           = attr
+  = A { _states         = qs
+      , _alphabet       = is
+      , _startState     = q0
+      , _finalStates    = fs
+      , _delta          = delta'
+      , _attr           = attr
       }
   where
-    delta' q' Nothing  = empty
+    delta' _  Nothing  = empty
     delta' q' (Just i) = maybe empty singleton $
                          delta q' i
 
 removeSetsDFA :: (Eq q) => DFA' (Set q) a -> DFA' Q a
-removeSetsDFA a@(A qs is q0 fs delta attr)
+removeSetsDFA a@(A { _states = qs })
   = renameDFA (f, f1) a
   where
     stateSeq  = zip (toList qs) [1..]
@@ -154,9 +155,9 @@ deltaPart i delta part
     
 deltaPart1 :: (Ord q) => Set q -> I -> (q -> I -> Maybe q) -> Partition q -> Set (Set q)
 deltaPart1 qs i delta part
-  = fromList . elems $ deltaPart
+  = fromList . elems $ deltaP
   where
-    deltaPart = foldMap delta' qs
+    deltaP = foldMap delta' qs
       where
         delta' q'
           = case delta q' i of
@@ -167,12 +168,15 @@ deltaPart1 qs i delta part
               = q1' `lookupSet` part
                 
       
-removeSetsDFAMin :: Ord q => DFA' (Set q) a -> DFA' q a
-removeSetsDFAMin a@(A qs is q0 fs delta attr)
   -- qs is a set of pairwise disjoint sets of numbers
+  -- the smallest number in every set is taken to represent
+  -- the set
+
+removeSetsDFAMin :: Ord q => DFA' (Set q) a -> DFA' q a
+removeSetsDFAMin a@(A { _states = qs })
   = renameDFA (f, f1) a
   where
-    f  s = findMin s
+    f    = findMin
     f1 q = lookupSet q qs
 
 -- ----------------------------------------
@@ -198,9 +202,9 @@ scanNFA nfa input0
                       Right ts  -> Right (t1 ++ ts)
 
 scan1NFA :: Ord q => NFA' q a -> Input -> Tokens (Set q)
-scan1NFA (A { startState  = q0
-            , delta       = delta'
-            , finalStates = fs
+scan1NFA (A { _startState  = q0
+            , _delta       = delta'
+            , _finalStates = fs
             }) is
   
   | null is && not (qs0 `disjoint` fs)
@@ -220,6 +224,7 @@ scan1NFA (A { startState  = q0
       |     finalState && not longestMatch = symbol (Just curState) nextState
       | not finalState &&     longestMatch = lastFinalState
       | not finalState && not longestMatch = symbol lastFinalState  nextState
+      | otherwise                          = error "the impossible happend"
 
       where
         finalState   = not (qs `disjoint` fs)
@@ -268,13 +273,13 @@ scanResToAs f xs = map (\ (qs, t) -> (qsToAs f qs, t)) xs
 -- conversion of a DFA into a NFA
       
 convertNFAtoDFA :: (Ord q, Ord (Set q), Monoid a) => NFA' q a -> DFA' (Set q) a
-convertNFAtoDFA (A qs is q0 fs deltaN attr)
-  = A { states         = qs'
-      , alphabet       = is
-      , startState     = q0'
-      , finalStates    = fs'
-      , delta          = delta'
-      , attr           = attr'
+convertNFAtoDFA (A _qs is q0 fs deltaN attr)
+  = A { _states         = qs'
+      , _alphabet       = is
+      , _startState     = q0'
+      , _finalStates    = fs'
+      , _delta          = delta'
+      , _attr           = attr'
       }
   where
     deltaS = deltaOnSets deltaN
@@ -291,12 +296,12 @@ convertNFAtoDFA (A qs is q0 fs deltaN attr)
         q1s   = map fst . filter (\ p -> i `elem` snd p) $ q'map
            
     deltaMap
-      = genDelta' qs is q0' deltaS
+      = genDelta' is q0' deltaS
 
 genDelta' :: (Ord q) =>
-             Set q -> Set I -> Set q -> (Set q -> I -> Set q) ->
+             Set I -> Set q -> (Set q -> I -> Set q) ->
              Map (Set q) (Map (Set q) (Set I))
-genDelta' qs is q0 delta
+genDelta' is q0 delta
   = states (singleton q0) emptyMap
   where
     states open acc

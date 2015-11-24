@@ -13,11 +13,9 @@ import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotDFA
                         )
 
-import           Automaton.GenCode (GenCodeSet(..)
-                         , GenCodePattern(..)
-                         , genCodeNFA'
-                         , genCodeDFA'
-                         )
+import           Automaton.GenCode ( genCodeNFA'
+                                   , genCodeDFA'
+                                   )
 import           Control.Monad.RWSErrorIO
 import qualified Control.Monad.RWSErrorIO as RWS(exec)
 
@@ -28,7 +26,7 @@ import           Regex.Parse ( parseRegex )
 
 import           System.Console.CmdTheLine
 import           System.Console.CmdTheLine.Utils
-import           System.FilePath ((</>), replaceExtension)
+import           System.FilePath ((</>), replaceExtension, takeFileName, dropExtension)
 import           System.Exit
 
 import           Text.Read (readMaybe)
@@ -94,6 +92,7 @@ instance Config Env where
     errorOn   = theErrorFlag
     stderrOn  = theStdErrFlag
 
+initEnv :: Env
 initEnv
   = Env
     { theProgName      = "finite-automaton"
@@ -122,7 +121,7 @@ oAll
   = oVerbose
     <.> oQuiet
     <.> oName
-    <.> oRegex
+    <.> oRegex  <.> oRegexFile
     <.> oDotDir <.> oPngDir <.> oCodeDir
     <.> oInputLimit
     
@@ -154,13 +153,14 @@ oQuiet
 
 oName :: Term (Env -> Env)
 oName
-  = fmap setName . value . opt ""
+  = convStringValue "name expected" (Just . setName)
     $ (optInfo ["n", "name"])
             { optName = "NAME"
-            , optDoc = "Set the name of the automaton."
+            , optDoc = "The name of the finite automaton."
             }
   where
-    setName n e = e { theName = n }
+    setName "" = id
+    setName n  = \ e -> e { theName = n }
 
 oDotDir :: Term (Env -> Env)
 oDotDir
@@ -197,26 +197,49 @@ oRegex
   = fmap setRegex . value . opt ""
     $ (optInfo ["r", "regex"])
             { optName = "REGEX"
-            , optDoc = "the regular expression to be converted into an automaton."
+            , optDoc  = "The regular expression to be converted into an automaton."
             }
   where
-    setRegex r e
-      = e { theRegex = if null r
-                       then abort "no regex given"
-                       else return r
-          }
+    setRegex "" = id
+    setRegex r  = \ e -> e { theRegex = return r }
 
+oRegexFile :: Term (Env -> Env)
+oRegexFile
+  = convStringValue "file name expected" (Just . setRegex)
+    $ (optInfo ["regex-file"])
+            { optName= "INPUT-FILE"
+            , optDoc  = unwords
+                        [ "Regex is read from a file,"
+                        , "not from the \"--regex\" command line argument,"
+                        , "if INPUT-FILE=\"-\", the regex is read from stdin."
+                        , "If no \"--name\" option is specified and input is"
+                        , "read from a file, the basname of the file is taken as"
+                        , "name of the automaton."
+                        ]
+            }
+  where
+    setRegex ""  = id
+    setRegex "-" = \ e -> e { theRegex = readFromStdin }
+    setRegex fn  = \ e -> e { theRegex = readFromFile fn
+                            , theName  = fnToName (theName e) fn
+                            }
+    fnToName "" fn = dropExtension . takeFileName $ fn
+    fnToName n  _  = n  -- name already set
+    
 oInputLimit :: Term (Env -> Env)
 oInputLimit
-  = convDefaultStringValue "number >= 1 expected" setLimit "0"
+  = convStringValue "number >= 1 expected" setLimit
     $ (optInfo ["max-regex-length"])
             { optName = "NUMBER"
             , optDoc  = unwords
-                        [ "the maximum length of the string representing the regular expression,"
+                        [ "The maximum length of the string representing the regular expression,"
+                        , "and the maximum complexity of the resulting regular expression,"
                         , "default is \"0\" for no limit."
                         ]
             }
   where
+    setLimit ""
+      = Just id
     setLimit l
       = fmap f $ readMaybe l
       where
@@ -244,25 +267,30 @@ type Cmd = Action Env State
 
 doIt :: Cmd ()
 doIt
-    = do n <- asks theName
-         trc $ "start processing automaton " ++ show n
-         inp <- asks theRegex
-         xs  <- inp
-         trc ("input is " ++ show xs)
-         pipeline xs
-         trc $ "end processing automaton "   ++ show n
+    = withName $
+      \ n -> do trc $ "start processing automaton " ++ show n
+                processRegex
+                trc $ "end processing automaton "   ++ show n
 
-pipeline :: String -> Cmd ()
-pipeline
-  =     checkInputLimit
-    >=> stringToRegex     >=> checkRegexLimit
-    >=> regexToNFA        >=> teeToDot nfaToDot
-    >=> nfaToDFAset       >=> teeToDot dfaSetToDot
-    >=> dfaSetToDFA       >=> teeToDot dfaToDot
-    >=> dfaToDFAMinSet    >=> teeToDot dfaMinSetToDot
-    >=> dfaMinSetToDFAMin >=> teeToDot dfaMinToDot
-    >=> (return . const ())
-    
+processRegex :: Cmd ()
+processRegex
+  = getTheRegex
+    >>= checkInputLimit
+    >>= stringToRegex     >>= checkRegexLimit
+    >>= regexToNFA        >>= teeToDot nfaToDot
+    >>= nfaToDFAset       >>= teeToDot dfaSetToDot
+    >>= dfaSetToDFA       >>= teeToDot dfaToDot
+    >>= dfaToDFAMinSet    >>= teeToDot dfaMinSetToDot
+    >>= dfaMinSetToDFAMin >>= teeToDot dfaMinToDot
+    >>= (return . const ())
+
+getTheRegex :: Cmd String
+getTheRegex
+  = do cmd <- asks theRegex
+       xs  <- cmd
+       trc ("regex string is " ++ show xs)
+       return xs
+       
 checkInputLimit :: String -> Cmd String
 checkInputLimit xs
   = do l <- asks theInputLimit
@@ -298,7 +326,6 @@ checkRegexLimit re
                       ++ show mx
       where
         n = statesRE re
-
 
         
 stringToRegex :: String -> Cmd Regex
@@ -365,8 +392,11 @@ whenFlagN f c
                                  
 withName :: (String -> Cmd a) -> Cmd a
 withName c
-  = asks theName >>= c
-
+  = asks (getDef . theName) >>= c
+  where
+    getDef "" = "unknown"
+    getDef n  = n
+    
 teeToDot :: (a -> Cmd ()) -> a -> Cmd a
 teeToDot cmd a
   = cmd a >> return a
@@ -441,6 +471,16 @@ dotToPng dot
   where
     png = replaceExtension dot "png"
 
+readFromStdin :: Cmd String
+readFromStdin
+  = do trc $ "read contents from stdin"
+       io  $ getContents
+
+readFromFile :: FilePath -> Cmd String
+readFromFile fn
+  = do trc $ "read contents from " ++ show fn
+       io $ readFile fn
+    
 -- ----------------------------------------
 -- test stuff
 -- ----------------------------------------
