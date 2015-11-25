@@ -40,6 +40,24 @@ scanDFA dfa input0
                       Left rest -> Left rest
                       Right ts  -> Right (t1 ++ ts)
 
+
+scanDFA' :: Ord q => DFA' q a -> Input -> ([(q, Token)], Input)
+scanDFA' dfa input0
+  = cont input0
+  where
+    cont input
+      = case scan1DFA dfa input of
+         ([], is) -> ([], is)
+         (t1, "") -> (t1, "")
+         (t1, is) -> let (res, rest) = cont is in
+                      (t1 ++ res, rest)
+
+scanDFA'' :: Ord q => DFA' q a -> Input -> ([(a, Token)], Input)
+scanDFA'' dfa@(A { _attr = f }) input
+  = ( map (\ (q, t) -> (f q, t)) qs, is)
+  where
+    (qs, is) = scanDFA' dfa input
+    
 -- split a single token from an input
                       
 scan1DFA :: Ord q => DFA' q a -> Input -> Tokens q
@@ -202,6 +220,23 @@ scanNFA nfa input0
          (t1, is) -> case cont is of
                       Left rest -> Left rest
                       Right ts  -> Right (t1 ++ ts)
+
+scanNFA' :: (Ord q) => NFA' q a -> Input -> ([(Set q, Token)], Input)
+scanNFA' nfa input0
+  = cont input0
+  where
+    cont input
+      = case scan1NFA nfa input of
+         ([], is) -> ([], is)
+         (t1, "") -> (t1, "")
+         (t1, is) -> let (res, rest) = cont is in
+                      (t1 ++ res, rest)
+
+scanNFA'' :: (Ord q, Monoid a) => NFA' q a -> Input -> ([(a, Token)], Input)
+scanNFA'' nfa@(A { _attr = f }) input
+  = ( map (\ (qs, t) -> (foldMap f qs, t)) ts, is)
+  where
+    (ts, is) = scanNFA' nfa input
 
 scan1NFA :: Ord q => NFA' q a -> Input -> Tokens (Set q)
 scan1NFA (A { _startState  = q0

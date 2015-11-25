@@ -162,8 +162,10 @@ genDotAutomaton genEdges name (A qs is _q0 fs delta attr)
 -- --------------------
 
 class GenDotAttr a where
-  genDotAttr :: a -> String
-
+  genDotAttr  :: a -> String
+  genDotAttr' :: a -> String
+  genDotAttr' = genDotAttr
+  
 instance GenDotAttr () where
   genDotAttr = const ""
 
@@ -174,16 +176,16 @@ instance GenDotAttr q => GenDotAttr (Set q) where
   genDotAttr = intercalate "," . foldMap (\ q -> [genDotAttr q])
 
 instance (GenDotAttr a, GenDotAttr b) => GenDotAttr (a, b) where
-  genDotAttr (x1, x2)
-    | null s1   = s2
-    | null s2   = s1
-    | otherwise = s1 ++ "\\n" ++ s2
-    where
-      s1 = genDotAttr x1
-      s2 = genDotAttr x2
-
+  genDotAttr  (x1, x2) = concDotAttr "\\n" (genDotAttr  x1) (genDotAttr  x2)
+  genDotAttr' (x1, x2) = concDotAttr " "   (genDotAttr' x1) (genDotAttr' x2)
+  
 instance GenDotAttr String where
   genDotAttr = id
+
+concDotAttr :: String -> String -> String -> String
+concDotAttr _  "" s2 = s2
+concDotAttr _  s1 "" = s1
+concDotAttr d  s1 s2 = s1 ++ d ++ s2
 
 -- --------------------
 

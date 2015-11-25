@@ -11,6 +11,8 @@ import           Automaton.Core ( convertNFAtoDFA
                       , acceptNFA
                       , scanDFA
                       , scanNFA
+                      , scanDFA''
+                      , scanNFA''
                       )
 import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
@@ -393,10 +395,11 @@ stringToRegex xs
                      return re
          ) $ parseRegex xs
 
-regexToNFA :: Regex -> Cmd (NFA' Q (Q, ()))
+regexToNFA :: Regex -> Cmd (NFA' Q (Set Q, ()))
 regexToNFA re
   = do trc $ "transform regex into NFA"
-       return ( addStateAttr
+       return ( mapSetAttr
+                . addStateAttr
                 . reToNFA
                 $ re
               )
@@ -458,17 +461,17 @@ runAcceptAutomaton acceptFct acceptWith a
          (\ w -> writeToStdout . show $ acceptFct a w)
          word
 
-runScanNFA :: (Ord q, Show q, GenCodePattern (Set q)) => NFA' q a -> Cmd ()
-runScanNFA = runScanAutomaton scanNFA scanWithNFA
+runScanNFA :: (Ord q, Show q, Monoid a, GenDotAttr a) => NFA' q a -> Cmd ()
+runScanNFA = runScanAutomaton scanNFA'' scanWithNFA
 
-runScanDFA :: (Ord q, Show q, GenCodePattern q) => DFA' q a -> Cmd ()
-runScanDFA = runScanAutomaton scanDFA scanWithDFA
+runScanDFA :: (Ord q, Show q, GenDotAttr a) => DFA' q a -> Cmd ()
+runScanDFA = runScanAutomaton scanDFA'' scanWithDFA
 
-runScanDFAMin :: (Ord q, Show q, GenCodePattern q) => DFA' q a -> Cmd ()
-runScanDFAMin = runScanAutomaton scanDFA scanWithDFAMin
+runScanDFAMin :: (Ord q, Show q, GenDotAttr a) => DFA' q a -> Cmd ()
+runScanDFAMin = runScanAutomaton scanDFA'' scanWithDFAMin
 
-runScanAutomaton :: (Ord q, GenCodePattern q1) =>
-                    (Automaton delta q a -> Input -> Either Input [(q1, Token)]) ->
+runScanAutomaton :: (Ord q, GenDotAttr a) =>
+                    (Automaton delta q a -> Input -> ([(a, Token)], Input)) ->
                     (Env -> Maybe (Cmd String)) ->
                     Automaton delta q a   ->
                     Cmd ()
@@ -479,17 +482,20 @@ runScanAutomaton scanFct scanWith a
          (\ inp ->
            do w <- inp
               writeToStdout $
-                either
-                  ("scanner error " ++)
-                  (unlines
-                   . map (\ (x, t) ->
-                           "(" ++ toPattern x ++ ", " ++ show t ++ ")"
-                         )
-                  )
-                  (scanFct a w)
+                toOut (scanFct a w)
          )
          mc
-
+  where
+    toOut (ts, rest)
+      = unlines $
+        map (\ (a, t) ->
+              "(" ++ genDotAttr' a ++ ", " ++ show t ++ ")"
+            ) ts
+        ++ (if null rest
+            then []
+            else ["scanner error: remaining input is " ++ show rest]
+           )                 
+        
 -- --------------------
 
 whenFlag :: (Env -> Bool) -> Cmd () -> Cmd ()
@@ -705,7 +711,7 @@ a8a = removeSetsDFA a7a
 a9 :: DFA' (Set Q) (Set Q, (Set String, ()))
 a9 = minDFA a8
 
-t1 = scanDFA a1 "if id 1 1.0 .0 --x\n"
+t1 = scanDFA'' a1 "if id 1 1.0 .0 --x\n"
 t2 = scanNFA a2 "if id 1 1.0 .0 --x\n"
 t4 = scanNFA a4 "if id 1 123"
 t5 = scanNFA a5 "if id 1 123"
