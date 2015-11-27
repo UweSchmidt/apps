@@ -40,6 +40,10 @@ toListMap :: Map k a -> [(k, a)]
 toListMap (Map m)
   = M.toList m
 
+fromListMap :: Ord k => [(k, a)] -> Map k a
+fromListMap
+  = Map . M.fromList
+
 lookupMap :: Ord k => k -> Map k a -> Maybe a
 lookupMap k (Map m)
   = M.lookup k m

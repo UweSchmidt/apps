@@ -88,6 +88,9 @@ lookupSubset xs xss
 findMin :: Set a -> a
 findMin (Set xs) = head xs
 
+findMax :: Set a -> a
+findMax (Set xs) = last xs
+
 -- ----------------------------------------
                            
 

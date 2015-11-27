@@ -1,6 +1,6 @@
 module Automaton.Types where
 
-import           Data.Set.Simple ( Set, fromList )
+import           Data.Set.Simple ( Set, fromList, empty )
 
 -- ----------------------------------------
 
@@ -50,6 +50,9 @@ mkDFA qs is q0 fs delta'
     qs'             = fromList qs
     fs'             = fromList fs
 
+emptyDFA :: DFA
+emptyDFA = mkDFA [1] "a" 1 [] (const $ const Nothing)
+
 mkNFA :: [Q] -> [I] -> Q -> [Q] -> (Q -> Maybe I -> Set Q) -> NFA
 mkNFA qs is q0 fs delta'
   = A { _states         = qs'
@@ -63,5 +66,8 @@ mkNFA qs is q0 fs delta'
     is'             = fromList is
     qs'             = fromList qs
     fs'             = fromList fs
+
+emptyNFA :: NFA
+emptyNFA = mkNFA [1] "a" 1 [] (const $ const empty)
 
 -- ----------------------------------------

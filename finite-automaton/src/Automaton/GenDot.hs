@@ -98,7 +98,7 @@ genDotAutomaton :: (GenDotAttr a) =>
                    (Set Q -> Set I -> delta -> Prog) ->
                    String ->
                    Automaton delta Q a -> Prog
-genDotAutomaton genEdges name (A qs is _q0 fs delta attr)
+genDotAutomaton genEdges name (A qs is q0 fs delta attr)
   = ( pr ("digraph " ++ name ++ " {")
       +> [ "rankdir=LR;"
          , "fondname=" ++ fontName ++ ";"
@@ -134,7 +134,7 @@ genDotAutomaton genEdges name (A qs is _q0 fs delta attr)
                         , "];"
                         ]
          )
-      ++ pr "Start -> 1;"
+      ++ pr ("Start -> " ++ show q0 ++ ";")
     )
     ++ pr "}"
   where

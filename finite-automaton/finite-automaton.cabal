@@ -18,9 +18,10 @@ library
   exposed-modules:     Regex.Parse
                      , Regex.Core
                      , Automaton.Types
+                     , Automaton.Run
+                     , Automaton.Transform
                      , Automaton.GenCode
                      , Automaton.GenDot
-                     , Automaton.Core
                      , Data.Set.Simple
                      , Data.Map.Simple
                      , Text.Utils

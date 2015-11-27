@@ -1,2 +1,5 @@
 .stack-work/
 png/
+*.png
+*.dot
+*_*.hs

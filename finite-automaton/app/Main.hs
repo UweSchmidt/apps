@@ -1,24 +1,23 @@
 module Main where
 
 import           Automaton.Types ( Q, NFA', DFA', Input, Token)
-import           Automaton.Core ( convertNFAtoDFA
+import           Automaton.Run ( acceptDFA
+                      , acceptNFA
+                      , scanDFA''
+                      , scanNFA''
+                      )
+import           Automaton.Transform ( convertNFAtoDFA
                       , removeSetsDFA
                       , removeSetsDFAMin
                       , addStateAttr
                       , mapAttr
                       , mapSetAttr
-                      , acceptDFA
-                      , acceptNFA
-                      , scanDFA
-                      , scanNFA
-                      , scanDFA''
-                      , scanNFA''
+                      , unionNFA
                       )
 import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
                         , genDotDFA
                         )
-
 import           Automaton.GenCode ( genCodeNFA'
                                    , genCodeDFA'
                                    , GenCodePattern(..)
@@ -40,12 +39,16 @@ import           Text.Read (readMaybe)
 
 -- imports for examples
 import           Automaton.Types (mkDFA, mkNFA, Automaton(..))
-import Automaton.Core ( convertDFAtoNFA
+import           Automaton.Transform ( convertDFAtoNFA
                       , addAttr
                       , minDFA
                       )
 import           Automaton.GenCode ( genCodeDFA, genCodeNFA )
 import           Data.Set.Simple (empty, fromList, singleton)
+
+import           Data.Map.Simple
+import           Data.Set.Simple
+import           Data.Either
 
 -- ----------------------------------------
 
@@ -712,9 +715,9 @@ a9 :: DFA' (Set Q) (Set Q, (Set String, ()))
 a9 = minDFA a8
 
 t1 = scanDFA'' a1 "if id 1 1.0 .0 --x\n"
-t2 = scanNFA a2 "if id 1 1.0 .0 --x\n"
-t4 = scanNFA a4 "if id 1 123"
-t5 = scanNFA a5 "if id 1 123"
+t2 = scanNFA'' a2 "if id 1 1.0 .0 --x\n"
+t4 = scanNFA'' a4 "if id 1 123"
+t5 = scanNFA'' a5 "if id 1 123"
 
 c1 = putStrLn $ genCodeDFA "dfa1" a1
 c2 = putStrLn $ genCodeNFA "dnfa1" a2
@@ -817,3 +820,70 @@ xxx = A qs is q0 fs delta attr
                  -> (5,())
                _ -> error "genCodeAT: illegal arg"
 
+newtype PrioLabel a =
+  PL (Maybe (a, Int))
+  deriving (Eq, Ord, Show)
+
+instance Monoid (PrioLabel a) where
+  mempty = PL Nothing
+  PL Nothing `mappend` p2
+    = p2
+  p1 `mappend` PL Nothing
+    = p1
+  p1@(PL (Just (_, i1))) `mappend` p2@(PL (Just (_, i2)))
+    | i1 <= i2
+        = p1
+    | otherwise
+        = p2
+
+instance GenDotAttr (PrioLabel String) where
+  genDotAttr (PL Nothing) = ""
+  genDotAttr (PL (Just (x, _))) = x
+  
+type Pairs a b = [(a, b)]
+
+mkPrio0 :: PrioLabel a
+mkPrio0 = PL Nothing
+
+mkPrio :: a -> Int -> PrioLabel a
+mkPrio x i
+  = PL $ Just (x, i)
+    
+scanSpecToNFA :: [(a, String)] -> Either String (NFA' Q (Set Q, (PrioLabel a, ())))
+scanSpecToNFA xs
+  | null xs
+      = Left "no scanner spec found"
+  | null es
+      = Right . mapSetAttr . addStateAttr . unionsNFA $ zipWith3 labelNFA ls [1..] as
+  | otherwise
+      = Left $ head es
+  where
+    (ls, rs)
+      = unzip xs
+    (es, as)
+      = partitionEithers $
+        map (fmap reToNFA . parseRegex) rs
+
+    labelNFA x i a@(A {_finalStates = fs, _attr = attr})
+      = addAttr attr' $ a
+      where
+        attr' q
+          | q `member` fs = mkPrio x i
+          | otherwise     = mkPrio0
+
+    unionsNFA
+      = foldl1 unionNFA
+
+spec1
+  = [ ("IF", "if")
+    , ("ID", "[a-z][a-z0-9]*")
+    , ("NUM", "[0-9]+")
+    , ("REAL", "([0-9]+[.][0-9]*)|([.][0-9]+)")
+{-
+    , ("WS", "[ \n\t]+")
+    , ("CMT", "--[a-z]*\n")
+    , ("ERR", ".")
+-- -}      
+    ]
+    
+c11 = putStrLn $ genDotNFA "xxx" $ either error id $ scanSpecToNFA spec1

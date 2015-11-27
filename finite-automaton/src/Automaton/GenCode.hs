@@ -104,7 +104,7 @@ genCodeDeltaNFA :: (Ord q, Show q, GenCodePattern q) =>
 genCodeDeltaNFA qs is delta
   =    genDelta "(Just i)" (pr "_ -> empty") id deltaI
     ++ genDeltaEps deltaEps
-    ++ genDeltaDefault
+    ++ pr "delta _ _ = empty"
     where
       deltaI
         = foldMap (\ q -> [(q, delta1 q)]) qs
@@ -128,10 +128,6 @@ genCodeDeltaNFA qs is delta
         where
           genCase' (q', qs')
             = ("delta " ++ show q' ++ " Nothing" ++ " = ") ++> show' qs'
-
-genDeltaDefault :: Prog
-genDeltaDefault
-  = pr "delta _ _ = Nothing"
 
 genDelta :: (Enum a, Eq a, Show a, GenCodePattern q, Show q, Show q1) =>
             String -> Prog ->
