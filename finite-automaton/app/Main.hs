@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Main where
 
 import           Automaton.Types ( Q, NFA', DFA', Input, Token)
@@ -7,6 +10,7 @@ import           Automaton.Run ( acceptDFA
                       , scanNFA''
                       )
 import           Automaton.Transform ( convertNFAtoDFA
+                      , minDFA'
                       , removeSetsDFA
                       , removeSetsDFAMin
                       , addStateAttr
@@ -82,7 +86,7 @@ data Env
       , theErrorFlag     :: Bool
       , theStdErrFlag    :: Bool
       , theName          :: String
-      , theRegex         :: Cmd String
+      , theInpSpec       :: InpSpec
       , theDotDir        :: String
       , thePngDir        :: String
       , theCodeDir       :: String
@@ -100,7 +104,11 @@ data Env
       , scanWithDFA      :: Maybe (Cmd String)
       , scanWithDFAMin   :: Maybe (Cmd String)
       }
-             
+
+data InpSpec
+  = RegexSpec (Cmd String)
+  | ScannSpec (Cmd String)
+    
 instance Config Env where
     traceOn   = theTraceFlag
     warningOn = theWarningFlag
@@ -116,7 +124,7 @@ initEnv
     , theErrorFlag     = True
     , theStdErrFlag    = True
     , theName          = ""
-    , theRegex         = abort "no regex given"
+    , theInpSpec       = RegexSpec (abort "no regex given")
     , theDotDir        = "."
     , thePngDir        = "."
     , theCodeDir       = "."
@@ -143,6 +151,7 @@ oAll
     <.> oQuiet
     <.> oName
     <.> oRegex         <.> oRegexFile
+    <.> oScanSpec      <.> oScanSpecFile
     <.> oAcceptWithNFA <.> oAcceptWithDFA <.> oAcceptWithDFAMin
     <.> oScanWithNFA   <.> oScanWithDFA   <.> oScanWithDFAMin
     <.> oDotDir        <.> oPngDir        <.> oCodeDir
@@ -207,7 +216,18 @@ oRegex
             }
   where
     setRegex "" = id
-    setRegex r  = \ e -> e { theRegex = return r }
+    setRegex r  = \ e -> e { theInpSpec = RegexSpec (return r) }
+
+oScanSpec :: Term (Env -> Env)
+oScanSpec
+  = fmap setScan . value . opt ""
+    $ (optInfo ["s", "scan-spec"])
+            { optName = "SCANNER-SPEC"
+            , optDoc  = "The scanner spec to be converted into an automaton."
+            }
+  where
+    setScan "" = id
+    setScan r  = \ e -> e { theInpSpec = ScannSpec (return r) }
 
 oRegexFile :: Term (Env -> Env)
 oRegexFile
@@ -219,19 +239,42 @@ oRegexFile
                         , "not from the \"--regex\" command line argument,"
                         , "if INPUT-FILE=\"-\", the regex is read from stdin."
                         , "If no \"--name\" option is specified and input is"
-                        , "read from a file, the basname of the file is taken as"
+                        , "read from a file, the basename of the file is taken as"
                         , "name of the automaton."
                         ]
             }
   where
     setRegex ""  = id
-    setRegex "-" = \ e -> e { theRegex = readFromStdin }
-    setRegex fn  = \ e -> e { theRegex = readFromFile fn
-                            , theName  = fnToName (theName e) fn
+    setRegex "-" = \ e -> e { theInpSpec = RegexSpec readFromStdin }
+    setRegex fn  = \ e -> e { theInpSpec = RegexSpec (readFromFile fn)
+                            , theName    = fnToName  (theName e) fn
                             }
     fnToName "" fn = dropExtension . takeFileName $ fn
     fnToName n  _  = n  -- name already set
-    
+
+oScanSpecFile :: Term (Env -> Env)
+oScanSpecFile
+  = convStringValue "file name expected" (Just . setScan)
+    $ (optInfo ["scan-spec-file"])
+            { optName= "INPUT-FILE"
+            , optDoc  = unwords
+                        [ "The scanner spec is read from a file,"
+                        , "not from the \"--scan-spec\" command line argument,"
+                        , "if INPUT-FILE=\"-\", the spec is read from stdin."
+                        , "If no \"--name\" option is specified and input is"
+                        , "read from a file, the basename of the file is taken as"
+                        , "name of the automaton."
+                        ]
+            }
+  where
+    setScan ""  = id
+    setScan "-" = \ e -> e { theInpSpec = ScannSpec readFromStdin }
+    setScan fn  = \ e -> e { theInpSpec = ScannSpec (readFromFile fn)
+                           , theName    = fnToName  (theName e) fn
+                           }
+    fnToName "" fn = dropExtension . takeFileName $ fn
+    fnToName n  _  = n  -- name already set
+
 oInputLimit :: Term (Env -> Env)
 oInputLimit
   = convStringValue "number >= 1 expected" setLimit
@@ -329,10 +372,7 @@ doIt
 
 processRegex :: Cmd ()
 processRegex
-  = getTheRegex
-    >>= checkInputLimit
-    >>= stringToRegex     >>= checkRegexLimit
-    >>= regexToNFA        >>= tee nfaToDot
+  = processTheInpSpec     >>= tee nfaToDot
                           >>= tee runAcceptNFA
                           >>= tee runScanNFA
     >>= nfaToDFAset       >>= tee dfaSetToDot
@@ -345,12 +385,24 @@ processRegex
                           >>= tee runScanDFAMin
     >>= (return . const ())
 
-getTheRegex :: Cmd String
-getTheRegex
-  = do cmd <- asks theRegex
-       xs  <- cmd
-       trc ("regex string is " ++ show xs)
-       return xs
+processTheInpSpec :: Cmd (NFA' Q (Set Q, (PrioLabel String, ())))
+processTheInpSpec
+  = do inp <- asks theInpSpec
+       case inp of
+        RegexSpec cmd
+          -> processRE cmd
+        ScannSpec cmd
+          -> processSS cmd
+  where
+    processRE cmd
+      = cmd
+        >>= checkInputLimit >>= stringToRegex
+        >>= checkRegexLimit >>= regexToNFA
+
+    processSS cmd
+      = cmd
+        >>= scannerToNFA
+
        
 checkInputLimit :: String -> Cmd String
 checkInputLimit xs
@@ -398,15 +450,27 @@ stringToRegex xs
                      return re
          ) $ parseRegex xs
 
-regexToNFA :: Regex -> Cmd (NFA' Q (Set Q, ()))
+regexToNFA :: Regex -> Cmd (NFA' Q (Set Q, (PrioLabel String, ())))
 regexToNFA re
   = do trc $ "transform regex into NFA"
        return ( mapSetAttr
                 . addStateAttr
+                . addAttr (const mkPrio0)
                 . reToNFA
                 $ re
               )
 
+scannerToNFA :: String ->  Cmd (NFA' Q (Set Q, (PrioLabel String, ())))
+scannerToNFA xs
+  = do trc $ "transform scanner spec into NFA"
+       spec <- maybe
+               (abort "syntax error in scanner spec")
+               return $ readSpec xs
+       either abort return $ scanSpecToNFA spec
+  where
+    readSpec :: String -> Maybe [(String, String)]
+    readSpec = readMaybe
+    
 nfaToDFAset :: (Ord a, Monoid a1) => NFA' Q (a, a1) -> Cmd (DFA' Q (Set a, a1))
 nfaToDFAset a
   = do trc $ "transform NFA into DFA with state sets as labels"
@@ -424,14 +488,20 @@ dfaSetToDFA a
                 $ a
               )
 
-dfaToDFAMinSet :: (Ord a, Monoid a1) => DFA' Q (a, a1) -> Cmd (DFA' Q (Set a, a1))
+dfaToDFAMinSet :: (Ord a, Monoid a1, Ord a2) =>
+                  DFA' Q (a, (PrioLabel a2 , a1)) -> Cmd (DFA' Q (Set a, (PrioLabel a2, a1)))
 dfaToDFAMinSet a
   = do trc $ "minimize DFA into min DFA with sets as states"
        return ( removeSetsDFAMin    -- state sets -> numbers
-                . minDFA
+                . minA
                 . mapSetAttr        -- make attr a monoid with `union`
                 $ a
               )
+  where
+    minA a@(A {_attr = f})
+      = minDFA' part a
+      where
+        part q = fmap fst . unPrioLabel . fst . snd $ f q
 
 dfaMinSetToDFAMin :: DFA' Q (a, a1) -> Cmd (DFA' Q (Q, a1))
 dfaMinSetToDFAMin a
@@ -821,7 +891,7 @@ xxx = A qs is q0 fs delta attr
                _ -> error "genCodeAT: illegal arg"
 
 newtype PrioLabel a =
-  PL (Maybe (a, Int))
+  PL { unPrioLabel :: Maybe (a, Int) }
   deriving (Eq, Ord, Show)
 
 instance Monoid (PrioLabel a) where
@@ -848,7 +918,15 @@ mkPrio0 = PL Nothing
 mkPrio :: a -> Int -> PrioLabel a
 mkPrio x i
   = PL $ Just (x, i)
-    
+{-
+scannerToNFA :: String ->  Either String (NFA' Q (Set Q, (PrioLabel String, ())))
+scannerToNFA
+  = either Left scanSpecToNFA . readSpec
+  where
+    readSpec :: String -> Either String [(String, String)]
+    readSpec
+      = maybe (Left "syntax error in scanner spec") Right . readMaybe
+-- -}       
 scanSpecToNFA :: [(a, String)] -> Either String (NFA' Q (Set Q, (PrioLabel a, ())))
 scanSpecToNFA xs
   | null xs

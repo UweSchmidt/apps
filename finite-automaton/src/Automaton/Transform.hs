@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Automaton.Transform where
 
 import Automaton.Types
@@ -101,10 +104,20 @@ removeSetsDFA a@(A { _states = qs })
 type Partition q = Set (Set q)
 
 minDFA :: (Ord q, Monoid a) => DFA' q a -> DFA' (Set q) a
-minDFA (A qs is q0 fs delta attr)
+minDFA = minDFA' (const ())
+
+-- in a scanner the final states must be partitioned
+-- with respect to the token detected (ID, IF, ..)
+-- so states labeled with the token symbol are'nt equivalent
+
+minDFA' :: (Ord q, Monoid a, Ord a1) =>
+           (q -> a1) ->   -- partition function for final states
+           DFA' q a -> DFA' (Set q) a
+minDFA' pf (A qs is q0 fs delta attr)
   = A qs' is q0' fs' delta' attr'
   where
-    qs' = minPart (fromList [fs, qs `difference` fs])
+    prt = insert (qs `difference` fs) $ partitionBy pf fs
+    qs' = minPart prt
     q0' = lookupSet q0 qs'
     fs' = filterSet (`isSubsetOf` fs) qs'
 

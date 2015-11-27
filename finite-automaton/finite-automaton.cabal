@@ -23,7 +23,10 @@ library
                      , Automaton.GenCode
                      , Automaton.GenDot
                      , Data.Set.Simple
+                     , Data.Set.Simple.Core
+                     , Data.Set.Simple.Partitions
                      , Data.Map.Simple
+                     , Data.Map.Simple.Core
                      , Text.Utils
 
   build-depends:       base >= 4.7 && < 5
