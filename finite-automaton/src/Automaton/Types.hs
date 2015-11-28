@@ -53,8 +53,8 @@ mkDFA qs is q0 fs delta'
 emptyDFA :: DFA
 emptyDFA = mkDFA [1] "a" 1 [] (const $ const Nothing)
 
-mkNFA :: [Q] -> [I] -> Q -> [Q] -> (Q -> Maybe I -> Set Q) -> NFA
-mkNFA qs is q0 fs delta'
+mkNFA :: [Q] -> [I] -> Q -> [Q] -> (Q -> Maybe I -> [Q]) -> NFA
+mkNFA qs is q0 fs delta
   = A { _states         = qs'
       , _alphabet       = is'
       , _startState     = q0
@@ -66,8 +66,9 @@ mkNFA qs is q0 fs delta'
     is'             = fromList is
     qs'             = fromList qs
     fs'             = fromList fs
+    delta' q i      = fromList $ delta q i
 
 emptyNFA :: NFA
-emptyNFA = mkNFA [1] "a" 1 [] (const $ const empty)
+emptyNFA = mkNFA [1] "a" 1 [] (const $ const [])
 
 -- ----------------------------------------

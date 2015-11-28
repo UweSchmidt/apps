@@ -3,9 +3,9 @@ where
 
 -- TODO: rewrite [I] as Set I
   
-import Automaton.Types (I, Q, NFA', mkNFA)
+import Automaton.Types (I, Q, NFA', Automaton(..))
 
-import Data.Set.Simple (Set, mkSet, isEmpty, empty, singleton, union, toList)
+import Data.Set.Simple (Set, mkSet, isEmpty, empty, singleton, union, fromList)
 
 type Regex = RE
 
@@ -128,14 +128,15 @@ type Delta = Q -> Maybe I -> Set Q
 
 reToNFA :: RE -> NFA' Q ()
 reToNFA re
-  = mkNFA states syms q0 finalStates delta
+  = A states syms q0 finalStates delta attr
   where
-    states      = [1..lastState]
-    syms        = toList . allSymbols $ re
+    states      = fromList [1..lastState]
+    syms        = allSymbols $ re
     q0          = 1
-    finalStates = [2]
+    finalStates = singleton 2
     (lastState, delta)
                 = compDelta 1 2 2 (normalizeForNFA re)
+    attr        = const ()
     
 compDelta       :: Q -> Q -> Q -> RE -> (Q, Delta)
 compDelta _s _e mx (REnull)

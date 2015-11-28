@@ -243,6 +243,9 @@ addAttr f (A qs is q0 fs delta attr)
 addStateAttr :: Automaton delta q a -> Automaton delta q (q, a)
 addStateAttr = addAttr id
 
+addStateSetAttr :: Automaton delta q a -> Automaton delta q (Set q, a)
+addStateSetAttr = mapSetAttr . addStateAttr
+
 mapAttr :: (a -> a1) -> Automaton delta q a -> Automaton delta q a1
 mapAttr f (A qs is q0 fs delta attr)
   = A qs is q0 fs delta attr'

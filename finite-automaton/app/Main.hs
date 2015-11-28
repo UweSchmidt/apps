@@ -16,7 +16,6 @@ import           Automaton.Transform ( convertNFAtoDFA
                       , addStateAttr
                       , mapAttr
                       , mapSetAttr
-                      , unionNFA
                       )
 import           Automaton.GenDot ( GenDotAttr(..)
                         , genDotNFA
@@ -24,12 +23,15 @@ import           Automaton.GenDot ( GenDotAttr(..)
                         )
 import           Automaton.GenCode ( genCodeNFA'
                                    , genCodeDFA'
-                                   , GenCodePattern(..)
                                    )
+import           Automaton.ScanSpec (PrioLabel(thePrioLabel), mkPrio0, scanSpecToNFA)
+
 import           Control.Monad.RWSErrorIO
 import qualified Control.Monad.RWSErrorIO as RWS(exec)
 
+import           Data.List ( intercalate )
 import           Data.Set.Simple ( Set )
+import           Data.Maybe
 
 import           Regex.Core ( Regex, statesRE, reToNFA)
 import           Regex.Parse ( parseRegex )
@@ -50,9 +52,11 @@ import           Automaton.Transform ( convertDFAtoNFA
 import           Automaton.GenCode ( genCodeDFA, genCodeNFA )
 import           Data.Set.Simple (empty, fromList, singleton)
 
-import           Data.Map.Simple
-import           Data.Set.Simple
-import           Data.Either
+-- import           Data.Map.Simple
+-- import           Data.Set.Simple
+-- import           Data.Either
+
+import Examples
 
 -- ----------------------------------------
 
@@ -108,6 +112,9 @@ data Env
 data InpSpec
   = RegexSpec (Cmd String)
   | ScannSpec (Cmd String)
+  | ExampleA  (NFA' Q (Set Q, (PrioLabel String, ())))
+  | ExampleS  [(String, String)]
+  | ExampleR  String
     
 instance Config Env where
     traceOn   = theTraceFlag
@@ -152,6 +159,7 @@ oAll
     <.> oName
     <.> oRegex         <.> oRegexFile
     <.> oScanSpec      <.> oScanSpecFile
+    <.> oExample
     <.> oAcceptWithNFA <.> oAcceptWithDFA <.> oAcceptWithDFAMin
     <.> oScanWithNFA   <.> oScanWithDFA   <.> oScanWithDFAMin
     <.> oDotDir        <.> oPngDir        <.> oCodeDir
@@ -275,6 +283,47 @@ oScanSpecFile
     fnToName "" fn = dropExtension . takeFileName $ fn
     fnToName n  _  = n  -- name already set
 
+oExample :: Term (Env -> Env)
+oExample
+  = convStringValue "example automaton not found" setEx
+    $ (optInfo ["example"])
+            { optName= "EXAMPLE"
+            , optDoc  = unwords $
+                        [ "Select a builtin example,"
+                        , "examples are"
+                        , intercalate ", "
+                          ( map (show . fst) nfaExamples
+                            ++ map (show . fst) reExamples
+                            ++ map (show . fst) scanExamples
+                          )
+                        , "."
+                        ]
+            }
+  where
+    setEx ""  = Just id
+    setEx en
+      | isJust nfa
+          = Just $
+            \ e -> e { theInpSpec = ExampleA (fromJust nfa)
+                     , theName    = en
+                     }
+      | isJust scn
+          = Just $
+            \ e -> e { theInpSpec = ExampleS (fromJust scn)
+                     , theName    = en
+                     }
+      | isJust rex
+          = Just $
+            \ e -> e { theInpSpec = ExampleR (fromJust rex)
+                     , theName    = en
+                     }
+      | otherwise
+          = Nothing
+      where
+        nfa = lookup en nfaExamples
+        scn = lookup en scanExamples
+        rex = lookup en reExamples
+
 oInputLimit :: Term (Env -> Env)
 oInputLimit
   = convStringValue "number >= 1 expected" setLimit
@@ -393,6 +442,13 @@ processTheInpSpec
           -> processRE cmd
         ScannSpec cmd
           -> processSS cmd
+        ExampleA nfa
+          -> return nfa
+        ExampleS spec
+          -> either abort return $
+             scanSpecToNFA spec
+        ExampleR rex
+          -> processRE (return rex)
   where
     processRE cmd
       = cmd
@@ -466,7 +522,8 @@ scannerToNFA xs
        spec <- maybe
                (abort "syntax error in scanner spec")
                return $ readSpec xs
-       either abort return $ scanSpecToNFA spec
+       either abort return $
+         scanSpecToNFA spec
   where
     readSpec :: String -> Maybe [(String, String)]
     readSpec = readMaybe
@@ -501,7 +558,7 @@ dfaToDFAMinSet a
     minA a@(A {_attr = f})
       = minDFA' part a
       where
-        part q = fmap fst . unPrioLabel . fst . snd $ f q
+        part q = fmap fst . thePrioLabel . fst . snd $ f q
 
 dfaMinSetToDFAMin :: DFA' Q (a, a1) -> Cmd (DFA' Q (Q, a1))
 dfaMinSetToDFAMin a
@@ -746,10 +803,9 @@ a1 = mkDFA qs is q0 f delta
     
 a2 = convertDFAtoNFA a1
 
-a4 = mkNFA qs is q0 f delta'
+a4 = mkNFA qs is q0 f delta
   where
     (qs, is, q0, f, delta) = nfa4
-    delta' q i = fromList $ delta q i
 
 a5 = addAttr a4Label a4
   where
@@ -890,67 +946,6 @@ xxx = A qs is q0 fs delta attr
                  -> (5,())
                _ -> error "genCodeAT: illegal arg"
 
-newtype PrioLabel a =
-  PL { unPrioLabel :: Maybe (a, Int) }
-  deriving (Eq, Ord, Show)
-
-instance Monoid (PrioLabel a) where
-  mempty = PL Nothing
-  PL Nothing `mappend` p2
-    = p2
-  p1 `mappend` PL Nothing
-    = p1
-  p1@(PL (Just (_, i1))) `mappend` p2@(PL (Just (_, i2)))
-    | i1 <= i2
-        = p1
-    | otherwise
-        = p2
-
-instance GenDotAttr (PrioLabel String) where
-  genDotAttr (PL Nothing) = ""
-  genDotAttr (PL (Just (x, _))) = x
-  
-type Pairs a b = [(a, b)]
-
-mkPrio0 :: PrioLabel a
-mkPrio0 = PL Nothing
-
-mkPrio :: a -> Int -> PrioLabel a
-mkPrio x i
-  = PL $ Just (x, i)
-{-
-scannerToNFA :: String ->  Either String (NFA' Q (Set Q, (PrioLabel String, ())))
-scannerToNFA
-  = either Left scanSpecToNFA . readSpec
-  where
-    readSpec :: String -> Either String [(String, String)]
-    readSpec
-      = maybe (Left "syntax error in scanner spec") Right . readMaybe
--- -}       
-scanSpecToNFA :: [(a, String)] -> Either String (NFA' Q (Set Q, (PrioLabel a, ())))
-scanSpecToNFA xs
-  | null xs
-      = Left "no scanner spec found"
-  | null es
-      = Right . mapSetAttr . addStateAttr . unionsNFA $ zipWith3 labelNFA ls [1..] as
-  | otherwise
-      = Left $ head es
-  where
-    (ls, rs)
-      = unzip xs
-    (es, as)
-      = partitionEithers $
-        map (fmap reToNFA . parseRegex) rs
-
-    labelNFA x i a@(A {_finalStates = fs, _attr = attr})
-      = addAttr attr' $ a
-      where
-        attr' q
-          | q `member` fs = mkPrio x i
-          | otherwise     = mkPrio0
-
-    unionsNFA
-      = foldl1 unionNFA
 
 spec1
   = [ ("IF", "if")
