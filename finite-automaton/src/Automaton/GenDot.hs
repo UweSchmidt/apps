@@ -12,6 +12,8 @@ import Data.Map.Simple
 
 import Text.Utils
 
+import Debug.Trace(traceShow)
+
 -- ----------------------------------------
 
 genDotDFA :: (GenDotAttr a) =>
@@ -56,7 +58,10 @@ genDotDeltaNFA qs is delta
     ++ genDEps deltaEps
   where
     delta1 q
-      = toListMap $ foldr (\ (i, q') m -> insertMap q' [i] m) emptyMap ips
+      = toListMap $
+        foldr (\ (i, qs') m ->
+                foldr (\ q' m' -> insertMap q' (singleton i) m') m qs'
+              ) emptyMap ips
       where
         ips = foldMap ( \ i -> case delta q (Just i) of
                                 qs' | isEmpty qs' -> []
@@ -71,18 +76,19 @@ genDotDeltaNFA qs is delta
           | isEmpty qs' = []
           | otherwise   = [(q', qs')]
                           
-    genDotDN ::[(Q, [(Set Q, [I])])] -> Prog
+    genDotDN ::[(Q, [(Q, Set I)])] -> Prog
     genDotDN qmap
-      = concatMap genDot1 qmap
+      = traceShow qmap $
+        concatMap genDot1 qmap
       where
-        genDot1 (q, qsis)
-          = concatMap genDot11 qsis
+        genDot1 (q, qis)
+          = concatMap genDot11 qis
           where
-            genDot11 (qs1, is')
-              = foldMap genDot111 qs1
-              where
-                genDot111 q1
-                  = pr (show q ++ " -> " ++ show q1 ++ " [label=\"" ++ genDotInterval is' ++ "\"];")
+            genDot11 (q1, is')
+              = pr (show q ++ " -> " ++
+                    show q1 ++ " [label=\"" ++
+                    genDotInterval (toList is') ++ "\"];"
+                   )
 
     genDEps
       = concatMap genCase'
