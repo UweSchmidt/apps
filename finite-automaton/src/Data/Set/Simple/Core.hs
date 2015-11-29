@@ -16,7 +16,7 @@ instance Ord a => Monoid (Set a) where
   mappend = union
 
 instance Show a => Show (Set a) where
-  show (Set xs) = "fromList " ++ show xs
+  show (Set xs) = "{" ++ show xs ++ "}"
   
 mkSet :: Ord a => [a] -> Set a
 mkSet = Set . L.sort

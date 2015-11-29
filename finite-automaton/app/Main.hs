@@ -191,9 +191,9 @@ oName
     setName n  = \ e -> e { theName = n }
 
 oDotDir, oImgDir, oCodeDir :: Term (Env -> Env)
-oDotDir  = oDir "dot"  ".dot" (\ n e -> e { theDotDir  = n})
-oImgDir  = oDir "png"  ".png" (\ n e -> e { theImgDir  = n})
-oCodeDir = oDir "code" ".hs"  (\ n e -> e { theCodeDir = n}) 
+oDotDir  = oDir "dot"  ".dot"          (\ n e -> e { theDotDir  = n})
+oImgDir  = oDir "img"  ".png and .svg" (\ n e -> e { theImgDir  = n})
+oCodeDir = oDir "code" ".hs"           (\ n e -> e { theCodeDir = n}) 
 
 oDir :: String -> String -> (String -> Env -> Env) -> Term (Env -> Env)
 oDir s1 s2 set

@@ -23,11 +23,13 @@ scanExamples
     , ("scan3", scan3)
     ]
 
+scan1 :: [(String, String)]
 scan1
   = [ ("IF", "if")
     , ("ID", "[a-z][a-z0-9]*")
     ]
 
+scan2 :: [(String, String)]
 scan2
   = [ ("IF", "if")
     , ("ID", "[a-z][a-z0-9]*")
@@ -35,6 +37,7 @@ scan2
     , ("REAL", "([0-9]+[.][0-9]*)|([.][0-9]+)")
     ]
 
+scan3 :: [(String, String)]
 scan3
   = [ ("IF", "if")
     , ("ID", "[a-z][a-z0-9]*")

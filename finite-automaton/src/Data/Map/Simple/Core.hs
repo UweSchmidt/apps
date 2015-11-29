@@ -12,6 +12,9 @@ instance (Ord k, Monoid v) => Monoid (Map k v) where
   mempty = emptyMap
   mappend = unionMap
 
+instance (Show k, Show v) => Show (Map k v) where
+  show (Map m) = "{" ++ show (M.toList m) ++ "}"
+
 emptyMap :: Map k v
 emptyMap
   = Map M.empty

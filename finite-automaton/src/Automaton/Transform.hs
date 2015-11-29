@@ -284,12 +284,14 @@ genDelta' is q0 delta
       | isEmpty open
           = acc
       | otherwise
-          = states open' (acc `unionMap` acc1)
+          = states open' acc'
       where
-        acc1   = foldMap stateMap open
-        closed = keys acc1
-        
-        open' = (mconcat . map keys $ elems acc1) `difference` closed
+        acc'  = foldMap stateMap open
+                `unionMap` acc
+                
+        open' = (mconcat . map keys $ elems acc')
+                `difference`
+                keys acc'
         
         stateMap q = singletonMap q nextMap
           where
