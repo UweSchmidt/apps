@@ -19,11 +19,14 @@ import Data.Maybe
 -- union of two NFA's
 
 unionNFA :: Monoid a => NFA' Q a -> NFA' Q a -> NFA' Q a
+unionNFA a1 a2 = unionsNFA [a1, a2]
+
+{-
 unionNFA (A qs1 is1 q01 fs1 delta1 attr1) a2'@(A {_states = qs2'})
   = A qs  is  q0  fs  delta  attr
   where
     A qs2 is2 q02 fs2 delta2 attr2
-      = renameAutomaton ((+ shift2), (+(-shift2))) a2'
+      = shiftStatesAutomaton shift2 a2'
       where
         shift2
           = findMax qs1 + 1 - findMin qs2'
@@ -47,7 +50,66 @@ unionNFA (A qs1 is1 q01 fs1 delta1 attr1) a2'@(A {_states = qs2'})
     
     maxqs1 = findMax qs1
     maxqs2 = findMax qs2
+-- -}
+
+unionsNFA :: Monoid a => [NFA' Q a] -> NFA' Q a
+unionsNFA
+  = uni . disjointAutomatons (q0 + 1)
+  where
+    q0 = 0
     
+    uni []
+      = error "unionsNFA: empty list"
+    uni [a]
+      = a
+    uni as
+      = A qs is q0 fs delta attr
+      where
+        qs = q0 `insert` foldMap _states   as
+        is =             foldMap _alphabet as
+        fs =             foldMap _finalStates as
+    
+        delta
+          = foldr buildDelta delta0 as
+          where
+            buildDelta a acc
+              = \ q' i' ->
+                 if q' `member` _states a
+                 then _delta a q' i'
+                 else acc q' i'
+                   
+            delta0 q' Nothing
+              | q' == q0
+                  = foldMap (singleton . _startState) as
+            delta0 _q _i
+                  = empty
+            
+        attr
+          = foldr buildAttr (const mempty) as
+          where
+            buildAttr a acc
+              = \ q' ->
+                 ( if q' `member` _states a
+                   then _attr a
+                   else acc
+                 ) q'
+            
+disjointAutomatons :: (Functor f) =>
+                      Q ->
+                      [Automaton (Q -> i -> f Q) Q a] ->
+                      [Automaton (Q -> i -> f Q) Q a]
+disjointAutomatons
+  = shiftStates
+  where
+    shiftStates _     []
+      = []
+    shiftStates start (a : as)
+      = a' : shiftStates start' as
+      where
+        minq   =     findMin (_states a )
+        a'     = shiftStatesAutomaton (start - minq) a
+        start' = 1 + findMax (_states a')
+
 
 -- renameNFA :: Eq q => (q -> q1, q1 -> q) -> NFA' q a -> NFA' q1 a
 
@@ -75,6 +137,13 @@ renameAutomaton (f, f1) (A qs is q0 fs delta attr)
     isBijection = (fmap f1 . fmap f $ qs) == qs
 
 
+shiftStatesAutomaton :: (Functor f) =>
+                        Int ->
+                        Automaton (Q -> i -> f Q) Q a ->
+                        Automaton (Q -> i -> f Q) Q a
+shiftStatesAutomaton n
+  = renameAutomaton ((+ n), (+ (-n)))
+    
 -- (trivial) conversion of a DFA into a NFA
       
 convertDFAtoNFA :: DFA' q a -> NFA' q a

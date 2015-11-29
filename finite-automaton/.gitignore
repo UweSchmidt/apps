@@ -3,3 +3,4 @@ png/
 *.png
 *.dot
 *_*.hs
+*.svg

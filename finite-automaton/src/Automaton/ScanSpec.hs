@@ -9,7 +9,7 @@ import Automaton.Transform
          ( addStateAttr
          , addAttr
          , mapSetAttr
-         , unionNFA
+         , unionsNFA
          )
 import Automaton.GenDot ( GenDotAttr(..) )
 
@@ -89,8 +89,5 @@ scanSpecToNFA xs
         attr' q
           | q `member` fs = mkPrio x i
           | otherwise     = mkPrio0
-
-    unionsNFA
-      = foldl1 unionNFA
 
 -- ----------------------------------------

@@ -103,6 +103,7 @@ genDotAutomaton genEdges name (A qs is q0 fs delta attr)
       +> [ "rankdir=LR;"
          , "fondname=" ++ fontName ++ ";"
          , "fontsize=" ++ show fontSizeG ++ ";"
+         , "nodesep=.2;"
          ]
       ++ nl
       ++ ( "node " ++> [ "[fontname=" ++ fontName
@@ -153,9 +154,9 @@ genDotAutomaton genEdges name (A qs is q0 fs delta attr)
               = ", label=\"" ++ genDotAttr (attr q) ++ "\""
         
     fontName  = "Courier"
-    fontSizeG = 18::Int
+    fontSizeG = 10::Int
 --  fontSizeN = 18::Int
-    fontSizeE = 14::Int
+    fontSizeE = 10::Int
     color     = "steelblue"
     fillColor = "lightgrey"
 
