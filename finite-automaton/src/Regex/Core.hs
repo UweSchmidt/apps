@@ -1,8 +1,6 @@
 module Regex.Core
 where
 
--- TODO: rewrite [I] as Set I
-  
 import Automaton.Types (I, Q, NFA', Automaton(..))
 
 import Data.Set.Simple (Set, mkSet, isEmpty, empty, singleton, union, fromList)
@@ -131,12 +129,20 @@ reToNFA re
   = A states syms q0 finalStates delta attr
   where
     states      = fromList [1..lastState]
-    syms        = allSymbols $ re
+    syms
+      | isEmpty allSyms
+                = singleton 'x'
+      | otherwise
+                =allSyms
+      where
+        allSyms = allSymbols re
+        
     q0          = 1
     finalStates = singleton 2
     (lastState, delta)
                 = compDelta 1 2 2 (normalizeForNFA re)
     attr        = const ()
+
     
 compDelta       :: Q -> Q -> Q -> RE -> (Q, Delta)
 compDelta _s _e mx (REnull)
