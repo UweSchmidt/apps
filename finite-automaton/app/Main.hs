@@ -105,7 +105,7 @@ data InpSpec
   | ScannSpec (Cmd String)
   | ExampleA  (NFA' Q (Set Q, (PrioLabel String, ())))
   | ExampleS  [(String, String)]
-  | ExampleR  String
+  | ExampleR  Regex
     
 instance Config Env where
     traceOn   = theTraceFlag
@@ -474,7 +474,7 @@ processTheInpSpec
           -> either abort return $
              scanSpecToNFA spec
         ExampleR rex
-          -> processRE (return rex)
+          -> regexToNFA rex
   where
     processRE cmd
       = cmd

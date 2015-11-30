@@ -9,10 +9,11 @@ import Automaton.Types
 import Automaton.Transform
 import Automaton.ScanSpec
 
-import Control.Arrow ((***))
+import Regex.Core
+import Regex.Parse ( parseRegex )
 
 import Data.Set.Simple
-import Data.List (intercalate)
+-- import Data.List (intercalate)
 
 -- ----------------------------------------
 
@@ -48,17 +49,85 @@ scan3
     , ("ERR", ".")
     ]
 
+{-
 scanToRe :: [(String, String)] -> String
 scanToRe
   = intercalate "|" . map (par . snd)
   where
     par xs = "(" ++ xs ++ ")"
+-- -}
 
-reExamples :: [(String, String)]
+reExamples :: [(String, Regex)]
 reExamples
-  = map (rename *** scanToRe) scanExamples
+  = zipWith (\ i r -> ("re" ++ show i, r)) [(1::Int)..] $
+    [ REnull
+    , REepsilon
+    , a
+    , REsymset $ fromList "abc"
+    , REsymseq "abc"
+    , RErep a
+    , RErep1 a
+    , REopt a
+    , REalt aa' aaa'                          -- (aa)*|(aaa)*
+
+    , REalt REepsilon (REalt aa'' aaa'')      -- |(aa)+|(aaa)+
+
+    , foldr1 REseq [ RErep c                  -- c*a(a|c)*b(a|b|c)*
+                   , a
+                   , RErep (REalt a c)
+                   , b
+                   , RErep (REalt a (REalt b c))
+                   ]
+                                                -- ((b|c)*a(b|c)*a)*(b|c)*
+    , REseq (RErep (foldr1 REseq [ bc', a, bc', a])) bc'
+
+                                                -- if|<identifier>
+    , REalt (REsymseq "if") ident
+
+                                                -- if|then|else|<identifier>
+    , foldr1 REalt (map REsymseq [ "if"
+                                   , "then"
+                                   , "else"] ++ [ident])
+
+    , foldr1 REalt (map REsymseq [ "if"
+                                 , "then"
+                                 , "else"
+                                 , "while"
+                                 , "do"
+                                 , "for"
+                                 , "to"
+                                 , "begin"
+                                 , "end"
+                                 ] ++ [ident, num])
+    ]
+    ++
+    exs
   where
-    rename = ("regex" ++) . drop 4
+    a           = REsymbol 'a'
+    b           = REsymbol 'b'
+    c           = REsymbol 'c'
+    bc          = REsymset $ fromList "bc"
+    bc'         = RErep bc
+    aa'         = RErep (REsymseq "aa")         -- (aa)*
+    aaa'        = RErep (REsymseq "aaa")        -- (aaa)*
+    aa''        = RErep1 (REsymseq "aa")        -- (aa)+
+    aaa''       = RErep1 (REsymseq "aaa")       -- (aaa)+
+    ident       = REseq
+                  (REsymset $ fromList ['a'..'z'])
+                  (RErep (REsymset $ fromList (['a'..'z'] ++ ['0'..'9'])))
+    num         = RErep1 (REsymset $ fromList "0123456789")
+
+exs     :: [RE]
+exs
+    = map (either (error "syntax error in builtin regex") id . parseRegex)
+      [ "(aa)*|(aaa)*"
+      , "|(aa)+|(aaa)+"
+      , "if|then|else|[a-z][a-z0-9]*"
+      , "|a|bb"
+      , "/[*]([^*]|[*]+[^/*])*[*]+/"            -- C comment
+      , "/-([/0]|-+0)*-+/"                      -- /-0000-0----0----/ (simple form of C comment)
+      , "((b|c)*a(b|c)*a)*(b|c)*"
+      ]
 
 -- ----------------------------------------
 
