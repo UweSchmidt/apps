@@ -12,16 +12,21 @@ import Data.Map.Simple
 
 import Text.Utils
 
-import Debug.Trace(traceShow)
+-- import Debug.Trace(traceShow)
+
+-- ----------------------------------------
+
+type DotFlags = ((Int, Int), String)
 
 -- ----------------------------------------
 
 genDotDFA :: (GenDotAttr a) =>
+             DotFlags ->
              String ->
              DFA' Q a -> String
-genDotDFA name 
+genDotDFA flags name 
   = unlines .
-    genDotAutomaton genDotDeltaDFA name
+    genDotAutomaton flags genDotDeltaDFA name
 
 genDotDeltaDFA :: Set Q -> Set I -> (Q -> I -> Maybe Q) -> Prog
 genDotDeltaDFA qs is delta
@@ -46,11 +51,12 @@ genDotDeltaDFA qs is delta
               = pr (show q ++ " -> " ++ show q1 ++ " [label=\"" ++ genDotInterval is' ++ "\"];")
 
 genDotNFA :: (GenDotAttr a) =>
+             DotFlags ->
              String ->
              NFA' Q a -> String
-genDotNFA name 
+genDotNFA flags name 
   = unlines .
-    genDotAutomaton genDotDeltaNFA name
+    genDotAutomaton flags genDotDeltaNFA name
 
 genDotDeltaNFA :: Set Q -> Set I -> (Q -> Maybe I -> Set Q) -> Prog
 genDotDeltaNFA qs is delta
@@ -78,8 +84,7 @@ genDotDeltaNFA qs is delta
                           
     genDotDN ::[(Q, [(Q, Set I)])] -> Prog
     genDotDN qmap
-      = traceShow qmap $
-        concatMap genDot1 qmap
+      = concatMap genDot1 qmap
       where
         genDot1 (q, qis)
           = concatMap genDot11 qis
@@ -101,15 +106,17 @@ genDotDeltaNFA qs is delta
                     ++ " [label=\"e\", fontname=Symbol, fontcolor=red];")
 
 genDotAutomaton :: (GenDotAttr a) =>
+                   DotFlags ->
                    (Set Q -> Set I -> delta -> Prog) ->
                    String ->
                    Automaton delta Q a -> Prog
-genDotAutomaton genEdges name (A qs is q0 fs delta attr)
+genDotAutomaton ((fontSizeG, fontSizeE), cssRef) genEdges name (A qs is q0 fs delta attr)
   = ( pr ("digraph " ++ name ++ " {")
       +> [ "rankdir=LR;"
          , "fondname=" ++ fontName ++ ";"
          , "fontsize=" ++ show fontSizeG ++ ";"
          , "nodesep=.2;"
+         , "stylesheet=\"" ++ cssRef ++ "\";"
          ]
       ++ nl
       ++ ( "node " ++> [ "[fontname=" ++ fontName
@@ -160,9 +167,6 @@ genDotAutomaton genEdges name (A qs is q0 fs delta attr)
               = ", label=\"" ++ genDotAttr (attr q) ++ "\""
         
     fontName  = "Courier"
-    fontSizeG = 10::Int
---  fontSizeN = 18::Int
-    fontSizeE = 10::Int
     color     = "steelblue"
     fillColor = "lightgrey"
 

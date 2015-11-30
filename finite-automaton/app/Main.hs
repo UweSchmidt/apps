@@ -18,10 +18,11 @@ import           Automaton.Transform ( convertNFAtoDFA
                       , mapAttr
                       , mapSetAttr
                       )
-import           Automaton.GenDot ( GenDotAttr(..)
-                        , genDotNFA
-                        , genDotDFA
-                        )
+import           Automaton.GenDot ( DotFlags
+                                  , GenDotAttr(..)
+                                  , genDotNFA
+                                  , genDotDFA
+                                  )
 import           Automaton.GenCode ( genCodeNFA'
                                    , genCodeDFA'
                                    )
@@ -65,7 +66,7 @@ autoInfo :: TermInfo
 autoInfo
   = defTI
     { termName = "finite-automaton"
-    , version  = "0.1.0.0"
+    , version  = "0.1.1.0"
     }
 
 -- ----------------------------------------
@@ -95,6 +96,8 @@ data Env
       , scanWithNFA      :: Maybe (Cmd String)
       , scanWithDFA      :: Maybe (Cmd String)
       , scanWithDFAMin   :: Maybe (Cmd String)
+      , dotFontSize      :: (Int,Int)
+      , dotCssRef        :: String
       }
 
 data InpSpec
@@ -136,6 +139,8 @@ initEnv
     , scanWithNFA      = Nothing
     , scanWithDFA      = Nothing
     , scanWithDFAMin   = Nothing
+    , dotFontSize      = (10, 10)
+    , dotCssRef        = "automaton.css"
     }
     
 -- ----------------------------------------
@@ -152,6 +157,7 @@ oAll
     <.> oScanWithNFA   <.> oScanWithDFA   <.> oScanWithDFAMin
     <.> oDotDir        <.> oImgDir        <.> oCodeDir
     <.> oInputLimit
+    <.> oFontSize      <.> oCssRef
     
 -- ----------------------------------------
 --
@@ -341,6 +347,38 @@ oInputLimit
                        }
 
 
+oFontSize :: Term (Env -> Env)
+oFontSize
+  = convStringValue "two comma separated numbers expected" setFontSize
+    $ (optInfo ["font-size"])
+            { optName ="NUMBER,NUMBER"
+            , optDoc  = unwords
+                        [ "Specify the font size in points for nodes and edges, default is"
+                        , show "10,10"
+                        , "."
+                        ]
+            }
+  where
+    setFontSize ""
+      = Just id
+    setFontSize s
+      = fmap f . readMaybe $ "(" ++ s ++ ")"
+      where
+        f :: (Int, Int) -> (Env -> Env)
+        f p = \ e -> e { dotFontSize = p }
+
+oCssRef :: Term (Env -> Env)
+oCssRef
+  = fmap setRef . value . opt ""
+    $ (optInfo ["css-ref"])
+            { optName = "HREF"
+            , optDoc  = "Specify a css style file for svg output with dot."
+            }
+  where
+    setRef "" = id
+    setRef r  = \ e -> e { dotCssRef = r }
+
+        
 oAcceptWithNFA, oAcceptWithDFA, oAcceptWithDFAMin :: Term (Env -> Env)
 
 oAcceptWithNFA
@@ -631,6 +669,12 @@ withName c
   where
     getDef "" = "unknown"
     getDef n  = n
+
+withDotFlags :: (DotFlags -> Cmd a) -> Cmd a
+withDotFlags c
+  = do fs <- asks dotFontSize
+       cs <- asks dotCssRef
+       c (fs, cs)
     
 tee :: (a -> Cmd ()) -> a -> Cmd a
 tee cmd a
@@ -639,7 +683,8 @@ tee cmd a
 nfaToDot :: (Show a, GenDotAttr a) => NFA' Q a-> Cmd ()
 nfaToDot a
   = do whenFlagN (fst . genNFA) $
-         \ n -> writeDot  (n ++ ".nfa.dot") (genDotNFA n a)
+         \ n -> withDotFlags $
+                \ fs -> writeDot  (n ++ ".nfa.dot") (genDotNFA fs n a)
 
        whenFlagN (snd . genNFA) $
          \ n -> writeCode (n ++ "_nfa.hs") (genCodeNFA' "Q" "(Q, ())" n a)
@@ -647,7 +692,8 @@ nfaToDot a
 dfaSetToDot :: (Show a, GenDotAttr a) => DFA' Q a -> Cmd ()
 dfaSetToDot a
   = do whenFlagN (fst . genDFASet) $
-         \ n -> writeDot  (n ++ ".dfa.set.dot") (genDotDFA n a)
+         \ n -> withDotFlags $
+                \ fs -> writeDot  (n ++ ".dfa.set.dot") (genDotDFA fs n a)
 
        whenFlagN (snd . genDFASet) $
          \ n -> writeCode (n ++ "_dfa_set.hs") (genCodeDFA' "Q" "(Set Q, ())" n a)
@@ -655,7 +701,8 @@ dfaSetToDot a
 dfaToDot :: (Show a, GenDotAttr a) => DFA' Q a-> Cmd ()
 dfaToDot a
   = do whenFlagN (fst . genDFA) $
-         \ n -> writeDot  (n ++ ".dfa.dot") (genDotDFA n a)
+         \ n -> withDotFlags $
+                \ fs -> writeDot  (n ++ ".dfa.dot") (genDotDFA fs n a)
 
        whenFlagN (snd . genDFASet) $
          \ n -> writeCode (n ++ "_dfa.hs") (genCodeDFA' "Q" "(Q, ())" n a)
@@ -663,7 +710,8 @@ dfaToDot a
 dfaMinSetToDot :: (Show a, GenDotAttr a) => DFA' Q a-> Cmd ()
 dfaMinSetToDot a
   = do whenFlagN (fst . genDFAMinSet) $
-         \ n -> writeDot  (n ++ ".dfa.min.set.dot") (genDotDFA n a)
+         \ n -> withDotFlags $
+                \ fs -> writeDot  (n ++ ".dfa.min.set.dot") (genDotDFA fs n a)
 
        whenFlagN (snd . genDFAMinSet) $
          \ n -> writeCode (n ++ "_dfa_min_set.hs") (genCodeDFA' "Q" "a" n a)
@@ -671,7 +719,8 @@ dfaMinSetToDot a
 dfaMinToDot :: (Show a, GenDotAttr a) => DFA' Q a -> Cmd ()
 dfaMinToDot a
   = do whenFlagN (fst . genDFAMin) $
-         \ n -> writeDot  (n ++ ".dfa.min.dot") (genDotDFA n a)
+         \ n -> withDotFlags $
+                \ fs -> writeDot  (n ++ ".dfa.min.dot") (genDotDFA fs n a)
 
        whenFlagN (snd . genDFAMin) $
          \ n -> writeCode (n ++ "_dfa_min.hs") (genCodeDFA' "Q" "a" n a)
