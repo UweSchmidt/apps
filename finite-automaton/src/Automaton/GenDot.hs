@@ -30,25 +30,15 @@ genDotDFA flags name
 
 genDotDeltaDFA :: Set Q -> Set I -> (Q -> I -> Maybe Q) -> Prog
 genDotDeltaDFA qs is delta
-  = genDotDD (foldMap (\ q -> [(q, delta1 q)]) qs)
+  = genDotDelta (foldMap (\ q -> [(q, delta1 q)]) qs)
   where
     delta1 q
-      = toListMap $ foldr (\ (i, q') m -> insertMap q' [i] m) emptyMap ips
+      = toListMap $ foldr (\ (i, q') m -> insertMap q' (singleton i) m) emptyMap ips
       where
         ips = foldMap (\ i -> case delta q i of
                         Nothing -> []
                         Just q' -> [(i, q')]
                       ) is
-
-    genDotDD ::[(Q, [(Q, [I])])] -> Prog
-    genDotDD qmap
-      = concatMap genDot1 qmap
-      where
-        genDot1 (q, qis)
-          = concatMap genDot11 qis
-          where
-            genDot11 (q1, is')
-              = pr (show q ++ " -> " ++ show q1 ++ " [label=\"" ++ genDotInterval is' ++ "\"];")
 
 genDotNFA :: (GenDotAttr a) =>
              DotFlags ->
@@ -60,7 +50,7 @@ genDotNFA flags name
 
 genDotDeltaNFA :: Set Q -> Set I -> (Q -> Maybe I -> Set Q) -> Prog
 genDotDeltaNFA qs is delta
-  = genDotDN (foldMap (\ q -> [(q, delta1 q)]) qs)
+  = genDotDelta (foldMap (\ q -> [(q, delta1 q)]) qs)
     ++ genDEps deltaEps
   where
     delta1 q
@@ -82,19 +72,6 @@ genDotDeltaNFA qs is delta
           | isEmpty qs' = []
           | otherwise   = [(q', qs')]
                           
-    genDotDN ::[(Q, [(Q, Set I)])] -> Prog
-    genDotDN qmap
-      = concatMap genDot1 qmap
-      where
-        genDot1 (q, qis)
-          = concatMap genDot11 qis
-          where
-            genDot11 (q1, is')
-              = pr (show q ++ " -> " ++
-                    show q1 ++ " [label=\"" ++
-                    genDotInterval (toList is') ++ "\"];"
-                   )
-
     genDEps
       = concatMap genCase'
       where
@@ -169,6 +146,19 @@ genDotAutomaton ((fontSizeG, fontSizeE), cssRef) genEdges name (A qs is q0 fs de
     fontName  = "Courier"
     color     = "steelblue"
     fillColor = "lightgrey"
+
+genDotDelta ::[(Q, [(Q, Set I)])] -> Prog
+genDotDelta qmap
+      = concatMap genDot1 qmap
+      where
+        genDot1 (q, qis)
+          = concatMap genDot11 qis
+          where
+            genDot11 (q1, is')
+              = pr (show q ++ " -> " ++
+                    show q1 ++ " [label=\"" ++
+                    genDotInterval (toList is') ++ "\"];"
+                   )
 
 -- --------------------
 
