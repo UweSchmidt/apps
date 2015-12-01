@@ -22,6 +22,7 @@ import           Automaton.GenDot ( DotFlags
                                   , GenDotAttr(..)
                                   , genDotNFA
                                   , genDotDFA
+                                  , genTabDFA
                                   )
 import           Automaton.GenCode ( genCodeNFA'
                                    , genCodeDFA'
@@ -45,7 +46,7 @@ import           System.Exit
 
 import           Text.Read (readMaybe)
 
-import Examples
+import           Examples
 
 -- ----------------------------------------
 
@@ -82,12 +83,14 @@ data Env
       , theInpSpec       :: InpSpec
       , theDotDir        :: String
       , theImgDir        :: String
+      , theTabDir        :: String
       , theCodeDir       :: String
       , genNFA           :: (Bool, Bool)
       , genDFASet        :: (Bool, Bool)
       , genDFA           :: (Bool, Bool)
       , genDFAMinSet     :: (Bool, Bool)
       , genDFAMin        :: (Bool, Bool)
+      , genDFASetTab     :: Bool
       , theInputLimit    :: Maybe Int
       , theRegexLimit    :: Maybe Int
       , acceptWithNFA    :: Maybe String
@@ -125,12 +128,14 @@ initEnv
     , theInpSpec       = RegexSpec (abort "no regex given")
     , theDotDir        = "."
     , theImgDir        = "."
+    , theTabDir        = "."
     , theCodeDir       = "."
     , genNFA           = (True, True)
     , genDFASet        = (True, True)
     , genDFA           = (True, True)
     , genDFAMinSet     = (True, True)
     , genDFAMin        = (True, True)
+    , genDFASetTab     = True
     , theInputLimit    = Nothing
     , theRegexLimit    = Nothing
     , acceptWithNFA    = Nothing
@@ -150,14 +155,15 @@ oAll
   = oVerbose
     <.> oQuiet
     <.> oName
-    <.> oRegex         <.> oRegexFile
-    <.> oScanSpec      <.> oScanSpecFile
+    <.> oRegex           <.> oRegexFile
+    <.> oScanSpec        <.> oScanSpecFile
     <.> oExample
-    <.> oAcceptWithNFA <.> oAcceptWithDFA <.> oAcceptWithDFAMin
-    <.> oScanWithNFA   <.> oScanWithDFA   <.> oScanWithDFAMin
-    <.> oDotDir        <.> oImgDir        <.> oCodeDir
+    <.> oAcceptWithNFA   <.> oAcceptWithDFA   <.> oAcceptWithDFAMin
+    <.> oScanWithNFA     <.> oScanWithDFA     <.> oScanWithDFAMin
+    <.> oScanFileWithNFA <.> oScanFileWithDFA <.> oScanFileWithDFAMin 
+    <.> oDotDir          <.> oImgDir          <.> oTabDir           <.> oCodeDir
     <.> oInputLimit
-    <.> oFontSize      <.> oCssRef
+    <.> oFontSize        <.> oCssRef
     
 -- ----------------------------------------
 --
@@ -196,9 +202,10 @@ oName
     setName "" = id
     setName n  = \ e -> e { theName = n }
 
-oDotDir, oImgDir, oCodeDir :: Term (Env -> Env)
+oDotDir, oImgDir, oTabDir, oCodeDir :: Term (Env -> Env)
 oDotDir  = oDir "dot"  ".dot"          (\ n e -> e { theDotDir  = n})
 oImgDir  = oDir "img"  ".png and .svg" (\ n e -> e { theImgDir  = n})
+oTabDir  = oDir "tab"  ".tab"          (\ n e -> e { theTabDir  = n})
 oCodeDir = oDir "code" ".hs"           (\ n e -> e { theCodeDir = n}) 
 
 oDir :: String -> String -> (String -> Env -> Env) -> Term (Env -> Env)
@@ -223,7 +230,7 @@ oRegex
 oScanSpec :: Term (Env -> Env)
 oScanSpec
   = fmap setScan . value . opt ""
-    $ (optInfo ["s", "scan-spec"])
+    $ (optInfo ["scan-spec"])
             { optName = "SCANNER-SPEC"
             , optDoc  = "The scanner spec to be converted into an automaton."
             }
@@ -401,14 +408,13 @@ oAcceptWith s1 s2 set
 
 oScanWithNFA, oScanWithDFA, oScanWithDFAMin :: Term (Env -> Env)
 
-oScanWithNFA
-  = oScanWith "nfa" "NFA" (\ v e -> e { scanWithNFA = v })
-oScanWithDFA
-  = oScanWith "dfa" "DFA" (\ v e -> e { scanWithDFA = v })
-oScanWithDFAMin
-  = oScanWith "dfamin" "minimal DFA" (\ v e -> e { scanWithDFAMin = v })
+oScanWithNFA    = oScanWith "nfa"    "NFA"         (\ v e -> e { scanWithNFA = v })
+oScanWithDFA    = oScanWith "dfa"    "DFA"         (\ v e -> e { scanWithDFA = v })
+oScanWithDFAMin = oScanWith "dfamin" "minimal DFA" (\ v e -> e { scanWithDFAMin = v })
 
-oScanWith :: String -> String -> (Maybe (Cmd String) -> Env -> Env) -> Term (Env -> Env)
+oScanWith :: String -> String ->
+             (Maybe (Cmd String) -> Env -> Env) ->
+             Term (Env -> Env)
 oScanWith s1 s2 set
   = convStringValue "no input given" (Just . setScan)
     $ (optInfo ["scan-" ++ s1])
@@ -416,7 +422,31 @@ oScanWith s1 s2 set
             , optDoc  = "Input for a scanner run with " ++ s2 ++ " constructed from a regex."
             }
   where
-    setScan w = (set (Just $ return w)) . resetGenDot
+    setScan w = set (Just $ return w) . resetGenDot
+
+
+oScanFileWithNFA, oScanFileWithDFA, oScanFileWithDFAMin :: Term (Env -> Env)
+
+oScanFileWithNFA    = oScanWithFile "nfa"    (\ v e -> e { scanWithNFA = v })
+oScanFileWithDFA    = oScanWithFile "dfa"    (\ v e -> e { scanWithDFA = v })
+oScanFileWithDFAMin = oScanWithFile "dfamin" (\ v e -> e { scanWithDFAMin = v })
+
+oScanWithFile :: String ->
+                 (Maybe (Cmd String) -> Env -> Env) ->
+                 Term (Env -> Env)
+oScanWithFile s1 set
+  = convStringValue "file name expected" (Just . setScan)
+    $ (optInfo ["scan-" ++ s1 ++ "-file"])
+            { optName= "INPUT-FILE"
+            , optDoc  = unwords
+                        [ "The input for a scanner run is read from a file."
+                        , "If INPUT-FILE=\"-\", the input is read from stdin."
+                        ]
+            }
+  where
+    setScan ""  = id
+    setScan "-" = set (Just readFromStdin) . resetGenDot
+    setScan fn  = set (Just $ readFromFile fn) . resetGenDot
 
 resetGenDot :: Env -> Env
 resetGenDot e
@@ -425,6 +455,7 @@ resetGenDot e
       , genDFA           = (False, False)
       , genDFAMinSet     = (False, False)
       , genDFAMin        = (False, False)
+      , genDFASetTab     = False
       }
     
 -- ----------------------------------------
@@ -451,6 +482,7 @@ processRegex
                           >>= tee runAcceptNFA
                           >>= tee runScanNFA
     >>= nfaToDFAset       >>= tee dfaSetToDot
+                          >>= tee dfaSetToTab
     >>= dfaSetToDFA       >>= tee dfaToDot
                           >>= tee runAcceptDFA
                           >>= tee runScanDFA
@@ -698,6 +730,11 @@ dfaSetToDot a
        whenFlagN (snd . genDFASet) $
          \ n -> writeCode (n ++ "_dfa_set.hs") (genCodeDFA' "Q" "(Set Q, ())" n a)
 
+dfaSetToTab :: DFA' Q (Set (Set Q), a) -> Cmd ()
+dfaSetToTab a
+  = do whenFlagN genDFASetTab $
+         \ n -> writeTab  (n ++ ".dfa.set.tab") (genTabDFA a)
+
 dfaToDot :: (Show a, GenDotAttr a) => DFA' Q a-> Cmd ()
 dfaToDot a
   = do whenFlagN (fst . genDFA) $
@@ -732,11 +769,17 @@ writeDot dotFile s
        writeToFile theDotDir dotFile s
        dotToPng dotFile
 
+writeTab :: FilePath -> String -> Cmd ()
+writeTab tabFile s
+  = do trc $ "write delta table as XML table"
+       trc $ s
+       writeToFile theTabDir tabFile s
+
 writeCode :: FilePath -> String -> Cmd ()
-writeCode out d
+writeCode codeFile d
   = do trc $ "write haskell source"
 --       trc $ d
-       writeToFile theCodeDir out d
+       writeToFile theCodeDir codeFile d
        return ()
 
 writeToFile :: (Env -> FilePath) -> FilePath -> String -> Cmd ()

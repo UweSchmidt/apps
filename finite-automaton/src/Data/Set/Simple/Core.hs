@@ -57,6 +57,9 @@ card (Set as) = length as
 union :: Ord a => Set a -> Set a -> Set a
 union (Set s1) (Set s2) = mkSet $ s1 `L.union` s2 
 
+unions :: Ord a => Set (Set a) -> Set a
+unions = foldMap id
+
 intersect :: Ord a => Set a -> Set a -> Set a
 intersect (Set s1) (Set s2) = mkSet $ s1 `L.intersect` s2 
 

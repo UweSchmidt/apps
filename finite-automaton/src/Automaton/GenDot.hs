@@ -6,7 +6,7 @@ module Automaton.GenDot where
 
 import Automaton.Types (DFA', NFA', I, Q, Automaton(A))
 
-import Data.List       (intercalate)
+import Data.List (intercalate)
 import Data.Set.Simple
 import Data.Map.Simple
 
@@ -20,6 +20,50 @@ type DotFlags = ((Int, Int), String)
 
 -- ----------------------------------------
 
+genTabDFA :: DFA' Q (Set (Set Q), a) -> String
+genTabDFA (A qs is _q0 _fs delta attr)
+  = unlines $
+    pr "<statetransition2>"
+    ++ genDotDeltaDFA' genTabDelta qs is delta
+    ++ pr "</statetransition2>"
+  where
+    genTabDelta qmap
+      = concatMap genTab1 qmap
+      where
+        genTab1 (q, qis)
+          = concatMap genTab11 qis
+          where
+            genTab11 (q1, is')
+              = pr . concat $
+                [ "<delta2"
+                , " q0="
+                , quote (show q)
+                , " q0s="
+                , attr' q
+                , " c="
+                , quote (genTabInterval $ toList is')
+                , " q1="
+                , quote (show q1)
+                , " q1s="
+                , attr' q1
+                , ">"
+                ]
+              where
+                quote s
+                  = "\"" ++ s ++ "\""
+                              
+                attr'
+                  = quote
+                    . ("{" ++) . (++ "}")
+                    . intercalate ","
+                    . map show
+                    . toList
+                    . unions
+                    . fst
+                    . attr
+                    
+-- ----------------------------------------
+
 genDotDFA :: (GenDotAttr a) =>
              DotFlags ->
              String ->
@@ -29,8 +73,14 @@ genDotDFA flags name
     genDotAutomaton flags genDotDeltaDFA name
 
 genDotDeltaDFA :: Set Q -> Set I -> (Q -> I -> Maybe Q) -> Prog
-genDotDeltaDFA qs is delta
-  = genDotDelta (foldMap (\ q -> [(q, delta1 q)]) qs)
+genDotDeltaDFA = genDotDeltaDFA' genDotDelta
+
+
+genDotDeltaDFA' :: ([(Q, [(Q, Set I)])] -> Prog) ->
+                   Set Q -> Set I -> (Q -> I -> Maybe Q) -> Prog
+                   
+genDotDeltaDFA' genDotDelta' qs is delta
+  = genDotDelta' (foldMap (\ q -> [(q, delta1 q)]) qs)
   where
     delta1 q
       = toListMap $ foldr (\ (i, q') m -> insertMap q' (singleton i) m) emptyMap ips
@@ -147,18 +197,18 @@ genDotAutomaton ((fontSizeG, fontSizeE), cssRef) genEdges name (A qs is q0 fs de
     color     = "steelblue"
     fillColor = "lightgrey"
 
-genDotDelta ::[(Q, [(Q, Set I)])] -> Prog
+genDotDelta :: [(Q, [(Q, Set I)])] -> Prog
 genDotDelta qmap
-      = concatMap genDot1 qmap
+  = concatMap genDot1 qmap
+  where
+    genDot1 (q, qis)
+      = concatMap genDot11 qis
       where
-        genDot1 (q, qis)
-          = concatMap genDot11 qis
-          where
-            genDot11 (q1, is')
-              = pr (show q ++ " -> " ++
-                    show q1 ++ " [label=\"" ++
-                    genDotInterval (toList is') ++ "\"];"
-                   )
+        genDot11 (q1, is')
+          = pr (show q ++ " -> " ++
+                show q1 ++ " [label=\"" ++
+                genDotInterval (toList is') ++ "\"];"
+               )
 
 -- --------------------
 
@@ -190,16 +240,34 @@ concDotAttr d  s1 s2 = s1 ++ d ++ s2
 
 -- --------------------
 
-genDotInterval    :: [I] -> String
-genDotInterval
-    = quoteInterval . tail . init . show . formatInterval . interval
+genTabInterval :: [I] -> String
+genTabInterval
+  = genInterval' quoteInterval
+  where
+    quoteInterval
+      = concatMap esc
       where
-      quoteInterval cs
-          = concatMap quoteC cs
-            where
-            quoteC '\"' = "\\\""
-            quoteC '\\' = "\\\\"
-            quoteC c    = [c]
+        esc c
+          | c `elem` "\"'<>&"
+            = "&#" ++ show (fromEnum c) ++ ";"
+          | otherwise
+            = [c]
+   
+genDotInterval :: [I] -> String
+genDotInterval
+  = genInterval' quoteInterval
+  where
+    quoteInterval cs
+      = concatMap quoteC cs
+      where
+        quoteC '\"' = "\\\""
+        quoteC '\\' = "\\\\"
+        quoteC c    = [c]
+
+genInterval'    :: (String -> String) -> [I] -> String
+genInterval' quoteI
+    = quoteI . tail . init . show . formatInterval . interval
+      where
       formatInterval cs
           | cs == "."
               = "[.]"
