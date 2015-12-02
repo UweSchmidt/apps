@@ -213,9 +213,11 @@ genDotDelta qmap
 -- --------------------
 
 class GenDotAttr a where
-  genDotAttr  :: a -> String
-  genDotAttr' :: a -> String
-  genDotAttr' = genDotAttr
+  genDotAttr   :: a -> String
+  genDotAttr'  :: a -> String
+  genDotAttr'  = genDotAttr
+  genDotAttr'' :: a -> String
+  genDotAttr'' = genDotAttr'
   
 instance GenDotAttr () where
   genDotAttr = const ""
@@ -224,11 +226,13 @@ instance GenDotAttr Q where
   genDotAttr = show
 
 instance GenDotAttr q => GenDotAttr (Set q) where
-  genDotAttr = intercalate "," . foldMap (\ q -> [genDotAttr q])
+  genDotAttr   = intercalate "," . foldMap (\ q -> [genDotAttr q])
+  genDotAttr'' = ("{" ++) . (++ "}") . genDotAttr'
 
 instance (GenDotAttr a, GenDotAttr b) => GenDotAttr (a, b) where
-  genDotAttr  (x1, x2) = concDotAttr "\\n" (genDotAttr  x1) (genDotAttr  x2)
-  genDotAttr' (x1, x2) = concDotAttr " "   (genDotAttr' x1) (genDotAttr' x2)
+  genDotAttr   (x1, x2) = concDotAttr "\\n" (genDotAttr   x1) (genDotAttr   x2)
+  genDotAttr'  (x1, x2) = concDotAttr " "   (genDotAttr'  x1) (genDotAttr'  x2)
+  genDotAttr'' (x1, x2) = concDotAttr " "   (genDotAttr'' x1) (genDotAttr'' x2)
   
 instance GenDotAttr String where
   genDotAttr = id

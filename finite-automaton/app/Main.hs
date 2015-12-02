@@ -677,7 +677,7 @@ runScanAutomaton scanFct scanWith a
     toOut (ts, rest)
       = unlines $
         map (\ (a', t') ->
-              "(" ++ genDotAttr' a' ++ ", " ++ show t' ++ ")"
+              "(" ++ genDotAttr'' a' ++ ", " ++ show t' ++ ")"
             ) ts
         ++ (if null rest
             then []
