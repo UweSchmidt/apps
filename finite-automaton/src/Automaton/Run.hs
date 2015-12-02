@@ -27,8 +27,13 @@ scanDFA' dfa input0
   where
     cont input
       = case scan1DFA dfa input of
-         ([], is) -> ([], is)
-         (t1, "") -> (t1, "")
+         ([], is) -> ([], is)     -- scan got stuck
+         
+         (((_, "") : t1), is)     -- tricky: token is the empty string
+                  -> (t1, is)     -- and q0 `elem` fs: scan also got stuck
+
+         (t1, "") -> (t1, "")     -- scan finished with success
+         
          (t1, is) -> let (res, rest) = cont is in
                       (t1 ++ res, rest)
 
@@ -43,7 +48,9 @@ scanDFA'' dfa@(A { _attr = f }) input
     
 -- split a single token from an input
                       
-scan1DFA :: Ord q => DFA' q a -> Input -> Tokens q
+scan1DFA :: Ord q =>
+            Automaton (q -> I -> Maybe q) q a ->
+            Input -> ([(q, Token)], Input)
 scan1DFA (A { _startState  = q0
             , _delta       = delta'
             , _finalStates = fs
@@ -92,9 +99,15 @@ scanNFA' nfa input0
   where
     cont input
       = case scan1NFA nfa input of
-         ([], is) -> ([], is)
-         (t1, "") -> (t1, "")
-         (t1, is) -> let (res, rest) = cont is in
+         ([], is) -> ([], is)     -- scan got stuck
+
+         (((_, "") : t1), is)     -- tricky: token is the empty string
+                  -> (t1, is)     -- and q0 `elem` fs: scan also got stuck
+
+         (t1, "") -> (t1, "")     -- scan finished with success
+
+         (t1, is) -> let (res, rest) = cont is
+                     in
                       (t1 ++ res, rest)
 
 scanNFA'' :: (Ord q, Monoid a) => NFA' q a -> Input -> ([(a, Token)], Input)
@@ -103,7 +116,9 @@ scanNFA'' nfa@(A { _attr = f }) input
   where
     (ts, is) = scanNFA' nfa input
 
-scan1NFA :: Ord q => NFA' q a -> Input -> Tokens (Set q)
+scan1NFA :: Ord q =>
+            Automaton (q -> Maybe I -> Set q) q a ->
+            Input -> ([(Set q, Token)], Input)
 scan1NFA (A { _startState  = q0
             , _delta       = delta'
             , _finalStates = fs
