@@ -13,7 +13,7 @@ import Regex.Core
 import Regex.Parse ( parseRegex )
 
 import Data.Set.Simple
--- import Data.List (intercalate)
+import Data.List (intercalate)
 
 -- ----------------------------------------
 
@@ -49,16 +49,29 @@ scan3
     , ("ERR", ".")
     ]
 
-{-
+
 scanToRe :: [(String, String)] -> String
 scanToRe
   = intercalate "|" . map (par . snd)
   where
     par xs = "(" ++ xs ++ ")"
--- -}
+
+reScanExamples :: [(String, Regex)]
+reScanExamples
+  = zipWith (\ i r ->
+              ( "rescan" ++ show i
+              , either (error "syntax error in builtin regex") id . parseRegex . scanToRe . snd $ r
+              )
+            ) [(1::Int)..] scanExamples
 
 reExamples :: [(String, Regex)]
 reExamples
+  = reScanExamples
+    ++
+    reExamples'
+
+reExamples' :: [(String, Regex)]
+reExamples'
   = zipWith (\ i r -> ("re" ++ show i, r)) [(1::Int)..] $
     [ REnull
     , REepsilon

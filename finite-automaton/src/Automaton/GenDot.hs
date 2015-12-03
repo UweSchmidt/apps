@@ -223,8 +223,9 @@ instance GenDotAttr () where
   genDotAttr = const ""
 
 instance GenDotAttr Q where
-  genDotAttr = show
-
+  genDotAttr   = show
+  genDotAttr'' = padd 2 . show
+    
 instance GenDotAttr q => GenDotAttr (Set q) where
   genDotAttr   = intercalate "," . foldMap (\ q -> [genDotAttr q])
   genDotAttr'' = ("{" ++) . (++ "}") . genDotAttr'
@@ -242,6 +243,12 @@ concDotAttr _  "" s2 = s2
 concDotAttr _  s1 "" = s1
 concDotAttr d  s1 s2 = s1 ++ d ++ s2
 
+padd :: Int -> String -> String
+padd n s
+  = replicate n' ' ' ++ s
+  where
+    n' = n - length s `max` 0
+    
 -- --------------------
 
 genTabInterval :: [I] -> String
