@@ -16,7 +16,7 @@ instance Ord a => Monoid (Set a) where
   mappend = union
 
 instance Show a => Show (Set a) where
-  show (Set xs) = "{" ++ show xs ++ "}"
+  show (Set xs) = "{" ++ (L.intercalate "," $ map show xs) ++ "}"
   
 mkSet :: Ord a => [a] -> Set a
 mkSet = Set . L.sort
@@ -94,6 +94,15 @@ findMin (Set xs) = head xs
 
 findMax :: Set a -> a
 findMax (Set xs) = last xs
+
+minView :: Ord a => Set a -> Maybe (a, Set a)
+minView (Set [])       = Nothing
+minView (Set (x : xs)) = Just (x, Set xs)
+
+maxView :: Ord a => Set a -> Maybe (a, Set a)
+maxView (Set [])       = Nothing
+maxView (Set xs) = Just (last xs, Set $ init xs)
+
 
 -- ----------------------------------------
                            
