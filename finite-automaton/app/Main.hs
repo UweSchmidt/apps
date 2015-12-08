@@ -67,7 +67,7 @@ autoInfo :: TermInfo
 autoInfo
   = defTI
     { termName = "finite-automaton"
-    , version  = "0.1.1.0"
+    , version  = "0.1.2.0"
     }
 
 -- ----------------------------------------
@@ -765,14 +765,14 @@ dfaMinToDot a
 writeDot :: FilePath -> String -> Cmd ()
 writeDot dotFile s
   = do trc $ "write dot source"
---       trc $ s
+       -- trc $ s
        writeToFile theDotDir dotFile s
        dotToPng dotFile
 
 writeTab :: FilePath -> String -> Cmd ()
 writeTab tabFile s
   = do trc $ "write delta table as XML table"
-       trc $ s
+       -- trc $ s
        writeToFile theTabDir tabFile s
 
 writeCode :: FilePath -> String -> Cmd ()

@@ -94,7 +94,7 @@ unionsNFA
                    else acc
                  ) q'
             
-disjointAutomatons :: (Functor f) =>
+disjointAutomatons :: (FromSet f, Foldable f) =>
                       Q ->
                       [Automaton (Q -> i -> f Q) Q a] ->
                       [Automaton (Q -> i -> f Q) Q a]
@@ -116,8 +116,8 @@ disjointAutomatons
 -- we need just a single function for renaming
 -- for DFA's i ~ I, for NFA's i ~ Just I
 -- for DFA's f ~ Maybe, for NFA's f ~ Set
-    
-renameAutomaton :: (Eq q1, Functor f) =>
+
+renameAutomaton :: (Ord q1, Ord q2, FromSet f, Foldable f) =>
                    (q1 -> q2, q2 -> q1)
                    -> Automaton (q1 -> i -> f q1) q1 a
                    -> Automaton (q2 -> i -> f q2) q2 a
@@ -127,17 +127,19 @@ renameAutomaton (f, f1) (A qs is q0 fs delta attr)
   | otherwise
       = error "renameNFA: not a bijection"
   where
-    qs'   = fmap f qs
-    q0'   =      f q0
-    fs'   = fmap f fs
-    delta' q1 i
-          = fmap f $ delta (f1 q1) i
+    qs'   = foldMap (singleton . f) qs
+    q0'   =                      f  q0
+    fs'   = foldMap (singleton . f) fs
     attr' = attr . f1
 
-    isBijection = (fmap f1 . fmap f $ qs) == qs
+    delta' q1 i
+          = fromSet . foldMap (singleton . f) $ delta (f1 q1) i
+
+    isBijection
+          = foldMap (singleton . f1) qs' == qs
 
 
-shiftStatesAutomaton :: (Functor f) =>
+shiftStatesAutomaton :: (FromSet f, Foldable f) =>
                         Int ->
                         Automaton (Q -> i -> f Q) Q a ->
                         Automaton (Q -> i -> f Q) Q a
@@ -160,7 +162,7 @@ convertDFAtoNFA (A qs is q0 fs delta attr)
     delta' q' (Just i) = maybe empty singleton $
                          delta q' i
 
-removeSetsDFA :: (Eq q) => DFA' (Set q) a -> DFA' Q a
+removeSetsDFA :: (Ord q) => DFA' (Set q) a -> DFA' Q a
 removeSetsDFA a@(A { _states = qs })
   = renameAutomaton (f, f1) a
   where

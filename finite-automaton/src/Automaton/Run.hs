@@ -172,17 +172,19 @@ epsilonClosure delta qs
     | otherwise
         = epsilonClosure delta qs'
     where
-      qs' = foldr union qs $ fmap (flip delta epsilon) qs
-      epsilon = Nothing
-
+      qs' = qs `union` qse
+      qse = foldMap (\ q -> delta q epsilon) qs
+        where
+          epsilon = Nothing
+              
 -- convert delta to work with sets of states as arguments
       
 extendDelta :: Ord q => (q -> Maybe I -> Set q) -> (Set q -> I -> Set q)
 extendDelta delta
   = delta'
-    where
-      delta' qs i
-        = foldr union empty $ fmap (\ q' -> delta q' (Just i)) qs
+  where
+    delta' qs i
+      = foldMap (\ q -> delta q (Just i)) qs
 
 deltaOnSets :: Ord q => (q -> Maybe I -> Set q) -> (Set q -> I -> Set q)
 deltaOnSets delta
