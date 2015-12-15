@@ -1,3 +1,6 @@
+## ppl build file
+
+
 VERSION := $(shell grep '^version' ppl.cabal | sed 's|^version:[ ]*||')
 
 ##
