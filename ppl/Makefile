@@ -12,8 +12,7 @@ help	:
 ##	make pplc compiler
 
 all	:
-	cabal configure && cabal build && cabal install
-	cp ./dist/build/pplc/pplc .
+	stack install
 
 ##
 ##ex

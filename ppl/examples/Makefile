@@ -1,5 +1,3 @@
-# $Id: Makefile,v 1.34 2006/01/08 14:20:13 uwe Exp $
-
 ##
 ##help
 ##	this target
@@ -15,22 +13,20 @@ PNG	= $(patsubst %.pgm,%.png,$(patsubst %.ppm,%.png,$(GEN)))
 PPLCOPT	= +RTS -K2000000 -A10000000 -M200000000 -RTS
 
 PPLCOPT	= +RTS -K20m -RTS
-PPLC	= ../pplc
+PPLC	:= $(shell which pplc)
 
 ##
 ##all
 ##	compile ppl-test programs
 ##	run some of the test programs
-##	and generate java code
+##	(disabled: and generate java code)
 
 all	: $(PPLC)
+	echo $(PPLC)
 	[ -d gen ] || mkdir gen
 	$(MAKE) test
 	$(MAKE) run
-	$(MAKE) java
-
-$(PPLC)	:
-	$(MAKE) -C .. all
+	echo $(MAKE) java not done
 
 %.pgm	: org/%.pgm
 	cp $< $@
