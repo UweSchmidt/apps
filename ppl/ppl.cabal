@@ -49,7 +49,6 @@ executable pplc
     PPL.OPCode
     PPL.OptimizeInstr
     PPL.Parser
-    PPL.Peephole
     PPL.Picture
     PPL.PPLInterpreter
     PPL.SemanticAnalysis

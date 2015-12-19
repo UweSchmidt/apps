@@ -124,5 +124,3 @@ usage
 main2 :: (String -> IO ()) -> [String] -> IO ()
 main2 fct []            = processHandle fct stdin
 main2 fct (fn:_)        = processFile fct fn
-
-
