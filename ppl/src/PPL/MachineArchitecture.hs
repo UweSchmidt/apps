@@ -10,7 +10,7 @@ type MProg      = Array Int Instr       -- the machine programm
 -- machine values are tagged
 -- there is an undefined value for initializing variable
 -- if this value is read from the data memory, an error is issued
--- 
+--
 
 data MV
     = VUndef
