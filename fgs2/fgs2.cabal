@@ -49,6 +49,7 @@ executable fgs2
                    , hxt-regex-xmlschema >= 9.2
                    , hxt-unicode         >= 9.0
                    , monad-error-rws-io  >= 0.0.2
+                   , mtl                 >= 2.2
                    , pureMD5             >= 2
                    , pretty              >= 1.1
                    , process

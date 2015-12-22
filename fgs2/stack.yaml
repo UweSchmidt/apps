@@ -8,7 +8,10 @@ packages:
 - '.'
 - '../monad-error-rws-io'
 # '../monad-error-rws-io/monad-error-rws-io-0.1.0.tar.gz'
-- '../../cmdtheline'
+- location:
+    git: https://github.com/UweSchmidt/cmdtheline.git
+    commit: dfdacef455b07eb4abad940920adc380bd4acc84
+# '../../cmdtheline'
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: []
