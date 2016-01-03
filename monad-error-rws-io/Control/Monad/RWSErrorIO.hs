@@ -96,7 +96,7 @@ logg enabled level msg
       fmt = take 10 (level ++ ":" ++ replicate 10 ' ') ++ msg
 
 -- convenience functions for logging
- 
+
 trc :: Config r => String -> Action r s ()
 trc = logg traceOn "message"
 
