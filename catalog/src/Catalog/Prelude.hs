@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
--- {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Catalog.Prelude
        ( module Catalog.Prelude
@@ -15,10 +15,11 @@ import Control.Lens
 import Control.Arrow (first)
 import Control.Applicative
 import           Control.Monad.RWSErrorIO
-import           Text.Regex.XMLSchema.Generic (Regex, parseRegex, match)
+import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, )
 import           Data.Foldable
 import           Data.Map.Strict (Map)
 -- import           Data.Monoid
+import Data.List (intercalate)
 import           Data.Word
 import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson as J
@@ -124,6 +125,9 @@ emptyObjMap = ObjMap M.empty
 
 deriving instance Show ObjMap
 
+isoObjMap :: Iso' ObjMap (M.Map ObjID Object)
+isoObjMap = iso (\ (ObjMap om) -> om) ObjMap
+
 instance ToJSON ObjMap where
   toJSON (ObjMap om) = toJSON $ M.toList om
 
@@ -138,6 +142,32 @@ insertObjMap oid obj (ObjMap om) = ObjMap $ M.insert oid obj om
 
 deleteObjMap :: ObjID -> ObjMap -> ObjMap
 deleteObjMap oid (ObjMap om) = ObjMap $ M.delete oid om
+
+memberObjM :: ObjID -> Cmd Bool
+memberObjM oid = uses (objMap . isoObjMap) (maybe False (const True) . M.lookup oid)
+
+lookupObjM :: ObjID -> Cmd Object
+lookupObjM oid = do
+  res <- uses (objMap . isoObjMap) (M.lookup oid)
+  case res of
+   Nothing -> abort $ "lookupObjM: object not found " ++ show oid
+   Just o  -> return o
+   
+checkObjM :: (Object -> Bool) -> ObjID -> Cmd Object
+checkObjM p oid = do
+  o <- lookupObjM oid
+  if p o
+    then return o
+    else abort $ "checkObjM: wrong object type for object " ++ show o
+
+insertObjM :: ObjID -> Object -> Cmd ()
+insertObjM oid obj = objMap . isoObjMap %= M.insert oid obj
+
+deleteObjM :: ObjID -> Cmd ()
+deleteObjM oid = objMap . isoObjMap %= M.delete oid
+
+adjustObjM :: (Object -> Object) -> ObjID -> Cmd ()
+adjustObjM f oid = objMap . isoObjMap %= M.adjust f oid
 
 -- ----------------------------------------
 --
@@ -681,4 +711,41 @@ mkFileCheckSum p = do
   mkCheckSum <$> io (readFile p)
 
 
+scanFSDir'' :: (FilePath -> Bool) -> ObjID -> Cmd [FilePath]
+scanFSDir'' fp oid = do
+  p <- path
+  maybe (return []) readDir p
+  where
+    path = do
+      obj <- checkObjM isDirObj oid
+      return (fromName . _filePath <$> _fse obj)
+      
+    readDir :: FilePath -> Cmd [FilePath] 
+    readDir p = io $ do
+      s  <- X.openDirStream p
+      xs <- readDirEntries s
+      X.closeDirStream s
+      return xs
+      where
+        readDirEntries s = do
+          e1 <- X.readDirStream s
+          if null e1
+            then return []
+            else do es <- readDirEntries s
+                    return $ if fp e1
+                             then e1 : es
+                             else      es
+                                   
 -- ----------------------------------------
+
+boringFilePath :: FilePath -> Bool
+boringFilePath p = undefined
+
+boringRegex :: Regex
+boringRegex =
+  parseRegex $
+  intercalate "|"
+  [ "[.].*"
+  , ".*~"
+  , "[.]bak"
+  ]
