@@ -4,10 +4,11 @@ version:             0.1.0.2
 synopsis:            Compiler construction example for a DSL to process pictures
 author:              Uwe Schmidt
 maintainer:          si@fh-wedel.de
-copyright:           2006 - 2015 Uwe Schmidt
-category:            Graphics
+copyright:           2006 - 2016 Uwe Schmidt
+category:            Compiler, Graphics
 build-type:          Simple
 extra-source-files:
+  stack.yaml
   README
   Makefile
   src/PPL/Makefile

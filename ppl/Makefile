@@ -31,8 +31,8 @@ ex	:
 
 dist	:
 	$(MAKE) -C src/PPL sdist
-	cabal sdist
-	cp ./dist/ppl-$(VERSION).tar.gz ppl.tar.gz
+	stack sdist
+	cp -v .stack-work/dist/*/Cabal-*/ppl-$(VERSION).tar.gz ppl.tar.gz
 
 
 ##
@@ -40,7 +40,7 @@ dist	:
 ##	delete all generated files
 
 clean	:
-	cabal clean
+	stack clean
 	$(MAKE) -C src/PPL  clean
 	$(MAKE) -C examples clean
 	rm -rf $(wildcard dist/*)

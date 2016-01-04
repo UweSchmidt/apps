@@ -6,13 +6,14 @@ Die Quellen bestehen aus Haskell Dateien *.hs im Unterverzeichnis src.
 Eine Haskell Quelle Parser.hs ist mit dem happy Parsergenerator
 aus der Grammatikspezifikation Parser.y erzeugt worden.
 
-Um das System zu benutzen müssen der GHC Haskell Compiler und happy
-installiert sein (Version ghc-6.8.2 oder neuer)
-"http://www.haskell.org/ghc" oder Haskell Platform
+Um das System zu nutzen muss nur das Haskell Build System "stack" installiert
+sein (http://docs.haskellstack.org/en/stable/README.html). Dieses sorgt
+dafür, dass der richtige ghc und die richtigen Bibliotheks-Versionen zum
+Compilieren genutzt werden.
 
-zum Erzeugen des Compilers pplc
-	make all
-aufrufen
+Zum Erzeugen des Compilers pplc
+	make all (oder stack install)
+aufrufen.
 
 Beispiele sind *.ppl, im Verzeichnis "examples".
 Diese zeigen die Verwendung fast aller eingebauten Operationen.
@@ -24,10 +25,13 @@ bitte einmal
 ausführen.
 
 Die im Augenblick unterstützten
-externe Bildformate ist .ppm (portable pixmap) und .pgm (portable grey map).
+externe Bildformate sind .ppm (portable pixmap) und .pgm (portable grey map).
 Eingelesen werden können .pgm und .ppm files
 sowohl im ascii als auch im raw format. Ausgegeben
 werden die Bilder im .ppm oder .pgm raw format mit 256 Farben oder Graustufen.
+
+Zum Konvertieren von anderen Bildformaten bitte "convert" (ImageMagick) oder
+die pbm-tools nutzen.
 
 pplc --help listet die Funktionen des pplc Compilers
 Dieser enthält auch einen eingebauten Interpretierer.
@@ -41,7 +45,7 @@ aufrufen zum Erzeugen des Compilers, zum
 Ausführen der Beispielprogramme und zum
 Betrachten der Ergebnisse. (Anstatt xv geht natürlich auch ein anderer viewer)
 
-viel Spass (und wenig Frust) beim Ausprobieren
+Viel Spass (und wenig Frust) beim Ausprobieren
 
 Uwe Schmidt
 
