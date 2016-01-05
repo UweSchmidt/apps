@@ -209,11 +209,11 @@ instance FromJSON ObjId where
 
 -- makeLenses ''Object
 
-mkObject   :: ObjType -> ObjRels -> Object
-mkObject t rs = Object t rs emptyFSEntry
+mkObject :: ObjType -> Object
+mkObject t = Object t emptyObjRels emptyFSEntry
 
-mkObjectFS :: ObjType -> ObjRels -> FSEntry -> Object
-mkObjectFS t rs fs = Object t rs fs
+mkObjectFS :: ObjType -> FSEntry -> Object
+mkObjectFS t fs = Object t emptyObjRels fs
 
 otype :: Lens' Object ObjType
 otype k o = fmap (\ new -> o { _otype = new }) (k (_otype o) )
@@ -350,7 +350,7 @@ addCopy n oid = copiesIds . at n .~ Just oid
 remCopy :: ImgSize -> Object -> Object
 remCopy n = copiesIds . at n .~ Nothing
 
-o1 = mkObject DIR emptyObjRels
+o1 = mkObject DIR
 
 -- ----------------------------------------
 --
@@ -710,28 +710,6 @@ mergeRelVal ops x1 x2 = merge x1 x2 >>= cleanup
 
 -- ----------------------------------------
 --
--- old stuff: use leses for this
--- modify relations between objects
-
-modifyObjRel :: (ObjRels -> ObjRels) -> ObjId -> ObjMap -> ObjMap
-modifyObjRel f oid (ObjMap om) = ObjMap $ M.adjust f' oid om
-  where
-    f' o@(Object {_orel = r}) = o {_orel = f r}
-
-setRelVal :: RelType -> RelVal -> ObjId -> ObjMap -> ObjMap
-setRelVal ot ov = modifyObjRel (<> ObjRels (M.singleton ot ov))
-
-setChildren :: [(Name, ObjId)] -> ObjId -> ObjMap -> ObjMap
-setChildren = setRelVal CHILDREN . RelOrdered
-
-setVersions :: Map Name ObjId -> ObjId -> ObjMap -> ObjMap
-setVersions = setRelVal VERSIONS . RelUnordered
-
-setCopies :: Map ImgSize ObjId -> ObjId -> ObjMap -> ObjMap
-setCopies = setRelVal COPIES . RelCopies
-
--- ----------------------------------------
---
 -- other stuff
 
 filterObj :: (Object -> Bool) -> ObjId -> ObjMap -> Maybe Object
@@ -802,13 +780,13 @@ saveObjStore p = do
 mkFSObj :: FilePath -> ObjType -> Cmd ObjId
 mkFSObj p t = do
   trc $ "mkFSObj: create an object for path " ++ show p
-  bs <- use mountPath
-  f  <- mkFSEntry (fromName bs </> p) t
-  objMap %= insertObjMap oid (obj f)
+  bs     <- use mountPath
+  f      <- mkFSEntry (fromName bs </> p) t
+  objMap %= insertObjMap oid (mkObjectFS t f)
   return oid
   where
     oid   = mkObjId p
-    obj f = mkObjectFS t emptyObjRels f
+
 
 -- ----------------------------------------
 
