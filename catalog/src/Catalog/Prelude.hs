@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Catalog.Prelude
        ( module Catalog.Prelude
@@ -11,7 +12,7 @@ module Catalog.Prelude
        )
 where
 
-import Control.Lens
+import Control.Lens hiding (children)
 import Control.Arrow (first)
 import Control.Applicative
 import           Control.Monad.RWSErrorIO
@@ -25,6 +26,7 @@ import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import Data.Bits
+import Data.String
 import System.FilePath ((</>))
 import qualified System.Posix as X
 import qualified Data.ByteString as B
@@ -39,18 +41,18 @@ import qualified Data.Text as T
 
 data ObjStore     = ObjStore
                     { _objMap   :: ! ObjMap
-                    , _root      :: ! ObjID
+                    , _root      :: ! ObjId
                     , _mountPath :: ! Name
                     }
 
-newtype ObjMap    = ObjMap (M.Map ObjID Object)
+newtype ObjMap    = ObjMap (M.Map ObjId Object)
 
-newtype ObjID     = ObjID Word64
+newtype ObjId     = ObjId Word64
 
 data Object       = Object
                     { _otype :: ! ObjType
                     , _orel  :: ! ObjRels
-                    , _fse   :: ! (Maybe FSEntry)
+                    , _fse   :: ! FSEntry
                     }
 
 data ObjType      = DIR | RAW | JPG | COPY | XMP | EXIF
@@ -59,10 +61,10 @@ newtype ObjRels   = ObjRels (Map RelType RelVal)
 
 data RelType      = CHILDREN | PARENT | VERSIONS | ORIG | COPIES
 
-data RelVal       = RelSingle    ! ObjID
-                  | RelOrdered   ! [(Name, ObjID)]
-                  | RelUnordered ! (Map Name ObjID)
-                  | RelCopies    ! (Map ImgSize ObjID)
+data RelVal       = RelSingle    ! ObjId
+                  | RelOrdered   ! [(Name, ObjId)]
+                  | RelUnordered ! (Map Name ObjId)
+                  | RelCopies    ! (Map ImgSize ObjId)
 
 data FSEntry      = FSEntry
                     { _filePath :: ! Name          -- ^ the corresponding fs entry stored in compact form
@@ -87,20 +89,20 @@ mkObjStore :: FilePath -> ObjStore
 mkObjStore p =
   ObjStore
   { _objMap   = emptyObjMap
-  , _root      = nullObjID
+  , _root      = emptyObjId
   , _mountPath = mkName p
   }
 
 -- lenses
 
 objMap :: Lens' ObjStore ObjMap
-objMap k s = fmap (\ newOm -> s { _objMap = newOm }) (k (_objMap s) )
+objMap k s = fmap (\ new -> s { _objMap = new }) (k (_objMap s) )
 
-root :: Lens' ObjStore ObjID
-root k s = fmap (\ newRoot -> s { _root = newRoot }) (k (_root s) )
+root :: Lens' ObjStore ObjId
+root k s = fmap (\ new -> s { _root = new }) (k (_root s) )
 
 mountPath :: Lens' ObjStore Name
-mountPath k s = fmap (\ newMountPath -> s { _mountPath = newMountPath }) (k (_mountPath s) )
+mountPath k s = fmap (\ new -> s { _mountPath = new }) (k (_mountPath s) )
 
 instance ToJSON ObjStore where
   toJSON o = J.object
@@ -125,7 +127,7 @@ emptyObjMap = ObjMap M.empty
 
 deriving instance Show ObjMap
 
-isoObjMap :: Iso' ObjMap (M.Map ObjID Object)
+isoObjMap :: Iso' ObjMap (M.Map ObjId Object)
 isoObjMap = iso (\ (ObjMap om) -> om) ObjMap
 
 instance ToJSON ObjMap where
@@ -134,66 +136,72 @@ instance ToJSON ObjMap where
 instance FromJSON ObjMap where
   parseJSON j = (ObjMap . M.fromList) <$> parseJSON j
 
-lookupObjMap :: ObjID -> ObjMap -> Maybe Object
+lookupObjMap :: ObjId -> ObjMap -> Maybe Object
 lookupObjMap oid (ObjMap om) = M.lookup oid om
 
-insertObjMap :: ObjID -> Object -> ObjMap -> ObjMap
+insertObjMap :: ObjId -> Object -> ObjMap -> ObjMap
 insertObjMap oid obj (ObjMap om) = ObjMap $ M.insert oid obj om
 
-deleteObjMap :: ObjID -> ObjMap -> ObjMap
+deleteObjMap :: ObjId -> ObjMap -> ObjMap
 deleteObjMap oid (ObjMap om) = ObjMap $ M.delete oid om
 
-memberObjM :: ObjID -> Cmd Bool
+memberObjM :: ObjId -> Cmd Bool
 memberObjM oid = uses (objMap . isoObjMap) (maybe False (const True) . M.lookup oid)
 
-lookupObjM :: ObjID -> Cmd Object
+lookupObjM :: ObjId -> Cmd Object
 lookupObjM oid = do
   res <- uses (objMap . isoObjMap) (M.lookup oid)
   case res of
    Nothing -> abort $ "lookupObjM: object not found " ++ show oid
    Just o  -> return o
-   
-checkObjM :: (Object -> Bool) -> ObjID -> Cmd Object
+
+checkObjM :: (Object -> Bool) -> ObjId -> Cmd Object
 checkObjM p oid = do
   o <- lookupObjM oid
   if p o
     then return o
     else abort $ "checkObjM: wrong object type for object " ++ show o
 
-insertObjM :: ObjID -> Object -> Cmd ()
+insertObjM :: ObjId -> Object -> Cmd ()
 insertObjM oid obj = objMap . isoObjMap %= M.insert oid obj
 
-deleteObjM :: ObjID -> Cmd ()
+deleteObjM :: ObjId -> Cmd ()
 deleteObjM oid = objMap . isoObjMap %= M.delete oid
 
-adjustObjM :: (Object -> Object) -> ObjID -> Cmd ()
+adjustObjM :: (Object -> Object) -> ObjId -> Cmd ()
 adjustObjM f oid = objMap . isoObjMap %= M.adjust f oid
 
 -- ----------------------------------------
 --
 -- basic ops for object ids
 
-nullObjID :: ObjID
-nullObjID = toObjID 0
+emptyObjId :: ObjId
+emptyObjId = toObjId 0
 
-mkObjID :: MM.Hashable64 a => a -> ObjID
-mkObjID = ObjID . MM.asWord64 . MM.hash64
+nullObjId :: ObjId -> Bool
+nullObjId (ObjId i) = i == 0
 
-fromObjID :: ObjID -> Integer
-fromObjID (ObjID w) = fromIntegral w
+mkObjId :: MM.Hashable64 a => a -> ObjId
+mkObjId = ObjId . MM.asWord64 . MM.hash64
 
-toObjID :: Integer -> ObjID
-toObjID = ObjID . fromIntegral
+fromObjId :: ObjId -> Integer
+fromObjId (ObjId w) = fromIntegral w
 
-deriving instance Eq   ObjID
-deriving instance Ord  ObjID
-deriving instance Show ObjID
+toObjId :: Integer -> ObjId
+toObjId = ObjId . fromIntegral
 
-instance ToJSON ObjID where
-  toJSON = toJSON . fromObjID
+isoObjId :: Iso' ObjId Integer
+isoObjId = iso fromObjId toObjId
 
-instance FromJSON ObjID where
-  parseJSON o = toObjID <$> parseJSON o
+deriving instance Eq   ObjId
+deriving instance Ord  ObjId
+deriving instance Show ObjId
+
+instance ToJSON ObjId where
+  toJSON = toJSON . fromObjId
+
+instance FromJSON ObjId where
+  parseJSON o = toObjId <$> parseJSON o
 
 -- ----------------------------------------
 --
@@ -202,18 +210,28 @@ instance FromJSON ObjID where
 -- makeLenses ''Object
 
 mkObject   :: ObjType -> ObjRels -> Object
-mkObject t rs = Object t rs Nothing
+mkObject t rs = Object t rs emptyFSEntry
 
 mkObjectFS :: ObjType -> ObjRels -> FSEntry -> Object
-mkObjectFS t rs fs = Object t rs (Just fs)
+mkObjectFS t rs fs = Object t rs fs
+
+otype :: Lens' Object ObjType
+otype k o = fmap (\ new -> o { _otype = new }) (k (_otype o) )
+
+orels :: Lens' Object ObjRels
+orels k o = fmap (\ new -> o { _orel = new }) (k (_orel o) )
+
+fse :: Lens' Object FSEntry
+fse k o = fmap (\ new -> o { _fse = new }) (k (_fse o) )
 
 deriving instance Show Object
 
 instance ToJSON Object where
   toJSON o = J.object $
-    ( case _fse o of
-        Nothing  -> []
-        Just fse -> [ "fse" J..= fse]
+    ( let f = o ^. fse in
+      if nullFSEntry f
+      then []
+      else [ "fse" J..= f]
     )
     ++
     [ "otype" J..= _otype o
@@ -225,9 +243,9 @@ instance FromJSON Object where
     Object
     <$> o .: "otype"
     <*> o .: "orel"
-    <*> ( (Just <$> o .: "fse")
+    <*> ( (o .: "fse")
           <|>
-          return Nothing
+          return emptyFSEntry
         )
 
 -- ----------------------------------------
@@ -272,13 +290,83 @@ hasObjType ot (Object {_otype = ot2}) = ot == ot2
 
 -- ----------------------------------------
 --
+-- lenses for Object to access relations
+
+children :: Lens' Object RelVal
+children = orels . relAt CHILDREN
+
+childrenIds :: Lens' Object (Map Name ObjId)
+childrenIds = children . relUnordered
+
+parent :: Lens' Object RelVal
+parent = orels . relAt PARENT
+
+parentId :: Lens' Object ObjId
+parentId = parent . relSingle
+
+versions :: Lens' Object RelVal
+versions = orels . relAt VERSIONS
+
+versionsIds :: Lens' Object (Map Name ObjId)
+versionsIds = versions . relUnordered
+
+orig :: Lens' Object RelVal
+orig = orels . relAt ORIG
+
+origId :: Lens' Object ObjId
+origId = orig . relSingle
+
+copies :: Lens' Object RelVal
+copies = orels . relAt COPIES
+
+copiesIds :: Lens' Object (Map ImgSize ObjId)
+copiesIds = copies . relCopies
+
+-- ----------------------------------------
+--
+-- relation setters
+
+addChild :: Name -> ObjId -> Object -> Object
+addChild n oid = childrenIds . at n .~ Just oid
+
+remChild :: Name -> Object -> Object
+remChild n = childrenIds . at n .~ Nothing
+
+setParent :: ObjId -> Object -> Object
+setParent oid = parentId .~ oid
+
+addVersion :: Name -> ObjId -> Object -> Object
+addVersion n oid = versionsIds . at n .~ Just oid
+
+remVersion :: Name -> Object -> Object
+remVersion n = versionsIds . at n .~ Nothing
+
+setOrig :: ObjId -> Object -> Object
+setOrig oid = origId .~ oid
+
+addCopy :: ImgSize -> ObjId -> Object -> Object
+addCopy n oid = copiesIds . at n .~ Just oid
+
+remCopy :: ImgSize -> Object -> Object
+remCopy n = copiesIds . at n .~ Nothing
+
+o1 = mkObject DIR emptyObjRels
+
+-- ----------------------------------------
+--
 -- basic ops for object relations
 
 emptyObjRels :: ObjRels
 emptyObjRels = ObjRels M.empty
 
+singletonObjRels :: RelType -> RelVal -> ObjRels
+singletonObjRels rt rv = ObjRels $ M.singleton rt rv
+
 deriving instance Eq   ObjRels
 deriving instance Show ObjRels
+
+isoObjRels :: Iso' ObjRels (Map RelType RelVal)
+isoObjRels = iso (\ (ObjRels r) -> r) ObjRels
 
 instance ToJSON ObjRels where
   toJSON (ObjRels rm) = toJSON $ M.toList rm
@@ -295,6 +383,19 @@ mergeObjRels ops (ObjRels or1) (ObjRels or2) =
   ObjRels $ M.mergeWithKey combine id id or1 or2
   where
     combine _rt = mergeRelVal ops
+
+relAt :: RelType -> Lens' ObjRels RelVal
+relAt rt = \ k rel -> fmap (\ new -> ins rt new rel) (k (look rt rel))
+  where
+    ins t new rel = rel <> singletonObjRels t new
+
+    look t (ObjRels rm) = maybe (def t) id $ M.lookup t rm
+      where
+        def CHILDREN = RelUnordered M.empty
+        def PARENT   = RelSingle      emptyObjId
+        def VERSIONS = RelUnordered M.empty
+        def ORIG     = RelSingle      emptyObjId
+        def COPIES   = RelCopies    M.empty
 
 -- ----------------------------------------
 --
@@ -315,9 +416,36 @@ instance FromJSON RelType where
 --
 -- basic ops for object relation values
 
+emptyRelVal :: RelVal
+emptyRelVal = RelSingle emptyObjId
+
 deriving instance Eq   RelVal
 deriving instance Ord  RelVal
 deriving instance Show RelVal
+
+relSingle :: Lens' RelVal ObjId
+relSingle k r = fmap RelSingle (k (sel r))
+  where
+    sel (RelSingle o) = o
+    sel _             = emptyObjId
+
+relOrdered :: Lens' RelVal [(Name, ObjId)]
+relOrdered k r = fmap RelOrdered (k (sel r))
+  where
+    sel (RelOrdered o) = o
+    sel _              = []
+
+relUnordered :: Lens' RelVal (Map Name ObjId)
+relUnordered k r = fmap RelUnordered (k (sel r))
+  where
+    sel (RelUnordered o) = o
+    sel _                = M.empty
+
+relCopies :: Lens' RelVal (Map ImgSize ObjId)
+relCopies k r = fmap RelCopies (k (sel r))
+  where
+    sel (RelCopies o) = o
+    sel _             = M.empty
 
 instance ToJSON RelVal where
   toJSON (RelSingle oid) = J.object
@@ -351,7 +479,24 @@ instance FromJSON RelVal where
 --
 -- basic ops for file system entries
 
--- makeLenses ''FSEntry
+emptyFSEntry :: FSEntry
+emptyFSEntry = FSEntry
+  { _filePath = emptyName
+  , _age      = zeroTimeStamp
+  , _checksum = zeroCheckSum
+  }
+
+nullFSEntry :: FSEntry -> Bool
+nullFSEntry = nullName . _filePath
+
+filePath :: Lens' FSEntry Name
+filePath k f = fmap (\ new -> f { _filePath = new }) (k (_filePath f) )
+
+age :: Lens' FSEntry TimeStamp
+age k f = fmap (\ new -> f { _age = new }) (k (_age f) )
+
+checksum :: Lens' FSEntry CheckSum
+checksum k f = fmap (\ new -> f { _checksum = new }) (k (_checksum f) )
 
 deriving instance Show FSEntry
 
@@ -360,34 +505,50 @@ instance ToJSON FSEntry where
                   , _age      = t
                   , _checksum = cs
                   }
-         ) = J.object
-    [ "path"     J..= toJSON p
-    , "age"      J..= toJSON t
-    , "checksum" J..= toJSON cs
-    ]
+         )
+    | nullName p = J.object []
+    | otherwise  = J.object
+      [ "path"     J..= toJSON p
+      , "age"      J..= toJSON t
+      , "checksum" J..= toJSON cs
+      ]
 
 instance FromJSON FSEntry where
   parseJSON = withObject "FSentry" $ \ o ->
-    FSEntry
-    <$> o .: "path"
-    <*> o .: "age"
-    <*> o .: "checksum"
+    ( FSEntry
+      <$> o .: "path"
+      <*> o .: "age"
+      <*> o .: "checksum"
+    )
+    <|> return emptyFSEntry
 
 -- ----------------------------------------
 --
 -- basic ops for names (UTF8 encoded strict bytestrings)
 
+emptyName :: Name
+emptyName = mkName ""
+
 mkName :: String -> Name
 mkName = Name . B.pack . UTF8.encode
+
+nullName :: Name -> Bool
+nullName (Name n) = B.null n
 
 fromName :: Name -> String
 fromName (Name fsn) = UTF8.decode . B.unpack $ fsn
 
+isoName :: Iso' Name String
+isoName = iso fromName mkName
+
 deriving instance Eq   Name
 deriving instance Ord  Name
 
+instance IsString Name where
+  fromString = mkName
+
 instance Show Name where
-  show = fromName
+  show = show . fromName
 
 instance ToJSON Name where
   toJSON = toJSON . fromName
@@ -399,6 +560,9 @@ instance FromJSON Name where
 -- ----------------------------------------
 --
 -- basic ops for time stamps
+
+zeroTimeStamp :: TimeStamp
+zeroTimeStamp = TS $ read "0"
 
 deriving instance Eq   TimeStamp
 deriving instance Ord  TimeStamp
@@ -415,8 +579,8 @@ instance FromJSON TimeStamp where
 --
 -- basic ops for checksums
 
-emptyCheckSum :: CheckSum
-emptyCheckSum = CS 0
+zeroCheckSum :: CheckSum
+zeroCheckSum = CS 0
 
 mkCheckSum :: MM.Hashable64 a => a -> CheckSum
 mkCheckSum = CS . MM.asWord64 . MM.hash64
@@ -426,6 +590,9 @@ fromCheckSum (CS csum) = fromIntegral csum
 
 toCheckSum :: Integer -> CheckSum
 toCheckSum = CS . fromInteger
+
+isoCheckSum :: Iso' CheckSum Integer
+isoCheckSum = iso fromCheckSum toCheckSum
 
 deriving instance Eq CheckSum
 
@@ -503,10 +670,10 @@ instance FromJSON ImgSize where
 
 data ZipRelVal =
   ZipRelVal
-  { zipSingle    :: ObjID             -> ObjID             -> Maybe ObjID
-  , zipOrdered   :: [(Name, ObjID)]   -> [(Name, ObjID)]   -> Maybe [(Name, ObjID)]
-  , zipUnordered :: Map Name ObjID    -> Map Name ObjID    -> Maybe (Map Name ObjID)
-  , zipCopies    :: Map ImgSize ObjID -> Map ImgSize ObjID -> Maybe (Map ImgSize ObjID)
+  { zipSingle    :: ObjId             -> ObjId             -> Maybe ObjId
+  , zipOrdered   :: [(Name, ObjId)]   -> [(Name, ObjId)]   -> Maybe [(Name, ObjId)]
+  , zipUnordered :: Map Name ObjId    -> Map Name ObjId    -> Maybe (Map Name ObjId)
+  , zipCopies    :: Map ImgSize ObjId -> Map ImgSize ObjId -> Maybe (Map ImgSize ObjId)
   }
 
 
@@ -527,7 +694,7 @@ zipConst1 = ZipRelVal
   }
 
 mergeRelVal :: ZipRelVal -> RelVal -> RelVal -> Maybe RelVal
-mergeRelVal ops = merge
+mergeRelVal ops x1 x2 = merge x1 x2 >>= cleanup
   where
     merge (RelSingle    r1) (RelSingle    r2) = RelSingle    <$> zipSingle    ops r1 r2
     merge (RelOrdered   r1) (RelOrdered   r2) = RelOrdered   <$> zipOrdered   ops r1 r2
@@ -535,89 +702,51 @@ mergeRelVal ops = merge
     merge (RelCopies    r1) (RelCopies    r2) = RelCopies    <$> zipCopies    ops r1 r2
     merge _                 _                 = Nothing
 
+    cleanup (RelSingle    r1) | nullObjId r1 = Nothing
+    cleanup (RelOrdered   r1) | null r1      = Nothing
+    cleanup (RelUnordered r1) | M.null r1    = Nothing
+    cleanup (RelCopies    r1) | M.null r1    = Nothing
+    cleanup r                                = Just r
+
 -- ----------------------------------------
 --
+-- old stuff: use leses for this
 -- modify relations between objects
 
-modifyObjRel :: (ObjRels -> ObjRels) -> ObjID -> ObjMap -> ObjMap
+modifyObjRel :: (ObjRels -> ObjRels) -> ObjId -> ObjMap -> ObjMap
 modifyObjRel f oid (ObjMap om) = ObjMap $ M.adjust f' oid om
   where
     f' o@(Object {_orel = r}) = o {_orel = f r}
 
-setRelVal :: RelType -> RelVal -> ObjID -> ObjMap -> ObjMap
+setRelVal :: RelType -> RelVal -> ObjId -> ObjMap -> ObjMap
 setRelVal ot ov = modifyObjRel (<> ObjRels (M.singleton ot ov))
 
-setChildren :: [(Name, ObjID)] -> ObjID -> ObjMap -> ObjMap
+setChildren :: [(Name, ObjId)] -> ObjId -> ObjMap -> ObjMap
 setChildren = setRelVal CHILDREN . RelOrdered
 
-setParent :: ObjID -> ObjID -> ObjMap -> ObjMap
-setParent = setRelVal PARENT . RelSingle
-
-setVersions :: Map Name ObjID -> ObjID -> ObjMap -> ObjMap
+setVersions :: Map Name ObjId -> ObjId -> ObjMap -> ObjMap
 setVersions = setRelVal VERSIONS . RelUnordered
 
-setOrig :: ObjID -> ObjID -> ObjMap -> ObjMap
-setOrig = setRelVal ORIG . RelSingle
-
-setCopies :: Map ImgSize ObjID -> ObjID -> ObjMap -> ObjMap
+setCopies :: Map ImgSize ObjId -> ObjId -> ObjMap -> ObjMap
 setCopies = setRelVal COPIES . RelCopies
 
 -- ----------------------------------------
 --
 -- other stuff
 
-filterObj :: (Object -> Bool) -> ObjID -> ObjMap -> Maybe Object
+filterObj :: (Object -> Bool) -> ObjId -> ObjMap -> Maybe Object
 filterObj p oid om = do
   o <- lookupObjMap oid om
   if p o
     then return o
     else mzero
 
-removeExObj :: ObjID -> ObjMap -> Maybe ObjMap
+removeExObj :: ObjId -> ObjMap -> Maybe ObjMap
 removeExObj oid (ObjMap om)
   | oid `M.member` om =
       Just $ ObjMap $ M.delete oid om
   | otherwise =
       Nothing
--- ----------------------------------------
---
--- basic file system ops
-
-
-scanFSDir :: ObjID -> ObjMap -> IO [FilePath]
-scanFSDir = scanFSDir' fs
-  where
-    fs ""        = False
-    fs ('.' : _) = False
-    fs p
-      | last p == '~' = False
-      | otherwise     = True
-
-scanFSDir' :: (FilePath -> Bool) -> ObjID -> ObjMap -> IO [FilePath]
-scanFSDir' fp oid om =
-  case path of
-    Nothing -> return []
-    Just p  -> readDir p
-  where
-    path = do
-      obj <- filterObj isDirObj oid om
-      fse <- _fse obj
-      return . fromName . _filePath $ fse
-
-    readDir p = do
-      s  <- X.openDirStream p
-      xs <- readDirEntries s
-      X.closeDirStream s
-      return xs
-
-    readDirEntries s = do
-      e1 <- X.readDirStream s
-      if null e1
-        then return []
-        else do es <- readDirEntries s
-                return $ if fp e1
-                         then e1 : es
-                         else      es
 
 -- ----------------------------------------
 --
@@ -643,7 +772,7 @@ runCmd cmd = runAction cmd Env (mkObjStore ".")
 syncFS :: Cmd ()
 syncFS = do
   r <- use root  -- asks _root
-  when (r == nullObjID) $
+  when (nullObjId r) $
     mountFS
   -- do all the rest
   return ()
@@ -670,16 +799,16 @@ saveObjStore p = do
 -- | make an object representing a file or a directory in the FS.
 --   The file path must point to an existing and readable fs entry
 
-mkFSObj :: FilePath -> ObjType -> Cmd ObjID
+mkFSObj :: FilePath -> ObjType -> Cmd ObjId
 mkFSObj p t = do
   trc $ "mkFSObj: create an object for path " ++ show p
-  bs  <- use mountPath
-  fse <- mkFSEntry (fromName bs </> p) t
-  objMap %= insertObjMap oid (obj fse)
+  bs <- use mountPath
+  f  <- mkFSEntry (fromName bs </> p) t
+  objMap %= insertObjMap oid (obj f)
   return oid
   where
-    oid     = mkObjID p
-    obj fse = mkObjectFS t emptyObjRels fse
+    oid   = mkObjId p
+    obj f = mkObjectFS t emptyObjRels f
 
 -- ----------------------------------------
 
@@ -692,7 +821,7 @@ mkFSEntry p t = do
 
   cs <- if X.isRegularFile st
         then mkFileCheckSum p
-        else return emptyCheckSum
+        else return zeroCheckSum
 
   return $ FSEntry
     { _filePath = mkName p
@@ -711,16 +840,16 @@ mkFileCheckSum p = do
   mkCheckSum <$> io (readFile p)
 
 
-scanFSDir'' :: (FilePath -> Bool) -> ObjID -> Cmd [FilePath]
-scanFSDir'' fp oid = do
+scanFSDir :: (FilePath -> Bool) -> ObjId -> Cmd [FilePath]
+scanFSDir fp oid = do
   p <- path
-  maybe (return []) readDir p
+  readDir p
   where
     path = do
       obj <- checkObjM isDirObj oid
-      return (fromName . _filePath <$> _fse obj)
-      
-    readDir :: FilePath -> Cmd [FilePath] 
+      return $ obj ^. fse . filePath . isoName
+
+    readDir :: FilePath -> Cmd [FilePath]
     readDir p = io $ do
       s  <- X.openDirStream p
       xs <- readDirEntries s
@@ -735,17 +864,62 @@ scanFSDir'' fp oid = do
                     return $ if fp e1
                              then e1 : es
                              else      es
-                                   
+
 -- ----------------------------------------
+--
+-- filename classification
 
 boringFilePath :: FilePath -> Bool
-boringFilePath p = undefined
+boringFilePath = matchRE boringRegex
+
+rawImageFilePath :: FilePath -> Bool
+rawImageFilePath = matchRE rawImageRegex
+
+jpgImageFilePath :: FilePath -> Bool
+jpgImageFilePath = matchRE jpgImageRegex
+
+xmpImageFilePath :: FilePath -> Bool
+xmpImageFilePath = matchRE xmpImageRegex
+
+dxoImageFilePath :: FilePath -> Bool
+dxoImageFilePath = matchRE dxoImageRegex
+
+srgbSubDirPath :: FilePath -> Bool
+srgbSubDirPath = matchRE srgbSubDirRegex
 
 boringRegex :: Regex
-boringRegex =
-  parseRegex $
-  intercalate "|"
+boringRegex = parseRegex $ intercalate "|"
   [ "[.].*"
   , ".*~"
   , "[.]bak"
+  , "tiff"
+  , "dng"
   ]
+
+rawImageRegex :: Regex
+rawImageRegex =  parseRegex $ "[_A-Za-z0-9]+" ++ "([.](nef|NEF|rw2|RW2|gif|tiff|ppm|pgm|pbm))"
+
+jpgImageRegex :: Regex
+jpgImageRegex = parseRegex $ "[_A-Za-z0-9]+[.](jpg|JPG)"
+
+xmpImageRegex :: Regex
+xmpImageRegex = parseRegex $ "[_A-Za-z0-9]+[.](xmp|XMP)"
+
+jsonImageRegex :: Regex
+jsonImageRegex = parseRegex $ "[_A-Za-z0-9]+[.](json)"
+
+dxoImageRegex :: Regex
+dxoImageRegex = parseRegex $ "[_A-Za-z0-9]+" ++ "([.](nef|NEF|rw2|RW2|jpg|JPG)[.]dop)"
+
+srgbSubDirRegex :: Regex
+srgbSubDirRegex = parseRegex $ intercalate "|"
+  [ "srgb[0-9]*"
+  , "srgb-bw"
+  , "[0-9]+x[0-9]+"
+  , "dxo"
+  , "small"
+  , "web"
+  , "bw"
+  ]
+
+-- ----------------------------------------
