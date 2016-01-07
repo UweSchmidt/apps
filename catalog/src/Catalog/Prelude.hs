@@ -20,13 +20,14 @@ import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, )
 import           Data.Foldable
 import           Data.Map.Strict (Map)
 -- import           Data.Monoid
-import Data.List (intercalate)
+import Data.List (intercalate, partition)
 import           Data.Word
 import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import Data.Bits
 import Data.String
+import Data.Maybe
 import System.FilePath ((</>))
 import qualified System.Posix as X
 import qualified Data.ByteString as B
@@ -40,7 +41,7 @@ import qualified Data.Text as T
 -- ----------------------------------------
 
 data ObjStore     = ObjStore
-                    { _objMap   :: ! ObjMap
+                    { _objMap    :: ! ObjMap
                     , _root      :: ! ObjId
                     , _mountPath :: ! Name
                     }
@@ -85,12 +86,12 @@ data    ImgSize   = IS ! Int ! Int
 
 deriving instance Show ObjStore
 
-mkObjStore :: FilePath -> ObjStore
-mkObjStore p =
+emptyObjStore :: ObjStore
+emptyObjStore =
   ObjStore
-  { _objMap   = emptyObjMap
+  { _objMap    = emptyObjMap
   , _root      = emptyObjId
-  , _mountPath = mkName p
+  , _mountPath = emptyName
   }
 
 -- lenses
@@ -98,11 +99,17 @@ mkObjStore p =
 objMap :: Lens' ObjStore ObjMap
 objMap k s = fmap (\ new -> s { _objMap = new }) (k (_objMap s) )
 
-root :: Lens' ObjStore ObjId
-root k s = fmap (\ new -> s { _root = new }) (k (_root s) )
+root :: Lens' ObjStore (Maybe ObjId)
+root = root' . isoMaybeObjId
+  where
+    root' :: Lens' ObjStore ObjId
+    root' k s = fmap (\ new -> s { _root = new }) (k (_root s) )
 
-mountPath :: Lens' ObjStore Name
-mountPath k s = fmap (\ new -> s { _mountPath = new }) (k (_mountPath s) )
+mountPath :: Lens' ObjStore String
+mountPath = mountPath' . isoName
+  where
+    mountPath' :: Lens' ObjStore Name
+    mountPath' k s = fmap (\ new -> s { _mountPath = new }) (k (_mountPath s) )
 
 instance ToJSON ObjStore where
   toJSON o = J.object
@@ -152,8 +159,8 @@ lookupObjM :: ObjId -> Cmd Object
 lookupObjM oid = do
   res <- uses (objMap . isoObjMap) (M.lookup oid)
   case res of
-   Nothing -> abort $ "lookupObjM: object not found " ++ show oid
-   Just o  -> return o
+    Nothing -> abort $ "lookupObjM: object not found " ++ show oid
+    Just o  -> return o
 
 checkObjM :: (Object -> Bool) -> ObjId -> Cmd Object
 checkObjM p oid = do
@@ -190,8 +197,16 @@ fromObjId (ObjId w) = fromIntegral w
 toObjId :: Integer -> ObjId
 toObjId = ObjId . fromIntegral
 
-isoObjId :: Iso' ObjId Integer
-isoObjId = iso fromObjId toObjId
+isoObjIdInteger :: Iso' ObjId Integer
+isoObjIdInteger = iso fromObjId toObjId
+
+isoMaybeObjId :: Iso' ObjId (Maybe ObjId)
+isoMaybeObjId =
+  iso (\ i -> if nullObjId i
+              then Nothing
+              else Just i
+      )
+      (fromMaybe emptyObjId)
 
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
@@ -301,8 +316,8 @@ childrenIds = children . relUnordered
 parent :: Lens' Object RelVal
 parent = orels . relAt PARENT
 
-parentId :: Lens' Object ObjId
-parentId = parent . relSingle
+parentId :: Lens' Object (Maybe ObjId)
+parentId = parent . relSingle . isoMaybeObjId
 
 versions :: Lens' Object RelVal
 versions = orels . relAt VERSIONS
@@ -313,8 +328,8 @@ versionsIds = versions . relUnordered
 orig :: Lens' Object RelVal
 orig = orels . relAt ORIG
 
-origId :: Lens' Object ObjId
-origId = orig . relSingle
+origId :: Lens' Object (Maybe ObjId)
+origId = orig . relSingle .isoMaybeObjId
 
 copies :: Lens' Object RelVal
 copies = orels . relAt COPIES
@@ -333,7 +348,7 @@ remChild :: Name -> Object -> Object
 remChild n = childrenIds . at n .~ Nothing
 
 setParent :: ObjId -> Object -> Object
-setParent oid = parentId .~ oid
+setParent oid = parentId .~ Just oid
 
 addVersion :: Name -> ObjId -> Object -> Object
 addVersion n oid = versionsIds . at n .~ Just oid
@@ -342,15 +357,13 @@ remVersion :: Name -> Object -> Object
 remVersion n = versionsIds . at n .~ Nothing
 
 setOrig :: ObjId -> Object -> Object
-setOrig oid = origId .~ oid
+setOrig oid = origId .~ Just oid
 
 addCopy :: ImgSize -> ObjId -> Object -> Object
 addCopy n oid = copiesIds . at n .~ Just oid
 
 remCopy :: ImgSize -> Object -> Object
 remCopy n = copiesIds . at n .~ Nothing
-
-o1 = mkObject DIR
 
 -- ----------------------------------------
 --
@@ -489,8 +502,14 @@ emptyFSEntry = FSEntry
 nullFSEntry :: FSEntry -> Bool
 nullFSEntry = nullName . _filePath
 
-filePath :: Lens' FSEntry Name
-filePath k f = fmap (\ new -> f { _filePath = new }) (k (_filePath f) )
+mkFSEntry :: FilePath -> FSEntry
+mkFSEntry p = emptyFSEntry { _filePath = mkName p}
+
+filePath :: Lens' FSEntry FilePath
+filePath = filePath' . isoName
+  where
+    filePath' :: Lens' FSEntry Name
+    filePath' k f = fmap (\ new -> f { _filePath = new }) (k (_filePath f) )
 
 age :: Lens' FSEntry TimeStamp
 age k f = fmap (\ new -> f { _age = new }) (k (_age f) )
@@ -508,7 +527,7 @@ instance ToJSON FSEntry where
          )
     | nullName p = J.object []
     | otherwise  = J.object
-      [ "path"     J..= toJSON p
+      [ "filePath" J..= toJSON p
       , "age"      J..= toJSON t
       , "checksum" J..= toJSON cs
       ]
@@ -516,7 +535,7 @@ instance ToJSON FSEntry where
 instance FromJSON FSEntry where
   parseJSON = withObject "FSentry" $ \ o ->
     ( FSEntry
-      <$> o .: "path"
+      <$> o .: "filePath"
       <*> o .: "age"
       <*> o .: "checksum"
     )
@@ -597,7 +616,7 @@ isoCheckSum = iso fromCheckSum toCheckSum
 deriving instance Eq CheckSum
 
 instance Show CheckSum where
-  show = showCheckSum
+  show = ("0x" ++) . showCheckSum
 
 showCheckSum :: CheckSum -> String
 showCheckSum (CS csum) =
@@ -745,22 +764,130 @@ instance Config Env where
 type Cmd = Action Env ObjStore
 
 runCmd :: Cmd a -> IO (Either Msg a, ObjStore, Log)
-runCmd cmd = runAction cmd Env (mkObjStore ".")
+runCmd cmd = runAction cmd Env emptyObjStore
 
 syncFS :: Cmd ()
 syncFS = do
-  r <- use root  -- asks _root
-  when (nullObjId r) $
-    mountFS
-  -- do all the rest
+  notMounted <- uses root isNothing -- asks _root
+  when notMounted
+       mountFS
+
+  rootObjId <- uses root fromJust
+  syncFSEntry rootObjId
   return ()
+
+syncFSEntry :: ObjId -> Cmd ()
+syncFSEntry oid = do
+  o <- lookupObjM oid
+  trc $ "syncFSentry: syncing oid " ++ show oid ++ " => " ++ show o
+  p <- absPath o
+  trc $ "syncFSentry: absPath " ++ show p
+
+  x <- io $ X.fileExist p
+  if x
+    then do
+      status <- io $ X.getFileStatus p
+      let newtime = TS $ X.modificationTime status
+      let oldtime = o ^. fse .age
+      let update  = newtime > oldtime
+      when update $ adjustObjM (fse . age .~ newtime) oid
+
+      case o ^. otype of
+        DIR -> do
+          trc $ "syncFSentry: update directory"
+          when update $ do
+            trc $ "syncFSentry: read directory entries"
+            es <- scanFSDir p
+            trc $ "syncFSentry: dir contents " ++ show es
+            syncDir oid es
+
+          syncDirEntries oid
+
+        _oty -> do
+          trc $ "syncFSentry: update file"
+          when update $ do
+            trc $ "syncFSentry: file has changed"
+
+    else do
+      warn $ "syncFSentry: file object not found, will be removed " ++ show p
+      deleteObjects oid
+
+deleteObjects :: ObjId -> Cmd ()
+deleteObjects oid = do
+  o <- lookupObjM oid
+  p <- objPath o
+  warn $ "syncFSentry: file not found, obj " ++ show oid ++ " will be removed, path = " ++ show p
+
+  mapM_ deleteObjects (o ^. childrenIds . to M.elems)
+  mapM_ deleteObjects (o ^. versionsIds . to M.elems)
+  mapM_ deleteObjects (o ^. copiesIds   . to M.elems)
+
+  deleteObjM oid
+
+
+syncDir :: ObjId -> [FilePath] -> Cmd ()
+syncDir oid es = do
+  trc $ "syncDirObj: obj = " ++ show oid ++ ", entries = " ++ show es
+  o <- lookupObjM oid
+  p <- objPath o
+  let es' = filter (\ n -> mkName n `M.notMember` (o ^. childrenIds)) $
+            filter (not . boringFilePath) $
+            es
+  syncParts p es'
+  where
+    syncParts p es1 = do
+      mapM_ addRaw raws
+      mapM_ addXmp xmps
+      mapM_ addDxo dxos
+      mapM_ addJsn jsns
+      mapM_ addRgb srgb
+
+        where
+        (raws, es2) = partition rawImageFilePath  es1
+        (xmps, es3) = partition xmpImageFilePath  es2
+        (dxos, es4) = partition dxoImageFilePath  es3
+        (jsns, es5) = partition jsonImageFilePath es4
+        (srgb, es6) = partition srgbSubDirPath    es5
+
+        addRaw n = do new <- mkFSObj (p </> n) RAW
+                      adjustObjM (setParent  oid) new
+                      adjustObjM (addChild (mkName n) new) oid
+
+        addXmp n = return ()
+        addDxo n = return ()
+        addJsn n = return ()
+        addRgb n = return ()
+
+
+
+syncDirEntries :: ObjId -> Cmd ()
+syncDirEntries oid = do
+  trc $ "syncDirEntries: oid = " ++ show oid
 
 mountFS :: Cmd ()
 mountFS = do
-  mp <- uses mountPath fromName
+  mp <- use mountPath
   trc $ "mountFS: mount filesystem directory at " ++ show mp
-  newRoot <- mkFSObj "" DIR
-  root .= newRoot  -- set new _root in state
+  newRoot <- mkFSObj "." DIR
+  root .= Just newRoot  -- set new _root in state
+
+-- ----------------------------------------
+
+objPath :: Object -> Cmd FilePath
+objPath o = do
+  parentPath (o ^. parentId) (o ^. fse . filePath)
+
+parentPath :: Maybe ObjId -> FilePath -> Cmd FilePath
+parentPath Nothing    p0 = return p0
+parentPath (Just oid) p0 = do
+  o <- lookupObjM oid
+  parentPath (o ^. parentId) (o ^. fse . filePath </> p0)
+
+absPath :: Object -> Cmd FilePath
+absPath o = do
+  p <- objPath o
+  b <- use mountPath
+  return (b </> p)
 
 -- ----------------------------------------
 
@@ -781,17 +908,14 @@ mkFSObj :: FilePath -> ObjType -> Cmd ObjId
 mkFSObj p t = do
   trc $ "mkFSObj: create an object for path " ++ show p
   bs     <- use mountPath
-  f      <- mkFSEntry (fromName bs </> p) t
-  objMap %= insertObjMap oid (mkObjectFS t f)
+  let oid = mkObjId (bs </> p)
+  objMap %= insertObjMap oid (mkObjectFS t (mkFSEntry p))
   return oid
-  where
-    oid   = mkObjId p
-
 
 -- ----------------------------------------
 
-mkFSEntry :: FilePath -> ObjType -> Cmd FSEntry
-mkFSEntry p t = do
+mkFSEntry' :: FilePath -> ObjType -> Cmd FSEntry
+mkFSEntry' p t = do
   st <- io $ X.getFileStatus p
 
   when ( X.isDirectory st /= (t == DIR) ) $
@@ -818,17 +942,13 @@ mkFileCheckSum p = do
   mkCheckSum <$> io (readFile p)
 
 
-scanFSDir :: (FilePath -> Bool) -> ObjId -> Cmd [FilePath]
-scanFSDir fp oid = do
-  p <- path
-  readDir p
+scanFSDir :: FilePath -> Cmd [FilePath]
+scanFSDir p0 = do
+  trc $ "scanFSDir: reading dir " ++ show p0
+  io $ readDir p0
   where
-    path = do
-      obj <- checkObjM isDirObj oid
-      return $ obj ^. fse . filePath . isoName
-
-    readDir :: FilePath -> Cmd [FilePath]
-    readDir p = io $ do
+    readDir :: FilePath -> IO [FilePath]
+    readDir p = do
       s  <- X.openDirStream p
       xs <- readDirEntries s
       X.closeDirStream s
@@ -838,10 +958,9 @@ scanFSDir fp oid = do
           e1 <- X.readDirStream s
           if null e1
             then return []
-            else do es <- readDirEntries s
-                    return $ if fp e1
-                             then e1 : es
-                             else      es
+            else do
+              es <- readDirEntries s
+              return (e1 : es)
 
 -- ----------------------------------------
 --
@@ -861,6 +980,9 @@ xmpImageFilePath = matchRE xmpImageRegex
 
 dxoImageFilePath :: FilePath -> Bool
 dxoImageFilePath = matchRE dxoImageRegex
+
+jsonImageFilePath :: FilePath -> Bool
+jsonImageFilePath = matchRE jsonImageRegex
 
 srgbSubDirPath :: FilePath -> Bool
 srgbSubDirPath = matchRE srgbSubDirRegex
@@ -901,3 +1023,12 @@ srgbSubDirRegex = parseRegex $ intercalate "|"
   ]
 
 -- ----------------------------------------
+
+cmd1 :: Cmd ()
+cmd1 = do
+  mountPath .= "."
+  syncFS
+  saveObjStore ""
+
+
+run1 = runCmd cmd1
