@@ -849,7 +849,7 @@ syncDir oid es = do
         (jsns, es5) = partition jsonImageFilePath es4
         (srgb, es6) = partition srgbSubDirPath    es5
 
-        addRaw n = do new <- mkFSObj (p </> n) RAW
+        addRaw n = do new <- mkFSObj p n RAW
                       adjustObjM (setParent  oid) new
                       adjustObjM (addChild (mkName n) new) oid
 
@@ -868,7 +868,7 @@ mountFS :: Cmd ()
 mountFS = do
   mp <- use mountPath
   trc $ "mountFS: mount filesystem directory at " ++ show mp
-  newRoot <- mkFSObj "." DIR
+  newRoot <- mkFSObj "" "." DIR
   root .= Just newRoot  -- set new _root in state
 
 -- ----------------------------------------
@@ -904,12 +904,12 @@ saveObjStore p = do
 -- | make an object representing a file or a directory in the FS.
 --   The file path must point to an existing and readable fs entry
 
-mkFSObj :: FilePath -> ObjType -> Cmd ObjId
-mkFSObj p t = do
-  trc $ "mkFSObj: create an object for path " ++ show p
+mkFSObj :: FilePath -> FilePath -> ObjType -> Cmd ObjId
+mkFSObj p n t = do
+  trc $ "mkFSObj: create an object for path " ++ show (p </> n)
   bs     <- use mountPath
-  let oid = mkObjId (bs </> p)
-  objMap %= insertObjMap oid (mkObjectFS t (mkFSEntry p))
+  let oid = mkObjId (bs </> p </> n)
+  objMap %= insertObjMap oid (mkObjectFS t (mkFSEntry n))
   return oid
 
 -- ----------------------------------------
