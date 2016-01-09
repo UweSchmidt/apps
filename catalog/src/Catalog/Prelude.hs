@@ -1035,53 +1035,69 @@ run1 = runCmd cmd1
 
 -- ----------------------------------------
 
-data Object'      = Object'
-                    { _objName   :: !Name
-                    , _objType   :: !ObjType
-                    , _objParent :: !ObjId
-                    , _objParts  :: !Parts
+data Object'      = ImgObject
+                    { _objName     :: !Name
+                    , _objParent   :: !ObjId
+                    , _objParts    :: !Parts
+                    }
+                  | DirObject
+                    { _objName     :: !Name
+                    , _objParent   :: !ObjId
+                    , _objAge      :: !TimeStamp
+                    , _objChildren :: !(Map Name ObjId)
                     }
 
-data Parts        = Parts (Map PartName Part)
+data Parts        = Parts (Map Name FSentry)
 
-data PartName     = PNraw    !Name
-                  | PNmeta   !Name
-                  | PNjpg    !Name !Name
-                  | PNcopy   !Name !Name
-                  | PNchild  !Name
-                  | PNcoll   !Name
-                    
-data Part         = FSE
-                    { _ts :: !TimeStamp
+data FSentry      = FSE
+                    { _ft :: !FStype
+                    , _ts :: !TimeStamp
                     , _cs :: !CheckSum
                     }
                   | CLE
                     { _orgRef :: !ObjId
-                    , _orgImg :: !PartName
+                    , _orgImg :: !Name
                     }
-                    
+
+data FStype = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
+
 -- ----------------------------------------
 
-mkObject' :: Name -> ObjType -> Object'
-mkObject' n t = Object' n t emptyObjId emptyParts
+mkImgObject :: Name -> Object'
+mkImgObject n = ImgObject n emptyObjId emptyParts
+
+mkDirObject :: Name -> Object'
+mkDirObject n = DirObject n emptyObjId zeroTimeStamp M.empty
 
 deriving instance Show Object'
 
 instance ToJSON Object' where
-  toJSON o = J.object
-    [ "objName"   J..= _objName   o
-    , "objType"   J..= _objType   o
-    , "objParent" J..= _objParent o
-    , "objParts"  J..= _objParts  o
+  toJSON o@ImgObject{} = J.object
+    [ "Object'"     J..= ("ImgObject" :: String)
+    , "objName"     J..= _objName     o
+    , "objParent"   J..= _objParent   o
+    , "objParts"    J..= _objParts    o
+    ]
+  toJSON o@DirObject{} = J.object
+    [ "Object'"     J..= ("DirObject" :: String)
+    , "objName"     J..= _objName     o
+    , "objParent"   J..= _objParent   o
+    , "objAge"      J..= _objAge      o
+    , "objChildren" J..= (M.toList $ _objChildren o)
     ]
 
 instance FromJSON Object' where
   parseJSON = withObject "Object'" $ \ o ->
-    Object'
-    <$> o .: "objName"
-    <*> o .: "objType"
-    <*> o .: "objParent"
-    <*> o .: "objParts"
+    do t <- o .: "Object'"
+       case t :: String of
+         "ImgObject" ->
+           ImgObject <$> (o .: "objName")  <*> (o .: "objParent")
+                     <*> (o .: "objParts")
+         "DirObject" ->
+           DirObject <$> (o .: "objName")  <*> (o .: "objParent")
+                     <*> (o .: "objAge")
+                     <*> (M.fromList <$> (o .: "objChildren"))
+         _ -> mzero
 
 -- ----------------------------------------
 
@@ -1090,7 +1106,7 @@ emptyParts = Parts M.empty
 
 deriving instance Show Parts
 
-isoParts :: Iso' Parts (Map PartName Part)
+isoParts :: Iso' Parts (Map Name FSentry)
 isoParts = iso (\ (Parts pm) -> pm) Parts
 
 instance ToJSON Parts where
@@ -1101,96 +1117,78 @@ instance FromJSON Parts where
 
 -- ----------------------------------------
 
-deriving instance Eq   PartName
-deriving instance Ord  PartName
-deriving instance Show PartName
+deriving instance Show FSentry
 
-instance ToJSON PartName where
-  toJSON (PNraw   n)   = J.object ["PNraw"   J..= n]
-  toJSON (PNmeta  n)   = J.object ["PNmeta"  J..= n]
-  toJSON (PNjpg   n m) = J.object ["PNjpeg"  J..= (n, m)]
-  toJSON (PNcopy  n m) = J.object ["PNcopy"  J..= (n, m)]
-  toJSON (PNchild n)   = J.object ["PNchild" J..= n]
-  toJSON (PNcoll  n)   = J.object ["PNcoll"  J..= n]
+instance ToJSON FSentry where
+  toJSON o = J.object
+    [ "ft"   J..= _ft o
+    , "ts"   J..= _ts o
+    , "cs"   J..= _cs o
+    ]
 
-instance FromJSON PartName where
-  parseJSON = withObject "PartName" $ \ o ->
-    (do n <- o .: "PNraw"
-        PNraw <$> parseJSON n
-    )
-    <|>
-    (do n <- o .: "PNmeta"
-        PNmeta <$> parseJSON n
-    )
-    <|>
-    (do n <- o .: "PNjpg"
-        uncurry PNjpg <$> parseJSON n
-    )
-    <|>
-    (do n <- o .: "PNcopy"
-        uncurry PNcopy <$> parseJSON n
-    )
-    <|>
-    (do n <- o .: "PNchild"
-        PNchild <$> parseJSON n
-    )
-    <|>
-    (do n <- o .: "PNcoll"
-        PNcoll <$> parseJSON n
-    )
-    
+instance FromJSON FSentry where
+  parseJSON = withObject "FSentry" $ \ o ->
+    FSE <$> (o .: "ft") <*> (o .: "ts") <*> (o .: "cs")
+
 -- ----------------------------------------
 
-deriving instance Show Part
+deriving instance Eq   FStype
+deriving instance Ord  FStype
+deriving instance Show FStype
+deriving instance Read FStype
 
-instance ToJSON Part where
-  toJSON = undefined
+instance ToJSON FStype where
+  toJSON = toJSON . show
 
-instance FromJSON Part where
-  parseJSON = withObject "Part" $ \ o ->
-    undefined
-    
+instance FromJSON FStype where
+  parseJSON o = read <$> parseJSON o
+
 -- ----------------------------------------
 
-filePathToPartName :: FilePath -> Maybe (Name, PartName)
-filePathToPartName path =
-  parse (mk1 baseName ++ mk2 rawExt)  (const PNraw)
+filePathToFStype :: FilePath -> Maybe (Name, FStype)
+filePathToFStype path =
+  parse (mk1 baseName  ++ rawExt)  FSraw
   <|>
-  parse (mk1 baseName ++ mk2 metaExt) (const PNmeta)
+  parse (mk1 baseName' ++ imgExt)  FSimg
   <|>
-  parse (mk0 subDirPre ++
-         mk1 baseName ++ mk2 jpgExt)   PNjpg
-  where   
+  parse (mk1 baseName  ++ metaExt) FSmeta
+  <|>
+  parse (mk1 baseName  ++ jsonExt) FSjson
+  <|>
+  parse (subDirPre ++ mk1 baseName ++ jpgExt)  FSjpg
+  where
     parse re' c
       | null rest = partRes res
       | otherwise = Nothing
       where
         (res, rest) = splitSubex re' path
 
-        partRes [("0", dir), ("1", base), ("2", part)] =
-          Just (mkName base, c (mkName dir) (mkName part))
-
-        partRes             [("1", base), ("2", part)] =
-          Just (mkName base, c emptyName    (mkName part))
+        partRes [("1", base)] =
+          Just (mkName base, c)
 
         partRes _ = Nothing
 
-    mk0  e = "({0}((" ++ e ++ ")/)?)"
     mk1  e = "({1}(" ++ e ++ "))"
-    mk2  e = "({2}(" ++ e ++ "))"
 
-    baseName = "[-._A-Za-z0-9]+"
-    rawExt   = "[.](nef|NEF|rw2|RW2|gif|tiff|ppm|pgm|pbm)"
-    metaExt  = "[.]xmp|([.](nef|NEF|rw2|RW2|jpg|JPG)[.]dxo)"
-    jpgExt   = "[.](jpg|JPG)"
-    subDirPre = intercalate "|"
-                [ "srgb[0-9]*"
-                , "srgb-bw"
-                , "[0-9]+x[0-9]+"
-                , "dxo"
-                , "small"
-                , "web"
-                , "bw"
-                ]
+    baseName  = "[-._A-Za-z0-9]+"
+    baseName' = "[-._A-Za-z0-9]+"
+    rawExt    = "[.](nef|NEF)"
+    imgExt    = "[.](jpp|JPG|gif|tiff|ppm|pgm|pbm)"
+    metaExt   = "[.](xmp|((nef|NEF|rw2|RW2|jpg|JPG)[.]dxo))"
+    jsonExt   = "[.](json)"
+    jpgExt    = "[.](jpg|JPG)"
+    subDirPre =
+      "(("
+      ++ ( intercalate "|"
+           [ "srgb[0-9]*"
+           , "srgb-bw"
+           , "[0-9]+x[0-9]+"
+           , "dxo"
+           , "small"
+           , "web"
+           , "bw"
+           ]
+         )
+      ++ ")/)?"
 
 -- ----------------------------------------
