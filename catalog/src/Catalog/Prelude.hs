@@ -533,7 +533,7 @@ instance ToJSON FSEntry where
       ]
 
 instance FromJSON FSEntry where
-  parseJSON = withObject "FSentry" $ \ o ->
+  parseJSON = withObject "FSEntry" $ \ o ->
     ( FSEntry
       <$> o .: "filePath"
       <*> o .: "age"
@@ -583,16 +583,24 @@ instance FromJSON Name where
 zeroTimeStamp :: TimeStamp
 zeroTimeStamp = TS $ read "0"
 
+isoTimeStamp :: Iso' TimeStamp String
+isoTimeStamp = iso
+               (\ (TS t) -> show t)
+               (TS . read)
+               
 deriving instance Eq   TimeStamp
 deriving instance Ord  TimeStamp
 deriving instance Show TimeStamp
 
 instance ToJSON TimeStamp where
-  toJSON (TS t) = toJSON . show $ t
+  toJSON = toJSON . view isoTimeStamp
 
 instance FromJSON TimeStamp where
-  parseJSON (J.String t) = return (TS . read . T.unpack $ t)
+  parseJSON (J.String t) = return ((view $ from isoTimeStamp) . T.unpack $ t)
   parseJSON _            = mzero
+
+now :: MonadIO m => m TimeStamp
+now = liftIO (TS <$> X.epochTime)
 
 -- ----------------------------------------
 --
@@ -1046,15 +1054,20 @@ newtype ObjMap'   = ObjMap' (M.Map ObjId Object')
 data Object'      = ImgObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
-                    , _objParts    :: !Parts
+                    , _imgParts    :: !Parts
                     }
                   | DirObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
-                    , _objAge      :: !TimeStamp
-                    , _objChildren :: !(Map Name ObjId)
+                    , _dirAge      :: !TimeStamp
+                    , _dirContent :: !(Map Name ObjId)
                     }
-
+                  | ColObject
+                    { _objName     :: !Name
+                    , _objParent   :: !ObjId
+                    , _colContent  :: ![(Name, ObjId)] 
+                    }
+                    
 data Parts        = Parts (Map Name FSentry)
 
 data FSentry      = FSE
@@ -1062,10 +1075,6 @@ data FSentry      = FSE
                     , _ft :: !FStype
                     , _ts :: !TimeStamp
                     , _cs :: !CheckSum
-                    }
-                  | CLE
-                    { _orgRef :: !ObjId
-                    , _orgImg :: !Name
                     }
 
 data FStype = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
@@ -1159,10 +1168,11 @@ checkObjM p oid = do
   if p o
     then return o
     else abort $ "checkObjM: wrong object type for object " ++ show o
+--}
+insertObj'M :: ObjId -> Object' -> Cmd' ()
+insertObj'M oid obj = osMap . isoObjMap' %= M.insert oid obj
 
-insertObjM :: ObjId -> Object -> Cmd ()
-insertObjM oid obj = objMap . isoObjMap' %= M.insert oid obj
-
+{-
 deleteObjM :: ObjId -> Cmd ()
 deleteObjM oid = objMap . isoObjMap' %= M.delete oid
 
@@ -1172,11 +1182,25 @@ adjustObjM f oid = objMap . isoObjMap' %= M.adjust f oid
 
 -- ----------------------------------------
 
+o1' = (mkImgObject (mkName "abc")) {_imgParts = pm1}
+  where
+    pm1 = Parts $ M.fromList [(n1, FSE n1 FSraw zeroTimeStamp zeroCheckSum)]
+    n1 = mkName "abc.nef"
+    
+o2' = (mkDirObject "dir") {_dirContent = cm1}
+  where
+    cm1 = M.fromList [(n1, emptyObjId)]
+    n1 = mkName "subdir"
+    
+
 mkImgObject :: Name -> Object'
 mkImgObject n = ImgObject n emptyObjId emptyParts
 
-mkDirObject :: Name -> Object'
-mkDirObject n = DirObject n emptyObjId zeroTimeStamp M.empty
+mkDirObject :: FilePath -> Object'
+mkDirObject n = DirObject (mkName n) emptyObjId zeroTimeStamp M.empty
+
+mkColObject :: Name -> Object'
+mkColObject n = ColObject n emptyObjId []
 
 deriving instance Show Object'
 
@@ -1185,14 +1209,20 @@ instance ToJSON Object' where
     [ "Object'"     J..= ("ImgObject" :: String)
     , "objName"     J..= _objName     o
     , "objParent"   J..= _objParent   o
-    , "objParts"    J..= _objParts    o
+    , "imgParts"    J..= _imgParts    o
     ]
   toJSON o@DirObject{} = J.object
     [ "Object'"     J..= ("DirObject" :: String)
     , "objName"     J..= _objName     o
     , "objParent"   J..= _objParent   o
-    , "objAge"      J..= _objAge      o
-    , "objChildren" J..= (M.toList $ _objChildren o)
+    , "dirAge"      J..= _dirAge      o
+    , "dirContent"  J..= (M.toList $ _dirContent o)
+    ]
+  toJSON o@ColObject{} = J.object
+    [ "Object'"     J..= ("ColObject" :: String)
+    , "objName"     J..= _objName     o
+    , "objParent"   J..= _objParent   o
+    , "colContent"  J..= _colContent  o
     ]
 
 instance FromJSON Object' where
@@ -1200,12 +1230,18 @@ instance FromJSON Object' where
     do t <- o .: "Object'"
        case t :: String of
          "ImgObject" ->
-           ImgObject <$> (o .: "objName")  <*> (o .: "objParent")
-                     <*> (o .: "objParts")
+           ImgObject <$> (o .: "objName")
+                     <*> (o .: "objParent")
+                     <*> (o .: "imgParts")
          "DirObject" ->
-           DirObject <$> (o .: "objName")  <*> (o .: "objParent")
-                     <*> (o .: "objAge")
-                     <*> (M.fromList <$> (o .: "objChildren"))
+           DirObject <$> (o .: "objName")
+                     <*> (o .: "objParent")
+                     <*> (o .: "dirAge")
+                     <*> (M.fromList <$> (o .: "dirContent"))
+         "ColObject" ->
+           ColObject <$> (o .: "objName")
+                     <*> (o .: "objParent")
+                     <*> (o .: "colContent")
          _ -> mzero
 
 objName :: Lens' Object' Name
@@ -1214,47 +1250,67 @@ objName k o = fmap (\ new -> o {_objName = new}) (k (_objName o))
 objParent :: Lens' Object' ObjId
 objParent k o = fmap (\ new -> o {_objParent = new}) (k (_objParent o))
 
-imgObject :: Prism' Object' (Name, ObjId, Parts)
-imgObject = prism
-  (\ (x1, x2, x3) -> ImgObject x1 x2 x3)
+imgObject :: Prism' Object' Object'
+imgObject = prism id
   (\ o -> case o of
-      ImgObject x1 x2 x3 -> Right (x1, x2, x3)
-      _                  -> Left o
+      ImgObject{} -> Right o
+      _           -> Left  o
   )
 
-dirObject :: Prism' Object' (Name, ObjId, TimeStamp, Map Name ObjId)
-dirObject = prism
-  (\ (x1, x2, x3, x4) -> DirObject x1 x2 x3 x4)
+dirObject :: Prism' Object' Object'
+dirObject = prism id
   (\ o -> case o of
-      DirObject x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
-      _                     -> Left o
+      DirObject{} -> Right o
+      _           -> Left  o
   )
 
-objParts :: Traversal' Object' Parts
-objParts = imgObject . _3
+colObject :: Prism' Object' Object'
+colObject = prism id
+  (\ o -> case o of
+      ColObject{} -> Right o
+      _           -> Left  o
+  )
 
-objAge :: Traversal' Object' TimeStamp
-objAge = dirObject . _3
+imgParts :: Traversal' Object' Parts
+imgParts = imgObject . imgParts'
+  where
+    imgParts' k o =fmap (\ new -> o {_imgParts = new}) (k (_imgParts o))
 
-objChildren :: Traversal' Object' (Map Name ObjId)
-objChildren = dirObject . _4
+dirAge :: Traversal' Object' TimeStamp
+dirAge = dirObject . dirAge'
+  where
+    dirAge' k o =fmap (\ new -> o {_dirAge = new}) (k (_dirAge o))
 
+dirContent :: Traversal' Object' (Map Name ObjId)
+dirContent = dirObject . dirContent'
+  where
+    dirContent' k o =fmap (\ new -> o {_dirContent = new}) (k (_dirContent o))
+
+colContent :: Traversal' Object' [(Name, ObjId)]
+colContent = colObject . colContent'
+  where
+    colContent' k o =fmap (\ new -> o {_colContent = new}) (k (_colContent o))
 
 -- ----------------------------------------
 
 emptyParts :: Parts
 emptyParts = Parts M.empty
 
+mkParts :: [FSentry] -> Parts
+mkParts = view $ from isoParts
+
 deriving instance Show Parts
 
-isoParts :: Iso' Parts (Map Name FSentry)
-isoParts = iso (\ (Parts pm) -> pm) Parts
+isoParts :: Iso' Parts [FSentry]
+isoParts = iso
+           (\ (Parts pm) -> M.elems pm)
+           (Parts . M.fromList . (\ es -> zip (map _fn es) es))
 
 instance ToJSON Parts where
-  toJSON (Parts pm) = toJSON $ M.elems pm
+  toJSON = toJSON . view isoParts
 
 instance FromJSON Parts where
-  parseJSON j = (Parts . M.fromList . (\ es -> zip (map _fn es) es)) <$> parseJSON j
+  parseJSON j = mkParts <$> parseJSON j
 
 -- ----------------------------------------
 
@@ -1340,3 +1396,38 @@ filePathToFStype path =
       ++ ")/)?"
 
 -- ----------------------------------------
+
+type Cmd' = Action Env ObjStore'
+
+runCmd' :: Cmd' a -> IO (Either Msg a, ObjStore', Log)
+runCmd' cmd = runAction cmd Env emptyObjStore'
+
+setMountPath :: FilePath -> Cmd' ()
+setMountPath p =
+  osMount .= p
+  
+mountFS' :: Cmd' ()
+mountFS' = do
+  bs <- use osMount
+  trc $ "mountFS': mount filesystem directory at " ++ show bs
+  newRoot <- mkDir "" ""
+  osRoot .= Just newRoot  -- set new _root in state
+
+-- ----------------------------------------
+--
+-- | make an object representing a file or a directory in the FS.
+--   The file path must point to an existing and readable fs entry
+
+mkDir :: FilePath -> FilePath -> Cmd' ObjId
+mkDir p n = do
+  trc $ "mkDir: create an object for path " ++ show (p </> n)
+  bs     <- use osMount
+  let oid = mkObjId (bs </> p </> n)
+  insertObj'M oid (mkDirObject n)
+  return oid
+
+-- ----------------------------------------
+
+rrr = runCmd' $ do
+  setMountPath "/home/uwe/Bilder/Catalog"
+  mountFS'
