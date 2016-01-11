@@ -1035,6 +1035,14 @@ run1 = runCmd cmd1
 
 -- ----------------------------------------
 
+data ObjStore'    = ObjStore'
+                    { _osMap   :: !ObjMap'
+                    , _osRoot  :: !ObjId
+                    , _osMount :: !Name
+                    }
+
+newtype ObjMap'   = ObjMap' (M.Map ObjId Object')
+
 data Object'      = ImgObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
@@ -1050,7 +1058,8 @@ data Object'      = ImgObject
 data Parts        = Parts (Map Name FSentry)
 
 data FSentry      = FSE
-                    { _ft :: !FStype
+                    { _fn :: !Name
+                    , _ft :: !FStype
                     , _ts :: !TimeStamp
                     , _cs :: !CheckSum
                     }
@@ -1060,6 +1069,106 @@ data FSentry      = FSE
                     }
 
 data FStype = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
+
+-- ----------------------------------------
+--
+-- basic ops for the object' store
+
+deriving instance Show ObjStore'
+
+emptyObjStore' :: ObjStore'
+emptyObjStore' =
+  ObjStore'
+  { _osMap   = emptyObjMap'
+  , _osRoot  = emptyObjId
+  , _osMount = emptyName
+  }
+
+-- lenses
+
+osMap :: Lens' ObjStore' ObjMap'
+osMap k s = fmap (\ new -> s { _osMap = new }) (k (_osMap s) )
+
+osRoot :: Lens' ObjStore' (Maybe ObjId)
+osRoot = root' . isoMaybeObjId
+  where
+    root' :: Lens' ObjStore' ObjId
+    root' k s = fmap (\ new -> s { _osRoot = new }) (k (_osRoot s) )
+
+osMount :: Lens' ObjStore' String
+osMount = mountPath' . isoName
+  where
+    mountPath' :: Lens' ObjStore' Name
+    mountPath' k s = fmap (\ new -> s { _osMount = new }) (k (_osMount s) )
+
+instance ToJSON ObjStore' where
+  toJSON o = J.object
+    [ "osMap"   J..= _osMap   o
+    , "osRoot"  J..= _osRoot  o
+    , "osMount" J..= _osMount o
+    ]
+
+instance FromJSON ObjStore' where
+  parseJSON = withObject "ObjStore'" $ \ o ->
+    ObjStore'
+    <$> o .: "osMap"
+    <*> o .: "osRoot"
+    <*> o .: "osMount"
+
+-- ----------------------------------------
+--
+-- basic ops for the object' map
+
+emptyObjMap' :: ObjMap'
+emptyObjMap' = ObjMap' M.empty
+
+deriving instance Show ObjMap'
+
+isoObjMap' :: Iso' ObjMap' (M.Map ObjId Object')
+isoObjMap' = iso (\ (ObjMap' om) -> om) ObjMap'
+
+instance ToJSON ObjMap' where
+  toJSON (ObjMap' om) = toJSON $ M.toList om
+
+instance FromJSON ObjMap' where
+  parseJSON j = (ObjMap' . M.fromList) <$> parseJSON j
+
+lookupObjMap' :: ObjId -> ObjMap' -> Maybe Object'
+lookupObjMap' oid (ObjMap' om) = M.lookup oid om
+
+insertObjMap' :: ObjId -> Object' -> ObjMap' -> ObjMap'
+insertObjMap' oid obj (ObjMap' om) = ObjMap' $ M.insert oid obj om
+
+deleteObjMap' :: ObjId -> ObjMap' -> ObjMap'
+deleteObjMap' oid (ObjMap' om) = ObjMap' $ M.delete oid om
+
+{--
+memberObjM :: ObjId -> Cmd Bool
+memberObjM oid = uses (objMap . isoObjMap') (maybe False (const True) . M.lookup oid)
+
+lookupObjM :: ObjId -> Cmd Object
+lookupObjM oid = do
+  res <- uses (objMap . isoObjMap') (M.lookup oid)
+  case res of
+    Nothing -> abort $ "lookupObjM: object not found " ++ show oid
+    Just o  -> return o
+
+checkObjM :: (Object -> Bool) -> ObjId -> Cmd Object
+checkObjM p oid = do
+  o <- lookupObjM oid
+  if p o
+    then return o
+    else abort $ "checkObjM: wrong object type for object " ++ show o
+
+insertObjM :: ObjId -> Object -> Cmd ()
+insertObjM oid obj = objMap . isoObjMap' %= M.insert oid obj
+
+deleteObjM :: ObjId -> Cmd ()
+deleteObjM oid = objMap . isoObjMap' %= M.delete oid
+
+adjustObjM :: (Object -> Object) -> ObjId -> Cmd ()
+adjustObjM f oid = objMap . isoObjMap' %= M.adjust f oid
+-- -}
 
 -- ----------------------------------------
 
@@ -1099,6 +1208,38 @@ instance FromJSON Object' where
                      <*> (M.fromList <$> (o .: "objChildren"))
          _ -> mzero
 
+objName :: Lens' Object' Name
+objName k o = fmap (\ new -> o {_objName = new}) (k (_objName o))
+
+objParent :: Lens' Object' ObjId
+objParent k o = fmap (\ new -> o {_objParent = new}) (k (_objParent o))
+
+imgObject :: Prism' Object' (Name, ObjId, Parts)
+imgObject = prism
+  (\ (x1, x2, x3) -> ImgObject x1 x2 x3)
+  (\ o -> case o of
+      ImgObject x1 x2 x3 -> Right (x1, x2, x3)
+      _                  -> Left o
+  )
+
+dirObject :: Prism' Object' (Name, ObjId, TimeStamp, Map Name ObjId)
+dirObject = prism
+  (\ (x1, x2, x3, x4) -> DirObject x1 x2 x3 x4)
+  (\ o -> case o of
+      DirObject x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
+      _                     -> Left o
+  )
+
+objParts :: Traversal' Object' Parts
+objParts = imgObject . _3
+
+objAge :: Traversal' Object' TimeStamp
+objAge = dirObject . _3
+
+objChildren :: Traversal' Object' (Map Name ObjId)
+objChildren = dirObject . _4
+
+
 -- ----------------------------------------
 
 emptyParts :: Parts
@@ -1110,10 +1251,10 @@ isoParts :: Iso' Parts (Map Name FSentry)
 isoParts = iso (\ (Parts pm) -> pm) Parts
 
 instance ToJSON Parts where
-  toJSON (Parts pm) = toJSON $ M.toList pm
+  toJSON (Parts pm) = toJSON $ M.elems pm
 
 instance FromJSON Parts where
-  parseJSON j = (Parts . M.fromList) <$> parseJSON j
+  parseJSON j = (Parts . M.fromList . (\ es -> zip (map _fn es) es)) <$> parseJSON j
 
 -- ----------------------------------------
 
@@ -1121,14 +1262,16 @@ deriving instance Show FSentry
 
 instance ToJSON FSentry where
   toJSON o = J.object
-    [ "ft"   J..= _ft o
+    [ "fn"   J..= _fn o
+    , "ft"   J..= _ft o
     , "ts"   J..= _ts o
     , "cs"   J..= _cs o
     ]
 
 instance FromJSON FSentry where
   parseJSON = withObject "FSentry" $ \ o ->
-    FSE <$> (o .: "ft") <*> (o .: "ts") <*> (o .: "cs")
+    FSE <$> (o .: "fn") <*> (o .: "ft")
+        <*> (o .: "ts") <*> (o .: "cs")
 
 -- ----------------------------------------
 
@@ -1142,6 +1285,11 @@ instance ToJSON FStype where
 
 instance FromJSON FStype where
   parseJSON o = read <$> parseJSON o
+
+-- ----------------------------------------
+
+isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
+isoMapList = iso M.toList M.fromList
 
 -- ----------------------------------------
 
