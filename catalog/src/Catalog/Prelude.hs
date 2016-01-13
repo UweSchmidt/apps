@@ -1065,19 +1065,21 @@ data Object'      = ImgObject
                   | ColObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
-                    , _colContent  :: ![(Name, ObjId)] 
+                    , _colContent  :: ![(ObjId, PartName)] 
                     }
                     
-data Parts        = Parts (Map Name FSentry)
+data Parts        = Parts (Map PartName FSentry)
+
+type PartName     = Name
 
 data FSentry      = FSE
-                    { _fn :: !Name
+                    { _fn :: !PartName
                     , _ft :: !FStype
                     , _ts :: !TimeStamp
                     , _cs :: !CheckSum
                     }
 
-data FStype = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
+data FStype       = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
 
 -- ----------------------------------------
 --
@@ -1286,7 +1288,7 @@ dirContent = dirObject . dirContent'
   where
     dirContent' k o =fmap (\ new -> o {_dirContent = new}) (k (_dirContent o))
 
-colContent :: Traversal' Object' [(Name, ObjId)]
+colContent :: Traversal' Object' [(ObjId, PartName)]
 colContent = colObject . colContent'
   where
     colContent' k o =fmap (\ new -> o {_colContent = new}) (k (_colContent o))
@@ -1410,8 +1412,21 @@ mountFS' :: Cmd' ()
 mountFS' = do
   bs <- use osMount
   trc $ "mountFS': mount filesystem directory at " ++ show bs
-  newRoot <- mkDir "" ""
+  newRoot <- mkDir "" "/"
   osRoot .= Just newRoot  -- set new _root in state
+
+saveObjStore' :: FilePath -> Cmd' ()
+saveObjStore' p = do
+  trc $ "saveobjstore': save state to " ++ show p
+  bs <- J.encodePretty <$> get
+  io $ if null p
+       then L.putStrLn bs
+       else L.writeFile p bs
+
+-- usefull ?
+
+_JSON :: (ToJSON a, FromJSON a) => Prism' L.ByteString a
+_JSON = prism' J.encodePretty J.decode
 
 -- ----------------------------------------
 --
@@ -1421,8 +1436,7 @@ mountFS' = do
 mkDir :: FilePath -> FilePath -> Cmd' ObjId
 mkDir p n = do
   trc $ "mkDir: create an object for path " ++ show (p </> n)
-  bs     <- use osMount
-  let oid = mkObjId (bs </> p </> n)
+  let oid = mkObjId (p </> n)
   insertObj'M oid (mkDirObject n)
   return oid
 
@@ -1431,3 +1445,5 @@ mkDir p n = do
 rrr = runCmd' $ do
   setMountPath "/home/uwe/Bilder/Catalog"
   mountFS'
+  saveObjStore' ""
+  
