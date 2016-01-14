@@ -587,7 +587,7 @@ isoTimeStamp :: Iso' TimeStamp String
 isoTimeStamp = iso
                (\ (TS t) -> show t)
                (TS . read)
-               
+
 deriving instance Eq   TimeStamp
 deriving instance Ord  TimeStamp
 deriving instance Show TimeStamp
@@ -1065,9 +1065,9 @@ data Object'      = ImgObject
                   | ColObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
-                    , _colContent  :: ![(ObjId, PartName)] 
+                    , _colContent  :: ![(ObjId, PartName)]
                     }
-                    
+
 data Parts        = Parts (Map PartName FSentry)
 
 type PartName     = Name
@@ -1188,12 +1188,12 @@ o1' = (mkImgObject (mkName "abc")) {_imgParts = pm1}
   where
     pm1 = Parts $ M.fromList [(n1, FSE n1 FSraw zeroTimeStamp zeroCheckSum)]
     n1 = mkName "abc.nef"
-    
+
 o2' = (mkDirObject "dir") {_dirContent = cm1}
   where
     cm1 = M.fromList [(n1, emptyObjId)]
     n1 = mkName "subdir"
-    
+
 
 mkImgObject :: Name -> Object'
 mkImgObject n = ImgObject n emptyObjId emptyParts
@@ -1407,7 +1407,7 @@ runCmd' cmd = runAction cmd Env emptyObjStore'
 setMountPath :: FilePath -> Cmd' ()
 setMountPath p =
   osMount .= p
-  
+
 mountFS' :: Cmd' ()
 mountFS' = do
   bs <- use osMount
@@ -1446,4 +1446,3 @@ rrr = runCmd' $ do
   setMountPath "/home/uwe/Bilder/Catalog"
   mountFS'
   saveObjStore' ""
-  
