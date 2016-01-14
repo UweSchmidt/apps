@@ -1429,6 +1429,64 @@ type Cmd' = Action Env ObjStore'
 runCmd' :: Cmd' a -> IO (Either Msg a, ObjStore', Log)
 runCmd' cmd = runAction cmd Env emptyObjStore'
 
+syncFS' :: Cmd' ()
+syncFS' = do
+  notMounted <- uses osRoot isNothing -- asks _osRoot
+  when notMounted mountFS'
+  root <- uses osRoot fromJust
+  syncFSEntry' root
+  return ()
+
+syncFSEntry' :: ObjId -> Cmd' ()
+syncFSEntry' oid = do
+  o <- lookupObj'M oid
+  trc $ "syncFSentry': syncing oid " ++ show oid ++ " => " ++ show o
+  case o of
+    ImgObject{} -> do
+      p <- objPath' o >>= fsPath'
+      trc $ "syncFSentry: syncing image " ++ show p
+
+    DirObject{} -> do
+      p <- objPath' o >>= fsPath'
+      trc $ "syncFSentry: syncing dir " ++ show p
+
+    ColObject{} -> do
+      p <- objPath' o
+      trc $ "syncFSentry: col object ignored " ++ show p
+
+
+{- }
+
+  x <- io $ X.fileExist p
+  if x
+    then do
+      status <- io $ X.getFileStatus p
+      let newtime = TS $ X.modificationTime status
+      let oldtime = o ^. fse .age
+      let update  = newtime > oldtime
+      when update $ adjustObjM (fse . age .~ newtime) oid
+
+      case o ^. otype of
+        DIR -> do
+          trc $ "syncFSentry: update directory"
+          when update $ do
+            trc $ "syncFSentry: read directory entries"
+            es <- scanFSDir p
+            trc $ "syncFSentry: dir contents " ++ show es
+            syncDir oid es
+
+          syncDirEntries oid
+
+        _oty -> do
+          trc $ "syncFSentry: update file"
+          when update $ do
+            trc $ "syncFSentry: file has changed"
+
+    else do
+      warn $ "syncFSentry: file object not found, will be removed " ++ show p
+      deleteObjects oid
+-- -}
+
 setMountPath :: FilePath -> Cmd' ()
 setMountPath p =
   osMount .= p
@@ -1437,7 +1495,7 @@ mountFS' :: Cmd' ()
 mountFS' = do
   bs <- use osMount
   trc $ "mountFS': mount filesystem directory at " ++ show bs
-  newRoot <- mkDir "" "/"
+  newRoot <- mkDir "" "."
   osRoot .= Just newRoot  -- set new _root in state
 
 saveObjStore' :: FilePath -> Cmd' ()
@@ -1510,10 +1568,13 @@ isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
 
 rrr :: IO (Either Msg (), ObjStore', Log)
 rrr = runCmd' $ do
-  setMountPath "/home/uwe/Bilder/Catalog"
+  wd <- exec "pwd" []
+  setMountPath =<< (head . lines  <$> execProcess "pwd" [] "")
   mountFS'
   r <- uses osRoot fromJust
   o <- lookupObj'M r
   p <- objPath' o
-  trc $ "root path = " ++ show p
+  a <- fsPath' p
+  trc $ "root path = " ++ show p ++ " (fspath = " ++ a ++ ")"
+  syncFS'
   saveObjStore' ""

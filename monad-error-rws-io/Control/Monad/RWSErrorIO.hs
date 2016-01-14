@@ -15,7 +15,7 @@ import Control.Monad.RWS
 import Control.Monad
 
 -- import Data.Monoid
-import System.Process           ( rawSystem )
+import System.Process           ( rawSystem, readProcessWithExitCode )
 import System.Exit
 import System.IO                ( hPutStrLn
                                 , stderr
@@ -166,5 +166,14 @@ execStr cmd0
     = exec (concat . take 1 $ cmd) (drop 1 cmd)
     where
       cmd = words cmd0
+
+execProcess :: Config r => String -> [String] -> String -> Action r s String
+execProcess cmd args input
+  = do (rc, stdOut, stdErr) <- io $ readProcessWithExitCode cmd args input
+       if rc == ExitSuccess
+         then do mapM_ warn $ lines stdErr
+                 return stdOut
+         else do mapM_ err  $ lines stdErr
+                 abort $ unwords ["error in executing external program: ", cmd, show args]
 
 -- ----------------------------------------
