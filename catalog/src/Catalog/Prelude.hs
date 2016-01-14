@@ -1039,6 +1039,7 @@ cmd1 = do
   saveObjStore ""
 
 
+run1 :: IO (Either Msg (), ObjStore, Log)
 run1 = runCmd cmd1
 
 -- ----------------------------------------
@@ -1065,12 +1066,17 @@ data Object'      = ImgObject
                   | ColObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
-                    , _colContent  :: ![(ObjId, PartName)]
+                    , _colContent  :: ![PartId]
                     }
 
 data Parts        = Parts (Map PartName FSentry)
 
 type PartName     = Name
+
+data PartId       = PartId
+                    { _ptObj  :: !ObjId
+                    , _ptName :: !PartName
+                    }
 
 data FSentry      = FSE
                     { _fn :: !PartName
@@ -1156,14 +1162,16 @@ deleteObjMap' oid (ObjMap' om) = ObjMap' $ M.delete oid om
 {--
 memberObjM :: ObjId -> Cmd Bool
 memberObjM oid = uses (objMap . isoObjMap') (maybe False (const True) . M.lookup oid)
+-- -}
 
-lookupObjM :: ObjId -> Cmd Object
-lookupObjM oid = do
-  res <- uses (objMap . isoObjMap') (M.lookup oid)
+lookupObj'M :: ObjId -> Cmd' Object'
+lookupObj'M oid = do
+  res <- uses (osMap . isoObjMap') (M.lookup oid)
   case res of
-    Nothing -> abort $ "lookupObjM: object not found " ++ show oid
+    Nothing -> abort $ "lookupObj'M: object not found " ++ show oid
     Just o  -> return o
 
+{-
 checkObjM :: (Object -> Bool) -> ObjId -> Cmd Object
 checkObjM p oid = do
   o <- lookupObjM oid
@@ -1184,11 +1192,13 @@ adjustObjM f oid = objMap . isoObjMap' %= M.adjust f oid
 
 -- ----------------------------------------
 
+o1' :: Object'
 o1' = (mkImgObject (mkName "abc")) {_imgParts = pm1}
   where
     pm1 = Parts $ M.fromList [(n1, FSE n1 FSraw zeroTimeStamp zeroCheckSum)]
     n1 = mkName "abc.nef"
 
+o2' :: Object'
 o2' = (mkDirObject "dir") {_dirContent = cm1}
   where
     cm1 = M.fromList [(n1, emptyObjId)]
@@ -1288,7 +1298,7 @@ dirContent = dirObject . dirContent'
   where
     dirContent' k o =fmap (\ new -> o {_dirContent = new}) (k (_dirContent o))
 
-colContent :: Traversal' Object' [(ObjId, PartName)]
+colContent :: Traversal' Object' [PartId]
 colContent = colObject . colContent'
   where
     colContent' k o =fmap (\ new -> o {_colContent = new}) (k (_colContent o))
@@ -1304,15 +1314,35 @@ mkParts = view $ from isoParts
 deriving instance Show Parts
 
 isoParts :: Iso' Parts [FSentry]
-isoParts = iso
-           (\ (Parts pm) -> M.elems pm)
-           (Parts . M.fromList . (\ es -> zip (map _fn es) es))
+isoParts =
+  iso (\ (Parts pm) -> pm) Parts
+  .
+  isoMapElems _fn
 
 instance ToJSON Parts where
   toJSON = toJSON . view isoParts
 
 instance FromJSON Parts where
   parseJSON j = mkParts <$> parseJSON j
+
+-- ----------------------------------------
+
+mkPartId :: ObjId -> PartName -> PartId
+mkPartId = PartId
+
+deriving instance Show PartId
+
+instance ToJSON PartId where
+  toJSON = toJSON . (\ (PartId oid n) -> (oid, n))
+
+instance FromJSON PartId where
+  parseJSON j = uncurry mkPartId <$> parseJSON j
+
+ptObj :: Lens' PartId ObjId
+ptObj k p = fmap (\ new -> p {_ptObj = new}) (k (_ptObj p))
+
+ptName :: Lens' PartId PartName
+ptName k p = fmap (\ new -> p {_ptName = new}) (k (_ptName p))
 
 -- ----------------------------------------
 
@@ -1343,11 +1373,6 @@ instance ToJSON FStype where
 
 instance FromJSON FStype where
   parseJSON o = read <$> parseJSON o
-
--- ----------------------------------------
-
-isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
-isoMapList = iso M.toList M.fromList
 
 -- ----------------------------------------
 
@@ -1423,11 +1448,6 @@ saveObjStore' p = do
        then L.putStrLn bs
        else L.writeFile p bs
 
--- usefull ?
-
-_JSON :: (ToJSON a, FromJSON a) => Prism' L.ByteString a
-_JSON = prism' J.encodePretty J.decode
-
 -- ----------------------------------------
 --
 -- | make an object representing a file or a directory in the FS.
@@ -1442,7 +1462,58 @@ mkDir p n = do
 
 -- ----------------------------------------
 
+partPath' :: PartId -> Cmd' FilePath
+partPath' p = do
+  o <- lookupObj'M (p ^.ptObj)
+  parentPath' (o ^. objParent . isoMaybeObjId) (p ^. ptName . isoName)
+
+objPath' :: Object' -> Cmd' FilePath
+objPath' o = do
+  parentPath' (o ^. objParent . isoMaybeObjId) (o ^. objName . isoName)
+
+parentPath' :: Maybe ObjId -> FilePath -> Cmd' FilePath
+parentPath' oid0  p0 =
+  maybe
+  (return p0)
+  (\ oid -> do
+      o <- lookupObj'M oid
+      parentPath' (o ^. objParent . isoMaybeObjId) (o ^. objName . isoName </> p0)
+  )
+  oid0
+
+fsPath' :: FilePath -> Cmd' FilePath
+fsPath' p = do
+  b <- use osMount
+  return (b </> p)
+
+-- ----------------------------------------
+--
+-- useful (?) glasses
+
+-- prism for parsing/printing JSON
+
+_JSON :: (ToJSON a, FromJSON a) => Prism' L.ByteString a
+_JSON = prism' J.encodePretty J.decode
+
+-- an iso for converting between maps and list of pairs
+
+isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
+isoMapList = iso M.toList M.fromList
+
+-- an iso for converting a list of elemets into a map,
+-- the key function estracts the keys of the elements
+
+isoMapElems :: Ord k => (e -> k) -> Iso' (Map k e) [e]
+isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
+
+-- ----------------------------------------
+
+rrr :: IO (Either Msg (), ObjStore', Log)
 rrr = runCmd' $ do
   setMountPath "/home/uwe/Bilder/Catalog"
   mountFS'
+  r <- uses osRoot fromJust
+  o <- lookupObj'M r
+  p <- objPath' o
+  trc $ "root path = " ++ show p
   saveObjStore' ""
