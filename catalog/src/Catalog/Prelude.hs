@@ -30,6 +30,7 @@ import Data.String
 import Data.Maybe
 import System.FilePath ((</>))
 import qualified System.Posix as X
+import           System.Posix (FileStatus)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map.Strict as M
@@ -601,6 +602,9 @@ instance FromJSON TimeStamp where
 
 now :: MonadIO m => m TimeStamp
 now = liftIO (TS <$> X.epochTime)
+
+fsTimeStamp :: FileStatus -> TimeStamp
+fsTimeStamp = TS . X.modificationTime
 
 -- ----------------------------------------
 --
@@ -1446,13 +1450,43 @@ syncFSEntry' oid = do
       p <- objPath' o >>= fsPath'
       trc $ "syncFSentry: syncing image " ++ show p
 
-    DirObject{} -> do
+
+    DirObject{_dirAge = t0} -> do
       p <- objPath' o >>= fsPath'
       trc $ "syncFSentry: syncing dir " ++ show p
+      s <- fsDirStat p
+      case s of
+        Nothing -> do
+          trc $ "syncFSentry: delete missing dir object " ++ show p ++ " (" ++ show oid ++ ")"
+          -- deleteObj'M
+        Just status -> do
+          when (fsTimeStamp status > t0) $ do
+            trc $ "syncFSentry: dir has changed syncing dir" ++ p
+
+          syncDirEntries' oid
 
     ColObject{} -> do
       p <- objPath' o
       trc $ "syncFSentry: col object ignored " ++ show p
+
+syncDirEntries' :: ObjId -> Cmd' ()
+syncDirEntries' oid = do
+  trc $ "syncDirEntries': syncing entries of dir " ++ show oid
+
+
+fsDirStat :: FilePath -> Cmd' (Maybe FileStatus)
+fsDirStat p = do
+  ex <- io $ X.fileExist p
+  if ex
+    then do
+      status <- io $ X.getFileStatus p
+      if X.isDirectory status
+        then do
+          return $ Just status
+        else
+          return Nothing
+    else
+      return Nothing
 
 
 {- }
@@ -1569,7 +1603,8 @@ isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
 rrr :: IO (Either Msg (), ObjStore', Log)
 rrr = runCmd' $ do
   wd <- exec "pwd" []
-  setMountPath =<< (head . lines  <$> execProcess "pwd" [] "")
+  -- setMountPath =<< (head . lines  <$> execProcess "pwd" [] "")
+  setMountPath =<< (io $ X.getWorkingDirectory)
   mountFS'
   r <- uses osRoot fromJust
   o <- lookupObj'M r
