@@ -1089,7 +1089,8 @@ data FSentry      = FSE
                     , _cs :: !CheckSum
                     }
 
-data FStype       = FSraw | FSmeta |FSjson | FSjpg | FSimg | FScopy
+data FStype       = FSraw    | FSmeta   | FSjson  | FSjpg | FSimg | FScopy
+                  | FSimgdir | FSjpgdir | FSother | FSboring
 
 -- ----------------------------------------
 --
@@ -1378,10 +1379,15 @@ instance ToJSON FStype where
 instance FromJSON FStype where
   parseJSON o = read <$> parseJSON o
 
+hasFStype :: (FStype -> Bool) -> (Name, (Name, FStype)) -> Bool
+hasFStype p (_, (_, t)) = p t
+
 -- ----------------------------------------
 
-filePathToFStype :: FilePath -> Maybe (Name, FStype)
-filePathToFStype path =
+filePathToFStype :: FilePath -> (Name, FStype)
+filePathToFStype path = fromMaybe (mkName path, FSother) $
+  parse (mk1 boringName) FSboring
+  <|>
   parse (mk1 baseName  ++ rawExt)  FSraw
   <|>
   parse (mk1 baseName' ++ imgExt)  FSimg
@@ -1390,7 +1396,11 @@ filePathToFStype path =
   <|>
   parse (mk1 baseName  ++ jsonExt) FSjson
   <|>
-  parse (subDirPre ++ mk1 baseName ++ jpgExt)  FSjpg
+  parse (mk1 jpgdirName) FSjpgdir
+  <|>
+  parse (mk1 imgdirName) FSimgdir
+  <|>
+  parse (jpgdirPre ++ mk1 baseName ++ jpgExt)  FSjpg
   where
     parse re' c
       | null rest = partRes res
@@ -1412,8 +1422,10 @@ filePathToFStype path =
     metaExt   = "[.](xmp|((nef|NEF|rw2|RW2|jpg|JPG)[.]dxo))"
     jsonExt   = "[.](json)"
     jpgExt    = "[.](jpg|JPG)"
-    subDirPre =
-      "(("
+
+    imgdirName = "[-_A-Za-z0-9]+" -- no do
+    jpgdirName =
+      "("
       ++ ( intercalate "|"
            [ "srgb[0-9]*"
            , "srgb-bw"
@@ -1424,7 +1436,17 @@ filePathToFStype path =
            , "bw"
            ]
          )
-      ++ ")/)?"
+      ++ ")"
+
+    jpgdirPre =
+      "(" ++ jpgdirName ++ "/)?"
+
+    boringName = intercalate "|"
+      [ "[.].*"
+      , ".*~"
+      , "tmp.*"
+      , ".*[.](bak|old|tiff|dng)"
+      ]
 
 -- ----------------------------------------
 
@@ -1457,7 +1479,8 @@ syncFSEntry' oid = do
       s <- fsDirStat p
       case s of
         Nothing -> do
-          trc $ "syncFSentry: delete missing dir object " ++ show p ++ " (" ++ show oid ++ ")"
+          trc $ "syncFSentry: delete missing dir object "
+                ++ show p ++ " (" ++ show oid ++ ")"
           -- deleteObj'M
         Just status -> do
           when (fsTimeStamp status > t0) $ do
@@ -1471,8 +1494,62 @@ syncFSEntry' oid = do
 
 syncDirEntries' :: ObjId -> Cmd' ()
 syncDirEntries' oid = do
-  trc $ "syncDirEntries': syncing entries of dir " ++ show oid
+  p <- oidPath oid
+  trc $ "syncDirEntries': syncing entries of dir " ++ show p
+  es <- parseFSDir p
+  trc $ "syncDirEntries': entries found " ++ show es
 
+  let (others, rest) = partition (hasFStype (== FSother)) es
+  mapM_ (\ n -> trc $ "syncDirEntries': entry ignored " ++ show (fst n)) others
+
+  return ()
+
+
+parseFSDir :: FilePath -> Cmd' [(Name, (Name, FStype))]
+parseFSDir p = do
+  (es, jpgdirs)  <- classifyNames <$> scanFSDir' p
+  jss <- mapM
+           (parseFSjpgdir p)                     -- process jpg subdirs
+           (jpgdirs ^.. traverse . _1 . isoName) -- (map (fromName . fst) jpgdirs)
+  return $ es ++ concat jss
+  where
+    classifyNames =
+      partition (hasFStype (/= FSjpgdir))  -- select jpg img subdirs
+      .
+      filter    (hasFStype (/= FSboring))  -- remove boring stuff
+      .
+      map (\ n -> (mkName n, filePathToFStype n))
+
+parseFSjpgdir :: FilePath -> FilePath -> Cmd' [(Name, (Name, FStype))]
+parseFSjpgdir p d =
+  classifyNames <$> scanFSDir' (p </> d)
+  where
+    classifyNames =
+      filter (\ n -> (n ^. _2 . _2) == FSjpg)
+      .
+      map (\ n -> (mkName (d </> n), filePathToFStype n))
+
+scanFSDir' :: FilePath -> Cmd' [FilePath]
+scanFSDir' p0 = do
+  trc $ "scanFSDir': reading dir " ++ show p0
+  res <- io $ readDir p0
+  trc $ "scanFSDir': result is " ++ show res
+  return res
+  where
+    readDir :: FilePath -> IO [FilePath]
+    readDir p = do
+      s  <- X.openDirStream p
+      xs <- readDirEntries s
+      X.closeDirStream s
+      return xs
+      where
+        readDirEntries s = do
+          e1 <- X.readDirStream s
+          if null e1
+            then return []
+            else do
+              es <- readDirEntries s
+              return (e1 : es)
 
 fsDirStat :: FilePath -> Cmd' (Maybe FileStatus)
 fsDirStat p = do
@@ -1559,6 +1636,10 @@ partPath' p = do
   o <- lookupObj'M (p ^.ptObj)
   parentPath' (o ^. objParent . isoMaybeObjId) (p ^. ptName . isoName)
 
+oidPath :: ObjId -> Cmd' FilePath
+oidPath =
+  lookupObj'M >=> objPath'
+
 objPath' :: Object' -> Cmd' FilePath
 objPath' o = do
   parentPath' (o ^. objParent . isoMaybeObjId) (o ^. objName . isoName)
@@ -1597,6 +1678,11 @@ isoMapList = iso M.toList M.fromList
 
 isoMapElems :: Ord k => (e -> k) -> Iso' (Map k e) [e]
 isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
+
+-- a prism for filtering
+
+is :: (a -> Bool) -> Prism' a a
+is p = prism id (\ o -> (if p o then Right else Left) o)
 
 -- ----------------------------------------
 
