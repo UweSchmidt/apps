@@ -13,7 +13,7 @@ module Catalog.Prelude
 where
 
 import Control.Lens hiding (children)
-import Control.Arrow (first)
+import Control.Arrow (first, (***))
 import Control.Applicative
 import           Control.Monad.RWSErrorIO
 import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
@@ -767,6 +767,12 @@ infixr 2 |||
 (|||) :: (a -> Bool) -> (a -> Bool) -> (a -> Bool)
 p ||| q = \ v -> p v || q v
 
+groupBy :: (Ord e) => (a -> e) -> [a] -> [[a]]
+groupBy f =
+  M.elems
+  . foldr (\ x m -> M.insertWith (++) (f x) [x]
+                    m) M.empty
+
 -- ----------------------------------------
 
 data Env = Env
@@ -1169,6 +1175,10 @@ memberObjM :: ObjId -> Cmd Bool
 memberObjM oid = uses (objMap . isoObjMap') (maybe False (const True) . M.lookup oid)
 -- -}
 
+memberObj'M :: ObjId -> Cmd' Bool
+memberObj'M oid =
+  uses (osMap . isoObjMap') (M.member oid)
+
 lookupObj'M :: ObjId -> Cmd' Object'
 lookupObj'M oid = do
   res <- uses (osMap . isoObjMap') (M.lookup oid)
@@ -1187,13 +1197,14 @@ checkObjM p oid = do
 insertObj'M :: ObjId -> Object' -> Cmd' ()
 insertObj'M oid obj = osMap . isoObjMap' %= M.insert oid obj
 
-{-
-deleteObjM :: ObjId -> Cmd ()
-deleteObjM oid = objMap . isoObjMap' %= M.delete oid
 
-adjustObjM :: (Object -> Object) -> ObjId -> Cmd ()
-adjustObjM f oid = objMap . isoObjMap' %= M.adjust f oid
--- -}
+deleteObj'M :: ObjId -> Cmd' ()
+deleteObj'M oid = osMap . isoObjMap' %= M.delete oid
+
+
+adjustObj'M :: (Object' -> Object') -> ObjId -> Cmd' ()
+adjustObj'M f oid = osMap . isoObjMap' %= M.adjust f oid
+
 
 -- ----------------------------------------
 
@@ -1301,7 +1312,7 @@ dirAge = dirObject . dirAge'
 dirContent :: Traversal' Object' (Map Name ObjId)
 dirContent = dirObject . dirContent'
   where
-    dirContent' k o =fmap (\ new -> o {_dirContent = new}) (k (_dirContent o))
+    dirContent' k o = fmap (\ new -> o {_dirContent = new}) (k (_dirContent o))
 
 colContent :: Traversal' Object' [PartId]
 colContent = colObject . colContent'
@@ -1479,14 +1490,19 @@ syncFSEntry' oid = do
       s <- fsDirStat p
       case s of
         Nothing -> do
-          trc $ "syncFSentry: delete missing dir object "
-                ++ show p ++ " (" ++ show oid ++ ")"
+          warn $ "syncFSentry: delete missing dir object "
+                 ++ show p ++ " (" ++ show oid ++ ")"
           -- deleteObj'M
         Just status -> do
           when (fsTimeStamp status > t0) $ do
             trc $ "syncFSentry: dir has changed syncing dir" ++ p
 
           syncDirEntries' oid
+
+      o'new <- lookupObj'M oid
+      when (has (dirContent . to M.null) o'new) $ do
+        warn $ "syncFSentry: delete empty dir " ++ show oid ++ ", " ++ show p
+        deleteObj'M oid
 
     ColObject{} -> do
       p <- objPath' o
@@ -1499,11 +1515,81 @@ syncDirEntries' oid = do
   es <- parseFSDir p
   trc $ "syncDirEntries': entries found " ++ show es
 
-  let (others, rest) = partition (hasFStype (== FSother)) es
-  mapM_ (\ n -> trc $ "syncDirEntries': entry ignored " ++ show (fst n)) others
+  let (others, rest) =
+        partition (hasFStype (== FSother)) es
+  mapM_ (\ n -> warn $ "syncDirEntries': entry ignored " ++ show (fst n)) others
 
+  let (subdirs, rest2) =
+        partition (hasFStype (== FSimgdir)) rest
+  mapM_ (syncSubDir oid p) (subdirs ^.. traverse . _1 . isoName)
+
+  let (imgfiles, rest3) =
+        partition (hasFStype (`elem` [ FSraw, FSmeta, FSjson
+                                     , FSjpg, FSimg,  FScopy
+                                     ])) rest2
+  trc $ "syncDirEntries: imgfiles " ++ show imgfiles
+
+  mapM_ (syncImgFile oid p) (groupBy (fst . snd) imgfiles)
+
+  trc $ "syncDirEntries: files ignored " ++ show rest3
   return ()
 
+syncImgFile :: ObjId -> FilePath -> [(Name, (Name, FStype))] -> Cmd' ()
+syncImgFile pid ppath xs = do
+  trc $ "syncImgFile: syncing img " ++ show p
+  trc $ "syncImgFile: syncing parts " ++ show ps
+  ex <- memberObj'M oid
+  when (not ex) $ do
+      insertObj'M oid ((mkImgObject n0)
+                       {_objParent = pid}
+                      )
+
+  adjustObj'M ( mergeParts $
+                Parts $
+                M.fromList $
+                map (\ (n', t') ->
+                      (n', FSE n' t' zeroTimeStamp zeroCheckSum )
+                    ) ps
+              ) oid
+
+  syncParts oid ppath
+  where
+    p   = ppath </> n
+    oid = mkObjId p
+    n   = n0 ^. isoName
+    n0  = xs ^. to head . _2 . _1
+    ps  = xs &  traverse %~ (id *** snd)
+
+    mergeParts :: Parts -> Object' -> Object'
+    mergeParts (Parts m'new) o = o & imgParts %~ merge
+      where
+        merge (Parts m'old) = undefined
+
+syncParts :: ObjId -> FilePath -> Cmd' ()
+syncParts oid ppath =
+  trc $ "syncParts: syncing img parts for " ++ show oid
+
+syncSubDir :: ObjId -> FilePath -> FilePath -> Cmd' ()
+syncSubDir pid ppath n = do
+  trc $ "syncSubDir: " ++ show pid ++ ", " ++ show ppath ++ ", " ++ show n
+  ex <- memberObj'M oid
+  if ex
+     then syncFSEntry' oid  -- dir already there
+     else do
+       s <- fsDirStat p
+       case s of
+         Nothing -> do
+           warn $ "syncSubDir: fsentry ignored, not a dir " ++ show p
+         Just status -> do  -- new dir
+           trc $ "syncSubDir: new directory " ++ show p
+           insertObj'M oid ((mkDirObject n)
+                            {_objParent = pid}
+                           )
+           syncFSEntry' oid
+
+  where
+    p   = ppath </> n
+    oid = mkObjId p
 
 parseFSDir :: FilePath -> Cmd' [(Name, (Name, FStype))]
 parseFSDir p = do
@@ -1688,7 +1774,7 @@ is p = prism id (\ o -> (if p o then Right else Left) o)
 
 rrr :: IO (Either Msg (), ObjStore', Log)
 rrr = runCmd' $ do
-  wd <- exec "pwd" []
+  -- wd <- exec "pwd" []
   -- setMountPath =<< (head . lines  <$> execProcess "pwd" [] "")
   setMountPath =<< (io $ X.getWorkingDirectory)
   mountFS'
