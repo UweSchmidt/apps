@@ -1071,7 +1071,7 @@ data Object'      = ImgObject
                     { _objName     :: !Name
                     , _objParent   :: !ObjId
                     , _dirAge      :: !TimeStamp
-                    , _dirContent :: !(Map Name ObjId)
+                    , _dirContent  :: !(Map Name ObjId)
                     }
                   | ColObject
                     { _objName     :: !Name
@@ -1199,7 +1199,16 @@ insertObj'M oid obj = osMap . isoObjMap' %= M.insert oid obj
 
 
 deleteObj'M :: ObjId -> Cmd' ()
-deleteObj'M oid = osMap . isoObjMap' %= M.delete oid
+deleteObj'M oid = do
+  -- delete reference in parent dir
+  o <- lookupObj'M oid
+  case o ^. objParent . isoMaybeObjId of
+    Nothing -> return ()
+    Just pid ->
+      adjustObj'M (dirContent . at (o ^. objName) .~ Nothing) pid
+
+  -- delete oid
+  osMap . isoObjMap' %= M.delete oid
 
 
 adjustObj'M :: (Object' -> Object') -> ObjId -> Cmd' ()
@@ -1340,6 +1349,18 @@ instance ToJSON Parts where
 
 instance FromJSON Parts where
   parseJSON j = mkParts <$> parseJSON j
+
+instance Monoid Parts where
+  mempty = emptyParts
+
+  Parts m1 `mappend` Parts m2 =
+    Parts $ M.mergeWithKey combine only1 only2 m1 m2
+    where
+      only1 = const M.empty
+      only2 = id
+      combine _k e1 e2
+        | _ts e1 > _ts e2 = Just e1
+        | otherwise       = Just e2
 
 -- ----------------------------------------
 
@@ -1482,6 +1503,7 @@ syncFSEntry' oid = do
     ImgObject{} -> do
       p <- objPath' o >>= fsPath'
       trc $ "syncFSentry: syncing image " ++ show p
+      trc $ "syncFSentry: TODO"
 
 
     DirObject{_dirAge = t0} -> do
@@ -1492,15 +1514,16 @@ syncFSEntry' oid = do
         Nothing -> do
           warn $ "syncFSentry: delete missing dir object "
                  ++ show p ++ " (" ++ show oid ++ ")"
-          -- deleteObj'M
+          deleteObj'M oid
+
         Just status -> do
           when (fsTimeStamp status > t0) $ do
             trc $ "syncFSentry: dir has changed syncing dir" ++ p
 
-          syncDirEntries' oid
+            syncDirEntries' oid
 
       o'new <- lookupObj'M oid
-      when (has (dirContent . to M.null) o'new) $ do
+      when (M.null (o'new ^. dirContent)) $ do
         warn $ "syncFSentry: delete empty dir " ++ show oid ++ ", " ++ show p
         deleteObj'M oid
 
@@ -1551,6 +1574,7 @@ syncImgFile pid ppath xs = do
                       (n', FSE n' t' zeroTimeStamp zeroCheckSum )
                     ) ps
               ) oid
+  adjustObj'M (dirContent . at n0 .~ Just oid) pid
 
   syncParts oid ppath
   where
@@ -1561,13 +1585,12 @@ syncImgFile pid ppath xs = do
     ps  = xs &  traverse %~ (id *** snd)
 
     mergeParts :: Parts -> Object' -> Object'
-    mergeParts (Parts m'new) o = o & imgParts %~ merge
-      where
-        merge (Parts m'old) = undefined
+    mergeParts m'new o = o & imgParts %~ (<> m'new)
 
 syncParts :: ObjId -> FilePath -> Cmd' ()
-syncParts oid ppath =
-  trc $ "syncParts: syncing img parts for " ++ show oid
+syncParts oid ppath = do
+  trco oid $ "syncParts: syncing img parts for "
+  trc $ "syncParts: TODO"
 
 syncSubDir :: ObjId -> FilePath -> FilePath -> Cmd' ()
 syncSubDir pid ppath n = do
@@ -1585,10 +1608,13 @@ syncSubDir pid ppath n = do
            insertObj'M oid ((mkDirObject n)
                             {_objParent = pid}
                            )
+           adjustObj'M (dirContent . at n0 .~ Just oid) pid
+
            syncFSEntry' oid
 
   where
     p   = ppath </> n
+    n0  = mkName n
     oid = mkObjId p
 
 parseFSDir :: FilePath -> Cmd' [(Name, (Name, FStype))]
@@ -1716,6 +1742,11 @@ mkDir p n = do
   return oid
 
 -- ----------------------------------------
+
+trco :: ObjId -> String -> Cmd' ()
+trco oid msg = do
+  p <- oidPath oid
+  trc $ msg ++ " " ++ show p
 
 partPath' :: PartId -> Cmd' FilePath
 partPath' p = do
