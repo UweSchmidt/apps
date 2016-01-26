@@ -1195,17 +1195,26 @@ checkObjM p oid = do
     else abort $ "checkObjM: wrong object type for object " ++ show o
 --}
 insertObj'M :: ObjId -> Object' -> Cmd' ()
-insertObj'M oid obj = osMap . isoObjMap' %= M.insert oid obj
+insertObj'M oid o = do
+  -- insert object
+  osMap . isoObjMap' %= M.insert oid o
 
+  -- insert reference in parent object
+  case o ^. objParent . isoMaybeObjId of
+    Nothing
+      -> return ()
+    Just pid
+      -> adjustObj'M (dirContent . at (o ^. objName) .~ Just oid) pid
 
 deleteObj'M :: ObjId -> Cmd' ()
 deleteObj'M oid = do
   -- delete reference in parent dir
   o <- lookupObj'M oid
   case o ^. objParent . isoMaybeObjId of
-    Nothing -> return ()
-    Just pid ->
-      adjustObj'M (dirContent . at (o ^. objName) .~ Nothing) pid
+    Nothing
+      -> return ()
+    Just pid
+      -> adjustObj'M (dirContent . at (o ^. objName) .~ Nothing) pid
 
   -- delete oid
   osMap . isoObjMap' %= M.delete oid
@@ -1503,7 +1512,7 @@ syncFSEntry' oid = do
     ImgObject{} -> do
       p <- objPath' o >>= fsPath'
       trc $ "syncFSentry: syncing image " ++ show p
-      trc $ "syncFSentry: TODO"
+      trc $ "syncFSentry: What TODO ?"
 
 
     DirObject{_dirAge = t0} -> do
@@ -1530,6 +1539,7 @@ syncFSEntry' oid = do
     ColObject{} -> do
       p <- objPath' o
       trc $ "syncFSentry: col object ignored " ++ show p
+      trc $ "syncFSentry: What TODO ?"
 
 syncDirEntries' :: ObjId -> Cmd' ()
 syncDirEntries' oid = do
@@ -1562,6 +1572,7 @@ syncImgFile pid ppath xs = do
   trc $ "syncImgFile: syncing img " ++ show p
   trc $ "syncImgFile: syncing parts " ++ show ps
   ex <- memberObj'M oid
+
   when (not ex) $ do
       insertObj'M oid ((mkImgObject n0)
                        {_objParent = pid}
@@ -1574,7 +1585,6 @@ syncImgFile pid ppath xs = do
                       (n', FSE n' t' zeroTimeStamp zeroCheckSum )
                     ) ps
               ) oid
-  adjustObj'M (dirContent . at n0 .~ Just oid) pid
 
   syncParts oid ppath
   where
@@ -1589,8 +1599,9 @@ syncImgFile pid ppath xs = do
 
 syncParts :: ObjId -> FilePath -> Cmd' ()
 syncParts oid ppath = do
-  trco oid $ "syncParts: syncing img parts for "
+  trcObj oid $ "syncParts: syncing img parts for "
   trc $ "syncParts: TODO"
+
 
 syncSubDir :: ObjId -> FilePath -> FilePath -> Cmd' ()
 syncSubDir pid ppath n = do
@@ -1743,11 +1754,6 @@ mkDir p n = do
 
 -- ----------------------------------------
 
-trco :: ObjId -> String -> Cmd' ()
-trco oid msg = do
-  p <- oidPath oid
-  trc $ msg ++ " " ++ show p
-
 partPath' :: PartId -> Cmd' FilePath
 partPath' p = do
   o <- lookupObj'M (p ^.ptObj)
@@ -1803,6 +1809,13 @@ is p = prism id (\ o -> (if p o then Right else Left) o)
 
 -- ----------------------------------------
 
+trcObj :: ObjId -> String -> Cmd' ()
+trcObj oid msg = do
+  p <- oidPath oid
+  trc $ msg ++ " " ++ show p
+
+-- ----------------------------------------
+
 rrr :: IO (Either Msg (), ObjStore', Log)
 rrr = runCmd' $ do
   -- wd <- exec "pwd" []
@@ -1816,3 +1829,78 @@ rrr = runCmd' $ do
   trc $ "root path = " ++ show p ++ " (fspath = " ++ a ++ ")"
   syncFS'
   saveObjStore' ""
+
+-- ----------------------------------------
+
+data RefTree n a = DT a (Map a (n a))
+
+data UpLink n a = UL a (n a)
+
+type DirTree n a = RefTree (UpLink n) a
+
+data DirNode a = F TimeStamp
+               | D (Map Name a)
+
+type FSwithNames = DirTree DirNode Name
+type FSs = DirTree DirNode String
+
+type FSwithIds = DirTree DirNode ObjId
+
+deriving instance (Show a, Show (n a)) => Show (RefTree n a)
+deriving instance (Show a, Show (n a)) => Show (UpLink  n a)
+deriving instance (Show a) => Show (DirNode a)
+
+instance Functor DirNode where
+  fmap _ (F ts) = F ts
+  fmap f (D m)  = D $ M.map f m
+
+instance Functor n => Functor (UpLink n) where
+  fmap f (UL x t) = UL (f x) (fmap f t)
+
+fmap' :: (Functor n, Ord b) => (a -> b) -> RefTree n a -> RefTree n b
+fmap' f (DT r t) =
+  DT (f r) ( M.foldrWithKey'
+             (\ k v acc -> M.insert (f k) (fmap f v) acc)
+             M.empty
+             t
+           )
+
+root' :: Lens' (RefTree n a) a
+root' k (DT r m) = fmap (\ new -> DT new m) (k r)
+
+entr' :: Lens' (RefTree n a) (Map a (n a))
+entr' k (DT r m) = fmap (\ new -> DT r new) (k m)
+
+upln' :: Lens' (UpLink n a) a
+upln' k (UL r n) = fmap (\ new -> UL new n) (k r)
+
+node' :: Lens' (UpLink n a) (n a)
+node' k (UL r n) = fmap (\ new -> UL r new) (k n)
+
+isD :: Prism' (DirNode a) (DirNode a)
+isD = is (\ d -> case d of
+             D _ -> True
+             _   -> False
+         )
+
+d' k (D m) = fmap (\ new -> D new) (k m)
+
+ins' :: Ord a => (a -> n a -> n a) -> a -> a -> n a -> DirTree n a -> DirTree n a
+ins' addChild' p r n rt =
+  rt & entr' . at r .~ Just (UL p n)               -- add the child
+     & entr' . at p %~ fmap (node' %~ addChild' r)  -- insert in parent
+
+
+addentr' :: Name -> a -> DirNode a -> DirNode a
+addentr' nm r = isD . d' . at nm .~ Just r
+
+-- addentr' nm r (D m) = D $ M.insert nm r m
+-- addentr' _ _ f = f
+
+insFS' :: Ord a => Name -> a -> a -> DirNode a -> DirTree DirNode a -> DirTree DirNode a
+insFS' nm = ins' (addentr' nm)
+
+u1 :: FSs
+u1 = undefined
+
+-- ----------------------------------------
