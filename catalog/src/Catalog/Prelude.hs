@@ -1887,8 +1887,8 @@ d' k (D m) = fmap (\ new -> D new) (k m)
 
 ins' :: Ord a => (a -> n a -> n a) -> a -> a -> n a -> DirTree n a -> DirTree n a
 ins' addChild' p r n rt =
-  rt & entr' . at r .~ Just (UL p n)               -- add the child
-     & entr' . at p %~ fmap (node' %~ addChild' r)  -- insert in parent
+  rt & entr' . at r .~ Just (UL p n)                -- add the child
+     & entr' . at p . _Just . node' %~ addChild' r  -- insert in parent
 
 
 addentr' :: Name -> a -> DirNode a -> DirNode a
