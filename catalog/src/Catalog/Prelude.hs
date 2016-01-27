@@ -12,32 +12,36 @@ module Catalog.Prelude
        )
 where
 
-import Control.Lens hiding (children)
-import Control.Arrow (first, (***))
-import Control.Applicative
+import           Data.Prim.CheckSum
+import           Data.Prim.Name
+import           Data.Prim.ObjId
+import           Data.Prim.Path
+import           Data.Prim.TimeStamp
+
+import           Control.Lens hiding (children)
+import           Control.Arrow (first, (***))
+import           Control.Applicative
 import           Control.Monad.RWSErrorIO
 import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
-import           Data.Foldable
+
 import           Data.Map.Strict (Map)
 -- import           Data.Monoid
-import Data.List (intercalate, partition)
-import           Data.Word
+import           Data.List (intercalate, partition)
+
 import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
-import Data.Bits
-import Data.String
-import Data.Maybe
-import System.FilePath ((</>))
+
+
+import           Data.Maybe
+import           System.FilePath ((</>))
 import qualified System.Posix as X
 import           System.Posix (FileStatus)
-import qualified Data.ByteString as B
+-- import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map.Strict as M
-import qualified Codec.Binary.UTF8.String as UTF8
-import qualified Data.Digest.Murmur64 as MM
--- import           GHC.Generics
-import qualified Data.Text as T
+
+-- import qualified Data.Text as T
 
 -- ----------------------------------------
 
@@ -48,8 +52,6 @@ data ObjStore     = ObjStore
                     }
 
 newtype ObjMap    = ObjMap (M.Map ObjId Object)
-
-newtype ObjId     = ObjId Word64
 
 data Object       = Object
                     { _otype :: ! ObjType
@@ -74,9 +76,6 @@ data FSEntry      = FSEntry
                     , _checksum :: ! CheckSum      -- ^ the checksum of the file contents
                     }
 
-newtype Name      = Name B.ByteString
-newtype TimeStamp = TS X.EpochTime
-newtype CheckSum  = CS Word64
 data    ImgSize   = IS ! Int ! Int
 
 -- ----------------------------------------
@@ -101,13 +100,13 @@ objMap :: Lens' ObjStore ObjMap
 objMap k s = fmap (\ new -> s { _objMap = new }) (k (_objMap s) )
 
 root :: Lens' ObjStore (Maybe ObjId)
-root = root' . isoMaybeObjId
+root = root' . objId2Maybe
   where
     root' :: Lens' ObjStore ObjId
     root' k s = fmap (\ new -> s { _root = new }) (k (_root s) )
 
 mountPath :: Lens' ObjStore String
-mountPath = mountPath' . isoName
+mountPath = mountPath' . name2string
   where
     mountPath' :: Lens' ObjStore Name
     mountPath' k s = fmap (\ new -> s { _mountPath = new }) (k (_mountPath s) )
@@ -178,46 +177,6 @@ deleteObjM oid = objMap . isoObjMap %= M.delete oid
 
 adjustObjM :: (Object -> Object) -> ObjId -> Cmd ()
 adjustObjM f oid = objMap . isoObjMap %= M.adjust f oid
-
--- ----------------------------------------
---
--- basic ops for object ids
-
-emptyObjId :: ObjId
-emptyObjId = toObjId 0
-
-nullObjId :: ObjId -> Bool
-nullObjId (ObjId i) = i == 0
-
-mkObjId :: MM.Hashable64 a => a -> ObjId
-mkObjId = ObjId . MM.asWord64 . MM.hash64
-
-fromObjId :: ObjId -> Integer
-fromObjId (ObjId w) = fromIntegral w
-
-toObjId :: Integer -> ObjId
-toObjId = ObjId . fromIntegral
-
-isoObjIdInteger :: Iso' ObjId Integer
-isoObjIdInteger = iso fromObjId toObjId
-
-isoMaybeObjId :: Iso' ObjId (Maybe ObjId)
-isoMaybeObjId =
-  iso (\ i -> if nullObjId i
-              then Nothing
-              else Just i
-      )
-      (fromMaybe emptyObjId)
-
-deriving instance Eq   ObjId
-deriving instance Ord  ObjId
-deriving instance Show ObjId
-
-instance ToJSON ObjId where
-  toJSON = toJSON . fromObjId
-
-instance FromJSON ObjId where
-  parseJSON o = toObjId <$> parseJSON o
 
 -- ----------------------------------------
 --
@@ -318,7 +277,7 @@ parent :: Lens' Object RelVal
 parent = orels . relAt PARENT
 
 parentId :: Lens' Object (Maybe ObjId)
-parentId = parent . relSingle . isoMaybeObjId
+parentId = parent . relSingle . objId2Maybe
 
 versions :: Lens' Object RelVal
 versions = orels . relAt VERSIONS
@@ -330,7 +289,7 @@ orig :: Lens' Object RelVal
 orig = orels . relAt ORIG
 
 origId :: Lens' Object (Maybe ObjId)
-origId = orig . relSingle .isoMaybeObjId
+origId = orig . relSingle .objId2Maybe
 
 copies :: Lens' Object RelVal
 copies = orels . relAt COPIES
@@ -507,7 +466,7 @@ mkFSEntry :: FilePath -> FSEntry
 mkFSEntry p = emptyFSEntry { _filePath = mkName p}
 
 filePath :: Lens' FSEntry FilePath
-filePath = filePath' . isoName
+filePath = filePath' . name2string
   where
     filePath' :: Lens' FSEntry Name
     filePath' k f = fmap (\ new -> f { _filePath = new }) (k (_filePath f) )
@@ -541,122 +500,6 @@ instance FromJSON FSEntry where
       <*> o .: "checksum"
     )
     <|> return emptyFSEntry
-
--- ----------------------------------------
---
--- basic ops for names (UTF8 encoded strict bytestrings)
-
-emptyName :: Name
-emptyName = mkName ""
-
-mkName :: String -> Name
-mkName = Name . B.pack . UTF8.encode
-
-nullName :: Name -> Bool
-nullName (Name n) = B.null n
-
-fromName :: Name -> String
-fromName (Name fsn) = UTF8.decode . B.unpack $ fsn
-
-isoName :: Iso' Name String
-isoName = iso fromName mkName
-
-deriving instance Eq   Name
-deriving instance Ord  Name
-
-instance IsString Name where
-  fromString = mkName
-
-instance Show Name where
-  show = show . fromName
-
-instance ToJSON Name where
-  toJSON = toJSON . fromName
-
-instance FromJSON Name where
-  parseJSON (J.String t) = return (mkName . T.unpack $ t)
-  parseJSON _            = mzero
-
--- ----------------------------------------
---
--- basic ops for time stamps
-
-zeroTimeStamp :: TimeStamp
-zeroTimeStamp = TS $ read "0"
-
-isoTimeStamp :: Iso' TimeStamp String
-isoTimeStamp = iso
-               (\ (TS t) -> show t)
-               (TS . read)
-
-deriving instance Eq   TimeStamp
-deriving instance Ord  TimeStamp
-deriving instance Show TimeStamp
-
-instance ToJSON TimeStamp where
-  toJSON = toJSON . view isoTimeStamp
-
-instance FromJSON TimeStamp where
-  parseJSON (J.String t) = return ((view $ from isoTimeStamp) . T.unpack $ t)
-  parseJSON _            = mzero
-
-now :: MonadIO m => m TimeStamp
-now = liftIO (TS <$> X.epochTime)
-
-fsTimeStamp :: FileStatus -> TimeStamp
-fsTimeStamp = TS . X.modificationTime
-
--- ----------------------------------------
---
--- basic ops for checksums
-
-zeroCheckSum :: CheckSum
-zeroCheckSum = CS 0
-
-mkCheckSum :: MM.Hashable64 a => a -> CheckSum
-mkCheckSum = CS . MM.asWord64 . MM.hash64
-
-fromCheckSum :: Integral a => CheckSum -> a
-fromCheckSum (CS csum) = fromIntegral csum
-
-toCheckSum :: Integer -> CheckSum
-toCheckSum = CS . fromInteger
-
-isoCheckSum :: Iso' CheckSum Integer
-isoCheckSum = iso fromCheckSum toCheckSum
-
-deriving instance Eq CheckSum
-
-instance Show CheckSum where
-  show = ("0x" ++) . showCheckSum
-
-showCheckSum :: CheckSum -> String
-showCheckSum (CS csum) =
-  toHex 16 csum []
-  where
-    toHex :: Int -> Word64 -> String -> String
-    toHex  0  _  acc = acc
-    toHex !n !w !acc = let !c = toDig (w .&. 0xF)
-                       in
-                         toHex (n - 1) (w `shiftR` 4) (c : acc)
-
-    toDig :: Word64 -> Char
-    toDig w
-      | w < 10    = toEnum $ fromEnum w + fromEnum '0'
-      | otherwise = toEnum $ fromEnum w + (fromEnum 'a' - 10)
-
-readCheckSum :: String -> CheckSum
-readCheckSum = CS . foldl' nextDig 0
-  where
-    nextDig !acc !c
-      | '0' <= c && c <= '9' = (acc `shiftL` 4) .|. toEnum (fromEnum c - fromEnum '0')
-      | otherwise            = (acc `shiftL` 4) .|. toEnum (fromEnum c - fromEnum 'a' + 10)
-
-instance ToJSON CheckSum where
-  toJSON = toJSON . showCheckSum
-
-instance FromJSON CheckSum where
-  parseJSON o = readCheckSum <$> parseJSON o
 
 -- ----------------------------------------
 --
@@ -940,7 +783,7 @@ mkFSEntry' p t = do
     abort $ "FS entry type mismatch: Object of type " ++ show t ++ " expected"
 
   cs <- if X.isRegularFile st
-        then mkFileCheckSum p
+        then io $ mkFileCheckSum p
         else return zeroCheckSum
 
   return $ FSEntry
@@ -951,13 +794,6 @@ mkFSEntry' p t = do
 
 -- ----------------------------------------
 
--- | compute the checksum for a simple file
--- does not work for directories
-
-mkFileCheckSum :: FilePath -> Cmd CheckSum
-mkFileCheckSum p = do
-  trc $ "mkChecksum: compute checksum for " ++ p
-  mkCheckSum <$> io (readFile p)
 
 
 scanFSDir :: FilePath -> Cmd [FilePath]
@@ -1118,13 +954,13 @@ osMap :: Lens' ObjStore' ObjMap'
 osMap k s = fmap (\ new -> s { _osMap = new }) (k (_osMap s) )
 
 osRoot :: Lens' ObjStore' (Maybe ObjId)
-osRoot = root' . isoMaybeObjId
+osRoot = root' . objId2Maybe
   where
     root' :: Lens' ObjStore' ObjId
     root' k s = fmap (\ new -> s { _osRoot = new }) (k (_osRoot s) )
 
 osMount :: Lens' ObjStore' String
-osMount = mountPath' . isoName
+osMount = mountPath' . name2string
   where
     mountPath' :: Lens' ObjStore' Name
     mountPath' k s = fmap (\ new -> s { _osMount = new }) (k (_osMount s) )
@@ -1200,7 +1036,7 @@ insertObj'M oid o = do
   osMap . isoObjMap' %= M.insert oid o
 
   -- insert reference in parent object
-  case o ^. objParent . isoMaybeObjId of
+  case o ^. objParent . objId2Maybe of
     Nothing
       -> return ()
     Just pid
@@ -1210,7 +1046,7 @@ deleteObj'M :: ObjId -> Cmd' ()
 deleteObj'M oid = do
   -- delete reference in parent dir
   o <- lookupObj'M oid
-  case o ^. objParent . isoMaybeObjId of
+  case o ^. objParent . objId2Maybe of
     Nothing
       -> return ()
     Just pid
@@ -1554,7 +1390,7 @@ syncDirEntries' oid = do
 
   let (subdirs, rest2) =
         partition (hasFStype (== FSimgdir)) rest
-  mapM_ (syncSubDir oid p) (subdirs ^.. traverse . _1 . isoName)
+  mapM_ (syncSubDir oid p) (subdirs ^.. traverse . _1 . name2string)
 
   let (imgfiles, rest3) =
         partition (hasFStype (`elem` [ FSraw, FSmeta, FSjson
@@ -1590,7 +1426,7 @@ syncImgFile pid ppath xs = do
   where
     p   = ppath </> n
     oid = mkObjId p
-    n   = n0 ^. isoName
+    n   = n0 ^. name2string
     n0  = xs ^. to head . _2 . _1
     ps  = xs &  traverse %~ (id *** snd)
 
@@ -1633,7 +1469,7 @@ parseFSDir p = do
   (es, jpgdirs)  <- classifyNames <$> scanFSDir' p
   jss <- mapM
            (parseFSjpgdir p)                     -- process jpg subdirs
-           (jpgdirs ^.. traverse . _1 . isoName) -- (map (fromName . fst) jpgdirs)
+           (jpgdirs ^.. traverse . _1 . name2string) -- (map (fromName . fst) jpgdirs)
   return $ es ++ concat jss
   where
     classifyNames =
@@ -1757,7 +1593,7 @@ mkDir p n = do
 partPath' :: PartId -> Cmd' FilePath
 partPath' p = do
   o <- lookupObj'M (p ^.ptObj)
-  parentPath' (o ^. objParent . isoMaybeObjId) (p ^. ptName . isoName)
+  parentPath' (o ^. objParent . objId2Maybe) (p ^. ptName . name2string)
 
 oidPath :: ObjId -> Cmd' FilePath
 oidPath =
@@ -1765,7 +1601,7 @@ oidPath =
 
 objPath' :: Object' -> Cmd' FilePath
 objPath' o = do
-  parentPath' (o ^. objParent . isoMaybeObjId) (o ^. objName . isoName)
+  parentPath' (o ^. objParent . objId2Maybe) (o ^. objName . name2string)
 
 parentPath' :: Maybe ObjId -> FilePath -> Cmd' FilePath
 parentPath' oid0  p0 =
@@ -1773,7 +1609,7 @@ parentPath' oid0  p0 =
   (return p0)
   (\ oid -> do
       o <- lookupObj'M oid
-      parentPath' (o ^. objParent . isoMaybeObjId) (o ^. objName . isoName </> p0)
+      parentPath' (o ^. objParent . objId2Maybe) (o ^. objName . name2string </> p0)
   )
   oid0
 

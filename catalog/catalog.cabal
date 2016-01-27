@@ -19,7 +19,11 @@ executable catalog
   build-depends:       base >= 4.7 && < 5
 
   other-modules:     Catalog.Prelude
-
+                     Data.Prim.CheckSum
+                     Data.Prim.Name
+                     Data.Prim.Path
+                     Data.Prim.TimeStamp
+                     Data.Prim.ObjId
   
   -- Other library packages from which modules are imported.
   build-depends:     base                >= 4.5
@@ -42,6 +46,7 @@ executable catalog
                    , process
 --                   , SHA                 >= 1.5
                    , text                >= 1.0
+                   , transformers        >= 0.4
                    , unix                >= 2.5
                    , utf8-string         >= 1
                    
