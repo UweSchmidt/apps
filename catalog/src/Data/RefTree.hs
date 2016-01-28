@@ -48,6 +48,10 @@ rootRef k (RT r m) = fmap (\ new -> RT new m) (k r)
 entries :: Lens' (RefTree node ref) (Map ref (node ref))
 entries k (RT r m) = fmap (\ new -> RT r new) (k m)
 
+theNode :: (Ord ref, Show ref) =>
+           ref -> Lens' (RefTree node ref) (node ref)
+theNode r = entries . at r . checkJust ("atRef: undefined ref " ++ show r)
+
 -- ----------------------------------------
 
 -- An UpLink adds two components to a node,
@@ -90,34 +94,23 @@ nodeVal k (UL r n v) = fmap (\ new -> UL r n new) (k v)
 checkJust :: String -> Iso' (Maybe a) a
 checkJust msg = iso (fromMaybe (error msg)) Just
 
-atRef :: (Functor f, Show (Index m), At m) =>
-         Index m -> (IxValue m -> f (IxValue m)) -> m -> f m
-atRef r = at r . checkJust ("atRef: undefined ref " ++ show r)
-
 -- ----------------------------------------
 
 type DirTree node ref = RefTree (UpLink node) ref
 
-getParent :: (Ord ref, Show ref) => ref -> DirTree node ref -> ref
-getParent r t
-  = t ^. entries
-       . atRef r
-       . parentRef
+theParent :: (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) ref
+theParent r = theNode r . parentRef
 
-getName :: (Ord ref, Show ref) => ref -> DirTree node ref -> Name
-getName r t
-  = t ^. entries
-       . atRef r
-       . nodeName
-
+theName ::  (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) Name
+theName r = theNode r . nodeName
 
 refPath :: (Ord ref, Show ref) => ref -> DirTree node ref -> Path
 refPath r0 t
-  = path (getParent r0 t) r0 (mkPath $ getName r0 t)
+  = path (t ^. theParent r0) r0 (mkPath $ t ^. theName r0)
   where
     path pr r ps
       | pr == r   = ps
-      | otherwise = path (getParent pr t) pr (consPath (getName r t)  ps)
+      | otherwise = path (t ^. theParent pr) pr (consPath (t ^. theName r)  ps)
 
 -- ----------------------------------------
 
