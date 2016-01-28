@@ -21,8 +21,10 @@ import Data.Prim.Name
 
 -- ----------------------------------------
 
-data Path = BN !Name
-          | DN !Name !Path
+data Path' name = BN !name
+                | DN !name !(Path' name)
+
+type Path = Path' Name
 
 readPath :: String -> Path
 readPath ('/' : xs0)
@@ -36,27 +38,27 @@ readPath ('/' : xs0)
 readPath xs
   = error $ "readPath: no path: " ++ show xs
 
-mkPath :: Name -> Path
+mkPath :: name -> Path' name
 mkPath = BN
 
-consPath :: Name -> Path -> Path
+consPath :: name -> Path' name -> Path' name
 consPath = DN
 
-showPath :: Path -> String
-showPath (BN n) = "/" ++ fromName n
-showPath (DN n p) = "/" ++ fromName n ++ showPath p
+showPath :: Show name => Path' name -> String
+showPath (BN n) = "/" ++ show n
+showPath (DN n p) = "/" ++ show n ++ showPath p
 
 path2string :: Iso' Path String
 path2string = iso showPath readPath
 
-deriving instance Eq  Path
-deriving instance Ord Path
+deriving instance Eq name  => Eq  (Path' name)
+deriving instance Ord name => Ord (Path' name)
 
-instance Show Path where
+instance Show name => Show (Path' name) where
   show = showPath
 
-instance ToJSON Path where
-  toJSON = toJSON . showPath
+instance Show name => ToJSON (Path' name) where
+  toJSON = toJSON . show
 
 instance FromJSON Path where
   parseJSON o = readPath <$> parseJSON o
@@ -64,7 +66,7 @@ instance FromJSON Path where
 instance IsString Path where
   fromString = readPath
 
-instance Hashable64 Path where
-  hash64Add = hash64Add . showPath
+instance Show name => Hashable64 (Path' name) where
+  hash64Add = hash64Add . show
 
 -- ----------------------------------------
