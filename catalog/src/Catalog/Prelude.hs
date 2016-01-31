@@ -12,13 +12,16 @@ module Catalog.Prelude
        )
 where
 
+import           Data.ImageTree
 import           Data.Prim.CheckSum
 import           Data.Prim.Name
 import           Data.Prim.ObjId
 import           Data.Prim.Path
 import           Data.Prim.TimeStamp
-
+import           Data.RefTree
+import Catalog.FilePath
 import           Control.Lens hiding (children)
+import           Control.Lens.Util
 import           Control.Arrow (first, (***))
 import           Control.Applicative
 import           Control.Monad.RWSErrorIO
@@ -926,7 +929,7 @@ data PartId       = PartId
 
 data FSentry      = FSE
                     { _fn :: !PartName
-                    , _ft :: !FStype
+                    , _ft :: !ImgType
                     , _ts :: !TimeStamp
                     , _cs :: !CheckSum
                     }
@@ -1065,7 +1068,7 @@ adjustObj'M f oid = osMap . isoObjMap' %= M.adjust f oid
 o1' :: Object'
 o1' = (mkImgObject (mkName "abc")) {_imgParts = pm1}
   where
-    pm1 = Parts $ M.fromList [(n1, FSE n1 FSraw zeroTimeStamp zeroCheckSum)]
+    pm1 = Parts $ M.fromList [(n1, FSE n1 IMGraw zeroTimeStamp zeroCheckSum)]
     n1 = mkName "abc.nef"
 
 o2' :: Object'
@@ -1179,7 +1182,7 @@ emptyParts :: Parts
 emptyParts = Parts M.empty
 
 mkParts :: [FSentry] -> Parts
-mkParts = view $ from isoParts
+mkParts = (^. from isoParts)
 
 deriving instance Show Parts
 
@@ -1190,7 +1193,7 @@ isoParts =
   isoMapElems _fn
 
 instance ToJSON Parts where
-  toJSON = toJSON . view isoParts
+  toJSON = toJSON . (^. isoParts)
 
 instance FromJSON Parts where
   parseJSON j = mkParts <$> parseJSON j
@@ -1256,8 +1259,8 @@ instance ToJSON FStype where
 instance FromJSON FStype where
   parseJSON o = read <$> parseJSON o
 
-hasFStype :: (FStype -> Bool) -> (Name, (Name, FStype)) -> Bool
-hasFStype p (_, (_, t)) = p t
+hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
+hasImgType p (_, (_, t)) = p t
 
 -- ----------------------------------------
 
@@ -1385,16 +1388,16 @@ syncDirEntries' oid = do
   trc $ "syncDirEntries': entries found " ++ show es
 
   let (others, rest) =
-        partition (hasFStype (== FSother)) es
+        partition (hasImgType (== IMGother)) es
   mapM_ (\ n -> warn $ "syncDirEntries': entry ignored " ++ show (fst n)) others
 
   let (subdirs, rest2) =
-        partition (hasFStype (== FSimgdir)) rest
+        partition (hasImgType (== IMGimgdir)) rest
   mapM_ (syncSubDir oid p) (subdirs ^.. traverse . _1 . name2string)
 
   let (imgfiles, rest3) =
-        partition (hasFStype (`elem` [ FSraw, FSmeta, FSjson
-                                     , FSjpg, FSimg,  FScopy
+        partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
+                                     , IMGjpg, IMGimg,  IMGcopy
                                      ])) rest2
   trc $ "syncDirEntries: imgfiles " ++ show imgfiles
 
@@ -1403,7 +1406,7 @@ syncDirEntries' oid = do
   trc $ "syncDirEntries: files ignored " ++ show rest3
   return ()
 
-syncImgFile :: ObjId -> FilePath -> [(Name, (Name, FStype))] -> Cmd' ()
+syncImgFile :: ObjId -> FilePath -> [(Name, (Name, ImgType))] -> Cmd' ()
 syncImgFile pid ppath xs = do
   trc $ "syncImgFile: syncing img " ++ show p
   trc $ "syncImgFile: syncing parts " ++ show ps
@@ -1464,7 +1467,7 @@ syncSubDir pid ppath n = do
     n0  = mkName n
     oid = mkObjId p
 
-parseFSDir :: FilePath -> Cmd' [(Name, (Name, FStype))]
+parseFSDir :: FilePath -> Cmd' [(Name, (Name, ImgType))]
 parseFSDir p = do
   (es, jpgdirs)  <- classifyNames <$> scanFSDir' p
   jss <- mapM
@@ -1473,20 +1476,20 @@ parseFSDir p = do
   return $ es ++ concat jss
   where
     classifyNames =
-      partition (hasFStype (/= FSjpgdir))  -- select jpg img subdirs
+      partition (hasImgType (/= IMGjpgdir))  -- select jpg img subdirs
       .
-      filter    (hasFStype (/= FSboring))  -- remove boring stuff
+      filter    (hasImgType (/= IMGboring))  -- remove boring stuff
       .
-      map (\ n -> (mkName n, filePathToFStype n))
+      map (\ n -> (mkName n, filePathToImgType n))
 
-parseFSjpgdir :: FilePath -> FilePath -> Cmd' [(Name, (Name, FStype))]
+parseFSjpgdir :: FilePath -> FilePath -> Cmd' [(Name, (Name, ImgType))]
 parseFSjpgdir p d =
   classifyNames <$> scanFSDir' (p </> d)
   where
     classifyNames =
-      filter (\ n -> (n ^. _2 . _2) == FSjpg)
+      filter (\ n -> (n ^. _2 . _2) == IMGjpg)
       .
-      map (\ n -> (mkName (d </> n), filePathToFStype n))
+      map (\ n -> (mkName (d </> n), filePathToImgType n))
 
 scanFSDir' :: FilePath -> Cmd' [FilePath]
 scanFSDir' p0 = do
@@ -1627,17 +1630,6 @@ fsPath' p = do
 _JSON :: (ToJSON a, FromJSON a) => Prism' L.ByteString a
 _JSON = prism' J.encodePretty J.decode
 
--- an iso for converting between maps and list of pairs
-
-isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
-isoMapList = iso M.toList M.fromList
-
--- an iso for converting a list of elemets into a map,
--- the key function estracts the keys of the elements
-
-isoMapElems :: Ord k => (e -> k) -> Iso' (Map k e) [e]
-isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
-
 -- a prism for filtering
 
 is :: (a -> Bool) -> Prism' a a
@@ -1667,7 +1659,7 @@ rrr = runCmd' $ do
   saveObjStore' ""
 
 -- ----------------------------------------
-
+{-}
 data RefTree n a = DT a (Map a (n a))
 
 data UpLink n a = UL a (n a)
@@ -1738,5 +1730,5 @@ insFS' nm = ins' (addentr' nm)
 
 u1 :: FSs
 u1 = undefined
-
+-}
 -- ----------------------------------------

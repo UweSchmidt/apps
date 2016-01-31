@@ -38,11 +38,15 @@ name2string = iso fromName mkName
 deriving instance Eq   Name
 deriving instance Ord  Name
 
+instance Monoid Name where
+  mempty = emptyName
+  Name n1 `mappend` Name n2 = Name $ n1 `B.append` n2
+
 instance IsString Name where
   fromString = mkName
 
 instance Show Name where
-  show = show . fromName
+  show = fromName
 
 instance ToJSON Name where
   toJSON = toJSON . fromName
