@@ -13,7 +13,10 @@ module Data.ImageTree
        , theParts
        , theDirTimeStamp
        , theDirEntries
+       , emptyImg
+       , emptyImgDir
        , isImgDir
+       , mkImgRoot
        , mkImgNode
        , remImgNode
        , emptyImgParts
@@ -77,6 +80,12 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
                <*> (S.fromList <$> o .: "children")
          _ -> mzero
 
+emptyImgDir :: ImgNode' ref
+emptyImgDir = DIR zeroTimeStamp S.empty
+
+emptyImg :: ImgNode' ref
+emptyImg = IMG M.empty
+
 -- image node optics
 
 theParts :: Prism' (ImgNode' ref) (Map Name ImgParts)
@@ -107,6 +116,9 @@ theDirEntries = isImgDir . _2
 type ImgTree = DirTree ImgNode' ObjId
 type ImgNode = ImgNode' ObjId
 
+
+mkImgRoot :: Name -> ImgNode -> ImgTree
+mkImgRoot = mkDirRoot mkObjId
 
 mkImgNode :: (MonadError String m) =>
              Name ->                       -- name of the node

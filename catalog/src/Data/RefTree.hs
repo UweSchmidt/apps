@@ -159,7 +159,7 @@ mkDirNode :: (MonadError String m, Ord ref, Show ref) =>
              m (ref, DirTree node ref) -- new ref and modified tree
 
 mkDirNode genRef isParentDir updateParent n p v t
-  = do when (has (entries . at r) t) $
+  = do when (has (entries . at r . _Just) t) $
          throwError $ "mkDirNode: entry already exists: " ++ show rp
        when (not (t ^. theNodeVal p . to isParentDir)) $
          throwError $ "mkDirNode: parent node not a dir" ++ show pp
