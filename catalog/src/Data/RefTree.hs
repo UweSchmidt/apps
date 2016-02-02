@@ -125,12 +125,14 @@ theNodeVal r = theNode r . nodeVal
 
 refPath :: (Ord ref, Show ref) => ref -> DirTree node ref -> Path
 refPath r0 t
-  = path (t ^. theParent r0) r0 (mkPath $ t ^. theName r0)
+  = path r0 (mkPath $ t ^. theName r0)
   where
-    path pr r ps
-      | pr == r   = ps
-      | otherwise = path (t ^. theParent pr) pr (consPath (t ^. theName r)  ps)
-
+    path ref acc
+      | isRoot    = acc
+      | otherwise = path par (consPath (t ^. theName par) acc)
+      where
+        par    = t ^. theParent ref
+        isRoot = par == ref
 
 -- | create the root of a DirTree.
 -- It's the only node where the parent ref equals the ref.
@@ -197,49 +199,3 @@ remDirNode removable updateParent r t
      p = t ^. theParent r
 
 -- ----------------------------------------
-{-
-
-deriving instance (Show ref) => Show (DirNode ref)
-
-instance Functor DirNode where
-  fmap _ (F ts) = F ts
-  fmap f (D m)  = D $ M.map f m
-
-
-
-isD :: Prism' (DirNode a) (DirNode a)
-isD = is (\ d -> case d of
-             D _ -> True
-             _   -> False
-         )
-
-d' k (D m) = fmap (\ new -> D new) (k m)
-
-ins' :: Ord a => (a -> n a -> n a) -> a -> a -> n a -> DirTree n a -> DirTree n a
-ins' addChild' p r n rt =
-  rt & entr' . at r .~ Just (UL p n)                -- add the child
-     & entr' . at p . _Just . node' %~ addChild' r  -- insert in parent
-
-
-addentr' :: Name -> a -> DirNode a -> DirNode a
-addentr' nm r = isD . d' . at nm .~ Just r
-
--- addentr' nm r (D m) = D $ M.insert nm r m
--- addentr' _ _ f = f
-
-insFS' :: Ord a => Name -> a -> a -> DirNode a -> DirTree DirNode a -> DirTree DirNode a
-insFS' nm = ins' (addentr' nm)
-
-u1 :: FSs
-u1 = undefined
-
--- ----------------------------------------
-data DirNode a = F TimeStamp
-               | D (Map Name a)
-
-type FSwithNames = DirTree DirNode Name
-type FSs = DirTree DirNode String
-
-type FSwithIds = DirTree DirNode ObjId
-
--- -}

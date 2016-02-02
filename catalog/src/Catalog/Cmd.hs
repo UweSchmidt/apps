@@ -50,8 +50,8 @@ runCmd cmd = runAction cmd Env emptyImgStore
 
 -- ----------------------------------------
 
-withCWD :: (ObjId -> Cmd a) -> Cmd a
-withCWD cmd = use theWD >>= cmd
+withCWN :: (ObjId -> Cmd a) -> Cmd a
+withCWN cmd = use theWD >>= cmd
 
 withImgTree :: (ImgTree -> Cmd a) -> Cmd a
 withImgTree cmd = use theImgTree >>= cmd
@@ -66,5 +66,11 @@ trcObj :: ObjId -> String -> Cmd ()
 trcObj r msg =
   withImgTree $ \ t ->
     trc $ msg ++ " " ++ show (refPath r t)
+
+trcCmd :: Show a => Cmd a -> Cmd a
+trcCmd cmd
+  = do res <- cmd
+       trc $ "cmd: res = " ++ show res
+       return res
 
 -- ----------------------------------------

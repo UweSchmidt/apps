@@ -49,30 +49,50 @@ saveImgStore p = do
        then L.putStrLn bs
        else L.writeFile p bs
 
-mkImgDir :: Name -> Cmd ObjId
-mkImgDir n
-  = withCWD $ \ cwd ->
+mkImg' :: ImgNode -> Name -> Cmd ObjId
+mkImg' v n
+  = withCWN $ \ cwn ->
     withImgTree $ \ t ->
-      do (d, t') <- liftE $ mkImgNode n cwd emptyImgDir t
+      do (d, t') <- liftE $ mkImgNode n cwn v t
          theImgTree .= t'
-         trcObj d "mkImgDir: new dir"
+         trcObj d "mkImg': new image node"
          return d
 
-cd :: ObjId -> Cmd ()
-cd r
+
+mkImgDir :: Name -> Cmd ObjId
+mkImgDir = mkImg' emptyImgDir
+
+mkImg :: Name -> Cmd ObjId
+mkImg = mkImg' emptyImg
+
+-- change working entry
+
+cwe :: ObjId -> Cmd ()
+cwe r
   = withImgTree $ \ t ->
       do when (hasn't (entries . at r . _Just) t) $
-           abort $ "cd: image dir not found: " ++ show r
-         when (hasn't (theNodeVal r . isImgDir) t) $
-           abort $ "cd: entry isn't an image dir"
-         trcObj r "cd: cwd is"
+           abort $ "cwe: node not found: " ++ show r
+--         when (hasn't (theNodeVal r . isImgDir) t) $
+--           abort $ "cd: entry isn't an image dir"
+         trcObj r "cwe: current node is"
          theWD .= r
 
-pwd :: Cmd ()
-pwd =
-  withCWD $ \ cwd ->
+cwroot :: Cmd ()
+cwroot
+  = withImgTree $ \ t ->
+      cwe (t ^. rootRef)
+
+pwe :: Cmd Path
+pwe =
+  withCWN $ \ cwn ->
   withImgTree $ \ t ->
-    io $ putStrLn $ show $ refPath cwd t
+    return $ refPath cwn t
+
+ls :: Cmd ()
+ls =
+  withCWN $ \ cwn ->
+  withImgTree $ \ t ->
+  undefined
 
 -- ----------------------------------------
 
@@ -81,8 +101,13 @@ ccc = runCmd $ do
   s <- mkImgStore <$> io X.getWorkingDirectory
   put s
   saveImgStore ""
-  pwd
+  trcCmd pwe
   d <- mkImgDir "emil"
-  cd d
-  pwd
+  cwe d
+  trcCmd pwe
+  i1 <- mkImg "pic1"
+  i2 <- mkImg "pic2"
+  cwe i2
+  -- d2 <- mkImg "xxx" -- error
+  cwroot
   saveImgStore ""
