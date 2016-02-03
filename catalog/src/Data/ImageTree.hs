@@ -52,20 +52,26 @@ import qualified Data.Set as S
 -- ----------------------------------------
 
 
-data ImgNode' ref = IMG !(Map Name ImgParts)
-                  | DIR !TimeStamp !(Set ref)
+data ImgNode' ref = IMG  !(Map Name ImgParts)
+                  | DIR  !TimeStamp !(Set ref)
+                  | ROOT !ref !ref
 
 deriving instance (Show ref) => Show (ImgNode' ref)
 
 instance ToJSON ref => ToJSON (ImgNode' ref) where
   toJSON (IMG pm) = object
-    [ "ImgNode" .= ("IMG" :: String)
-    , "parts"   .= M.toList pm
+    [ "ImgNode"     .= ("IMG" :: String)
+    , "parts"       .= M.toList pm
     ]
   toJSON (DIR ts rs) = object
-    [ "ImgNode"   .= ("DIR" :: String)
-    , "timestamp" .= ts
-    , "children"  .= S.toList rs
+    [ "ImgNode"     .= ("DIR" :: String)
+    , "timestamp"   .= ts
+    , "children"    .= S.toList rs
+    ]
+  toJSON (ROOT rd rc) = object
+    [ "ImgNode"     .= ("ROOT" :: String)
+    , "archive"     .= rd
+    , "collections" .= rc
     ]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
@@ -78,6 +84,9 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          "DIR" ->
            DIR <$> o .: "timestamp"
                <*> (S.fromList <$> o .: "children")
+         "ROOT" ->
+           ROOT <$> o .: "archive"
+               <*> o .: "collections"
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
@@ -85,6 +94,12 @@ emptyImgDir = DIR zeroTimeStamp S.empty
 
 emptyImg :: ImgNode' ref
 emptyImg = IMG M.empty
+
+emptyImgRoot :: Monoid ref => ImgNode' ref
+emptyImgRoot = ROOT mempty mempty
+
+emptyImgCol :: ImgNode' ref
+emptyImgCol = DIR zeroTimeStamp S.empty -- TODO
 
 -- image node optics
 
@@ -109,6 +124,20 @@ theDirTimeStamp = isImgDir . _1
 theDirEntries ::  Traversal' (ImgNode' ref) (Set ref)
 theDirEntries = isImgDir . _2
 
+isImgRoot :: Prism' (ImgNode' ref) (ref, ref)
+isImgRoot
+  = prism (uncurry ROOT)
+          (\ x -> case x of
+              ROOT rd rc -> Right (rd, rc)
+              _          -> Left x
+          )
+
+theRootImgDir :: Traversal' (ImgNode' ref) ref
+theRootImgDir = isImgRoot . _1
+
+theRootImgCol :: Traversal' (ImgNode' ref) ref
+theRootImgCol = isImgRoot . _2
+
 -- ----------------------------------------
 
 -- the tree for the image hierachy
@@ -116,6 +145,18 @@ theDirEntries = isImgDir . _2
 type ImgTree = DirTree ImgNode' ObjId
 type ImgNode = ImgNode' ObjId
 
+mkEmptyImgRoot :: (MonadError String m) =>
+                  Name -> Name -> Name -> m ImgTree
+mkEmptyImgRoot rootName imgName colName =
+  do (r1,t1) <- mkDirNode mkObjId isParentDir addImgArchive imgName r emptyImgDir t0
+     (r2,t2) <- mkDirNode mkObjId isParentDir addImgCol     colName r emptyImgCol t0
+     return t2
+  where
+    t0 = mkDirRoot mkObjId rootName emptyImgRoot
+    r  = t0 ^. rootRef
+
+    addImgArchive r n = n & theRootImgDir .~ r
+    addImgCol     r n = n & theRootImgCol .~ r
 
 mkImgRoot :: Name -> ImgNode -> ImgTree
 mkImgRoot = mkDirRoot mkObjId
@@ -139,8 +180,9 @@ remChildRef :: ObjId -> ImgNode -> ImgNode
 remChildRef r n = n & theDirEntries %~ S.delete r
 
 isParentDir :: ImgNode -> Bool
-isParentDir DIR{} = True
-isParentDir _     = False
+isParentDir DIR{}  = True
+isParentDir ROOT{} = True
+isParentDir _      = False
 
 nullImgDir :: ImgNode -> Bool
 nullImgDir (DIR _ s) = S.null s

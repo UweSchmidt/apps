@@ -47,6 +47,12 @@ objId2Maybe =
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 
+instance Monoid ObjId where
+  mempty = emptyObjId
+  i1 `mappend` i2
+    | nullObjId i1 = i2
+    | otherwise    = i1
+
 instance Show ObjId where
   show = showObjId
 

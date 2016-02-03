@@ -5,6 +5,8 @@ module Control.Lens.Util where
 import           Control.Lens
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import           Data.Set (Set)
+import qualified Data.Set as S
 
 -- ----------------------------------------
 
@@ -18,6 +20,9 @@ isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
 
 isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
 isoMapList = iso M.toList M.fromList
+
+isoSetList :: Ord a => Iso' (Set a) [a]
+isoSetList = iso S.toList S.fromList
 
 -- a prism for filtering
 

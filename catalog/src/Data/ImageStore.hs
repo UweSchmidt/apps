@@ -9,7 +9,7 @@ module Data.ImageStore
        ( ImgStore
        , theImgTree
        , theMountPath
-       , theWD
+       , theWE
        , emptyImgStore
        , mkImgStore
        )
@@ -68,8 +68,8 @@ theImgTree k (IS t p w) = (\new -> IS new p w) <$> k t
 theMountPath :: Lens' ImgStore FilePath
 theMountPath k (IS t p w) = (\new -> IS t new w) <$> k p
 
-theWD :: Lens' ImgStore ObjId
-theWD k (IS t p w) = (\new -> IS t p new) <$> k w
+theWE :: Lens' ImgStore ObjId
+theWE k (IS t p w) = (\new -> IS t p new) <$> k w
 
 -- ----------------------------------------
 

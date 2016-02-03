@@ -38,6 +38,7 @@ import qualified System.Posix as X
 import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
 import Catalog.Cmd
 import           Control.Monad.Except
+import qualified Data.Set as S
 
 -- ----------------------------------------
 
@@ -50,13 +51,12 @@ saveImgStore p = do
        else L.writeFile p bs
 
 mkImg' :: ImgNode -> Name -> Cmd ObjId
-mkImg' v n
-  = withCWN $ \ cwn ->
-    withImgTree $ \ t ->
-      do (d, t') <- liftE $ mkImgNode n cwn v t
-         theImgTree .= t'
-         trcObj d "mkImg': new image node"
-         return d
+mkImg' v n =
+  withCWN $ \ cwn t ->
+  do (d, t') <- liftE $ mkImgNode n cwn v t
+     theImgTree .= t'
+     trcObj d "mkImg': new image node"
+     return d
 
 
 mkImgDir :: Name -> Cmd ObjId
@@ -68,31 +68,42 @@ mkImg = mkImg' emptyImg
 -- change working entry
 
 cwe :: ObjId -> Cmd ()
-cwe r
-  = withImgTree $ \ t ->
-      do when (hasn't (entries . at r . _Just) t) $
-           abort $ "cwe: node not found: " ++ show r
+cwe r =
+  withImgTree $ \ t ->
+  do when (hasn't (entries . at r . _Just) t) $
+       abort $ "cwe: node not found: " ++ show r
 --         when (hasn't (theNodeVal r . isImgDir) t) $
 --           abort $ "cd: entry isn't an image dir"
-         trcObj r "cwe: current node is"
-         theWD .= r
+     theWE .= r
 
 cwroot :: Cmd ()
-cwroot
-  = withImgTree $ \ t ->
-      cwe (t ^. rootRef)
+cwroot =
+  withImgTree $ \ t -> cwe (t ^. rootRef)
 
-pwe :: Cmd Path
-pwe =
-  withCWN $ \ cwn ->
-  withImgTree $ \ t ->
-    return $ refPath cwn t
+cweType :: Cmd String
+cweType =
+  withCWN $ \ cwn t ->
+  return $
+  concat $
+  t ^.. theNodeVal cwn
+      . ( theParts . to (const "IMG") <>
+          isImgDir . to (const "DIR")
+        )
 
-ls :: Cmd ()
-ls =
-  withCWN $ \ cwn ->
-  withImgTree $ \ t ->
-  undefined
+cwePath :: Cmd Path
+cwePath =
+  withCWN $ \ cwn t -> return $ refPath cwn t
+
+cweLs :: Cmd [Name]
+cweLs =
+  withCWN $ \ cwn t ->
+  return $
+  t ^. theNodeVal cwn
+       . ( theParts . to M.keys <>
+           theDirEntries . isoSetList . traverse
+           . to (\ r -> t ^. theNode r . nodeName . to (:[]))
+         )
+
 
 -- ----------------------------------------
 
@@ -100,14 +111,21 @@ ls =
 ccc = runCmd $ do
   s <- mkImgStore <$> io X.getWorkingDirectory
   put s
-  saveImgStore ""
-  trcCmd pwe
+--  saveImgStore ""
+  trcCmd cwePath
   d <- mkImgDir "emil"
   cwe d
-  trcCmd pwe
+  trcCmd cwePath
+  trcCmd cweType
   i1 <- mkImg "pic1"
   i2 <- mkImg "pic2"
+  trcCmd cweLs
   cwe i2
+  trcCmd cweType
+  trcCmd cweLs
   -- d2 <- mkImg "xxx" -- error
   cwroot
+  trcCmd cweType
+  trcCmd cweLs
+  trcCmd cwePath
   saveImgStore ""

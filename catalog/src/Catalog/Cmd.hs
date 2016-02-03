@@ -50,8 +50,11 @@ runCmd cmd = runAction cmd Env emptyImgStore
 
 -- ----------------------------------------
 
-withCWN :: (ObjId -> Cmd a) -> Cmd a
-withCWN cmd = use theWD >>= cmd
+withCWN :: (ObjId -> ImgTree -> Cmd a) -> Cmd a
+withCWN cmd
+  = do wd <- use theWE
+       t  <- use theImgTree
+       cmd wd t
 
 withImgTree :: (ImgTree -> Cmd a) -> Cmd a
 withImgTree cmd = use theImgTree >>= cmd
