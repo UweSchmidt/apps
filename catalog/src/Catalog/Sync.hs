@@ -14,13 +14,14 @@ import           Control.Arrow (first, (***))
 import           Control.Lens hiding (children)
 import           Control.Lens.Util
 import           Control.Monad.RWSErrorIO
+import Data.Function.Util
 import qualified Data.Aeson as J
 import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson.Encode.Pretty as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ImageTree
-import           Data.List (intercalate, partition)
+import           Data.List (intercalate, partition, isPrefixOf)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
@@ -50,82 +51,302 @@ saveImgStore p = do
        then L.putStrLn bs
        else L.writeFile p bs
 
-mkImg' :: ImgNode -> Name -> Cmd ObjId
-mkImg' v n =
+-- ----------------------------------------
+--
+-- ops on current node
+
+-- change working node
+cwSet :: ObjId -> Cmd ()
+cwSet i = dt >>= go
+  where
+    go t = do
+      when (hasn't (entryAt i . _Just) t) $
+        abort $ "cwSet: node not found: " ++ show i
+      theWE .= i
+
+cwSetPath :: Path -> Cmd ()
+cwSetPath p =
+  cwSet (mkObjId p)
+  `catchError`
+  (\ _e -> abort $ "cwSetPath: no such node " ++ show p)
+
+-- | change working node to root node
+cwRoot :: Cmd ()
+cwRoot = dt >>= go
+  where
+    go t = cwSet (t ^. rootRef)
+
+-- | change working node to parent
+
+cwUp :: Cmd ()
+cwUp =
   withCWN $ \ cwn t ->
-  do (d, t') <- liftE $ mkImgNode n cwn v t
-     theImgTree .= t'
-     trcObj d "mkImg': new image node"
-     return d
+  if isDirRoot cwn t
+     then return ()
+     else theWE .= t ^. theParent cwn
+
+cwDown :: Name -> Cmd ()
+cwDown d = do
+  p <- flip snocPath d <$> cwnPath
+  cwSetPath p
+
+cwnType :: Cmd String
+cwnType = we >>= id2type
+
+cwnPath :: Cmd Path
+cwnPath = we >>= id2path
+
+-- | list names of elements in current node
+cwnLs :: Cmd [Name]
+cwnLs = we >>= id2contNames
+
+-- | convert working node path to file system path
+cwnFilePath :: Cmd FilePath
+cwnFilePath = cwnPath >>= toFilePath
+
+-- ----------------------------------------
+--
+
+-- | convert an image path to a file system path
+toFilePath :: Path -> Cmd FilePath
+toFilePath p = do
+  mp <- use theMountPath
+  return $ mp ++ tailPath p ^. path2string
+
+-- | convert a file system path to an image path
+fromFilePath :: FilePath -> Cmd Path
+fromFilePath f = dt >>= go
+  where
+    go t = do
+      mp <- use theMountPath
+      when (not (mp `isPrefixOf` f)) $
+        abort $ "fromFilePath: not a legal image path " ++ show f
+      let f' = drop (length mp) f
+      let r' = t ^. theName (t ^. rootRef)
+      return $ consPath r' (readPath f')
+
+-- | ref to path
+id2path :: ObjId -> Cmd Path
+id2path i = dt >>= go
+  where
+    go t = return (refPath i t)
+
+-- | ref to type
+id2type :: ObjId -> Cmd String
+id2type i = dt >>= go
+  where
+    go t = return $ concat $
+      t ^.. theNodeVal i
+          . ( theParts  . to (const "IMG")  <>
+              isImgDir  . to (const "DIR")  <>
+              isImgRoot . to (const "Root") <>
+              isImgCol  . to (const "COL")
+            )
+
+id2contNames :: ObjId -> Cmd [Name]
+id2contNames i = dt >>= go
+  where
+    go t =
+      return $
+      t ^. theNodeVal i
+         . ( theParts . to M.keys
+             <>
+             theDirEntries . isoSetList . traverse . name
+             -- to (\ r -> t ^. theNode r . nodeName . to (:[]))
+             <>
+             isImgRoot . (_1 . name <> _2 . name)
+           )
+      where
+        name = to (\ r -> t ^. theNode r . nodeName . to (:[]))
+
+idSyncFS :: ObjId -> Cmd ()
+idSyncFS i = dt >>= go
+  where
+    go t
+      | isIMG e = do
+          trcObj i "idSyncFS: syncing image"
+          warn "TODO"
+          return ()
+
+      | isDIR e = do
+          trcObj i "idSyncFS: syncing image dir"
+          (do s <- id2path i >>= toFilePath >>= fsDirStat
+              when (fsTimeStamp s > e ^. theDirTimeStamp) $
+                do trc "idSyncFS: dir has changed since last sync"
+                   syncDirCont i
+              checkEmptyDir i
+
+            ) `catchError`
+            (\ e ->
+              do warn $ "idSyncFS: fs dir not found " ++ show e
+                 rmImgNode i
+            )
+          return ()
+
+      | otherwise = return ()
+      where
+        e = t ^. theNodeVal i
+
+syncDirCont :: ObjId -> Cmd ()
+syncDirCont i = do
+  trcObj i "syncDirCont: syncing entries in dir "
+  es <- id2path i >>= toFilePath >>= parseDirCont
+  trc $ "syncDirCont: entries found " ++ show es
+  p  <- id2path i
+
+  -- remove none image entries
+  let (others, rest) =
+        partition (hasImgType (== IMGother)) es
+  mapM_ (\ n -> warn $ "syncDirCont: entry ignored " ++ show (fst n)) others
+
+  -- process jpg subdirs
+  let (subdirs, rest2) =
+        partition (hasImgType (== IMGimgdir)) rest
+  mapM_ (syncSubDir i p) (subdirs ^.. traverse . _1 . name2string)
+
+  -- process files for a single image
+  let (imgfiles, rest3) =
+        partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
+                                     , IMGjpg, IMGimg,  IMGcopy
+                                     ])) rest2
+  trc $ "syncDirEntries: imgfiles " ++ show imgfiles
+  mapM_ (syncImg i p) (groupBy (fst . snd) imgfiles)
+
+  -- remove unknown files
+  trc $ "syncDirEntries: files ignored " ++ show rest3
+  return ()
+
+syncImg :: ObjId -> Path -> [(Name, (Name, ImgType))] -> Cmd ()
+syncImg pi ppath xs = dt >>= go
+  where
+    go t = do
+      trcObj pi $ "syncImg: syncing img "
+      -- trc $ "syncImg: syncing parts " ++ show ps
+      when notex $
+        mkImg pi n >> return ()
+
+      adjustImgNode undefined new'i -- TODO
+      syncParts new'i ppath
+      return ()
+
+      where
+        notex = hasn't (entryAt new'i . _Just) t
+        new'i = mkObjId (ppath `snocPath` n)
+        n     = xs ^. to head . _2 . _1
+        ps    = xs &  traverse %~ (id *** snd)
+
+syncSubDir :: ObjId -> Path -> FilePath -> Cmd ()
+syncSubDir pid ppath n = do
+  trc $ "syncSubDir: " ++ show pid ++ ", " ++ show ppath ++ ", " ++ show n
+  trc "TODO"
+
+  return ()
+
+syncParts :: ObjId -> Path -> Cmd ()
+syncParts i p = do
+  trcObj i $ "syncParts: syncing img parts for "
+  trc $ "syncParts: TODO"
 
 
-mkImgDir :: Name -> Cmd ObjId
-mkImgDir = mkImg' emptyImgDir
+checkEmptyDir :: ObjId -> Cmd ()
+checkEmptyDir i = dt >>= go
+  where
+    go t = do
+      when (nullImgDir (t ^. theNodeVal i)) $ do
+        p <- id2path i
+        warn $ "checkEmptyDir: image dir empty, will be removed " ++ show p
+        warn "TODO"
+        -- rmImgNode i
 
-mkImg :: Name -> Cmd ObjId
-mkImg = mkImg' emptyImg
 
--- change working entry
+fsDirStat :: FilePath -> Cmd FileStatus
+fsDirStat p = do
+  ex <- io $ X.fileExist p
+  when (not ex) $
+    abort $ "fs entry not found " ++ show p
+  st <- io $ X.getFileStatus p
+  when (not $ X.isDirectory st) $
+    abort $ "fs entry not a directory " ++ show p
+  return st
 
-cwe :: ObjId -> Cmd ()
-cwe r =
-  withImgTree $ \ t ->
-  do when (hasn't (entries . at r . _Just) t) $
-       abort $ "cwe: node not found: " ++ show r
---         when (hasn't (theNodeVal r . isImgDir) t) $
---           abort $ "cd: entry isn't an image dir"
-     theWE .= r
+parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
+parseDirCont p = do
+  (es, jpgdirs)  <- classifyNames <$> scanDirCont p
+  jss <- mapM
+         (parseJpgDirCont p)                       -- process jpg subdirs
+         (jpgdirs ^.. traverse . _1 . name2string) -- (map (fromName . fst) jpgdirs)
+  return $ es ++ concat jss
+  where
+    classifyNames =
+      partition (hasImgType (/= IMGjpgdir))  -- select jpg img subdirs
+      .
+      filter    (hasImgType (/= IMGboring))  -- remove boring stuff
+      .
+      map (\ n -> (mkName n, filePathToImgType n))
 
-cwroot :: Cmd ()
-cwroot =
-  withImgTree $ \ t -> cwe (t ^. rootRef)
+parseJpgDirCont :: FilePath -> FilePath -> Cmd [(Name, (Name, ImgType))]
+parseJpgDirCont p d =
+  classifyNames <$> scanDirCont (p </> d)
+  where
+    classifyNames =
+      filter (\ n -> (n ^. _2 . _2) == IMGjpg)
+      .
+      map (\ n -> (mkName (d </> n), filePathToImgType n))
 
-cweType :: Cmd String
-cweType =
-  withCWN $ \ cwn t ->
-  return $
-  concat $
-  t ^.. theNodeVal cwn
-      . ( theParts . to (const "IMG") <>
-          isImgDir . to (const "DIR")
-        )
 
-cwePath :: Cmd Path
-cwePath =
-  withCWN $ \ cwn t -> return $ refPath cwn t
+scanDirCont :: FilePath -> Cmd [FilePath]
+scanDirCont p0 = do
+  trc $ "scanDirCont: reading dir " ++ show p0
+  res <- io $ readDir p0
+  trc $ "scanDirCont: result is " ++ show res
+  return res
+  where
+    readDir :: FilePath -> IO [FilePath]
+    readDir p = do
+      s  <- X.openDirStream p
+      xs <- readDirEntries s
+      X.closeDirStream s
+      return xs
+      where
+        readDirEntries s = do
+          e1 <- X.readDirStream s
+          if null e1
+            then return []
+            else do
+              es <- readDirEntries s
+              return (e1 : es)
 
-cweLs :: Cmd [Name]
-cweLs =
-  withCWN $ \ cwn t ->
-  return $
-  t ^. theNodeVal cwn
-       . ( theParts . to M.keys <>
-           theDirEntries . isoSetList . traverse
-           . to (\ r -> t ^. theNode r . nodeName . to (:[]))
-         )
 
+hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
+hasImgType p (_, (_, t)) = p t
 
 -- ----------------------------------------
 
 
+ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
-  s <- mkImgStore <$> io X.getWorkingDirectory
-  put s
---  saveImgStore ""
-  trcCmd cwePath
-  d <- mkImgDir "emil"
-  cwe d
-  trcCmd cwePath
-  trcCmd cweType
-  i1 <- mkImg "pic1"
-  i2 <- mkImg "pic2"
-  trcCmd cweLs
-  cwe i2
-  trcCmd cweType
-  trcCmd cweLs
-  -- d2 <- mkImg "xxx" -- error
-  cwroot
-  trcCmd cweType
-  trcCmd cweLs
-  trcCmd cwePath
+  mountPath <- io X.getWorkingDirectory
+  initImgStore "archive" "collections" mountPath
+  trcCmd cwnPath >> trcCmd cwnLs
+  saveImgStore ""
+
+  refRoot <- use (theImgTree . rootRef)
+  refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
+  cwSet refImg >> trcCmd cwnPath >> trcCmd cwnType
+
+  cwe <- we
+  refDir1 <- mkImgDir cwe "emil"
+  cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath
+
+  cwe <- we
+  pic1 <- mkImg cwe "pic1"
+  pic2 <- mkImg cwe "pic2"
+  trcCmd cwnLs
+
+  cwSet pic2 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnLs
+  cwe <- we
+  (mkImg cwe "xxx" >> return ()) `catchError` (\ _ -> return ()) -- error
+
+  cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath
+  trcCmd (fromFilePath "/Users/uwe/haskell/apps/catalog/emil")
   saveImgStore ""

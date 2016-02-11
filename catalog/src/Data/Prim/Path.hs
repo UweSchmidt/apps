@@ -10,6 +10,9 @@ module Data.Prim.Path
        , nullPath
        , consPath
        , concPath
+       , snocPath
+       , tailPath
+       , headPath
        , showPath
        , path2string
        )
@@ -24,8 +27,8 @@ import Data.Prim.Name
 
 -- ----------------------------------------
 
-data Path' name = BN !name
-                | DN !name !(Path' name)
+data Path' n = BN !n
+                | DN !n !(Path' n)
 
 type Path = Path' Name
 
@@ -44,29 +47,42 @@ readPath ""
 readPath xs
   = error $ "readPath: no path: " ++ show xs
 
-mkPath :: name -> Path' name
+mkPath :: n -> Path' n
 mkPath = BN
 
-emptyPath :: Monoid name => Path' name
+emptyPath :: Monoid n => Path' n
 emptyPath = mkPath mempty
 
-nullPath :: (Monoid name, Eq name) =>
-            Path' name -> Bool
+nullPath :: (Monoid n, Eq n) =>
+            Path' n -> Bool
 nullPath = (== emptyPath)
 
-consPath :: (Monoid name, Eq name) =>
-            name -> Path' name -> Path' name
+consPath :: (Monoid n, Eq n) =>
+            n -> Path' n -> Path' n
 consPath n p
   | n == mempty = p
   | nullPath p  = mkPath n
   | otherwise   = DN n p
 
-concPath :: (Monoid name, Eq name) =>
-            Path' name -> Path' name -> Path' name
+snocPath :: (Monoid n, Eq n) =>
+            Path' n -> n -> Path' n
+snocPath p n = p `concPath` mkPath n
+
+concPath :: (Monoid n, Eq n) =>
+            Path' n -> Path' n -> Path' n
 concPath (BN n) p2    = consPath n p2
 concPath (DN n p1) p2 = consPath n $ concPath p1 p2
 
-showPath :: (Monoid name, Eq name, Show name) => Path' name -> String
+
+headPath :: Path' n -> n
+headPath (DN n _p) = n
+headPath (BN n)    = n
+
+tailPath :: Path' n -> Path' n
+tailPath (DN _n p) = p
+tailPath p         = p
+
+showPath :: (Monoid n, Eq n, Show n) => Path' n -> String
 showPath (BN n)
   | n == mempty   = ""
   | otherwise     = "/" ++ show n
@@ -76,15 +92,15 @@ showPath (DN n p) = "/" ++ show n ++ showPath p
 path2string :: Iso' Path String
 path2string = iso showPath readPath
 
-deriving instance Eq name  => Eq  (Path' name)
-deriving instance Ord name => Ord (Path' name)
+deriving instance Eq n  => Eq  (Path' n)
+deriving instance Ord n => Ord (Path' n)
 
--- deriving instance Show name => Show (Path' name)
+-- deriving instance Show n => Show (Path' n)
 
-instance (Eq name, Monoid name, Show name) => Show (Path' name) where
+instance (Eq n, Monoid n, Show n) => Show (Path' n) where
   show = showPath
 
-instance (Eq name, Monoid name, Show name) => ToJSON (Path' name) where
+instance (Eq n, Monoid n, Show n) => ToJSON (Path' n) where
   toJSON = toJSON . showPath
 
 instance FromJSON Path where
@@ -93,7 +109,7 @@ instance FromJSON Path where
 instance IsString Path where
   fromString = readPath
 
-instance (Eq name, Monoid name, Show name) => Hashable64 (Path' name) where
+instance (Eq n, Monoid n, Show n) => Hashable64 (Path' n) where
   hash64Add = hash64Add . showPath
 
 -- ----------------------------------------

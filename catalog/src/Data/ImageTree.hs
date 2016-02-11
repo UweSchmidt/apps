@@ -10,12 +10,22 @@ module Data.ImageTree
        , ImgParts
        , ImgPart
        , ImgType(..)
+       , mkEmptyImgRoot
        , theParts
        , theDirTimeStamp
        , theDirEntries
        , emptyImg
        , emptyImgDir
+       , emptyImgRoot
+       , emptyImgCol
        , isImgDir
+       , isImgRoot
+       , isImgCol
+       , isDIR
+       , isIMG
+       , isROOT
+       , isCOL
+       , nullImgDir
        , mkImgRoot
        , mkImgNode
        , remImgNode
@@ -26,6 +36,8 @@ module Data.ImageTree
        , theImgType
        , theImgTimeStamp
        , theImgCheckSum
+       , theRootImgDir
+       , theRootImgCol
        )
 where
 
@@ -55,6 +67,7 @@ import qualified Data.Set as S
 data ImgNode' ref = IMG  !(Map Name ImgParts)
                   | DIR  !TimeStamp !(Set ref)
                   | ROOT !ref !ref
+                  | COL
 
 deriving instance (Show ref) => Show (ImgNode' ref)
 
@@ -73,6 +86,9 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     , "archive"     .= rd
     , "collections" .= rc
     ]
+  toJSON (COL) = object
+    [ "ImgNode"    .= ("COL" :: String)
+    ]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
   parseJSON = withObject "ImgNode" $ \ o ->
@@ -86,7 +102,9 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
                <*> (S.fromList <$> o .: "children")
          "ROOT" ->
            ROOT <$> o .: "archive"
-               <*> o .: "collections"
+                <*> o .: "collections"
+         "COL" ->
+           return COL
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
@@ -99,7 +117,7 @@ emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
 
 emptyImgCol :: ImgNode' ref
-emptyImgCol = DIR zeroTimeStamp S.empty -- TODO
+emptyImgCol = COL
 
 -- image node optics
 
@@ -138,6 +156,34 @@ theRootImgDir = isImgRoot . _1
 theRootImgCol :: Traversal' (ImgNode' ref) ref
 theRootImgCol = isImgRoot . _2
 
+isImgCol :: Prism' (ImgNode' ref) (ImgNode' ref)
+isImgCol
+  = prism id
+          (\ x -> case x of
+              COL -> Right x
+              _   -> Left x
+          )
+
+isDIR :: ImgNode' ref -> Bool
+isDIR DIR{}  = True
+isDIR _      = False
+
+isIMG :: ImgNode' ref -> Bool
+isIMG IMG{}  = True
+isIMG _      = False
+
+isROOT :: ImgNode' ref -> Bool
+isROOT ROOT{} = True
+isROOT _      = False
+
+isCOL :: ImgNode' ref -> Bool
+isCOL COL{} = True
+isCOL _     = False
+
+nullImgDir :: ImgNode' ref -> Bool
+nullImgDir (DIR _ s) = S.null s
+nullImgDir _         = True
+
 -- ----------------------------------------
 
 -- the tree for the image hierachy
@@ -148,8 +194,8 @@ type ImgNode = ImgNode' ObjId
 mkEmptyImgRoot :: (MonadError String m) =>
                   Name -> Name -> Name -> m ImgTree
 mkEmptyImgRoot rootName imgName colName =
-  do (r1,t1) <- mkDirNode mkObjId isParentDir addImgArchive imgName r emptyImgDir t0
-     (r2,t2) <- mkDirNode mkObjId isParentDir addImgCol     colName r emptyImgCol t0
+  do (r1,t1) <- mkDirNode mkObjId isROOT addImgArchive imgName r emptyImgDir t0
+     (r2,t2) <- mkDirNode mkObjId isROOT addImgCol     colName r emptyImgCol t1
      return t2
   where
     t0 = mkDirRoot mkObjId rootName emptyImgRoot
@@ -166,7 +212,7 @@ mkImgNode :: (MonadError String m) =>
              ObjId ->                      -- parent node
              ImgNode ->                    -- node value
              ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
-mkImgNode = mkDirNode mkObjId isParentDir addChildRef
+mkImgNode = mkDirNode mkObjId isDIR addChildRef
 
 remImgNode :: (MonadError String m) =>
               ObjId ->
@@ -178,15 +224,6 @@ addChildRef r n = n & theDirEntries %~ S.insert r
 
 remChildRef :: ObjId -> ImgNode -> ImgNode
 remChildRef r n = n & theDirEntries %~ S.delete r
-
-isParentDir :: ImgNode -> Bool
-isParentDir DIR{}  = True
-isParentDir ROOT{} = True
-isParentDir _      = False
-
-nullImgDir :: ImgNode -> Bool
-nullImgDir (DIR _ s) = S.null s
-nullImgDir _         = True
 
 -- ----------------------------------------
 

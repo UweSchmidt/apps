@@ -50,25 +50,78 @@ runCmd cmd = runAction cmd Env emptyImgStore
 
 -- ----------------------------------------
 
+initImgStore :: Name -> Name -> FilePath -> Cmd ()
+initImgStore rootName colName mountPath
+  = do r <- liftE $
+            mkEmptyImgRoot rootName dirName colName
+       put $ mkImgStore r mPath (r ^. rootRef)
+  where
+    dirName  = mkName $ takeFileName mountPath
+    mPath    = takeDirectory mountPath
+
+-- ----------------------------------------
+--
+-- simple monadic ops
+
+we :: Cmd ObjId
+we = use theWE
+
+dt :: Cmd ImgTree
+dt = use theImgTree
+
 withCWN :: (ObjId -> ImgTree -> Cmd a) -> Cmd a
 withCWN cmd
-  = do wd <- use theWE
-       t  <- use theImgTree
+  = do wd <- we
+       t  <- dt
        cmd wd t
 
-withImgTree :: (ImgTree -> Cmd a) -> Cmd a
-withImgTree cmd = use theImgTree >>= cmd
-
 liftE :: Except String a -> Cmd a
-liftE cmd =
+liftE cmd = cmd `andThenE` return
+
+andThenE :: Except String a -> (a -> Cmd b) -> Cmd b
+andThenE cmd f =
   case runExcept cmd of
     Left  msg -> abort msg
-    Right res  -> return res
+    Right res -> f res
+
+-- ----------------------------------------
+--
+-- smart constructors
+
+mkImg' :: ImgNode -> ObjId -> Name -> Cmd ObjId
+mkImg' v i n = dt >>= go
+  where
+    go t = do
+      (d, t') <- liftE $ mkImgNode n i v t
+      theImgTree .= t'
+      trcObj d "mkImg': new image node"
+      return d
+
+mkImgDir :: ObjId -> Name -> Cmd ObjId
+mkImgDir = mkImg' emptyImgDir
+
+mkImg :: ObjId -> Name -> Cmd ObjId
+mkImg = mkImg' emptyImg
+
+rmImgNode :: ObjId -> Cmd ()
+rmImgNode i = dt >>= go
+  where
+    go t = do
+      t' <- liftE $ remImgNode i t
+      theImgTree .= t'
+
+adjustImgNode :: (ImgNode -> ImgNode) -> ObjId -> Cmd ()
+adjustImgNode f i = do
+  trc "TODO"
+  return ()
+
+-- ----------------------------------------
+--
+-- trace commands
 
 trcObj :: ObjId -> String -> Cmd ()
-trcObj r msg =
-  withImgTree $ \ t ->
-    trc $ msg ++ " " ++ show (refPath r t)
+trcObj r msg = dt >>= \ t ->
+  trc $ msg ++ " " ++ show (refPath r t)
 
 trcCmd :: Show a => Cmd a -> Cmd a
 trcCmd cmd

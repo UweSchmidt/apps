@@ -4,7 +4,27 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.RefTree where
+module Data.RefTree
+       ( RefTree
+       , UpLink
+       , DirTree
+       , rootRef
+       , entries
+       , entryAt
+       , theNode
+       , parentRef
+       , nodeName
+       , nodeVal
+       , theParent
+       , theName
+       , theNodeVal
+       , refPath
+       , mkDirRoot
+       , isDirRoot
+       , mkDirNode
+       , remDirNode
+       )
+where
 
 import           Data.Prim.Name
 import           Data.Prim.Path
@@ -59,9 +79,12 @@ rootRef k (RT r m) = (\ new -> RT new m) <$> k r
 entries :: Lens' (RefTree node ref) (Map ref (node ref))
 entries k (RT r m) = (\ new -> RT r new) <$> k m
 
+entryAt :: (Ord ref) => ref -> Lens' (RefTree node ref) (Maybe (node ref))
+entryAt r = entries . at r
+
 theNode :: (Ord ref, Show ref) =>
            ref -> Lens' (RefTree node ref) (node ref)
-theNode r = entries . at r . checkJust ("atRef: undefined ref " ++ show r)
+theNode r = entryAt r . checkJust ("atRef: undefined ref " ++ show r)
 
 -- ----------------------------------------
 
@@ -161,13 +184,13 @@ mkDirNode :: (MonadError String m, Ord ref, Show ref) =>
              m (ref, DirTree node ref) -- new ref and modified tree
 
 mkDirNode genRef isParentDir updateParent n p v t
-  = do when (has (entries . at r . _Just) t) $
+  = do when (has (entryAt r . _Just) t) $
          throwError $ "mkDirNode: entry already exists: " ++ show rp
        when (not (t ^. theNodeVal p . to isParentDir)) $
-         throwError $ "mkDirNode: parent node not a dir" ++ show pp
+         throwError $ "mkDirNode: parent node not a dir: " ++ show pp
        return
          ( r
-         , t & entries . at r .~ Just (UL p n v)
+         , t & entryAt r .~ Just (UL p n v)
              & theNodeVal p   %~ updateParent r
          )
   where
@@ -182,7 +205,7 @@ remDirNode :: (MonadError String m, Ord ref, Show ref) =>
               DirTree node ref ->
               m (DirTree node ref)
 remDirNode removable updateParent r t
-  = do when (hasn't (entries . at r) t) $
+  = do when (hasn't (entryAt r) t) $
          throwError $ "remDirNode: ref doesn't exist: " ++ show r
 
        when (r `isDirRoot` t) $
@@ -193,7 +216,7 @@ remDirNode removable updateParent r t
                       ++ show (refPath r t)
 
        return (t & theNodeVal p   %~ updateParent r
-                 & entries . at r .~ Nothing
+                 & entryAt r .~ Nothing
               )
    where
      p = t ^. theParent r

@@ -10,8 +10,8 @@ module Data.ImageStore
        , theImgTree
        , theMountPath
        , theWE
-       , emptyImgStore
        , mkImgStore
+       , emptyImgStore
        )
 where
 
@@ -20,6 +20,7 @@ import           Control.Applicative
 import           Control.Arrow (first, (***))
 import           Control.Lens hiding (children)
 import           Control.Lens.Util
+import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import qualified Data.Aeson as J
 import           Data.Aeson hiding (Object, (.=))
@@ -73,15 +74,14 @@ theWE k (IS t p w) = (\new -> IS t p new) <$> k w
 
 -- ----------------------------------------
 
-mkImgStore :: FilePath -> ImgStore
-mkImgStore p0
-  = IS t p (t ^. rootRef)
-  where
-    p = takeDirectory p0
-    n = mkName $ takeFileName  p0
-    t = mkImgRoot n emptyImgDir
+mkImgStore :: ImgTree -> FilePath -> ObjId -> ImgStore
+mkImgStore = IS
 
 emptyImgStore :: ImgStore
-emptyImgStore = mkImgStore ""
+emptyImgStore
+  = IS r "" (r ^. rootRef)
+  where
+    r = mkDirRoot mkObjId "" emptyImgRoot
+
 
 -- ----------------------------------------
