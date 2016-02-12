@@ -9,25 +9,25 @@ module Catalog.Sync
 where
 
 import           Catalog.FilePath
-import           Control.Applicative
-import           Control.Arrow (first, (***))
+-- import           Control.Applicative
+import           Control.Arrow ((***))
 import           Control.Lens hiding (children)
 import           Control.Lens.Util
 import           Control.Monad.RWSErrorIO
 import Data.Function.Util
-import qualified Data.Aeson as J
-import           Data.Aeson hiding (Object, (.=))
+-- import qualified Data.Aeson as J
+-- import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.ByteString as B
+-- import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ImageTree
-import           Data.List (intercalate, partition, isPrefixOf)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Prim.CheckSum
+import           Data.List ({-intercalate,-} partition, isPrefixOf)
+-- import           Data.Map.Strict (Map)
+-- import qualified Data.Map.Strict as M
+-- import           Data.Maybe
+-- import           Data.Prim.CheckSum
 import           Data.Prim.Name
-import Data.ImageTree
+-- import Data.ImageTree
 import Data.ImageStore
 import           Data.Prim.PathId
 import           Data.Prim.Path
@@ -36,10 +36,10 @@ import           Data.RefTree
 import           System.FilePath -- ((</>))
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
-import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
+-- import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
 import Catalog.Cmd
 import           Control.Monad.Except
-import qualified Data.Set as S
+-- import qualified Data.Set as S
 
 -- ----------------------------------------
 
@@ -149,10 +149,9 @@ id2contNames i = dt >>= go
     go t =
       return $
       t ^. theNodeVal i
-         . ( theParts . to M.keys
+         . ( theParts . isoImgParts . traverse . theImgName . to (:[])
              <>
              theDirEntries . isoSetList . traverse . name
-             -- to (\ r -> t ^. theNode r . nodeName . to (:[]))
              <>
              isImgRoot . (_1 . name <> _2 . name)
            )
@@ -177,7 +176,7 @@ idSyncFS i = dt >>= go
               checkEmptyDir i
 
             ) `catchError`
-            (\ e ->
+            (\ _e ->
               do warn $ "idSyncFS: fs dir not found " ++ show e
                  rmImgNode i
             )
@@ -217,36 +216,39 @@ syncDirCont i = do
   return ()
 
 syncImg :: ObjId -> Path -> [(Name, (Name, ImgType))] -> Cmd ()
-syncImg pi ppath xs = dt >>= go
+syncImg ip pp xs = dt >>= go
   where
     go t = do
-      trcObj pi $ "syncImg: syncing img "
+      trcObj ip $ "syncImg: syncing img "
       -- trc $ "syncImg: syncing parts " ++ show ps
       when notex $
-        mkImg pi n >> return ()
+        mkImg ip n >> return ()
 
-      adjustImgNode undefined new'i -- TODO
-      syncParts new'i ppath
+      adjustImg (<> mkImgParts ps) new'i -- TODO
+      syncParts new'i pp
       return ()
 
       where
         notex = hasn't (entryAt new'i . _Just) t
-        new'i = mkObjId (ppath `snocPath` n)
+        new'i = mkObjId (pp `snocPath` n)
         n     = xs ^. to head . _2 . _1
-        ps    = xs &  traverse %~ (id *** snd)
+        ps    = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
 
 syncSubDir :: ObjId -> Path -> FilePath -> Cmd ()
-syncSubDir pid ppath n = do
-  trc $ "syncSubDir: " ++ show pid ++ ", " ++ show ppath ++ ", " ++ show n
+syncSubDir pid pp n = do
+  trc $ "syncSubDir: " ++ show pid ++ ", " ++ show pp ++ ", " ++ show n
   trc "TODO"
 
   return ()
 
 syncParts :: ObjId -> Path -> Cmd ()
-syncParts i p = do
-  trcObj i $ "syncParts: syncing img parts for "
-  trc $ "syncParts: TODO"
-
+syncParts i pp = dt >>= go
+  where
+    go t = do
+      trcObj i $ "syncParts: syncing img parts for "
+      trc $ "syncParts: TODO" ++ show ps
+      where
+        ps = t ^. theNodeVal i . theParts
 
 checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = dt >>= go
@@ -327,26 +329,26 @@ ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
   mountPath <- io X.getWorkingDirectory
   initImgStore "archive" "collections" mountPath
-  trcCmd cwnPath >> trcCmd cwnLs
+  trcCmd cwnPath >> trcCmd cwnLs >> return ()
   saveImgStore ""
 
   refRoot <- use (theImgTree . rootRef)
   refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
-  cwSet refImg >> trcCmd cwnPath >> trcCmd cwnType
+  cwSet refImg >> trcCmd cwnPath >> trcCmd cwnType >> return ()
 
   cwe <- we
   refDir1 <- mkImgDir cwe "emil"
-  cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath
+  cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath >> return ()
 
-  cwe <- we
-  pic1 <- mkImg cwe "pic1"
-  pic2 <- mkImg cwe "pic2"
-  trcCmd cwnLs
+  cwe' <- we
+  pic1 <- mkImg cwe' "pic1"
+  pic2 <- mkImg cwe' "pic2"
+  trcCmd cwnLs >> return ()
 
-  cwSet pic2 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnLs
-  cwe <- we
-  (mkImg cwe "xxx" >> return ()) `catchError` (\ _ -> return ()) -- error
+  cwSet pic2 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnLs >> return ()
+  cwe'' <- we
+  (mkImg cwe'' "xxx" >> return ()) `catchError` (\ _ -> return ()) -- error
 
-  cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath
-  trcCmd (fromFilePath "/Users/uwe/haskell/apps/catalog/emil")
+  cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath >> return ()
+  trcCmd (fromFilePath "/Users/uwe/haskell/apps/catalog/emil") >> return ()
   saveImgStore ""

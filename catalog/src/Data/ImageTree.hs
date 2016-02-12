@@ -32,6 +32,7 @@ module Data.ImageTree
        , emptyImgParts
        , mkImgParts
        , isoImgParts
+       , mkImgPart
        , theImgName
        , theImgType
        , theImgTimeStamp
@@ -64,7 +65,7 @@ import qualified Data.Set as S
 -- ----------------------------------------
 
 
-data ImgNode' ref = IMG  !(Map Name ImgParts)
+data ImgNode' ref = IMG  !ImgParts
                   | DIR  !TimeStamp !(Set ref)
                   | ROOT !ref !ref
                   | COL
@@ -74,7 +75,7 @@ deriving instance (Show ref) => Show (ImgNode' ref)
 instance ToJSON ref => ToJSON (ImgNode' ref) where
   toJSON (IMG pm) = object
     [ "ImgNode"     .= ("IMG" :: String)
-    , "parts"       .= M.toList pm
+    , "parts"       .= pm
     ]
   toJSON (DIR ts rs) = object
     [ "ImgNode"     .= ("DIR" :: String)
@@ -95,8 +96,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
     do t <- o .: "ImgNode"
        case t :: String of
          "IMG" ->
-           IMG . M.fromList
-               <$> o .: "parts"
+           IMG <$> o .: "parts"
          "DIR" ->
            DIR <$> o .: "timestamp"
                <*> (S.fromList <$> o .: "children")
@@ -111,7 +111,7 @@ emptyImgDir :: ImgNode' ref
 emptyImgDir = DIR zeroTimeStamp S.empty
 
 emptyImg :: ImgNode' ref
-emptyImg = IMG M.empty
+emptyImg = IMG emptyImgParts
 
 emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
@@ -121,7 +121,7 @@ emptyImgCol = COL
 
 -- image node optics
 
-theParts :: Prism' (ImgNode' ref) (Map Name ImgParts)
+theParts :: Prism' (ImgNode' ref) ImgParts
 theParts
   = prism IMG (\ x -> case x of
                   IMG m -> Right m
@@ -194,15 +194,15 @@ type ImgNode = ImgNode' ObjId
 mkEmptyImgRoot :: (MonadError String m) =>
                   Name -> Name -> Name -> m ImgTree
 mkEmptyImgRoot rootName imgName colName =
-  do (r1,t1) <- mkDirNode mkObjId isROOT addImgArchive imgName r emptyImgDir t0
-     (r2,t2) <- mkDirNode mkObjId isROOT addImgCol     colName r emptyImgCol t1
+  do (_r1,t1) <- mkDirNode mkObjId isROOT addImgArchive imgName r emptyImgDir t0
+     (_r2,t2) <- mkDirNode mkObjId isROOT addImgCol     colName r emptyImgCol t1
      return t2
   where
     t0 = mkDirRoot mkObjId rootName emptyImgRoot
     r  = t0 ^. rootRef
 
-    addImgArchive r n = n & theRootImgDir .~ r
-    addImgCol     r n = n & theRootImgCol .~ r
+    addImgArchive r' n = n & theRootImgDir .~ r'
+    addImgCol     r' n = n & theRootImgCol .~ r'
 
 mkImgRoot :: Name -> ImgNode -> ImgTree
 mkImgRoot = mkDirRoot mkObjId
@@ -230,6 +230,21 @@ remChildRef r n = n & theDirEntries %~ S.delete r
 newtype ImgParts = ImgParts (Map Name ImgPart)
 
 deriving instance Show ImgParts
+
+instance Monoid ImgParts where
+  mempty = emptyImgParts
+
+  ImgParts m1 `mappend` ImgParts m2
+    = ImgParts $ M.mergeWithKey combine only1 only2 m1 m2
+    where
+      only1 = const M.empty
+      only2 = id
+      combine _k e1 e2
+        | t1 > t2   = Just e1
+        | otherwise = Just e2
+        where
+          t1 = e1 ^. theImgTimeStamp
+          t2 = e2 ^. theImgTimeStamp
 
 instance ToJSON ImgParts where
   toJSON (ImgParts pm) = toJSON . M.toList $ pm
@@ -269,6 +284,9 @@ instance FromJSON ImgPart where
        <*> o .: "ImgType"
        <*> o .: "TimeStamp"
        <*> o .: "CheckSum"
+
+mkImgPart :: Name -> ImgType -> ImgPart
+mkImgPart n t = IP n t zeroTimeStamp zeroCheckSum
 
 theImgName :: Lens' ImgPart Name
 theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n

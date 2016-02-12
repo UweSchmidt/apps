@@ -50,6 +50,7 @@ data RefTree node ref = RT !ref !(Map ref (node ref))
 
 deriving instance (Show ref, Show (n ref)) => Show (RefTree n ref)
 
+{-}
 -- TODO: this isn't a solution, fmap does not fit
 -- and the rename must be an Iso
 
@@ -60,6 +61,7 @@ renameRefTree f (RT r t) =
              M.empty
              t
            )
+-- -}
 
 instance (ToJSON (node ref), ToJSON ref) => ToJSON (RefTree node ref) where
   toJSON (RT r m) = J.object

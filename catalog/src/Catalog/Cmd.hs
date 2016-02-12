@@ -8,34 +8,34 @@
 module Catalog.Cmd
 where
 
-import           Catalog.FilePath
-import           Control.Applicative
-import           Control.Arrow (first, (***))
+-- import           Catalog.FilePath
+-- import           Control.Applicative
+-- import           Control.Arrow (first, (***))
 import           Control.Lens hiding (children)
-import           Control.Lens.Util
+-- import           Control.Lens.Util
 import           Control.Monad.RWSErrorIO
-import qualified Data.Aeson as J
-import           Data.Aeson hiding (Object, (.=))
-import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy.Char8 as L
+-- import qualified Data.Aeson as J
+-- import           Data.Aeson hiding (Object, (.=))
+-- import qualified Data.Aeson.Encode.Pretty as J
+-- import qualified Data.ByteString as B
+-- import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.ImageTree
-import           Data.List (intercalate, partition)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Prim.CheckSum
+-- import           Data.List (intercalate, partition)
+-- import           Data.Map.Strict (Map)
+-- import qualified Data.Map.Strict as M
+-- import           Data.Maybe
+-- import           Data.Prim.CheckSum
 import           Data.Prim.Name
-import Data.ImageTree
+-- import Data.ImageTree
 import Data.ImageStore
 import           Data.Prim.PathId
-import           Data.Prim.Path
-import           Data.Prim.TimeStamp
+-- import           Data.Prim.Path
+-- import           Data.Prim.TimeStamp
 import           Data.RefTree
 import           System.FilePath -- ((</>))
-import           System.Posix (FileStatus)
-import qualified System.Posix as X
-import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
+-- import           System.Posix (FileStatus)
+-- import qualified System.Posix as X
+-- import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
 
 -- ----------------------------------------
 
@@ -110,10 +110,9 @@ rmImgNode i = dt >>= go
       t' <- liftE $ remImgNode i t
       theImgTree .= t'
 
-adjustImgNode :: (ImgNode -> ImgNode) -> ObjId -> Cmd ()
-adjustImgNode f i = do
-  trc "TODO"
-  return ()
+adjustImg :: (ImgParts -> ImgParts) -> ObjId -> Cmd ()
+adjustImg f i = do
+  theImgTree . theNodeVal i . theParts %= f
 
 -- ----------------------------------------
 --
