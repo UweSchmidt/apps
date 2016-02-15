@@ -29,9 +29,7 @@ deriving instance Show TimeStamp
 
 instance Monoid TimeStamp where
   mempty = zeroTimeStamp
-  ts1 `mappend` ts2
-    | ts1 == zeroTimeStamp = ts2
-    | otherwise            = ts1
+  ts1 `mappend` ts2 = ts1 `max` ts2
 
 instance ToJSON TimeStamp where
   toJSON = toJSON . view timeStamp2string

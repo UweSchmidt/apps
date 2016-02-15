@@ -8,38 +8,38 @@
 module Catalog.Sync
 where
 
+import           Catalog.Cmd
 import           Catalog.FilePath
--- import           Control.Applicative
 import           Control.Arrow ((***))
 import           Control.Lens hiding (children)
 import           Control.Lens.Util
+import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
-import Data.Function.Util
--- import qualified Data.Aeson as J
--- import           Data.Aeson hiding (Object, (.=))
 import qualified Data.Aeson.Encode.Pretty as J
--- import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Function.Util
+import           Data.ImageStore
 import           Data.ImageTree
 import           Data.List ({-intercalate,-} partition, isPrefixOf)
+import           Data.Prim.Name
+import           Data.Prim.Path
+import           Data.Prim.PathId
+import           Data.Prim.TimeStamp
+import           Data.RefTree
+import qualified Data.Set as S
+import           System.FilePath -- ((</>))
+import           System.Posix (FileStatus)
+import qualified System.Posix as X
+-- import           Control.Applicative
+-- import qualified Data.Aeson as J
+-- import           Data.Aeson hiding (Object, (.=))
+-- import qualified Data.ByteString as B
 -- import           Data.Map.Strict (Map)
 -- import qualified Data.Map.Strict as M
 -- import           Data.Maybe
 -- import           Data.Prim.CheckSum
-import           Data.Prim.Name
 -- import Data.ImageTree
-import Data.ImageStore
-import           Data.Prim.PathId
-import           Data.Prim.Path
-import           Data.Prim.TimeStamp
-import           Data.RefTree
-import           System.FilePath -- ((</>))
-import           System.Posix (FileStatus)
-import qualified System.Posix as X
 -- import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
-import Catalog.Cmd
-import           Control.Monad.Except
--- import qualified Data.Set as S
 
 -- ----------------------------------------
 
@@ -99,7 +99,6 @@ cwnPath = we >>= id2path
 -- | list names of elements in current node
 cwnLs :: Cmd [Name]
 cwnLs = we >>= id2contNames
-
 -- | convert working node path to file system path
 cwnFilePath :: Cmd FilePath
 cwnFilePath = cwnPath >>= toFilePath
@@ -174,72 +173,106 @@ idSyncFS i = dt >>= go
                 do trc "idSyncFS: dir has changed since last sync"
                    syncDirCont i
               checkEmptyDir i
-
-            ) `catchError`
+            )
+            `catchError`
             (\ _e ->
               do warn $ "idSyncFS: fs dir not found " ++ show e
                  rmImgNode i
             )
           return ()
 
-      | otherwise = return ()
+      | otherwise =
+          return ()
       where
         e = t ^. theNodeVal i
 
 syncDirCont :: ObjId -> Cmd ()
 syncDirCont i = do
   trcObj i "syncDirCont: syncing entries in dir "
-  es <- id2path i >>= toFilePath >>= parseDirCont
-  trc $ "syncDirCont: entries found " ++ show es
+  (subdirs, imgfiles) <- collectDirCont i
   p  <- id2path i
 
-  -- remove none image entries
+  cont <- id2contNames i
+  let lost = filter (`notElem` (subdirs ++ (map (fst . snd . head) imgfiles))) cont
+
+  mapM_ (remDirCont i p) lost
+  mapM_ (syncSubDir i p) subdirs
+  mapM_ (syncImg    i p) imgfiles
+
+remDirCont :: ObjId -> Path -> Name -> Cmd ()
+remDirCont i p n = do
+  trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
+  adjustDirEntries (S.delete new'i) i
+  rmImgNode new'i
+  where
+    new'i = mkObjId (p `snocPath` n)
+
+collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
+collectDirCont i = do
+  trcObj i "collectDirCont: group entries in dir "
+  fp <- id2path i >>= toFilePath
+  es <- parseDirCont fp
+  trc $ "collectDirCont: entries found " ++ show es
+
   let (others, rest) =
         partition (hasImgType (== IMGother)) es
-  mapM_ (\ n -> warn $ "syncDirCont: entry ignored " ++ show (fst n)) others
-
-  -- process jpg subdirs
   let (subdirs, rest2) =
         partition (hasImgType (== IMGimgdir)) rest
-  mapM_ (syncSubDir i p) (subdirs ^.. traverse . _1 . name2string)
-
-  -- process files for a single image
   let (imgfiles, rest3) =
         partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
-                                     , IMGjpg, IMGimg,  IMGcopy
-                                     ])) rest2
-  trc $ "syncDirEntries: imgfiles " ++ show imgfiles
-  mapM_ (syncImg i p) (groupBy (fst . snd) imgfiles)
+                                      , IMGjpg, IMGimg,  IMGcopy
+                                      ])) rest2
 
-  -- remove unknown files
-  trc $ "syncDirEntries: files ignored " ++ show rest3
-  return ()
+  mapM_ (\ n -> warn $ "collectDirCont: other entry ignored " ++ show (fst n)) others
+  realsubdirs <- filterM (isSubDir fp) subdirs
 
-syncImg :: ObjId -> Path -> [(Name, (Name, ImgType))] -> Cmd ()
+  trc $ "collectDirEntries: files ignored " ++ show rest3
+  trc $ "collectDirEntries: subdirs "       ++ show realsubdirs
+  trc $ "collectDirEntries: imgfiles "      ++ show imgfiles
+
+  return ( realsubdirs ^.. traverse . _1
+         , groupBy (^. _2 . _1) imgfiles
+         )
+  where
+    isSubDir fp n =
+      (const True <$> fsDirStat p)
+      `catchError`
+      (\ _ -> do warn $ "collectDirCont: error catched, not an image dir: " ++ show p
+                 return False
+      )
+      where
+        p = fp </> (n ^. _1 . name2string)
+
+type ClassifiedName  = (Name, (Name, ImgType))
+type ClassifiedNames = [ClassifiedName]
+
+syncImg :: ObjId -> Path -> ClassifiedNames -> Cmd ()
 syncImg ip pp xs = dt >>= go
   where
     go t = do
       trcObj ip $ "syncImg: syncing img "
-      -- trc $ "syncImg: syncing parts " ++ show ps
       when notex $
         mkImg ip n >> return ()
-
       adjustImg (<> mkImgParts ps) new'i -- TODO
+      -- idSyncFS new'i
       syncParts new'i pp
-      return ()
-
       where
         notex = hasn't (entryAt new'i . _Just) t
         new'i = mkObjId (pp `snocPath` n)
         n     = xs ^. to head . _2 . _1
         ps    = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
 
-syncSubDir :: ObjId -> Path -> FilePath -> Cmd ()
-syncSubDir pid pp n = do
-  trc $ "syncSubDir: " ++ show pid ++ ", " ++ show pp ++ ", " ++ show n
-  trc "TODO"
-
-  return ()
+syncSubDir :: ObjId -> Path -> Name -> Cmd ()
+syncSubDir ip pp n = dt >>= go
+  where
+    go t = do
+      trc $ "syncSubDir: " ++ show ip ++ ", " ++ show pp ++ ", " ++ show n
+      when notex $
+        mkImgDir ip n >> return ()
+      idSyncFS new'i
+      where
+        notex = hasn't (entryAt new'i . _Just) t
+        new'i = mkObjId (pp `snocPath` n)
 
 syncParts :: ObjId -> Path -> Cmd ()
 syncParts i pp = dt >>= go
@@ -257,8 +290,7 @@ checkEmptyDir i = dt >>= go
       when (nullImgDir (t ^. theNodeVal i)) $ do
         p <- id2path i
         warn $ "checkEmptyDir: image dir empty, will be removed " ++ show p
-        warn "TODO"
-        -- rmImgNode i
+        rmImgNode i
 
 
 fsDirStat :: FilePath -> Cmd FileStatus
@@ -291,7 +323,7 @@ parseJpgDirCont p d =
   classifyNames <$> scanDirCont (p </> d)
   where
     classifyNames =
-      filter (\ n -> (n ^. _2 . _2) == IMGjpg)
+      filter (\ n -> (n ^. _2 . _2) `elem` [IMGjpg, IMGcopy])
       .
       map (\ n -> (mkName (d </> n), filePathToImgType n))
 
@@ -351,4 +383,6 @@ ccc = runCmd $ do
 
   cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath >> return ()
   trcCmd (fromFilePath "/Users/uwe/haskell/apps/catalog/emil") >> return ()
+  saveImgStore ""
+  idSyncFS refImg
   saveImgStore ""

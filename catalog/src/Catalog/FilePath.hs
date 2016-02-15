@@ -27,6 +27,8 @@ filePathToImgType path = fromMaybe (mkName path, IMGother) $
   <|>
   parse (mk1 imgdirName) IMGimgdir
   <|>
+  parse (jpgdirPre ++ mk1 baseName ++ geoExt ++ jpgExt)  IMGcopy
+  <|>
   parse (jpgdirPre ++ mk1 baseName ++ jpgExt)  IMGjpg
   where
     parse re' c
@@ -49,6 +51,7 @@ filePathToImgType path = fromMaybe (mkName path, IMGother) $
     metaExt   = "[.](xmp|((nef|NEF|rw2|RW2|jpg|JPG)[.]dxo))"
     jsonExt   = "[.](json)"
     jpgExt    = "[.](jpg|JPG)"
+    geoExt    = "[.]([0-9]+x[0-9]+)"
 
     imgdirName = "[-_A-Za-z0-9]+" -- no do
     jpgdirName =

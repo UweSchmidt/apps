@@ -240,7 +240,7 @@ instance Monoid ImgParts where
       only1 = const M.empty
       only2 = id
       combine _k e1 e2
-        | t1 > t2   = Just e1
+        | t1 >= t2  = Just e1
         | otherwise = Just e2
         where
           t1 = e1 ^. theImgTimeStamp
