@@ -31,6 +31,8 @@ nullName (Name n) = B.null n
 fromName :: Name -> String
 fromName (Name fsn) = UTF8.decode . B.unpack $ fsn
 
+isNameSuffix :: Name -> Name -> Bool
+isNameSuffix (Name sx) (Name n) = sx `B.isSuffixOf` n
 name2string :: Iso' Name String
 name2string = iso fromName mkName
 
