@@ -70,6 +70,21 @@ we = use theWE
 dt :: Cmd ImgTree
 dt = use theImgTree
 
+getTree :: Getting a ImgTree a -> Cmd a
+getTree l = use (theImgTree . l)
+
+getImgName :: ObjId -> Cmd Name
+getImgName i = use (theImgTree . theNode i . nodeName)
+
+getImgParent :: ObjId -> Cmd ObjId
+getImgParent i = use (theImgTree . theNode i . parentRef)
+
+getImgVal :: ObjId -> Cmd ImgNode
+getImgVal i = use (theImgTree . theNode i . nodeVal)
+
+getImgVals :: ObjId -> Getting a ImgNode a -> Cmd a
+getImgVals i l = use (theImgTree . theNode i . nodeVal . l)
+
 withCWN :: (ObjId -> ImgTree -> Cmd a) -> Cmd a
 withCWN cmd
   = do wd <- we

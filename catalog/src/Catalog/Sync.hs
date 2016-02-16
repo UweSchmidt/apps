@@ -21,6 +21,7 @@ import           Data.Function.Util
 import           Data.ImageStore
 import           Data.ImageTree
 import           Data.List ({-intercalate,-} partition, isPrefixOf)
+import           Data.Maybe
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
@@ -132,11 +133,10 @@ id2path i = dt >>= go
 
 -- | ref to type
 id2type :: ObjId -> Cmd String
-id2type i = dt >>= go
+id2type i = getImgVal i >>= go
   where
-    go t = return $ concat $
-      t ^.. theNodeVal i
-          . ( theParts  . to (const "IMG")  <>
+    go e = return $ concat $
+      e ^.. ( theParts  . to (const "IMG")  <>
               isImgDir  . to (const "DIR")  <>
               isImgRoot . to (const "Root") <>
               isImgCol  . to (const "COL")
@@ -158,13 +158,14 @@ id2contNames i = dt >>= go
         name = to (\ r -> t ^. theNode r . nodeName . to (:[]))
 
 idSyncFS :: ObjId -> Cmd ()
-idSyncFS i = dt >>= go
+idSyncFS i = getImgVal i >>= go
   where
-    go t
+    go e
       | isIMG e = do
           trcObj i "idSyncFS: syncing image"
-          warn "TODO"
-          return ()
+          p  <- id2path i
+          ps <- collectImgCont i
+          syncImg i p ps
 
       | isDIR e = do
           trcObj i "idSyncFS: syncing image dir"
@@ -183,8 +184,6 @@ idSyncFS i = dt >>= go
 
       | otherwise =
           return ()
-      where
-        e = t ^. theNodeVal i
 
 syncDirCont :: ObjId -> Cmd ()
 syncDirCont i = do
@@ -206,6 +205,14 @@ remDirCont i p n = do
   rmImgNode new'i
   where
     new'i = mkObjId (p `snocPath` n)
+
+collectImgCont :: ObjId -> Cmd ClassifiedNames
+collectImgCont i = do
+  nm <- getImgName   i
+  ip <- getImgParent i
+  cs <- snd <$> collectDirCont ip
+  return $ concat . take 1 . filter (^. to head . _2 . _1 . to (== nm)) $ cs
+
 
 collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
 collectDirCont i = do
@@ -247,50 +254,52 @@ type ClassifiedName  = (Name, (Name, ImgType))
 type ClassifiedNames = [ClassifiedName]
 
 syncImg :: ObjId -> Path -> ClassifiedNames -> Cmd ()
-syncImg ip pp xs = dt >>= go
+syncImg ip pp xs = do
+  trcObj ip $ "syncImg: syncing img "
+
+  -- new image ?
+  notex <- isNothing <$> getTree (entryAt i)
+  when notex $
+    mkImg ip n >> return ()
+
+  -- is there at least a raw image or a jpg?
+  -- then update, else ignore image
+  if has (traverse . _2 . _2 . to (`elem` [IMGraw])) xs
+    then do
+      adjustImg (<> mkImgParts ps) i
+      syncParts i pp
+    else do
+      p <- id2path i
+      warn $ "syncImg: no raw or jpg found in " ++ show p ++ ", parts: " ++ show xs
+      rmImgNode i
   where
-    go t = do
-      trcObj ip $ "syncImg: syncing img "
-      when notex $
-        mkImg ip n >> return ()
-      adjustImg (<> mkImgParts ps) new'i -- TODO
-      -- idSyncFS new'i
-      syncParts new'i pp
-      where
-        notex = hasn't (entryAt new'i . _Just) t
-        new'i = mkObjId (pp `snocPath` n)
-        n     = xs ^. to head . _2 . _1
-        ps    = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
+    i  = mkObjId (pp `snocPath` n)
+    n  = xs ^. to head . _2 . _1
+    ps = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
 
 syncSubDir :: ObjId -> Path -> Name -> Cmd ()
-syncSubDir ip pp n = dt >>= go
+syncSubDir ip pp n = do
+  trc $ "syncSubDir: " ++ show ip ++ ", " ++ show pp ++ ", " ++ show n
+  notex <- isNothing <$> getTree (entryAt new'i)
+  when notex $
+    mkImgDir ip n >> return ()
+  idSyncFS new'i
   where
-    go t = do
-      trc $ "syncSubDir: " ++ show ip ++ ", " ++ show pp ++ ", " ++ show n
-      when notex $
-        mkImgDir ip n >> return ()
-      idSyncFS new'i
-      where
-        notex = hasn't (entryAt new'i . _Just) t
-        new'i = mkObjId (pp `snocPath` n)
+    new'i = mkObjId (pp `snocPath` n)
 
 syncParts :: ObjId -> Path -> Cmd ()
-syncParts i pp = dt >>= go
-  where
-    go t = do
-      trcObj i $ "syncParts: syncing img parts for "
-      trc $ "syncParts: TODO" ++ show ps
-      where
-        ps = t ^. theNodeVal i . theParts
+syncParts i pp = do
+  trcObj i $ "syncParts: syncing img parts for "
+  ps <- getImgVals i theParts
+  trc $ "syncParts: TODO" ++ show ps
 
 checkEmptyDir :: ObjId -> Cmd ()
-checkEmptyDir i = dt >>= go
-  where
-    go t = do
-      when (nullImgDir (t ^. theNodeVal i)) $ do
-        p <- id2path i
-        warn $ "checkEmptyDir: image dir empty, will be removed " ++ show p
-        rmImgNode i
+checkEmptyDir i = do
+  nv <- getImgVal i
+  when (nullImgDir nv) $ do
+    p <- id2path i
+    warn $ "checkEmptyDir: image dir empty, will be removed " ++ show p
+    rmImgNode i
 
 
 fsDirStat :: FilePath -> Cmd FileStatus
