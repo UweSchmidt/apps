@@ -22,6 +22,7 @@ import           Data.ImageStore
 import           Data.ImageTree
 import           Data.List ({-intercalate,-} partition, isPrefixOf)
 import           Data.Maybe
+import           Data.Prim.CheckSum
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
@@ -142,6 +143,7 @@ id2type i = getImgVal i >>= go
               isImgCol  . to (const "COL")
             )
 
+{-}
 id2contNames :: ObjId -> Cmd [Name]
 id2contNames i = dt >>= go
   where
@@ -156,6 +158,25 @@ id2contNames i = dt >>= go
            )
       where
         name = to (\ r -> t ^. theNode r . nodeName . to (:[]))
+-- -}
+
+id2contNames :: ObjId -> Cmd [Name]
+id2contNames i = getImgVal i >>= go
+  where
+    go e
+      | isIMG e =
+          return (e ^. theParts . isoImgParts . traverse . theImgName . to (:[]))
+
+      | isDIR e =
+          traverse getImgName (e ^. theDirEntries . isoSetList)
+
+      | isROOT e = let (i1, i2) = e ^. isImgRoot in do
+          n1 <- getImgName i1
+          n2 <- getImgName i2
+          return [n1, n2]
+
+      | otherwise =
+          return []
 
 idSyncFS :: ObjId -> Cmd ()
 idSyncFS i = getImgVal i >>= go
@@ -173,6 +194,7 @@ idSyncFS i = getImgVal i >>= go
               when (fsTimeStamp s > e ^. theDirTimeStamp) $
                 do trc "idSyncFS: dir has changed since last sync"
                    syncDirCont i
+                   adjustDirTimeStamp (const $ fsTimeStamp s) i
               checkEmptyDir i
             )
             `catchError`
@@ -290,8 +312,22 @@ syncSubDir ip pp n = do
 syncParts :: ObjId -> Path -> Cmd ()
 syncParts i pp = do
   trcObj i $ "syncParts: syncing img parts for "
-  ps <- getImgVals i theParts
-  trc $ "syncParts: TODO" ++ show ps
+  ps  <- getImgVals i (theParts . isoImgParts)
+  ps' <- traverse syncPart ps
+  adjustImg (const $ mkImgParts ps') i
+  where
+    syncPart p = do
+      fsp <- toFilePath (pp `snocPath` (p ^. theImgName))
+      ts  <- fsTimeStamp <$> fsFileStat fsp
+
+      -- if file has changed, update timestamp and reset checksum
+      return $
+        if ts > p ^. theImgTimeStamp
+        then p & theImgTimeStamp .~ ts
+               & theImgCheckSum  .~ zeroCheckSum
+        else p
+
+
 
 checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
@@ -302,15 +338,22 @@ checkEmptyDir i = do
     rmImgNode i
 
 
-fsDirStat :: FilePath -> Cmd FileStatus
-fsDirStat p = do
+fsStat :: String -> (FileStatus -> Bool) -> FilePath -> Cmd FileStatus
+fsStat msg isFile p = do
   ex <- io $ X.fileExist p
   when (not ex) $
     abort $ "fs entry not found " ++ show p
   st <- io $ X.getFileStatus p
-  when (not $ X.isDirectory st) $
-    abort $ "fs entry not a directory " ++ show p
+  when (not $ isFile st) $
+    abort $ unwords ["fs entry not a", msg, show p]
   return st
+
+
+fsDirStat :: FilePath -> Cmd FileStatus
+fsDirStat = fsStat "directory" X.isDirectory
+
+fsFileStat :: FilePath -> Cmd FileStatus
+fsFileStat = fsStat "regular file" X.isRegularFile
 
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
@@ -382,7 +425,7 @@ ccc = runCmd $ do
   cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath >> return ()
 
   cwe' <- we
-  pic1 <- mkImg cwe' "pic1"
+  _pic1 <- mkImg cwe' "pic1"
   pic2 <- mkImg cwe' "pic2"
   trcCmd cwnLs >> return ()
 

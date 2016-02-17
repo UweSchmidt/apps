@@ -8,15 +8,16 @@
 module Catalog.Cmd
 where
 
-import           Control.Lens hiding (children)
-import           Control.Monad.RWSErrorIO
-import           Data.ImageTree
-import           Data.Prim.Name
+import Control.Lens
+import Control.Monad.RWSErrorIO
 import Data.ImageStore
-import           Data.Prim.PathId
-import           Data.RefTree
-import           System.FilePath -- ((</>))
+import Data.ImageTree
+import Data.Prim.Name
+import Data.Prim.PathId
+import Data.Prim.TimeStamp
+import Data.RefTree
 import Data.Set (Set)
+import System.FilePath -- ((</>))
 -- import           Catalog.FilePath
 -- import           Control.Applicative
 -- import           Control.Arrow (first, (***))
@@ -133,6 +134,10 @@ adjustImg f i =
 adjustDirEntries :: (Set ObjId -> Set ObjId) -> ObjId -> Cmd ()
 adjustDirEntries f i =
   theImgTree . theNodeVal i . theDirEntries %= f
+
+adjustDirTimeStamp :: (TimeStamp -> TimeStamp) -> ObjId -> Cmd ()
+adjustDirTimeStamp f i =
+  theImgTree . theNodeVal i . theDirTimeStamp %= f
 
 -- ----------------------------------------
 --
