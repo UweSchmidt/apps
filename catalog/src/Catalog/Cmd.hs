@@ -8,16 +8,19 @@
 module Catalog.Cmd
 where
 
-import Control.Lens
-import Control.Monad.RWSErrorIO
-import Data.ImageStore
-import Data.ImageTree
-import Data.Prim.Name
-import Data.Prim.PathId
-import Data.Prim.TimeStamp
-import Data.RefTree
-import Data.Set (Set)
-import System.FilePath -- ((</>))
+import           Control.Lens
+import           Control.Lens.Util
+import           Control.Monad.RWSErrorIO
+import           Data.ImageStore
+import           Data.ImageTree
+import qualified Data.List as L
+import           Data.Prim.Name
+import           Data.Prim.Path
+import           Data.Prim.PathId
+import           Data.Prim.TimeStamp
+import           Data.RefTree
+import           Data.Set (Set)
+import           System.FilePath -- ((</>))
 -- import           Catalog.FilePath
 -- import           Control.Applicative
 -- import           Control.Arrow (first, (***))
@@ -27,13 +30,11 @@ import System.FilePath -- ((</>))
 -- import qualified Data.Aeson.Encode.Pretty as J
 -- import qualified Data.ByteString as B
 -- import qualified Data.ByteString.Lazy.Char8 as L
--- import           Data.List (intercalate, partition)
 -- import           Data.Map.Strict (Map)
 -- import qualified Data.Map.Strict as M
 -- import           Data.Maybe
 -- import           Data.Prim.CheckSum
 -- import Data.ImageTree
--- import           Data.Prim.Path
 -- import           Data.Prim.TimeStamp
 -- import           System.Posix (FileStatus)
 -- import qualified System.Posix as X
@@ -102,6 +103,25 @@ andThenE cmd f =
     Right res -> f res
 
 -- ----------------------------------------
+
+-- | ref to path
+id2path :: ObjId -> Cmd Path
+id2path i = dt >>= go
+  where
+    go t = return (refPath i t)
+
+-- | ref to type
+id2type :: ObjId -> Cmd String
+id2type i = getImgVal i >>= go
+  where
+    go e = return $ concat $
+      e ^.. ( theParts  . to (const "IMG")  <>
+              isImgDir  . to (const "DIR")  <>
+              isImgRoot . to (const "Root") <>
+              isImgCol  . to (const "COL")
+            )
+
+-- ----------------------------------------
 --
 -- smart constructors
 
@@ -138,6 +158,42 @@ adjustDirEntries f i =
 adjustDirTimeStamp :: (TimeStamp -> TimeStamp) -> ObjId -> Cmd ()
 adjustDirTimeStamp f i =
   theImgTree . theNodeVal i . theDirTimeStamp %= f
+
+
+-- | process all image nodes with a monadic action
+
+processImages :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages pf = process
+  where
+    process i = do
+      trcObj i "processImgTree: process node "
+      getImgVal i >>= go
+      where
+        go e
+          | isIMG e =
+              pf i (e ^. theParts)
+          | isDIR e =
+              mconcat <$> traverse process (e ^. theDirEntries . isoSetList)
+          | isROOT e =
+              process (e ^. theRootImgDir)
+          | otherwise =
+              return mempty
+
+listImages :: Cmd [(Path, [Name])]
+listImages = do
+  r <- use (theImgTree . rootRef)
+  processImages listImg r
+  where
+    listImg :: ObjId -> ImgParts -> Cmd [(Path, [Name])]
+    listImg i ps = do
+      p <- id2path i
+      let pns = ps ^.. isoImgParts . traverse . theImgName
+      return [(p, pns)]
+
+formatImages :: [(Path, [Name])] -> String
+formatImages = unlines . map (uncurry fmt)
+  where
+    fmt p ns = show p ++ ": " ++ L.intercalate ", " (map show ns)
 
 -- ----------------------------------------
 --

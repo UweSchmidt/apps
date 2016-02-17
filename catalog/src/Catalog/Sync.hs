@@ -15,6 +15,7 @@ import           Control.Lens hiding (children)
 import           Control.Lens.Util
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
+import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.Function.Util
@@ -52,6 +53,16 @@ saveImgStore p = do
   io $ if null p
        then L.putStrLn bs
        else L.writeFile p bs
+
+loadImgStore :: FilePath -> Cmd ()
+loadImgStore p = do
+  trc $ "loadImgStore: load State from " ++ show p
+  bs <- io $ L.readFile p
+  case J.decode' bs of
+    Nothing ->
+      abort $ "loadImgStore: JSON input corrupted: " ++ show p
+    Just st ->
+      put st
 
 -- ----------------------------------------
 --
@@ -126,22 +137,6 @@ fromFilePath f = dt >>= go
       let r' = t ^. theName (t ^. rootRef)
       return $ consPath r' (readPath f')
 
--- | ref to path
-id2path :: ObjId -> Cmd Path
-id2path i = dt >>= go
-  where
-    go t = return (refPath i t)
-
--- | ref to type
-id2type :: ObjId -> Cmd String
-id2type i = getImgVal i >>= go
-  where
-    go e = return $ concat $
-      e ^.. ( theParts  . to (const "IMG")  <>
-              isImgDir  . to (const "DIR")  <>
-              isImgRoot . to (const "Root") <>
-              isImgCol  . to (const "COL")
-            )
 
 {-}
 id2contNames :: ObjId -> Cmd [Name]
@@ -286,7 +281,7 @@ syncImg ip pp xs = do
 
   -- is there at least a raw image or a jpg?
   -- then update, else ignore image
-  if has (traverse . _2 . _2 . to (`elem` [IMGraw])) xs
+  if or (xs ^.. traverse . _2 . _2 . to (`elem` [IMGraw, IMGjpg]))
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
@@ -425,7 +420,7 @@ ccc = runCmd $ do
   cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath >> return ()
 
   cwe' <- we
-  _pic1 <- mkImg cwe' "pic1"
+  pic1 <- mkImg cwe' "pic1"
   pic2 <- mkImg cwe' "pic2"
   trcCmd cwnLs >> return ()
 
@@ -434,7 +429,17 @@ ccc = runCmd $ do
   (mkImg cwe'' "xxx" >> return ()) `catchError` (\ _ -> return ()) -- error
 
   cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath >> return ()
-  trcCmd (fromFilePath "/Users/uwe/haskell/apps/catalog/emil") >> return ()
+--  trcCmd (fromFilePath "/home/uwe/haskell/apps/catalog/emil") >> return ()
   saveImgStore ""
+  rmImgNode pic1
+  rmImgNode pic2
+  rmImgNode refDir1
+
   idSyncFS refImg
   saveImgStore ""
+  trc "save state to c1.json"
+  saveImgStore "c1.json"
+  trc "load state from c1.json"
+  loadImgStore "c1.json"
+  saveImgStore ""
+  (formatImages <$> listImages) >>= io . putStrLn

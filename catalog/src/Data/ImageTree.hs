@@ -45,22 +45,21 @@ where
 import           Control.Lens hiding ((.=))
 import           Control.Lens.Util
 import           Control.Monad.Except
-
 import           Data.Aeson (ToJSON(..), FromJSON(..)
                             , (.:), (.=)
                             , object, withObject
                             )
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
--- import           Data.Maybe
-import           Data.Prim.Name
 import           Data.Prim.CheckSum
---import           Data.Prim.Path
+import           Data.Prim.Name
 import           Data.Prim.PathId -- change this to ObjId later
 import           Data.Prim.TimeStamp
 import           Data.RefTree
 import           Data.Set (Set)
 import qualified Data.Set as S
+-- import           Data.Maybe
+--import           Data.Prim.Path
 
 -- ----------------------------------------
 
