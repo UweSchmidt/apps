@@ -18,8 +18,8 @@ module Data.ImageTree
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
-       , isImgDir
-       , isImgRoot
+       , theImgDir
+       , theImgRoot
        , isImgCol
        , isDIR
        , isIMG
@@ -127,8 +127,8 @@ theParts
                   _     -> Left x
               )
 
-isImgDir :: Prism' (ImgNode' ref) (TimeStamp, Set ref)
-isImgDir
+theImgDir :: Prism' (ImgNode' ref) (TimeStamp, Set ref)
+theImgDir
   = prism (uncurry DIR)
           (\ x -> case x of
               DIR ts s -> Right (ts, s)
@@ -136,13 +136,13 @@ isImgDir
           )
 
 theDirTimeStamp :: Traversal' (ImgNode' ref) TimeStamp
-theDirTimeStamp = isImgDir . _1
+theDirTimeStamp = theImgDir . _1
 
 theDirEntries ::  Traversal' (ImgNode' ref) (Set ref)
-theDirEntries = isImgDir . _2
+theDirEntries = theImgDir . _2
 
-isImgRoot :: Prism' (ImgNode' ref) (ref, ref)
-isImgRoot
+theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
+theImgRoot
   = prism (uncurry ROOT)
           (\ x -> case x of
               ROOT rd rc -> Right (rd, rc)
@@ -150,16 +150,16 @@ isImgRoot
           )
 
 theRootImgDir :: Traversal' (ImgNode' ref) ref
-theRootImgDir = isImgRoot . _1
+theRootImgDir = theImgRoot . _1
 
 theRootImgCol :: Traversal' (ImgNode' ref) ref
-theRootImgCol = isImgRoot . _2
+theRootImgCol = theImgRoot . _2
 
-isImgCol :: Prism' (ImgNode' ref) (ImgNode' ref)
+isImgCol :: Prism' (ImgNode' ref) ()
 isImgCol
-  = prism id
+  = prism (const COL)
           (\ x -> case x of
-              COL -> Right x
+              COL -> Right ()
               _   -> Left x
           )
 

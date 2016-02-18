@@ -10,6 +10,7 @@ where
 
 import           Control.Lens
 import           Control.Lens.Util
+import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
@@ -116,8 +117,8 @@ id2type i = getImgVal i >>= go
   where
     go e = return $ concat $
       e ^.. ( theParts  . to (const "IMG")  <>
-              isImgDir  . to (const "DIR")  <>
-              isImgRoot . to (const "Root") <>
+              theImgDir  . to (const "DIR")  <>
+              theImgRoot . to (const "Root") <>
               isImgCol  . to (const "COL")
             )
 
@@ -161,6 +162,9 @@ adjustDirTimeStamp f i =
 
 
 -- | process all image nodes with a monadic action
+--
+-- the image dir hierachy is traversed and all images are processed
+-- with a monadic op
 
 processImages :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
 processImages pf = process
@@ -179,10 +183,158 @@ processImages pf = process
           | otherwise =
               return mempty
 
+-- | better(?) version of processImages
+--
+-- The image hierachy is traversed, but changes in the dir tree do not
+-- affect the traversal
+
+processImages' :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages' pf i0 = dt >>= process
+  where
+    process t = go i0
+      where
+        go i = do
+          trcObj i "processImgTree: process node "
+          case t ^. theNodeVal i of
+            e | isIMG e ->
+                  pf i (e ^. theParts)
+              | isDIR e ->
+                  mconcat <$> traverse go (e ^. theDirEntries . isoSetList)
+              | isROOT e ->
+                  go (e ^. theRootImgDir)
+              | otherwise ->
+                  return mempty
+
+{-}
+foldMapTree :: Monoid r =>
+               (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
+               (ObjId -> (TimeStamp, Set ObjId) -> Cmd r) ->  -- fold an image dir node
+               (ObjId -> ImgParts               -> Cmd r) ->  -- fold a single image
+               (ObjId -> ()                     -> Cmd r) ->  -- fold a collection
+               (ObjId                           -> Cmd r)
+foldMapTree rootf dirf imgf colf i0 = dt >>= process
+  where
+    process t = go i0
+      where
+        go i = do
+          trcObj i "foldMapTree: fold node"
+          case t ^. theNodeVal i of
+            e | isIMG e ->
+                  imgf i (e ^. theParts)
+              | isDIR e -> do
+                  let d@(_ts, rset) = e ^. theImgDir
+                  r1 <- dirf i d
+                  rs <- mapM go (rset ^. isoSetList)
+                  return (r1 <> mconcat rs)
+              | isROOT e -> do
+                  let r@(rd, rc) = e ^. theImgRoot
+                  r1 <- rootf i r
+                  r2 <- go rd
+                  r3 <- go rc
+                  return (r1 <> r2 <> r3)
+              | isCOL e -> do
+                  let c = e ^. isImgCol
+                  r1 <- colf i c
+                  r2 <- return mempty        -- TODO: extend
+                  return (r1 <> r2)
+              | otherwise ->
+                  return mempty
+-- -}
+
+foldMapTree :: Monoid r =>
+               (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
+               (ObjId -> (TimeStamp, Set ObjId) -> Cmd r) ->  -- fold an image dir node
+               (ObjId -> ImgParts               -> Cmd r) ->  -- fold a single image
+               (ObjId -> ()                     -> Cmd r) ->  -- fold a collection
+               (ObjId                           -> Cmd r)
+foldMapTree = foldMTree rootC dirC colC
+  where
+    rootC r1 r2 r3 = r1 <> r2 <> r3
+    dirC  r1 rs    = r1 <> mconcat rs
+    colC  r1       = r1
+
+foldMTree :: (r1 -> r -> r -> r) ->                          -- combining ROOT res
+             (r2 -> [r]    -> r) ->                          -- combining DIR  res
+             (r3           -> r) ->                          -- combining COL  res
+             (ObjId -> (ObjId, ObjId)         -> Cmd r1) ->  -- fold the root node
+             (ObjId -> (TimeStamp, Set ObjId) -> Cmd r2) ->  -- fold an image dir node
+             (ObjId -> ImgParts               -> Cmd r ) ->  -- fold a single image
+             (ObjId -> ()                     -> Cmd r3) ->  -- fold a collection
+             (ObjId                           -> Cmd r)
+foldMTree rootC dirC      colC
+          rootf dirf imgf colf i0 = dt >>= process
+  where
+    process t = go i0
+      where
+        go i = do
+          trcObj i "foldMapTree: fold node"
+          case t ^. theNodeVal i of
+            e | isIMG e ->
+                  imgf i (e ^. theParts)
+              | isDIR e -> do
+                  let d@(_ts, rset) = e ^. theImgDir
+                  r1 <- dirf i d
+                  rs <- mapM go (rset ^. isoSetList)
+                  return (dirC r1 rs)
+              | isROOT e -> do
+                  let r@(rd, rc) = e ^. theImgRoot
+                  r1 <- rootf i r
+                  r2 <- go rd
+                  r3 <- go rc
+                  return (rootC r1 r2 r3)
+              | isCOL e -> do
+                  let c = e ^. isImgCol
+                  r1 <- colf i c
+                  return (colC r1)
+              | otherwise ->
+                  abort $ "foldTree: illegal node"
+
+invImages :: Cmd ()
+invImages = do
+  _r <- use (theImgTree . rootRef)
+  return ()
+
+listNames :: ObjId -> Cmd String
+listNames r =
+  unlines <$> foldMTree rootC dirC colC rootF dirF imgF colF r
+  where
+    gn i = show <$> getImgName i
+    ind  = map ("  " ++)
+
+    rootC n x1 x2 = n : ind (x1 ++ x2)
+    dirC  n xs    = n : ind (concat xs)
+    colC  n       = n : []
+    rootF i _     = gn i
+    dirF  i _     = gn i
+    colF  i _     = gn i
+    imgF i ps     = do
+      n <- gn i
+      return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
+
+
+listPaths :: ObjId -> Cmd [Path]
+listPaths r =
+  foldMapTree rootf dirf imgf colf r
+  where
+    rootf i _ = (:[]) <$> id2path i
+    dirf      = rootf
+    colf      = rootf
+    imgf i ps = do
+      pp <- getImgParent i >>= id2path
+      r1 <- rootf i ps
+      return ( r1
+               ++
+               map (pp `snocPath`)
+                   (ps ^.. isoImgParts . traverse . theImgName)
+             )
+
+listPaths' :: ObjId -> Cmd String
+listPaths' i = (unlines . map show) <$> listPaths i
+
 listImages :: Cmd [(Path, [Name])]
 listImages = do
   r <- use (theImgTree . rootRef)
-  processImages listImg r
+  processImages' listImg r
   where
     listImg :: ObjId -> ImgParts -> Cmd [(Path, [Name])]
     listImg i ps = do
@@ -194,6 +346,122 @@ formatImages :: [(Path, [Name])] -> String
 formatImages = unlines . map (uncurry fmt)
   where
     fmt p ns = show p ++ ": " ++ L.intercalate ", " (map show ns)
+
+-- ----------------------------------------
+--
+
+-- | convert an image path to a file system path
+toFilePath :: Path -> Cmd FilePath
+toFilePath p = do
+  mp <- use theMountPath
+  return $ mp ++ tailPath p ^. path2string
+
+-- | convert a file system path to an image path
+fromFilePath :: FilePath -> Cmd Path
+fromFilePath f = dt >>= go
+  where
+    go t = do
+      mp <- use theMountPath
+      when (not (mp `L.isPrefixOf` f)) $
+        abort $ "fromFilePath: not a legal image path " ++ show f
+      let f' = drop (length mp) f
+      let r' = t ^. theName (t ^. rootRef)
+      return $ consPath r' (readPath f')
+
+{-}
+id2contNames :: ObjId -> Cmd [Name]
+id2contNames i = dt >>= go
+  where
+    go t =
+      return $
+      t ^. theNodeVal i
+         . ( theParts . isoImgParts . traverse . theImgName . to (:[])
+             <>
+             theDirEntries . isoSetList . traverse . name
+             <>
+             isImgRoot . (_1 . name <> _2 . name)
+           )
+      where
+        name = to (\ r -> t ^. theNode r . nodeName . to (:[]))
+-- -}
+
+id2contNames :: ObjId -> Cmd [Name]
+id2contNames i = getImgVal i >>= go
+  where
+    go e
+      | isIMG e =
+          return (e ^. theParts . isoImgParts . traverse . theImgName . to (:[]))
+
+      | isDIR e =
+          traverse getImgName (e ^. theDirEntries . isoSetList)
+
+      | isROOT e = let (i1, i2) = e ^. theImgRoot in do
+          n1 <- getImgName i1
+          n2 <- getImgName i2
+          return [n1, n2]
+
+      | otherwise =
+          return []
+
+-- ----------------------------------------
+--
+-- ops on current node
+
+-- change working node
+
+cwSet :: ObjId -> Cmd ()
+cwSet i = dt >>= go
+  where
+    go t = do
+      when (hasn't (entryAt i . _Just) t) $
+        abort $ "cwSet: node not found: " ++ show i
+      theWE .= i
+
+cwSetPath :: Path -> Cmd ()
+cwSetPath p =
+  cwSet (mkObjId p)
+  `catchError`
+  (\ _e -> abort $ "cwSetPath: no such node " ++ show p)
+
+-- | change working node to root node
+cwRoot :: Cmd ()
+cwRoot = dt >>= go
+  where
+    go t = cwSet (t ^. rootRef)
+
+-- | change working node to parent
+
+cwUp :: Cmd ()
+cwUp =
+  withCWN $ \ cwn t ->
+  if isDirRoot cwn t
+     then return ()
+     else theWE .= t ^. theParent cwn
+
+cwDown :: Name -> Cmd ()
+cwDown d = do
+  p <- flip snocPath d <$> cwnPath
+  cwSetPath p
+
+cwnType :: Cmd String
+cwnType = we >>= id2type
+
+cwnPath :: Cmd Path
+cwnPath = we >>= id2path
+
+-- | list names of elements in current node
+cwnLs :: Cmd [Name]
+cwnLs = we >>= id2contNames
+
+-- | convert working node path to file system path
+cwnFilePath :: Cmd FilePath
+cwnFilePath = cwnPath >>= toFilePath
+
+cwnListPaths :: Cmd String
+cwnListPaths = we >>= listPaths'
+
+cwnListNames :: Cmd String
+cwnListNames = we >>= listNames
 
 -- ----------------------------------------
 --
