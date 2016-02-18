@@ -5,40 +5,41 @@ where
 
 import           Catalog.Cmd
 import           Control.Lens hiding ((.=))
-import           Control.Monad
+-- import           Control.Monad
 import           Data.ImageTree
-import qualified Data.List as L
-import qualified Data.Map.Strict as M
-import           Data.Monoid ((<>))
+-- import qualified Data.List as L
+-- import qualified Data.Map.Strict as M
+-- import           Data.Monoid ((<>))
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
 import           Data.Prim.TimeStamp
-import           Data.RefTree
-import qualified Text.Regex.XMLSchema.Generic as RE
+-- import           Data.RefTree
+-- import qualified Text.Regex.XMLSchema.Generic as RE
 -- (Regex, parseRegex, match, splitSubex)
 
-data Rule' a = Rule a [a]
+data RL a = RL a a
 
-instance Functor Rule' where
-  fmap f (Rule t ss) = Rule (f t) (map f ss)
+instance Functor RL where
+  fmap f (RL t s) = RL (f t) (f s)
 
-type Rule = Rule' (ImgType, Suffix)
-type Deps = Rule' Name
+type Pattern = RL (ImgType, Suffix)
+type Deps    = RL ImgPart
+type Rule    = (Pattern, Deps -> ObjId -> Cmd ImgAction)
 
-data GenAction = GA String (Cmd Action)
+data GenAction = GA String (Cmd ImgAction)
 
 type Suffix = Name
 
-data Action = GenCopy Path Path
+data ImgAction = GenCopy Path Path
             | GenExif Path [Path]
             | SyncImg ObjId
-            | ActSeq Action Action
+            | ActSeq ImgAction ImgAction
             | ActNoop
 
 -- ----------------------------------------
 
-deriving instance Show Rule
+deriving instance Show a => Show (RL a)
 
 -- ----------------------------------------
 
@@ -47,9 +48,9 @@ instance Show GenAction where
 
 -- ----------------------------------------
 
-deriving instance Show Action
+deriving instance Show ImgAction
 
-instance Monoid Action where
+instance Monoid ImgAction where
   mempty = ActNoop
 
   ActNoop `mappend` a2      = a2
@@ -58,8 +59,65 @@ instance Monoid Action where
 
 -- ----------------------------------------
 
-matchRule :: Rule -> ObjId -> Cmd (Maybe Deps)
-matchRule r@(Rule target sources) i = dt >>= (return . go) -- (return . go)
+applyRules :: [Rule] -> ObjId -> Cmd ImgAction
+applyRules rls i0 = processImages' (matchRules rls) i0
+
+matchRules :: [Rule] -> ObjId -> ImgParts -> Cmd ImgAction
+matchRules rs i ps = do
+  mconcat <$> mapM (matchRule (ps ^. isoImgParts)) rs
+  where
+    matchRule pts (RL target source, act) = do
+      mconcat <$> mapM apply dps
+      where
+        sps = filter (match source) pts
+        dps = map (\ p -> RL (toTP $ toTN p) p) sps
+
+        apply :: Deps -> Cmd ImgAction
+        apply r@(RL tp sp)
+          | tts == zeroTimeStamp
+            ||
+            tts < sts =
+              act r i
+          | otherwise =
+              return ActNoop
+          where
+            tts = tp ^. theImgTimeStamp
+            sts = sp ^. theImgTimeStamp
+
+        match (st, sp) ip =
+          (ip ^. theImgType == st)
+          &&
+          (sp `isNameSuffix` (ip ^. theImgName))
+
+        toTP tn =
+          case targetPart tn of
+            [] ->
+              mkImgPart tn (fst target)
+            (p : _) ->
+              p
+          where
+            targetPart n' = filter (\ p -> p ^. theImgName == n') pts
+
+        toTN part = part ^. theImgName . to (substNameSuffix (snd source) (snd target))
+
+mkCopyRule :: Int -> Int -> Rule
+mkCopyRule w h = (rl, act)
+  where
+    copy'sx = mkName $ "." ++ show w ++ "x" ++ show h ++ ".jpg"
+
+    rl = RL (IMGcopy, copy'sx) (IMGjpg, mkName ".jpg")
+
+    act (RL tp sp) i = do
+      ip <- getImgParent i
+      pp <- id2path ip
+      return $ GenCopy (pp `snocPath` (tp ^. theImgName))
+                       (pp `snocPath` (sp ^. theImgName))
+
+buildRules :: [Rule]
+buildRules = map (uncurry mkCopyRule) [(1024,768), (160,120)]
+
+{-}
+  let ss <- filter (match source) ps
   where
     go t
       | null ts =
@@ -69,7 +127,6 @@ matchRule r@(Rule target sources) i = dt >>= (return . go) -- (return . go)
       | otherwise =
           return (Rule (head ts') ss')
       where
-        -- nm = t ^. theName i . name2string
         ps = t ^. theNodeVal i . theParts . isoImgParts
         ts = filter (match target) ps
         ss  = concatMap (\ sp -> filter (match sp) ps) sources
@@ -92,16 +149,17 @@ applyRule r ca i = do
   case m of
     Nothing ->
       return mempty
-    Just r ->
-      ca r i
+    Just rl ->
+      ca rl i
 
 imgCopyRule :: Int -> Int -> ObjId -> Cmd Action
 imgCopyRule w h = applyRule rule action
   where
-    rule = undefined
+    tx   = "." ++ show w ++ x ++ show h ++ ".jpg"
+    rule = Rule (IMGcopy, tx) [(IMGjpg, ".jpg")]
     action (Rule tn sns) i = do
       undefined
-
+-- -}
 
 {-}
 mkAction :: Name -> (ObjId -> Name -> [Name] -> Cmd Action) -> Rule ->

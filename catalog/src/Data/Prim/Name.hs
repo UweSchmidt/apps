@@ -10,6 +10,7 @@ import           Control.Monad (mzero)
 import qualified Data.Aeson as J
 import           Data.Aeson (ToJSON, FromJSON, toJSON)
 import qualified Data.ByteString as B
+import qualified Data.List as L
 import           Data.String(IsString(..))
 import qualified Data.Text as T
 
@@ -33,6 +34,18 @@ fromName (Name fsn) = UTF8.decode . B.unpack $ fsn
 
 isNameSuffix :: Name -> Name -> Bool
 isNameSuffix (Name sx) (Name n) = sx `B.isSuffixOf` n
+
+substNameSuffix :: Name -> Name -> Name -> Name
+substNameSuffix os' ns' n'
+  | os `L.isSuffixOf` n =
+      mkName . reverse . ((reverse ns) ++) . drop (length os) . reverse $ n
+  | otherwise =
+      n'
+  where
+    os = fromName os'
+    ns = fromName ns'
+    n  = fromName n'
+
 name2string :: Iso' Name String
 name2string = iso fromName mkName
 

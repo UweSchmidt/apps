@@ -312,8 +312,8 @@ listNames r =
       return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
 
 
-listPaths :: ObjId -> Cmd [Path]
-listPaths r =
+listPaths' :: ObjId -> Cmd [Path]
+listPaths' r =
   foldMapTree rootf dirf imgf colf r
   where
     rootf i _ = (:[]) <$> id2path i
@@ -328,11 +328,11 @@ listPaths r =
                    (ps ^.. isoImgParts . traverse . theImgName)
              )
 
-listPaths' :: ObjId -> Cmd String
-listPaths' i = (unlines . map show) <$> listPaths i
+listPaths :: ObjId -> Cmd String
+listPaths i = (unlines . map show) <$> listPaths' i
 
-listImages :: Cmd [(Path, [Name])]
-listImages = do
+listImages' :: Cmd [(Path, [Name])]
+listImages' = do
   r <- use (theImgTree . rootRef)
   processImages' listImg r
   where
@@ -342,10 +342,13 @@ listImages = do
       let pns = ps ^.. isoImgParts . traverse . theImgName
       return [(p, pns)]
 
-formatImages :: [(Path, [Name])] -> String
-formatImages = unlines . map (uncurry fmt)
+listImages :: Cmd String
+listImages = formatImages <$> listImages'
   where
-    fmt p ns = show p ++ ": " ++ L.intercalate ", " (map show ns)
+    formatImages :: [(Path, [Name])] -> String
+    formatImages = unlines . map (uncurry fmt)
+      where
+        fmt p ns = show p ++ ": " ++ L.intercalate ", " (map show ns)
 
 -- ----------------------------------------
 --
@@ -358,15 +361,12 @@ toFilePath p = do
 
 -- | convert a file system path to an image path
 fromFilePath :: FilePath -> Cmd Path
-fromFilePath f = dt >>= go
-  where
-    go t = do
-      mp <- use theMountPath
-      when (not (mp `L.isPrefixOf` f)) $
-        abort $ "fromFilePath: not a legal image path " ++ show f
-      let f' = drop (length mp) f
-      let r' = t ^. theName (t ^. rootRef)
-      return $ consPath r' (readPath f')
+fromFilePath f = do
+  mp <- use theMountPath
+  when (not (mp `L.isPrefixOf` f)) $
+    abort $ "fromFilePath: not a legal image path " ++ show f
+  r' <- getTree rootRef >>= getImgName
+  return $ consPath r' (readPath $ drop (length mp) f)
 
 {-}
 id2contNames :: ObjId -> Cmd [Name]
@@ -410,11 +410,12 @@ id2contNames i = getImgVal i >>= go
 -- change working node
 
 cwSet :: ObjId -> Cmd ()
-cwSet i = dt >>= go
-  where
-    go t = do
-      when (hasn't (entryAt i . _Just) t) $
-        abort $ "cwSet: node not found: " ++ show i
+cwSet i = do
+  e <- getTree (entryAt i)
+  case e of
+    Nothing ->
+      abort $ "cwSet: node not found: " ++ show i
+    Just _ ->
       theWE .= i
 
 cwSetPath :: Path -> Cmd ()
@@ -425,18 +426,15 @@ cwSetPath p =
 
 -- | change working node to root node
 cwRoot :: Cmd ()
-cwRoot = dt >>= go
-  where
-    go t = cwSet (t ^. rootRef)
+cwRoot = getTree rootRef >>= cwSet
 
 -- | change working node to parent
 
 cwUp :: Cmd ()
-cwUp =
-  withCWN $ \ cwn t ->
-  if isDirRoot cwn t
-     then return ()
-     else theWE .= t ^. theParent cwn
+cwUp = do
+  ip <- we >>= getImgParent
+  theWE .= ip
+
 
 cwDown :: Name -> Cmd ()
 cwDown d = do
@@ -458,7 +456,7 @@ cwnFilePath :: Cmd FilePath
 cwnFilePath = cwnPath >>= toFilePath
 
 cwnListPaths :: Cmd String
-cwnListPaths = we >>= listPaths'
+cwnListPaths = we >>= listPaths
 
 cwnListNames :: Cmd String
 cwnListNames = we >>= listNames
