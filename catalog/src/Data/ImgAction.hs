@@ -3,13 +3,14 @@
 module Data.ImgAction
 where
 
-import           Data.Prim.Path
-import           Data.Prim.PathId
+import Data.ImageTree
+import Data.Prim.Name
+import Data.Prim.PathId
 
 -- ----------------------------------------
 
-data ImgAction = GenCopy AspectRatio Path Path
-               | GenExif Path Path
+data ImgAction = GenCopy ObjId Name Name AspectRatio Int Int
+               | GenMeta ObjId Name Name ImgType
                | SyncImg ObjId
                | ActSeq ImgAction ImgAction
                | ActNoop

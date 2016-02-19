@@ -27,7 +27,6 @@ import           Data.Prim.Path
 import           Data.Prim.PathId
 import           Data.Prim.TimeStamp
 import           Data.RefTree
-import qualified Data.Set as S
 import           System.FilePath
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
@@ -55,12 +54,18 @@ loadImgStore p = do
 -- ----------------------------------------
 
 cwSyncFS :: Cmd ()
-cwSyncFS = we >>= idSyncFS
+cwSyncFS = we >>= syncFS
 
 -- ----------------------------------------
 
-idSyncFS :: ObjId -> Cmd ()
-idSyncFS i = getImgVal i >>= go
+syncFS :: ObjId -> Cmd ()
+syncFS = idSyncFS True
+
+syncNode :: ObjId -> Cmd ()
+syncNode = idSyncFS False
+
+idSyncFS :: Bool -> ObjId -> Cmd ()
+idSyncFS recursive i = getImgVal i >>= go
   where
     go e
       | isIMG e = do
@@ -71,11 +76,7 @@ idSyncFS i = getImgVal i >>= go
 
       | isDIR e = do
           trcObj i "idSyncFS: syncing image dir"
-          (do s <- id2path i >>= toFilePath >>= fsDirStat
-              when (fsTimeStamp s > e ^. theDirTimeStamp) $         -- TODO: why dir timestamps?
-                do trc "idSyncFS: dir has changed since last sync"
-                   adjustDirTimeStamp (const $ fsTimeStamp s) i
-              syncDirCont   i
+          (do syncDirCont recursive i
               checkEmptyDir i
             )
             `catchError`
@@ -86,13 +87,13 @@ idSyncFS i = getImgVal i >>= go
           return ()
       | isROOT e = do
           trcObj i "idSyncFS: syncing root"
-          idSyncFS (e ^. theRootImgDir)
+          idSyncFS recursive (e ^. theRootImgDir)
 
       | otherwise =
           return ()
 
-syncDirCont :: ObjId -> Cmd ()
-syncDirCont i = do
+syncDirCont :: Bool -> ObjId -> Cmd ()
+syncDirCont recursive i = do
   trcObj i "syncDirCont: syncing entries in dir "
   (subdirs, imgfiles) <- collectDirCont i
   p  <- id2path i
@@ -100,17 +101,35 @@ syncDirCont i = do
   cont <- id2contNames i
   let lost = filter (`notElem` (subdirs ++ (map (fst . snd . head) imgfiles))) cont
 
-  mapM_ (remDirCont i p) lost
-  mapM_ (syncSubDir i p) subdirs
-  mapM_ (syncImg    i p) imgfiles
+  -- remove lost stuff
+  mapM_ (remDirCont p) lost
 
-remDirCont :: ObjId -> Path -> Name -> Cmd ()
-remDirCont i p n = do
-  trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
-  adjustDirEntries (S.delete new'i) i
-  rmImgNode new'i
+  -- recurse into subdirs
+  when recursive $
+    mapM_ (syncSubDir p) subdirs
+
+  -- sync the images
+  mapM_ (syncImg i p) imgfiles
   where
-    new'i = mkObjId (p `snocPath` n)
+
+    syncSubDir p n = do
+      trc $ "syncSubDir: " ++ show i ++ ", " ++ show p ++ ", " ++ show n
+
+      notex <- isNothing <$> getTree (entryAt new'i)
+      when notex $
+        mkImgDir i n >> return ()
+      idSyncFS recursive new'i
+      where
+        new'i = mkObjId (p `snocPath` n)
+
+    remDirCont p n = do
+      trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
+
+      -- will be done in rmImgNode
+      -- adjustDirEntries (S.delete new'i) i
+      rmImgNode new'i
+      where
+        new'i = mkObjId (p `snocPath` n)
 
 collectImgCont :: ObjId -> Cmd ClassifiedNames
 collectImgCont i = do
@@ -182,16 +201,6 @@ syncImg ip pp xs = do
     i  = mkObjId (pp `snocPath` n)
     n  = xs ^. to head . _2 . _1
     ps = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
-
-syncSubDir :: ObjId -> Path -> Name -> Cmd ()
-syncSubDir ip pp n = do
-  trc $ "syncSubDir: " ++ show ip ++ ", " ++ show pp ++ ", " ++ show n
-  notex <- isNothing <$> getTree (entryAt new'i)
-  when notex $
-    mkImgDir ip n >> return ()
-  idSyncFS new'i
-  where
-    new'i = mkObjId (pp `snocPath` n)
 
 syncParts :: ObjId -> Path -> Cmd ()
 syncParts i pp = do

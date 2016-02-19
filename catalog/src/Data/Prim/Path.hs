@@ -13,6 +13,7 @@ module Data.Prim.Path
        , snocPath
        , tailPath
        , headPath
+       , substPathName
        , showPath
        , path2string
        )
@@ -73,6 +74,9 @@ concPath :: (Monoid n, Eq n) =>
 concPath (BN n) p2    = consPath n p2
 concPath (DN n p1) p2 = consPath n $ concPath p1 p2
 
+substPathName :: n -> Path' n -> Path' n
+substPathName n (BN _)    = BN n
+substPathName n (DN n' p) = DN n' (substPathName n p)
 
 headPath :: Path' n -> n
 headPath (DN n _p) = n

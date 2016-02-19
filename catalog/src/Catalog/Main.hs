@@ -8,32 +8,36 @@
 module Catalog.Main
 where
 
+import Catalog.RunImgAction
 import           Catalog.Cmd
--- import           Catalog.FilePath
 import           Catalog.Sync
 import           Catalog.Rules
--- import           Control.Arrow ((***))
 import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
--- import qualified Data.Aeson as J
--- import qualified Data.Aeson.Encode.Pretty as J
--- import qualified Data.ByteString.Lazy.Char8 as L
--- import           Data.Function.Util
 import           Data.ImageStore
 import           Data.ImageTree
--- import           Data.List ({-intercalate,-} partition)
--- import           Data.Maybe
--- import           Data.Prim.CheckSum
--- import           Data.Prim.Name
--- import           Data.Prim.Path
--- import           Data.Prim.PathId
--- import           Data.Prim.TimeStamp
 import           Data.RefTree
--- import qualified Data.Set as S
--- import           System.FilePath -- ((</>))
--- import           System.Posix (FileStatus)
 import qualified System.Posix as X
+
+{-}
+import           Catalog.FilePath
+import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as J
+import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Function.Util
+import           Data.List ({-intercalate,-} partition)
+import           Data.Maybe
+import           Data.Prim.CheckSum
+import           Data.Prim.Name
+import           Data.Prim.Path
+import           Data.Prim.PathId
+import           Data.Prim.TimeStamp
+import qualified Data.Set as S
+import           System.FilePath -- ((</>))
+import           System.Posix (FileStatus)
+import           Control.Arrow ((***))
+-- -}
 
 ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
@@ -66,7 +70,7 @@ ccc = runCmd $ do
   rmImgNode pic2
   rmImgNode refDir1
 
-  idSyncFS refImg
+  syncFS refImg
   saveImgStore ""
   trc "save state to c1.json"
   saveImgStore "c1.json"
@@ -76,7 +80,8 @@ ccc = runCmd $ do
   listImages >>= io . putStrLn
   cwListPaths >>= trc
   cwListNames >>= trc
-  we >>= applyRules buildRules >>= (io . print)
+  rls <- buildRules
+  we >>= applyRules rls >>= runImgAction
 
 c2 :: Cmd ()
 c2 = do
@@ -87,4 +92,5 @@ c2 = do
   listImages >>= io . putStrLn
   cwListPaths >>= trc
   cwListNames >>= trc
-  we >>= applyRules buildRules >>= (io . print)
+  rls <- buildRules
+  we >>= applyRules rls >>= runImgAction

@@ -10,15 +10,14 @@ module Data.ImageTree
        , ImgParts
        , ImgPart
        , ImgType(..)
+       , NameImgType
        , mkEmptyImgRoot
        , theParts
-       , theDirTimeStamp
        , theDirEntries
        , emptyImg
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
-       , theImgDir
        , theImgRoot
        , isImgCol
        , isDIR
@@ -28,7 +27,7 @@ module Data.ImageTree
        , nullImgDir
        , mkImgRoot
        , mkImgNode
-       , remImgNode
+       , removeImgNode
        , emptyImgParts
        , mkImgParts
        , isoImgParts
@@ -65,7 +64,7 @@ import qualified Data.Set as S
 
 
 data ImgNode' ref = IMG  !ImgParts
-                  | DIR  !TimeStamp !(Set ref)
+                  | DIR  !(Set ref)
                   | ROOT !ref !ref
                   | COL
 
@@ -76,9 +75,8 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     [ "ImgNode"     .= ("IMG" :: String)
     , "parts"       .= pm
     ]
-  toJSON (DIR ts rs) = object
+  toJSON (DIR rs) = object
     [ "ImgNode"     .= ("DIR" :: String)
-    , "timestamp"   .= ts
     , "children"    .= S.toList rs
     ]
   toJSON (ROOT rd rc) = object
@@ -97,8 +95,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          "IMG" ->
            IMG <$> o .: "parts"
          "DIR" ->
-           DIR <$> o .: "timestamp"
-               <*> (S.fromList <$> o .: "children")
+           DIR <$> (S.fromList <$> o .: "children")
          "ROOT" ->
            ROOT <$> o .: "archive"
                 <*> o .: "collections"
@@ -107,7 +104,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
-emptyImgDir = DIR zeroTimeStamp S.empty
+emptyImgDir = DIR S.empty
 
 emptyImg :: ImgNode' ref
 emptyImg = IMG emptyImgParts
@@ -124,22 +121,15 @@ theParts :: Prism' (ImgNode' ref) ImgParts
 theParts
   = prism IMG (\ x -> case x of
                   IMG m -> Right m
-                  _     -> Left x
+                  _     -> Left  x
               )
 
-theImgDir :: Prism' (ImgNode' ref) (TimeStamp, Set ref)
-theImgDir
-  = prism (uncurry DIR)
-          (\ x -> case x of
-              DIR ts s -> Right (ts, s)
-              _        -> Left x
+theDirEntries :: Prism' (ImgNode' ref) (Set ref)
+theDirEntries =
+  prism DIR (\ x -> case x of
+                DIR s -> Right s
+                _     -> Left  x
           )
-
-theDirTimeStamp :: Traversal' (ImgNode' ref) TimeStamp
-theDirTimeStamp = theImgDir . _1
-
-theDirEntries ::  Traversal' (ImgNode' ref) (Set ref)
-theDirEntries = theImgDir . _2
 
 theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
 theImgRoot
@@ -180,8 +170,8 @@ isCOL COL{} = True
 isCOL _     = False
 
 nullImgDir :: ImgNode' ref -> Bool
-nullImgDir (DIR _ s) = S.null s
-nullImgDir _         = True
+nullImgDir (DIR s) = S.null s
+nullImgDir _       = True
 
 -- ----------------------------------------
 
@@ -213,16 +203,18 @@ mkImgNode :: (MonadError String m) =>
              ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
 mkImgNode = mkDirNode mkObjId isDIR addChildRef
 
-remImgNode :: (MonadError String m) =>
-              ObjId ->
-              ImgTree -> m ImgTree
-remImgNode = remDirNode nullImgDir remChildRef
+-- | remove an image node or a dir node without entries
+removeImgNode :: (MonadError String m) =>
+                 ObjId ->
+                 ImgTree -> m ImgTree
+removeImgNode = remDirNode nullImgDir removeChildRef
 
 addChildRef :: ObjId -> ImgNode -> ImgNode
 addChildRef r n = n & theDirEntries %~ S.insert r
 
-remChildRef :: ObjId -> ImgNode -> ImgNode
-remChildRef r n = n & theDirEntries %~ S.delete r
+-- | remove a child from an image dir node
+removeChildRef :: ObjId -> ImgNode -> ImgNode
+removeChildRef r n = n & theDirEntries %~ S.delete r
 
 -- ----------------------------------------
 
@@ -301,6 +293,7 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
+type NameImgType = (Name, ImgType)
 data ImgType     = IMGraw    | IMGmeta   | IMGjson  | IMGjpg | IMGimg | IMGcopy
                  | IMGimgdir | IMGjpgdir | IMGother | IMGboring
 

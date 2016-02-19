@@ -11,7 +11,7 @@ import Text.Regex.XMLSchema.Generic (splitSubex)
 
 -- ----------------------------------------
 
-filePathToImgType :: FilePath -> (Name, ImgType)
+filePathToImgType :: FilePath -> NameImgType
 filePathToImgType path = fromMaybe (mkName path, IMGother) $
   parse (mk1 boringName) IMGboring
   <|>

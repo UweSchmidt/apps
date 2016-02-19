@@ -14,43 +14,72 @@ import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
+import Data.ImgAction
 import qualified Data.List as L
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
-import           Data.Prim.TimeStamp
 import           Data.RefTree
 import           Data.Set (Set)
 import           System.FilePath -- ((</>))
--- import           Catalog.FilePath
--- import           Control.Applicative
--- import           Control.Arrow (first, (***))
--- import           Control.Lens.Util
--- import qualified Data.Aeson as J
--- import           Data.Aeson hiding (Object, (.=))
--- import qualified Data.Aeson.Encode.Pretty as J
--- import qualified Data.ByteString as B
--- import qualified Data.ByteString.Lazy.Char8 as L
--- import           Data.Map.Strict (Map)
--- import qualified Data.Map.Strict as M
--- import           Data.Maybe
--- import           Data.Prim.CheckSum
--- import Data.ImageTree
--- import           Data.Prim.TimeStamp
--- import           System.Posix (FileStatus)
--- import qualified System.Posix as X
--- import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
+{-}
+import           Catalog.FilePath
+import           Control.Applicative
+import           Control.Arrow (first, (***))
+import           Control.Lens.Util
+import qualified Data.Aeson as J
+import           Data.Aeson hiding (Object, (.=))
+import qualified Data.Aeson.Encode.Pretty as J
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy.Char8 as L
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
+import           Data.Maybe
+import           Data.Prim.CheckSum
+import Data.ImageTree
+import           Data.Prim.TimeStamp
+import           System.Posix (FileStatus)
+import qualified System.Posix as X
+import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
+-- -}
 
 -- ----------------------------------------
 
 data Env = Env
+  { _copyGeo :: [CopyGeo]
+  , _metaSrc :: [NameImgType]
+  }
+
+type CopyGeo = ((Int, Int), AspectRatio)
+
+initEnv :: Env
+initEnv = Env
+  { _copyGeo = [ ((1400, 1050), AsImg)
+               , (( 160,  160), AsImg)
+               , (( 160,  120), Fix)
+               ]
+  , _metaSrc = [ (mkName ".nef",     IMGraw)
+               , (mkName ".xmp",     IMGmeta)
+               , (mkName ".nef.dxo", IMGmeta)
+               ]
+  }
+
+envCopyGeo :: Lens' Env [CopyGeo]
+envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
+
+envMetaSrc :: Lens' Env [NameImgType]
+envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
+
+deriving instance Show Env
 
 instance Config Env where
+
+-- ----------------------------------------
 
 type Cmd = Action Env ImgStore
 
 runCmd :: Cmd a -> IO (Either Msg a, ImgStore, Log)
-runCmd cmd = runAction cmd Env emptyImgStore
+runCmd cmd = runAction cmd initEnv emptyImgStore
 
 -- ----------------------------------------
 
@@ -116,10 +145,10 @@ id2type :: ObjId -> Cmd String
 id2type i = getImgVal i >>= go
   where
     go e = return $ concat $
-      e ^.. ( theParts  . to (const "IMG")  <>
-              theImgDir  . to (const "DIR")  <>
-              theImgRoot . to (const "Root") <>
-              isImgCol  . to (const "COL")
+      e ^.. ( theParts      . to (const "IMG")  <>
+              theDirEntries . to (const "DIR")  <>
+              theImgRoot    . to (const "Root") <>
+              isImgCol      . to (const "COL")
             )
 
 -- ----------------------------------------
@@ -145,7 +174,7 @@ rmImgNode :: ObjId -> Cmd ()
 rmImgNode i = dt >>= go
   where
     go t = do
-      t' <- liftE $ remImgNode i t
+      t' <- liftE $ removeImgNode i t
       theImgTree .= t'
 
 adjustImg :: (ImgParts -> ImgParts) -> ObjId -> Cmd ()
@@ -156,11 +185,7 @@ adjustDirEntries :: (Set ObjId -> Set ObjId) -> ObjId -> Cmd ()
 adjustDirEntries f i =
   theImgTree . theNodeVal i . theDirEntries %= f
 
-adjustDirTimeStamp :: (TimeStamp -> TimeStamp) -> ObjId -> Cmd ()
-adjustDirTimeStamp f i =
-  theImgTree . theNodeVal i . theDirTimeStamp %= f
-
-
+{-}
 -- | process all image nodes with a monadic action
 --
 -- the image dir hierachy is traversed and all images are processed
@@ -170,7 +195,7 @@ processImages :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
 processImages pf = process
   where
     process i = do
-      trcObj i "processImgTree: process node "
+      -- trcObj i "processImgTree: process node "
       getImgVal i >>= go
       where
         go e
@@ -182,14 +207,15 @@ processImages pf = process
               process (e ^. theRootImgDir)
           | otherwise =
               return mempty
+-- -}
 
 -- | better(?) version of processImages
 --
 -- The image hierachy is traversed, but changes in the dir tree do not
 -- affect the traversal
 
-processImages' :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
-processImages' pf i0 = dt >>= process
+processImages :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages pf i0 = dt >>= process
   where
     process t = go i0
       where
@@ -208,7 +234,7 @@ processImages' pf i0 = dt >>= process
 {-}
 foldMapTree :: Monoid r =>
                (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
-               (ObjId -> (TimeStamp, Set ObjId) -> Cmd r) ->  -- fold an image dir node
+               (ObjId -> Set ObjId              -> Cmd r) ->  -- fold an image dir node
                (ObjId -> ImgParts               -> Cmd r) ->  -- fold a single image
                (ObjId -> ()                     -> Cmd r) ->  -- fold a collection
                (ObjId                           -> Cmd r)
@@ -241,9 +267,15 @@ foldMapTree rootf dirf imgf colf i0 = dt >>= process
                   return mempty
 -- -}
 
+-- | A general foldMap for an image tree
+--
+-- 1. all children are processed by a monadic action
+-- 2. the node itself is processed by a monadic action
+-- 3. the results are combined with a monoid op
+
 foldMapTree :: Monoid r =>
                (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
-               (ObjId -> (TimeStamp, Set ObjId) -> Cmd r) ->  -- fold an image dir node
+               (ObjId -> Set ObjId              -> Cmd r) ->  -- fold an image dir node
                (ObjId -> ImgParts               -> Cmd r) ->  -- fold a single image
                (ObjId -> ()                     -> Cmd r) ->  -- fold a collection
                (ObjId                           -> Cmd r)
@@ -253,11 +285,17 @@ foldMapTree = foldMTree rootC dirC colC
     dirC  r1 rs    = r1 <> mconcat rs
     colC  r1       = r1
 
+-- | A general fold for an image tree
+--
+-- 1. all children are processed by a monadic action
+-- 2. the node itself is processed by a monadic action
+-- 3. the results are combined
+
 foldMTree :: (r1 -> r -> r -> r) ->                          -- combining ROOT res
              (r2 -> [r]    -> r) ->                          -- combining DIR  res
              (r3           -> r) ->                          -- combining COL  res
              (ObjId -> (ObjId, ObjId)         -> Cmd r1) ->  -- fold the root node
-             (ObjId -> (TimeStamp, Set ObjId) -> Cmd r2) ->  -- fold an image dir node
+             (ObjId -> Set ObjId              -> Cmd r2) ->  -- fold an image dir node
              (ObjId -> ImgParts               -> Cmd r ) ->  -- fold a single image
              (ObjId -> ()                     -> Cmd r3) ->  -- fold a collection
              (ObjId                           -> Cmd r)
@@ -272,15 +310,15 @@ foldMTree rootC dirC      colC
             e | isIMG e ->
                   imgf i (e ^. theParts)
               | isDIR e -> do
-                  let d@(_ts, rset) = e ^. theImgDir
-                  r1 <- dirf i d
-                  rs <- mapM go (rset ^. isoSetList)
+                  let es = e ^. theDirEntries
+                  rs <- mapM go (es ^. isoSetList)
+                  r1 <- dirf i es
                   return (dirC r1 rs)
               | isROOT e -> do
                   let r@(rd, rc) = e ^. theImgRoot
-                  r1 <- rootf i r
                   r2 <- go rd
                   r3 <- go rc
+                  r1 <- rootf i r
                   return (rootC r1 r2 r3)
               | isCOL e -> do
                   let c = e ^. isImgCol
@@ -293,6 +331,30 @@ invImages :: Cmd ()
 invImages = do
   _r <- use (theImgTree . rootRef)
   return ()
+
+remRec :: ObjId -> Cmd ()
+remRec =
+  foldMapTree rootF dirF imgF colF
+  where
+    -- do nothing with the root node
+    rootF _i _ =
+      return ()
+
+    -- remove the directory, as long as it's not the top image dir
+    dirF i _ = do
+      pe <- getImgParent i >>= getImgVal
+      when (not $ isROOT pe) $
+        rmImgNode i
+
+    -- remove the image node
+    imgF i _ =
+      rmImgNode i
+
+    -- do nothing with a collection node
+    colF _i _ =
+      return ()
+
+
 
 listNames :: ObjId -> Cmd String
 listNames r =
@@ -310,7 +372,6 @@ listNames r =
     imgF i ps     = do
       n <- gn i
       return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
-
 
 listPaths' :: ObjId -> Cmd [Path]
 listPaths' r =
@@ -334,7 +395,7 @@ listPaths i = (unlines . map show) <$> listPaths' i
 listImages' :: Cmd [(Path, [Name])]
 listImages' = do
   r <- use (theImgTree . rootRef)
-  processImages' listImg r
+  processImages listImg r
   where
     listImg :: ObjId -> ImgParts -> Cmd [(Path, [Name])]
     listImg i ps = do

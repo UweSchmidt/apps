@@ -3,30 +3,34 @@
 module Catalog.Rules
 where
 
-import           Catalog.Cmd
-import           Control.Lens
-import           Data.ImageTree
+import Catalog.Cmd
+import Control.Lens
+import Data.ImageTree
 import Data.ImgAction
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.TimeStamp
+import Data.Prim.Name
+import Data.Prim.PathId
+import Data.Prim.TimeStamp
+
+{-}
+-- import           Data.Prim.Path
 -- import qualified Data.List as L
 -- import qualified Data.Map.Strict as M
 -- import           Data.Monoid ((<>))
 -- import           Data.RefTree
 -- import qualified Text.Regex.XMLSchema.Generic as RE
 -- (Regex, parseRegex, match, splitSubex)
+-- -}
+
+-- ----------------------------------------
 
 data RL a = RL a a
 
 instance Functor RL where
   fmap f (RL t s) = RL (f t) (f s)
 
-type Pattern = RL (ImgType, Suffix)
+type Pattern = RL NameImgType
 type Deps    = RL ImgPart
 type Rule    = (Pattern, Deps -> ObjId -> Cmd ImgAction)
-type Suffix = Name
 
 -- ----------------------------------------
 
@@ -35,7 +39,7 @@ deriving instance Show a => Show (RL a)
 -- ----------------------------------------
 
 applyRules :: [Rule] -> ObjId -> Cmd ImgAction
-applyRules rls i0 = processImages' (matchRules rls) i0
+applyRules rls i0 = processImages (matchRules rls) i0
 
 matchRules :: [Rule] -> ObjId -> ImgParts -> Cmd ImgAction
 matchRules rs i ps = do
@@ -59,7 +63,7 @@ matchRules rs i ps = do
             tts = tp ^. theImgTimeStamp
             sts = sp ^. theImgTimeStamp
 
-        match (st, sp) ip =
+        match (sp, st) ip =
           (ip ^. theImgType == st)
           &&
           (sp `isNameSuffix` (ip ^. theImgName))
@@ -67,31 +71,44 @@ matchRules rs i ps = do
         toTP tn =
           case targetPart tn of
             [] ->
-              mkImgPart tn (fst target)
+              mkImgPart tn (snd target)
             (p : _) ->
               p
           where
             targetPart n' = filter (\ p -> p ^. theImgName == n') pts
 
-        toTN part = part ^. theImgName . to (substNameSuffix (snd source) (snd target))
+        toTN part = part ^. theImgName . to (substNameSuffix (fst source) (fst target))
 
 mkCopyRule :: Int -> Int -> AspectRatio -> Rule
 mkCopyRule w h ar = (rl, act)
   where
     copy'sx = mkName $ "." ++ show w ++ "x" ++ show h ++ ".jpg"
 
-    rl = RL (IMGcopy, copy'sx) (IMGjpg, mkName ".jpg")
+    rl = RL (copy'sx, IMGcopy) (mkName ".jpg", IMGjpg)
 
     act (RL tp sp) i = do
-      ip <- getImgParent i
-      pp <- id2path ip
       return $
-        GenCopy ar
-                (pp `snocPath` (tp ^. theImgName))
-                (pp `snocPath` (sp ^. theImgName))
+        GenCopy i (tp ^. theImgName) (sp ^. theImgName) ar w h
 
-buildRules :: [Rule]
-buildRules = map (uncurry . uncurry $ mkCopyRule) [((1024,768), AsImg), ((160,120), Fix)]
+mkMetaRule :: NameImgType -> Rule
+mkMetaRule nt = (rl, act)
+  where
+    rl =
+      RL (mkName ".json", IMGjson) nt
+
+    act (RL tp sp) i =
+      return $
+      GenMeta i (tp ^. theImgName) (sp ^. theImgName) (snd nt)
+
+
+buildRules :: Cmd [Rule]
+buildRules = do
+  cg <- view envCopyGeo
+  cm <- view envMetaSrc
+  return $
+    map (uncurry . uncurry $ mkCopyRule) cg
+    ++
+    map mkMetaRule cm
 
 {-}
   let ss <- filter (match source) ps

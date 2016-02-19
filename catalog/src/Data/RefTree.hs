@@ -218,7 +218,7 @@ remDirNode removable updateParent r t
                       ++ show (refPath r t)
 
        return (t & theNodeVal p   %~ updateParent r
-                 & entryAt r .~ Nothing
+                 & entryAt r      .~ Nothing
               )
    where
      p = t ^. theParent r
