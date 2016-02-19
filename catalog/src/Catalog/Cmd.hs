@@ -47,7 +47,7 @@ import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, spli
 
 data Env = Env
   { _copyGeo :: [CopyGeo]
-  , _metaSrc :: [NameImgType]
+  , _metaSrc :: [ImgType]
   }
 
 type CopyGeo = ((Int, Int), AspectRatio)
@@ -58,16 +58,13 @@ initEnv = Env
                , (( 160,  160), AsImg)
                , (( 160,  120), Fix)
                ]
-  , _metaSrc = [ (mkName ".nef",     IMGraw)
-               , (mkName ".xmp",     IMGmeta)
-               , (mkName ".nef.dxo", IMGmeta)
-               ]
+  , _metaSrc = [ IMGraw, IMGmeta, IMGmeta]
   }
 
 envCopyGeo :: Lens' Env [CopyGeo]
 envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
 
-envMetaSrc :: Lens' Env [NameImgType]
+envMetaSrc :: Lens' Env [ImgType]
 envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
 
 deriving instance Show Env
@@ -220,7 +217,7 @@ processImages pf i0 = dt >>= process
     process t = go i0
       where
         go i = do
-          trcObj i "processImgTree: process node "
+          -- trcObj i "processImgTree: process node "
           case t ^. theNodeVal i of
             e | isIMG e ->
                   pf i (e ^. theParts)

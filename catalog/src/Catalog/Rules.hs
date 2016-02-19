@@ -10,6 +10,7 @@ import Data.ImgAction
 import Data.Prim.Name
 import Data.Prim.PathId
 import Data.Prim.TimeStamp
+import Catalog.FilePath
 
 {-}
 -- import           Data.Prim.Path
@@ -28,8 +29,8 @@ data RL a = RL a a
 instance Functor RL where
   fmap f (RL t s) = RL (f t) (f s)
 
-type Pattern = RL NameImgType
-type Deps    = RL ImgPart
+data Pattern = PT NameImgType ImgType
+data Deps    = DP ImgPart ImgPart
 type Rule    = (Pattern, Deps -> ObjId -> Cmd ImgAction)
 
 -- ----------------------------------------
@@ -45,14 +46,15 @@ matchRules :: [Rule] -> ObjId -> ImgParts -> Cmd ImgAction
 matchRules rs i ps = do
   mconcat <$> mapM (matchRule (ps ^. isoImgParts)) rs
   where
-    matchRule pts (RL target source, act) = do
+    matchRule pts (PT target source, act) = do
       mconcat <$> mapM apply dps
       where
-        sps = filter (match source) pts
-        dps = map (\ p -> RL (toTP $ toTN p) p) sps
+        sps = filter (not . nullName . snd) $
+              map (match source) pts
+        dps = map (\ (p, e) -> DP (toTP $ toTN p e) p) sps
 
         apply :: Deps -> Cmd ImgAction
-        apply r@(RL tp sp)
+        apply r@(DP tp sp)
           | tts == zeroTimeStamp
             ||
             tts < sts =
@@ -63,10 +65,11 @@ matchRules rs i ps = do
             tts = tp ^. theImgTimeStamp
             sts = sp ^. theImgTimeStamp
 
-        match (sp, st) ip =
-          (ip ^. theImgType == st)
-          &&
-          (sp `isNameSuffix` (ip ^. theImgName))
+        match st ip
+          | (ip ^. theImgType == st) = (ip, emptyName)
+          | otherwise                = (ip, ext)
+          where
+            ext = filePathToExt st (ip ^. theImgName . name2string)
 
         toTP tn =
           case targetPart tn of
@@ -77,28 +80,28 @@ matchRules rs i ps = do
           where
             targetPart n' = filter (\ p -> p ^. theImgName == n') pts
 
-        toTN part = part ^. theImgName . to (substNameSuffix (fst source) (fst target))
+        toTN part ext = part ^. theImgName . to (substNameSuffix ext (fst target))
 
 mkCopyRule :: Int -> Int -> AspectRatio -> Rule
 mkCopyRule w h ar = (rl, act)
   where
     copy'sx = mkName $ "." ++ show w ++ "x" ++ show h ++ ".jpg"
 
-    rl = RL (copy'sx, IMGcopy) (mkName ".jpg", IMGjpg)
+    rl = PT (copy'sx, IMGcopy) IMGjpg
 
-    act (RL tp sp) i = do
+    act (DP tp sp) i = do
       return $
         GenCopy i (tp ^. theImgName) (sp ^. theImgName) ar w h
 
-mkMetaRule :: NameImgType -> Rule
-mkMetaRule nt = (rl, act)
+mkMetaRule :: ImgType -> Rule
+mkMetaRule t = (rl, act)
   where
     rl =
-      RL (mkName ".json", IMGjson) nt
+      PT (mkName ".json", IMGjson) t
 
-    act (RL tp sp) i =
+    act (DP tp sp) i =
       return $
-      GenMeta i (tp ^. theImgName) (sp ^. theImgName) (snd nt)
+      GenMeta i (tp ^. theImgName) (sp ^. theImgName) t
 
 
 buildRules :: Cmd [Rule]
