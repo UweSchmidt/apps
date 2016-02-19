@@ -4,16 +4,16 @@ module Catalog.Rules
 where
 
 import           Catalog.Cmd
-import           Control.Lens hiding ((.=))
--- import           Control.Monad
+import           Control.Lens
 import           Data.ImageTree
--- import qualified Data.List as L
--- import qualified Data.Map.Strict as M
--- import           Data.Monoid ((<>))
+import Data.ImgAction
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
 import           Data.Prim.TimeStamp
+-- import qualified Data.List as L
+-- import qualified Data.Map.Strict as M
+-- import           Data.Monoid ((<>))
 -- import           Data.RefTree
 -- import qualified Text.Regex.XMLSchema.Generic as RE
 -- (Regex, parseRegex, match, splitSubex)
@@ -26,36 +26,11 @@ instance Functor RL where
 type Pattern = RL (ImgType, Suffix)
 type Deps    = RL ImgPart
 type Rule    = (Pattern, Deps -> ObjId -> Cmd ImgAction)
-
-data GenAction = GA String (Cmd ImgAction)
-
 type Suffix = Name
-
-data ImgAction = GenCopy Path Path
-            | GenExif Path [Path]
-            | SyncImg ObjId
-            | ActSeq ImgAction ImgAction
-            | ActNoop
 
 -- ----------------------------------------
 
 deriving instance Show a => Show (RL a)
-
--- ----------------------------------------
-
-instance Show GenAction where
-  show (GA n _f) = show n
-
--- ----------------------------------------
-
-deriving instance Show ImgAction
-
-instance Monoid ImgAction where
-  mempty = ActNoop
-
-  ActNoop `mappend` a2      = a2
-  a1      `mappend` ActNoop = a1
-  a1      `mappend` a2      = ActSeq a1 a2
 
 -- ----------------------------------------
 
@@ -100,8 +75,8 @@ matchRules rs i ps = do
 
         toTN part = part ^. theImgName . to (substNameSuffix (snd source) (snd target))
 
-mkCopyRule :: Int -> Int -> Rule
-mkCopyRule w h = (rl, act)
+mkCopyRule :: Int -> Int -> AspectRatio -> Rule
+mkCopyRule w h ar = (rl, act)
   where
     copy'sx = mkName $ "." ++ show w ++ "x" ++ show h ++ ".jpg"
 
@@ -110,11 +85,13 @@ mkCopyRule w h = (rl, act)
     act (RL tp sp) i = do
       ip <- getImgParent i
       pp <- id2path ip
-      return $ GenCopy (pp `snocPath` (tp ^. theImgName))
-                       (pp `snocPath` (sp ^. theImgName))
+      return $
+        GenCopy ar
+                (pp `snocPath` (tp ^. theImgName))
+                (pp `snocPath` (sp ^. theImgName))
 
 buildRules :: [Rule]
-buildRules = map (uncurry mkCopyRule) [(1024,768), (160,120)]
+buildRules = map (uncurry . uncurry $ mkCopyRule) [((1024,768), AsImg), ((160,120), Fix)]
 
 {-}
   let ss <- filter (match source) ps

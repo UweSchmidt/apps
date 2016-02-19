@@ -39,27 +39,27 @@ ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
   mountPath <- io X.getWorkingDirectory
   initImgStore "archive" "collections" mountPath
-  trcCmd cwnPath >> trcCmd cwnLs >> return ()
+  trcCmd cwPath >> trcCmd cwLs >> return ()
   saveImgStore ""
 
   refRoot <- use (theImgTree . rootRef)
   refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
-  cwSet refImg >> trcCmd cwnPath >> trcCmd cwnType >> return ()
+  cwSet refImg >> trcCmd cwPath >> trcCmd cwType >> return ()
 
   cwe <- we
   refDir1 <- mkImgDir cwe "emil"
-  cwSet refDir1 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnFilePath >> return ()
+  cwSet refDir1 >> trcCmd cwPath >> trcCmd cwType >> trcCmd cwFilePath >> return ()
 
   cwe' <- we
   pic1 <- mkImg cwe' "pic1"
   pic2 <- mkImg cwe' "pic2"
-  trcCmd cwnLs >> return ()
+  trcCmd cwLs >> return ()
 
-  cwSet pic2 >> trcCmd cwnPath >> trcCmd cwnType >> trcCmd cwnLs >> return ()
+  cwSet pic2 >> trcCmd cwPath >> trcCmd cwType >> trcCmd cwLs >> return ()
   cwe'' <- we
   (mkImg cwe'' "xxx" >> return ()) `catchError` (\ _ -> return ()) -- error
 
-  cwRoot >> trcCmd cwnType >> trcCmd cwnLs >> trcCmd cwnPath >> return ()
+  cwRoot >> trcCmd cwType >> trcCmd cwLs >> trcCmd cwPath >> return ()
 --  trcCmd (fromFilePath "/home/uwe/haskell/apps/catalog/emil") >> return ()
   saveImgStore ""
   rmImgNode pic1
@@ -74,6 +74,17 @@ ccc = runCmd $ do
   loadImgStore "c1.json"
   saveImgStore ""
   listImages >>= io . putStrLn
-  cwnListPaths >>= trc
-  cwnListNames >>= trc
+  cwListPaths >>= trc
+  cwListNames >>= trc
+  we >>= applyRules buildRules >>= (io . print)
+
+c2 :: Cmd ()
+c2 = do
+  loadImgStore "c1.json"
+  cwRoot
+  cwSyncFS
+  saveImgStore ""
+  listImages >>= io . putStrLn
+  cwListPaths >>= trc
+  cwListNames >>= trc
   we >>= applyRules buildRules >>= (io . print)

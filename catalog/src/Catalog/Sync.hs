@@ -52,6 +52,13 @@ loadImgStore p = do
     Just st ->
       put st
 
+-- ----------------------------------------
+
+cwSyncFS :: Cmd ()
+cwSyncFS = we >>= idSyncFS
+
+-- ----------------------------------------
+
 idSyncFS :: ObjId -> Cmd ()
 idSyncFS i = getImgVal i >>= go
   where
@@ -65,10 +72,10 @@ idSyncFS i = getImgVal i >>= go
       | isDIR e = do
           trcObj i "idSyncFS: syncing image dir"
           (do s <- id2path i >>= toFilePath >>= fsDirStat
-              when (fsTimeStamp s > e ^. theDirTimeStamp) $
+              when (fsTimeStamp s > e ^. theDirTimeStamp) $         -- TODO: why dir timestamps?
                 do trc "idSyncFS: dir has changed since last sync"
-                   syncDirCont i
                    adjustDirTimeStamp (const $ fsTimeStamp s) i
+              syncDirCont   i
               checkEmptyDir i
             )
             `catchError`
@@ -77,6 +84,9 @@ idSyncFS i = getImgVal i >>= go
                  rmImgNode i
             )
           return ()
+      | isROOT e = do
+          trcObj i "idSyncFS: syncing root"
+          idSyncFS (e ^. theRootImgDir)
 
       | otherwise =
           return ()

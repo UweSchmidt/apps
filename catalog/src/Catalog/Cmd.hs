@@ -267,7 +267,7 @@ foldMTree rootC dirC      colC
     process t = go i0
       where
         go i = do
-          trcObj i "foldMapTree: fold node"
+          -- trcObj i "foldMapTree: fold node"
           case t ^. theNodeVal i of
             e | isIMG e ->
                   imgf i (e ^. theParts)
@@ -438,28 +438,28 @@ cwUp = do
 
 cwDown :: Name -> Cmd ()
 cwDown d = do
-  p <- flip snocPath d <$> cwnPath
+  p <- flip snocPath d <$> cwPath
   cwSetPath p
 
-cwnType :: Cmd String
-cwnType = we >>= id2type
+cwType :: Cmd String
+cwType = we >>= id2type
 
-cwnPath :: Cmd Path
-cwnPath = we >>= id2path
+cwPath :: Cmd Path
+cwPath = we >>= id2path
 
 -- | list names of elements in current node
-cwnLs :: Cmd [Name]
-cwnLs = we >>= id2contNames
+cwLs :: Cmd [Name]
+cwLs = we >>= id2contNames
 
 -- | convert working node path to file system path
-cwnFilePath :: Cmd FilePath
-cwnFilePath = cwnPath >>= toFilePath
+cwFilePath :: Cmd FilePath
+cwFilePath = cwPath >>= toFilePath
 
-cwnListPaths :: Cmd String
-cwnListPaths = we >>= listPaths
+cwListPaths :: Cmd String
+cwListPaths = we >>= listPaths
 
-cwnListNames :: Cmd String
-cwnListNames = we >>= listNames
+cwListNames :: Cmd String
+cwListNames = we >>= listNames
 
 -- ----------------------------------------
 --
