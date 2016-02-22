@@ -19,7 +19,8 @@ import           Data.ImageStore
 import           Data.ImageTree
 import           Data.RefTree
 import qualified System.Posix as X
-
+import Catalog.System.Convert
+import Data.ImgAction
 {-}
 import           Catalog.FilePath
 import qualified Data.Aeson as J
@@ -42,7 +43,7 @@ import           Control.Arrow ((***))
 ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
   mountPath <- io X.getWorkingDirectory
-  initImgStore "archive" "collections" mountPath
+  initImgStore "archive" "collections" (mountPath ++ "/data/photos")
   trcCmd cwPath >> trcCmd cwLs >> return ()
   saveImgStore ""
 

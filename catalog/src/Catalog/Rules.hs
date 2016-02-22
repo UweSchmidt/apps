@@ -4,30 +4,26 @@ module Catalog.Rules
 where
 
 import Catalog.Cmd
+import Catalog.FilePath
 import Control.Lens
 import Data.ImageTree
 import Data.ImgAction
 import Data.Prim.Name
 import Data.Prim.PathId
 import Data.Prim.TimeStamp
-import Catalog.FilePath
 
 {-}
--- import           Data.Prim.Path
--- import qualified Data.List as L
--- import qualified Data.Map.Strict as M
--- import           Data.Monoid ((<>))
--- import           Data.RefTree
--- import qualified Text.Regex.XMLSchema.Generic as RE
--- (Regex, parseRegex, match, splitSubex)
+import Control.Monad.RWSErrorIO
+import           Data.Prim.Path
+import qualified Data.List as L
+import qualified Data.Map.Strict as M
+import           Data.Monoid ((<>))
+import           Data.RefTree
+import qualified Text.Regex.XMLSchema.Generic as RE
+(Regex, parseRegex, match, splitSubex)
 -- -}
 
 -- ----------------------------------------
-
-data RL a = RL a a
-
-instance Functor RL where
-  fmap f (RL t s) = RL (f t) (f s)
 
 data Pattern = PT NameImgType ImgType
 data Deps    = DP ImgPart ImgPart
@@ -35,7 +31,8 @@ type Rule    = (Pattern, Deps -> ObjId -> Cmd ImgAction)
 
 -- ----------------------------------------
 
-deriving instance Show a => Show (RL a)
+deriving instance Show Pattern
+deriving instance Show Deps
 
 -- ----------------------------------------
 
@@ -44,13 +41,15 @@ applyRules rls i0 = processImages (matchRules rls) i0
 
 matchRules :: [Rule] -> ObjId -> ImgParts -> Cmd ImgAction
 matchRules rs i ps = do
+  trcObj i $ "matchRules"
   mconcat <$> mapM (matchRule (ps ^. isoImgParts)) rs
   where
     matchRule pts (PT target source, act) = do
+      -- trc $ "matchRule: " ++ show (target, source, map snd sps', pts ^.. traverse . theImgName)
       mconcat <$> mapM apply dps
       where
-        sps = filter (not . nullName . snd) $
-              map (match source) pts
+        sps = filter (not . nullName . snd) $ sps'
+        sps' =      map (match source) pts
         dps = map (\ (p, e) -> DP (toTP $ toTN p e) p) sps
 
         apply :: Deps -> Cmd ImgAction
@@ -66,7 +65,7 @@ matchRules rs i ps = do
             sts = sp ^. theImgTimeStamp
 
         match st ip
-          | (ip ^. theImgType == st) = (ip, emptyName)
+          | (ip ^. theImgType /= st) = (ip, emptyName)
           | otherwise                = (ip, ext)
           where
             ext = filePathToExt st (ip ^. theImgName . name2string)
@@ -80,7 +79,8 @@ matchRules rs i ps = do
           where
             targetPart n' = filter (\ p -> p ^. theImgName == n') pts
 
-        toTN part ext = part ^. theImgName . to (substNameSuffix ext (fst target))
+        toTN part ext =
+          part ^. theImgName . to (substNameSuffix ext (fst target))
 
 mkCopyRule :: Int -> Int -> AspectRatio -> Rule
 mkCopyRule w h ar = (rl, act)

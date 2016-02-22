@@ -54,11 +54,11 @@ type CopyGeo = ((Int, Int), AspectRatio)
 
 initEnv :: Env
 initEnv = Env
-  { _copyGeo = [ ((1400, 1050), AsImg)
-               , (( 160,  160), AsImg)
+  { _copyGeo = [ ((1400, 1050), Pad)
+               , (( 160,  160), Pad)
                , (( 160,  120), Fix)
                ]
-  , _metaSrc = [ IMGraw, IMGmeta, IMGmeta]
+  , _metaSrc = [ IMGraw, IMGmeta]
   }
 
 envCopyGeo :: Lens' Env [CopyGeo]

@@ -15,7 +15,10 @@ data ImgAction = GenCopy ObjId Name Name AspectRatio Int Int
                | ActSeq ImgAction ImgAction
                | ActNoop
 
-data AspectRatio = Fix | AsImg
+data AspectRatio = Fix | Pad | Crop
+                 deriving (Eq, Show)
+
+type Geo = (Int, Int)
 
 -- ----------------------------------------
 
@@ -27,9 +30,5 @@ instance Monoid ImgAction where
   ActNoop `mappend` a2      = a2
   a1      `mappend` ActNoop = a1
   a1      `mappend` a2      = ActSeq a1 a2
-
--- ----------------------------------------
-
-deriving instance Show AspectRatio
 
 -- ----------------------------------------
