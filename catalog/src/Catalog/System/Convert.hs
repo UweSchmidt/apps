@@ -73,7 +73,7 @@ resizeShellCmd aspect d'geo s'geo d s =
 
     cmdArgs
         | isPad         = resize1
-                          ++ [ "-background", "#333333" ]
+                          ++ [ "-background", "'#333333'" ]
                        -- ++ [ "-size", show (2*w) ++ "x" ++ show (2*h) ] -- this gives too low quality
                           ++ [ s, d ]
         | isCrop        = [ "-crop", show cw ++ "x" ++ show ch ++ "+" ++ show xoff ++ "+" ++ show yoff

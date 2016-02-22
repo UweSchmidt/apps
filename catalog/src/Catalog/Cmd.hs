@@ -129,6 +129,10 @@ andThenE cmd f =
     Left  msg -> abort msg
     Right res -> f res
 
+catchAll :: Cmd () -> Cmd ()
+catchAll c =
+  c `catchError` (\ e -> warn $ "catchAll: error caught: " ++ show e)
+
 -- ----------------------------------------
 
 -- | ref to path

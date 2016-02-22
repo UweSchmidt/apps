@@ -18,12 +18,27 @@ executable catalog
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
 
-  other-modules:     Catalog.Prelude
-                     Data.Prim.CheckSum
+  other-modules:     Data.MetaData
+                     Data.ImgAction
+                     Data.ImageTree
+                     Data.RefTree
+                     Data.Function.Util
+                     Data.ImageStore
                      Data.Prim.Name
-                     Data.Prim.Path
                      Data.Prim.TimeStamp
+                     Data.Prim.Path
+                     Data.Prim.PathId
                      Data.Prim.ObjId
+                     Data.Prim.CheckSum
+                     Catalog.FilePath
+                     Catalog.Cmd
+                     Catalog.System.Convert
+                     Catalog.Prelude
+                     Catalog.Main
+                     Catalog.Sync
+                     Catalog.RunImgAction
+                     Catalog.Rules
+                     Control.Lens.Util
   
   -- Other library packages from which modules are imported.
   build-depends:     base                >= 4.5
@@ -49,6 +64,7 @@ executable catalog
                    , transformers        >= 0.4
                    , unix                >= 2.5
                    , utf8-string         >= 1
+                   , vector              >= 0.10
                    
   GHC-Options: -Wall -fwarn-tabs
  

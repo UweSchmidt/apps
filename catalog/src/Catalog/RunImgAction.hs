@@ -8,9 +8,10 @@
 module Catalog.RunImgAction
 where
 
-import Catalog.Cmd
-import Data.ImgAction
+import           Catalog.Cmd
+import           Catalog.System.Convert
 import           Control.Monad.RWSErrorIO
+import           Data.ImgAction
 import           Data.Prim.Path
 
 {-}
@@ -38,7 +39,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Prim.CheckSum
-import Data.ImageTree
+import           Data.ImageTree
 import           Data.Prim.TimeStamp
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
@@ -54,20 +55,12 @@ runImgAction ActNoop =
 runImgAction (ActSeq c1 c2) =
   runImgAction c1 >> runImgAction c2
 
-runImgAction c@(GenCopy i t s ar w h) = do
+runImgAction c@(GenCopy i t s ar w h) = catchAll $ do
   trc $ "runImgAction: " ++ show c
   p  <- id2path i
   tp <- toFilePath (substPathName t p)
   sp <- toFilePath (substPathName s p)
-  execProcess
-    "echo"
-    [ "convert"
-    , show ar
-    , "-geo=" ++ show w ++ "x" ++ show h
-    , sp
-    , tp
-    ]
-    "" >>= trc
+  createImageCopy ar (w, h) tp sp
   return ()
 
 runImgAction c@(GenMeta i t s ty) = do
