@@ -95,3 +95,12 @@ c2 = do
   cwListNames >>= trc
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
+
+c3 :: Cmd ()
+c3 = do
+  loadImgStore "c1.json"
+  cwRoot
+  cwSyncFS
+  saveImgStore "c1.json"
+  rls <- buildRules
+  we >>= applyRules rls >>= runImgAction

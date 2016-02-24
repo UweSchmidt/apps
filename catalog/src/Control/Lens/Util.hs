@@ -3,10 +3,10 @@
 module Control.Lens.Util where
 
 import           Control.Lens
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import           Data.Set (Set)
+import           Data.Prim.Prelude
 import qualified Data.Set as S
+import qualified Data.Text as T
 
 -- ----------------------------------------
 
@@ -23,6 +23,9 @@ isoMapList = iso M.toList M.fromList
 
 isoSetList :: Ord a => Iso' (Set a) [a]
 isoSetList = iso S.toList S.fromList
+
+isoStringText :: Iso' String Text
+isoStringText = iso T.pack T.unpack
 
 -- a prism for filtering
 

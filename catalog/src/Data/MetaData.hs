@@ -7,55 +7,68 @@
 module Data.MetaData
 where
 
-import           Data.Prim.Name
-import           Data.Prim.Path
-import qualified Data.Vector as V
 import           Control.Lens
 import           Control.Monad.Except
-
-import           Data.Aeson (ToJSON, FromJSON)
 import qualified Data.Aeson as J
-
-
-import           Data.Maybe
-
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
+import qualified Data.HashMap.Strict as HM
+import           Data.Prim.Name
+import           Data.Prim.Prelude
 import qualified Data.Text as T
+import qualified Data.Vector as V
 
 -- ----------------------------------------
 
-newtype MetaData = MD (Map Name Name)
+newtype MetaData = MD J.Object
 
 -- ----------------------------------------
 
 deriving instance Show MetaData
 
+instance Monoid MetaData where
+  mempty                = MD HM.empty
+  MD m1 `mappend` MD m2 = MD $ m1 `HM.union` m2
+
 instance ToJSON MetaData where
-  toJSON (MD m) = J.Array $ V.singleton $
-    J.object $ map (uncurry toPair) $ M.toList m
-    where
-      toPair n v =
-        (n ^. name2string . to T.pack) J..= v
+  toJSON (MD m) = J.toJSON [m]
 
-{-}
-instance (Ord ref, FromJSON (node ref), FromJSON ref) => FromJSON (RefTree node ref) where
-  parseJSON = J.withObject "RefTree" $ \ o ->
-    RT
-    <$> o J..: "rootRef"
-    <*> (M.fromList <$> o J..: "entries")
+instance FromJSON MetaData where
+  parseJSON = J.withArray "MetaData" $ \ v ->
+    case V.length v of
+      1 -> J.withObject "MetaData" (return . MD) (V.head v)
+      _ -> mzero
 
-rootRef :: Lens' (RefTree node ref) ref
-rootRef k (RT r m) = (\ new -> RT new m) <$> k r
+metaDataAt :: Name -> Lens' MetaData Text
+metaDataAt key = md2obj . at (key ^. name2text) . val2text
+  where
+    md2obj :: Iso' MetaData J.Object
+    md2obj = iso (\ (MD m) -> m) MD
 
-entries :: Lens' (RefTree node ref) (Map ref (node ref))
-entries k (RT r m) = (\ new -> RT r new) <$> k m
+    val2text :: Iso' (Maybe J.Value) Text
+    val2text = iso totext fromtext
+      where
+        totext (Just (J.String t)) = t
+        totext _                   = ""
 
-entryAt :: (Ord ref) => ref -> Lens' (RefTree node ref) (Maybe (node ref))
-entryAt r = entries . at r
+        fromtext t
+          | T.null t = Nothing
+          | otherwise = Just (J.String t)
 
-theNode :: (Ord ref, Show ref) =>
-           ref -> Lens' (RefTree node ref) (node ref)
-theNode r = entryAt r . checkJust ("atRef: undefined ref " ++ show r)
--- -}
+
+partMetaData :: (Name -> Bool) -> Iso' MetaData (MetaData, MetaData)
+partMetaData predicate = iso part (uncurry mappend)
+  where
+    part (MD m) = (MD *** MD) $ HM.foldrWithKey pf (HM.empty, HM.empty) m
+      where
+        pf k v (m1, m2)
+          | predicate (k ^. from name2text) =
+              (HM.insert k v m1, m2)
+          | otherwise =
+              (m1, HM.insert k v m2)
+
+partByRegex :: Text -> Iso' MetaData (MetaData, MetaData)
+partByRegex rx = partMetaData p
+  where
+    rx' = parseRegexExt rx
+    p n = matchRE rx' (n ^. name2text)
+
 -- ----------------------------------------
