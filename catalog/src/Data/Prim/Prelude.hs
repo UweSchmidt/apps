@@ -11,8 +11,11 @@ module Data.Prim.Prelude
        , IsString(..)
          -- Text.Regex.XMLSchema.Generic
        , Regex
+       , RegexText
        , parseRegex
+       , parseRegex'
        , parseRegexExt
+       , parseRegexExt'
        , match
        , matchRE
        , matchSubex
@@ -24,6 +27,10 @@ module Data.Prim.Prelude
        , isPrefixOf
        , isSuffixOf
        , partition
+       , sort
+       , sortBy
+         -- Data.Function
+       , on
          -- System.FilePath
        , FilePath
        , (</>)
@@ -34,6 +41,7 @@ module Data.Prim.Prelude
        )
 where
 
+import Data.Function
 import Control.Arrow
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.ByteString (ByteString)
@@ -47,6 +55,7 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import System.FilePath
 import Text.Regex.XMLSchema.Generic
+import Text.Regex.XMLSchema.Generic.RegexParser
 
 type LazyByteString = LB.ByteString
 

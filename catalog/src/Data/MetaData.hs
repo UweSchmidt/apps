@@ -76,10 +76,12 @@ partMetaData predicate = iso part (uncurry mappend)
           | otherwise =
               (m1, HM.insert k v m2)
 
-partByRegex :: Text -> Iso' MetaData (MetaData, MetaData)
-partByRegex rx = partMetaData p
+selectMetaData :: (Name -> Bool) -> Lens' MetaData MetaData
+selectMetaData p = partMetaData p . _1
+
+selectByRegex :: RegexText -> Lens' MetaData MetaData
+selectByRegex rx' = selectMetaData p
   where
-    rx' = parseRegexExt rx
     p n = matchRE rx' (n ^. name2text)
 
 -- ----------------------------------------

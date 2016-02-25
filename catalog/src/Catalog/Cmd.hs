@@ -51,6 +51,9 @@ import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, spli
 data Env = Env
   { _copyGeo :: [CopyGeo]
   , _metaSrc :: [ImgType]
+  , _trc     :: Bool
+  , _verbose :: Bool
+  , _dryRun  :: Bool
   }
 
 type CopyGeo = ((Int, Int), AspectRatio)
@@ -61,7 +64,10 @@ initEnv = Env
                , (( 160,  160), Pad)
                , (( 160,  120), Fix)
                ]
-  , _metaSrc = [ IMGraw, IMGmeta]
+  , _metaSrc = [IMGraw, IMGimg, IMGmeta]
+  , _trc     = True
+  , _verbose = True
+  , _dryRun  = False
   }
 
 envCopyGeo :: Lens' Env [CopyGeo]
@@ -70,9 +76,20 @@ envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
 envMetaSrc :: Lens' Env [ImgType]
 envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
 
+envTrc :: Lens' Env Bool
+envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)
+
+envVerbose :: Lens' Env Bool
+envVerbose k e = (\ new -> e {_verbose = new}) <$> k (_verbose e)
+
+envDryRun :: Lens' Env Bool
+envDryRun k e = (\ new -> e {_dryRun = new}) <$> k (_dryRun e)
+
 deriving instance Show Env
 
 instance Config Env where
+  traceOn   e = e ^. envTrc
+  verboseOn e = e ^. envVerbose
 
 -- ----------------------------------------
 
@@ -135,6 +152,16 @@ andThenE cmd f =
 catchAll :: Cmd () -> Cmd ()
 catchAll c =
   c `catchError` (\ e -> warn $ "catchAll: error caught: " ++ show e)
+
+runDry :: String -> Cmd () -> Cmd ()
+runDry msg cmd = do
+  dry <- view envDryRun
+  if dry
+    then do
+      logg (^. envDryRun) "dry-run" msg
+    else do
+      trc $ msg
+      cmd
 
 -- ----------------------------------------
 

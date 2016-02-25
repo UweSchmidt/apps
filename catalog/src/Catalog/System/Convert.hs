@@ -37,9 +37,9 @@ createImageCopy :: AspectRatio -> Geo -> FilePath -> FilePath -> Cmd ()
 createImageCopy aspect d'geo d s =
   getImageSize s >>= go
   where
-    go s'geo = do
-      trc $ "createImageCopy: " ++ shellCmd
-      execProcess "bash" [] shellCmd >> return ()
+    go s'geo =
+      runDry ("create image copy: " ++ show shellCmd) $ do
+        execProcess "bash" [] shellCmd >> return ()
       where
         shellCmd = resizeShellCmd aspect d'geo s'geo d s
 

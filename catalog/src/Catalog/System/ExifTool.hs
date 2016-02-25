@@ -38,9 +38,11 @@ buildMetaData =
   eitherDecodeStrict'
 
 writeMetaData :: FilePath -> MetaData -> Cmd ()
-writeMetaData f m = do
-  trc $ "writeMetadata to file " ++ f
-  io $ LB.writeFile f (J.encodePretty m)
+writeMetaData f m =
+  runDry ("write metadata to file " ++ show f) $ do
+    io $ LB.writeFile f (J.encodePretty' conf m)
+  where
+    conf = J.defConfig {J.confCompare = compare}
 
 readMetaData :: FilePath -> Cmd MetaData
 readMetaData f = do
@@ -58,9 +60,9 @@ readMetaData f = do
       return emptyMetaData
 
 filterMetaData :: ImgType -> MetaData -> MetaData
-filterMetaData IMGraw  m = m
-filterMetaData IMGmeta m = m
-filterMetaData IMGjpg  m = m
+filterMetaData IMGraw  m = m ^. selectByRegex reRaw
+filterMetaData IMGmeta m = m ^. selectByRegex reXmp
+filterMetaData IMGimg  m = m ^. selectByRegex reRaw
 filterMetaData _       _ = emptyMetaData
 
 -- ----------------------------------------
@@ -73,37 +75,25 @@ mkAlt xs = mkPar $ intercalate "|" $ map mkPar xs
 
 type AttrGroup = (String, [String])
 
-attrGroups2regex :: [AttrGroup] -> Regex
+attrGroups2regex :: [AttrGroup] -> RegexText
 attrGroups2regex =
-  parseRegex .
+  parseRegex' .
   mkAlt .
-  map (\ (px, attr) -> (px ++ mkAlt attr))
+  map (\ (px, attr) -> (px ++ ":" ++ mkAlt attr))
 
-reRaw :: Regex
+reRaw :: RegexText
 reRaw = attrGroups2regex
   [ attrExif
   , attrComposite
   , attrMaker
   ]
 
-attrComposite :: AttrGroup
-attrComposite =
-  ( "Composite"
-  , [ "Aperture"
-    , "AutoFocus"
-    , "ImageSize"
-    , "LensID"
-    , "LensSpec"
-    , "Megapixels"
-    , "ShutterSpeed"
-    , "SubSecDateTimeOriginal"
-    , "DOF"
-    , "FOV"
-    , "FocalLength35efl"
-    , "HyperfocalDistance"
-    , "LightValue"
-    ]
-  )
+reXmp :: RegexText
+reXmp = attrGroups2regex
+  [ attrComposite
+  , attrXmp
+  ]
+
 
 attrExif :: AttrGroup
 attrExif =
@@ -145,5 +135,41 @@ attrMaker =
     , "DaylightSavings"
     , "ShootingMode"
     , "ShutterCount"
+    ]
+  )
+
+
+attrComposite :: AttrGroup
+attrComposite =
+  ( "Composite"
+  , [ "Aperture"
+    , "AutoFocus"
+    , "CircleOfConfusion"
+    , "DOF"
+    , "Flash"
+    , "FocalLength35efl"
+    , "FocalLength35efl"
+    , "FOV"
+    , "GPSLatitudeRef"
+    , "GPSLongitudeRef"
+    , "GPSPosition"
+    , "HyperfocalDistance"
+    , "ImageSize"
+    , "LensID"
+    , "LensSpec"
+    , "LightValue"
+    , "Megapixels"
+    , "ShutterSpeed"
+    , "SubSecDateTimeOriginal"
+    ]
+  )
+
+attrXmp :: AttrGroup
+attrXmp =
+  ("XMP"
+  , [ "GPSLatitude"
+    , "GPSLongitude"
+    , "Format"
+    , "RawFileName"
     ]
   )

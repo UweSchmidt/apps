@@ -81,7 +81,7 @@ idSyncFS recursive i = getImgVal i >>= go
             )
             `catchError`
             (\ _e ->
-              do warn $ "idSyncFS: fs dir not found " ++ show e
+              do sync $ "fs dir not found " ++ show e
                  rmImgNode i
             )
           return ()
@@ -138,7 +138,6 @@ collectImgCont i = do
   cs <- snd <$> collectDirCont ip
   return $ concat . take 1 . filter (^. to head . _2 . _1 . to (== nm)) $ cs
 
-
 collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
 collectDirCont i = do
   trcObj i "collectDirCont: group entries in dir "
@@ -155,7 +154,7 @@ collectDirCont i = do
                                       , IMGjpg, IMGimg,  IMGcopy
                                       ])) rest2
 
-  mapM_ (\ n -> warn $ "collectDirCont: other entry ignored " ++ show (fst n)) others
+  mapM_ (\ n -> sync $ "fs entry ignored " ++ show (fst n)) others
   realsubdirs <- filterM (isSubDir fp) subdirs
 
   trc $ "collectDirEntries: files ignored " ++ show rest3
@@ -169,7 +168,7 @@ collectDirCont i = do
     isSubDir fp n =
       (const True <$> fsDirStat p)
       `catchError`
-      (\ _ -> do warn $ "collectDirCont: error catched, not an image dir: " ++ show p
+      (\ _ -> do sync $ "error caught, image dir expected " ++ show (show p)
                  return False
       )
       where
@@ -195,7 +194,7 @@ syncImg ip pp xs = do
       syncParts i pp
     else do
       p <- id2path i
-      warn $ "syncImg: no raw or jpg found in " ++ show p ++ ", parts: " ++ show xs
+      sync $ "no raw or jpg found for " ++ show (show p) ++ ", parts: " ++ show xs
       rmImgNode i
   where
     i  = mkObjId (pp `snocPath` n)
@@ -227,7 +226,7 @@ checkEmptyDir i = do
   nv <- getImgVal i
   when (nullImgDir nv) $ do
     p <- id2path i
-    warn $ "checkEmptyDir: image dir empty, will be removed " ++ show p
+    sync $ "empty image dir ignored " ++ show (show p)
     rmImgNode i
 
 
@@ -298,5 +297,8 @@ scanDirCont p0 = do
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
 hasImgType p (_, (_, t)) = p t
+
+sync :: String -> Cmd ()
+sync = logg verboseOn "sync"
 
 -- ----------------------------------------
