@@ -17,7 +17,8 @@ import Control.Monad
 -- import Data.Monoid
 import System.Process           ( rawSystem, readProcessWithExitCode )
 import System.Exit
-import System.IO                ( hPutStrLn
+import System.IO                ( hPutStr
+                                , hPutStrLn
                                 , stderr
                                 )
 
@@ -46,6 +47,9 @@ evalAction action env0 state0
 class Config c where
     traceOn :: c -> Bool
     traceOn = const True
+
+    verboseOn :: c -> Bool
+    verboseOn = const True
 
     warningOn :: c -> Bool
     warningOn = const True
@@ -90,22 +94,35 @@ logg enabled level msg
     = do asks enabled `guards`
            do s <- asks stderrOn
               if s
-                 then io $ hPutStrLn stderr fmt
+                 then io $ hPutStr stderr fmt'
                  else tell . LogMsg $ fmt
     where
-      fmt = take 10 (level ++ ":" ++ replicate 10 ' ') ++ msg
+      ind  = 10
+      lln  = 80
+      inds = replicate ind ' '
+      fmt  = take ind (level ++ ":" ++ inds) ++ msg
+      fmt' = unlines $
+             splitLines fmt
+
+      splitLines xs
+        | null xs1  = [l1]
+        | otherwise = l1 : splitLines (inds ++ xs1)
+        where
+          (l1, xs1) = splitAt lln xs
 
 -- convenience functions for logging
 
 trc :: Config r => String -> Action r s ()
 trc = logg traceOn "message"
 
+verbose :: Config r => String -> Action r s ()
+verbose = logg verboseOn "verbose"
+
 warn :: Config r => String -> Action r s ()
 warn = logg warningOn "warning"
 
 err :: Config r => String -> Action r s ()
 err = logg errorOn "error"
-
 
 logToList :: Log -> [String]
 logToList = log' []
