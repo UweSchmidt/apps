@@ -3,6 +3,8 @@
 module Control.Lens.Util where
 
 import           Control.Lens
+import qualified Data.ByteString.Lazy.UTF8 as LBU
+import qualified Data.ByteString.UTF8 as BU
 import qualified Data.Map.Strict as M
 import           Data.Prim.Prelude
 import qualified Data.Set as S
@@ -26,6 +28,14 @@ isoSetList = iso S.toList S.fromList
 
 isoStringText :: Iso' String Text
 isoStringText = iso T.pack T.unpack
+
+isoStringLazyByteString :: Iso' String LazyByteString
+isoStringLazyByteString = iso LBU.fromString LBU.toString
+
+isoStringByteString :: Iso' String ByteString
+isoStringByteString = iso BU.fromString BU.toString
+
+
 
 -- a prism for filtering
 

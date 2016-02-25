@@ -10,7 +10,7 @@ where
 
 import           Catalog.Cmd
 import           Catalog.System.Convert
-import           Control.Monad.RWSErrorIO
+import           Catalog.System.ExifTool
 import           Data.ImgAction
 import           Data.Prim.Path
 
@@ -68,15 +68,11 @@ runImgAction c@(GenMeta i t s ty) = do
   p  <- id2path i
   tp <- toFilePath (substPathName t p)
   sp <- toFilePath (substPathName s p)
-  execProcess
-    "echo"
-    [ "exiftool"
-    , sp
-    , tp
-    , show ty
-    ]
-    "" >>= trc
-  return ()
+  m1 <- readMetaData tp
+  m2 <- filterMetaData ty <$> getExifTool sp
+
+  -- new exif data wins
+  writeMetaData tp (m2 <> m1)
 
 runImgAction c = do
   trc $ "runImgAction: not implemented: " ++ show c

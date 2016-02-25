@@ -1,4 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
 module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
@@ -6,12 +5,10 @@ module Catalog.System.Convert
 where
 
 import Catalog.Cmd
-import Control.Monad.RWSErrorIO
 import Data.ImgAction
-import Text.Regex.XMLSchema.Generic
+import Data.Prim.Prelude
 
 -- ----------------------------------------
-
 
 getImageSize    :: FilePath -> Cmd Geo
 getImageSize f =
@@ -24,12 +21,15 @@ execImageSize f
 parseGeo :: String -> Cmd Geo
 parseGeo s =
   build $
-  matchSubex "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*" s
+  matchSubexRE regexGeo s
   where
     build [("w",w),("h",h)]
       = return (read w, read h)
     build _
       = abort $ "parseGeo: no parse: " ++ s
+
+regexGeo :: Regex
+regexGeo = parseRegexExt "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*"
 
 -- ----------------------------------------
 

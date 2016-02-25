@@ -1,14 +1,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Data.MetaData
 where
 
 import           Control.Lens
-import           Control.Monad.Except
+import           Control.Lens.Util
+import           Control.Monad
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Strict as HM
 import           Data.Prim.Name
@@ -25,8 +24,9 @@ newtype MetaData = MD J.Object
 deriving instance Show MetaData
 
 instance Monoid MetaData where
-  mempty                = MD HM.empty
+  mempty                = emptyMetaData
   MD m1 `mappend` MD m2 = MD $ m1 `HM.union` m2
+  -- the left map entries are prefered
 
 instance ToJSON MetaData where
   toJSON (MD m) = J.toJSON [m]
@@ -36,6 +36,16 @@ instance FromJSON MetaData where
     case V.length v of
       1 -> J.withObject "MetaData" (return . MD) (V.head v)
       _ -> mzero
+
+emptyMetaData :: MetaData
+emptyMetaData = MD HM.empty
+
+nullMetaData :: MetaData -> Bool
+nullMetaData (MD m) = HM.null m
+
+-- ----------------------------------------
+--
+-- MetaData lenses
 
 metaDataAt :: Name -> Lens' MetaData Text
 metaDataAt key = md2obj . at (key ^. name2text) . val2text
@@ -47,6 +57,7 @@ metaDataAt key = md2obj . at (key ^. name2text) . val2text
     val2text = iso totext fromtext
       where
         totext (Just (J.String t)) = t
+        totext (Just (J.Number n)) = (show n) ^. isoStringText
         totext _                   = ""
 
         fromtext t

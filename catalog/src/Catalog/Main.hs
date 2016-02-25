@@ -20,7 +20,10 @@ import           Data.ImageTree
 import           Data.RefTree
 import qualified System.Posix as X
 import Catalog.System.Convert
+import Catalog.System.ExifTool
 import Data.ImgAction
+import Data.MetaData
+
 {-}
 import           Catalog.FilePath
 import qualified Data.Aeson as J

@@ -6,6 +6,10 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Catalog.Cmd
+       ( module Catalog.Cmd
+       , module Control.Monad.RWSErrorIO
+       , module Control.Monad.Except
+       )
 where
 
 import           Control.Lens
@@ -14,14 +18,13 @@ import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
-import Data.ImgAction
-import qualified Data.List as L
+import           Data.ImgAction
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
+import           Data.Prim.Prelude
 import           Data.RefTree
-import           Data.Set (Set)
-import           System.FilePath -- ((</>))
+
 {-}
 import           Catalog.FilePath
 import           Control.Applicative
@@ -36,7 +39,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Prim.CheckSum
-import Data.ImageTree
+import           Data.ImageTree
 import           Data.Prim.TimeStamp
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
@@ -410,7 +413,7 @@ listImages = formatImages <$> listImages'
     formatImages :: [(Path, [Name])] -> String
     formatImages = unlines . map (uncurry fmt)
       where
-        fmt p ns = show p ++ ": " ++ L.intercalate ", " (map show ns)
+        fmt p ns = show p ++ ": " ++ intercalate ", " (map show ns)
 
 -- ----------------------------------------
 --
@@ -425,7 +428,7 @@ toFilePath p = do
 fromFilePath :: FilePath -> Cmd Path
 fromFilePath f = do
   mp <- use theMountPath
-  when (not (mp `L.isPrefixOf` f)) $
+  when (not (mp `isPrefixOf` f)) $
     abort $ "fromFilePath: not a legal image path " ++ show f
   r' <- getTree rootRef >>= getImgName
   return $ consPath r' (readPath $ drop (length mp) f)
