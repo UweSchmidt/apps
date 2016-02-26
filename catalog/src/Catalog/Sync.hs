@@ -77,6 +77,7 @@ idSyncFS recursive i = getImgVal i >>= go
       | isDIR e = do
           trcObj i "idSyncFS: syncing image dir"
           (do syncDirCont recursive i
+              setDirSyncTime i
               checkEmptyDir i
             )
             `catchError`

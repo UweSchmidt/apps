@@ -41,21 +41,21 @@ module Data.Prim.Prelude
        )
 where
 
-import Data.Function
-import Control.Arrow
-import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.ByteString (ByteString)
+import           Control.Arrow
+import           Data.Aeson (ToJSON(..), FromJSON(..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
-import Data.List
-import Data.Map.Strict (Map)
-import Data.Maybe
-import Data.Set (Set)
-import Data.String (IsString(..))
-import Data.Text (Text)
-import Data.Vector (Vector)
-import System.FilePath
-import Text.Regex.XMLSchema.Generic
-import Text.Regex.XMLSchema.Generic.RegexParser
+import           Data.Function
+import           Data.List
+import           Data.Map.Strict (Map)
+import           Data.Maybe
+import           Data.Set (Set)
+import           Data.String (IsString(..))
+import           Data.Text (Text)
+import           Data.Vector (Vector)
+import           System.FilePath
+import           Text.Regex.XMLSchema.Generic
+import           Text.Regex.XMLSchema.Generic.RegexParser
 
 type LazyByteString = LB.ByteString
 

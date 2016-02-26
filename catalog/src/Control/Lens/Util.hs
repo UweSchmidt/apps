@@ -36,7 +36,6 @@ isoStringByteString :: Iso' String ByteString
 isoStringByteString = iso BU.fromString BU.toString
 
 
-
 -- a prism for filtering
 
 is :: (a -> Bool) -> Prism' a a

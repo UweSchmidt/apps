@@ -58,9 +58,9 @@ filePathConfig = map (first parseRegexExt) $
 
     baseName  = "[-._A-Za-z0-9]+"
     baseName' = "[-._A-Za-z0-9]+"
-    rawExt    = "[.](nef|NEF)"
+    rawExt    = "[.](nef|NEF||rw2|RW2)"
     imgExt    = "[.](jpp|JPG|gif|tiff|ppm|pgm|pbm)"
-    metaExt   = "[.](xmp|((nef|NEF|rw2|RW2|jpg|JPG)[.]dxo))"
+    metaExt   = "[.](xmp|((nef|NEF|rw2|RW2|jpg|JPG)[.]dop))"
     jsonExt   = "[.](json)"
     jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"

@@ -82,8 +82,8 @@ ccc = runCmd $ do
   loadImgStore "c1.json"
   saveImgStore ""
   listImages >>= io . putStrLn
-  cwListPaths >>= trc
-  cwListNames >>= trc
+  cwListPaths >>= io . putStrLn
+  cwListNames >>= io . putStrLn
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 
@@ -93,17 +93,19 @@ c2 = do
   cwRoot
   cwSyncFS
   saveImgStore ""
-  listImages >>= io . putStrLn
-  cwListPaths >>= trc
-  cwListNames >>= trc
+  listImages  >>= io . putStrLn
+  cwListPaths >>= io . putStrLn
+  cwListNames >>= io . putStrLn
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 
-c3 :: Cmd ()
-c3 = do
+c3 :: Cmd () -> Cmd ()
+c3 c = local (envTrc .~ False) $ do
   loadImgStore "c1.json"
   cwRoot
-  cwSyncFS
+  c
   saveImgStore "c1.json"
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
+
+runc c = runCmd (c3 c)

@@ -11,62 +11,69 @@ module Data.ImageTree
        , ImgPart
        , ImgType(..)
        , NameImgType
+       , ColEntry
        , mkEmptyImgRoot
-       , theParts
-       , theDirEntries
+       , mkImgRoot
+       , mkImgNode
+       , mkImgParts
+       , mkImgPart
        , emptyImg
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
-       , theImgRoot
-       , isImgCol
+       , emptyImgParts
        , isDIR
        , isIMG
        , isROOT
        , isCOL
        , nullImgDir
-       , mkImgRoot
-       , mkImgNode
-       , removeImgNode
-       , emptyImgParts
-       , mkImgParts
        , isoImgParts
-       , mkImgPart
+       , theParts
        , theImgName
        , theImgType
        , theImgTimeStamp
        , theImgCheckSum
+       , theDir
+       , theDirEntries
+       , theDirSyncTime
        , theRootImgDir
        , theRootImgCol
+       , theImgRoot
+       , theImgCol
+       , theColMetaData
+       , theColEntries
+       , theColSyncTime
+       , theColColRef
+       , theColImgRef
+       , removeImgNode
        )
 where
 
 import           Control.Lens hiding ((.=))
 import           Control.Lens.Util
 import           Control.Monad.Except
-import           Data.Aeson (ToJSON(..), FromJSON(..)
-                            , (.:), (.=)
+import           Data.Aeson ( (.:), (.=), (.:?), (.!=)
                             , object, withObject
                             )
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import           Data.MetaData
 import           Data.Prim.CheckSum
 import           Data.Prim.Name
 import           Data.Prim.PathId -- change this to ObjId later
+import           Data.Prim.Prelude
 import           Data.Prim.TimeStamp
 import           Data.RefTree
-import           Data.Set (Set)
 import qualified Data.Set as S
--- import           Data.Maybe
---import           Data.Prim.Path
 
 -- ----------------------------------------
 
 
 data ImgNode' ref = IMG  !ImgParts
-                  | DIR  !(Set ref)
+                  | DIR  !(Set ref) !TimeStamp
                   | ROOT !ref !ref
-                  | COL
+                  | COL  !MetaData ![ColEntry] !TimeStamp
+
+-- ----------------------------------------
 
 deriving instance (Show ref) => Show (ImgNode' ref)
 
@@ -75,17 +82,21 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     [ "ImgNode"     .= ("IMG" :: String)
     , "parts"       .= pm
     ]
-  toJSON (DIR rs) = object
+  toJSON (DIR rs ts) = object
     [ "ImgNode"     .= ("DIR" :: String)
     , "children"    .= S.toList rs
+    , "sync"        .= ts
     ]
   toJSON (ROOT rd rc) = object
     [ "ImgNode"     .= ("ROOT" :: String)
     , "archive"     .= rd
     , "collections" .= rc
     ]
-  toJSON (COL) = object
+  toJSON (COL md es ts) = object
     [ "ImgNode"    .= ("COL" :: String)
+    , "metadata"   .= md
+    , "entries"    .= es
+    , "sync"       .= ts
     ]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
@@ -93,18 +104,21 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
     do t <- o .: "ImgNode"
        case t :: String of
          "IMG" ->
-           IMG <$> o .: "parts"
+           IMG  <$> o .: "parts"
          "DIR" ->
-           DIR <$> (S.fromList <$> o .: "children")
+           DIR  <$> (S.fromList <$> o .: "children")
+                <*> o .:? "sync" .!= zeroTimeStamp
          "ROOT" ->
            ROOT <$> o .: "archive"
                 <*> o .: "collections"
          "COL" ->
-           return COL
+           COL  <$> o .: "metadata"
+                <*> o .: "entries"
+                <*> o .: "sync"
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
-emptyImgDir = DIR S.empty
+emptyImgDir = DIR S.empty zeroTimeStamp
 
 emptyImg :: ImgNode' ref
 emptyImg = IMG emptyImgParts
@@ -113,7 +127,7 @@ emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
 
 emptyImgCol :: ImgNode' ref
-emptyImgCol = COL
+emptyImgCol = COL emptyMetaData [] zeroTimeStamp
 
 -- image node optics
 
@@ -124,12 +138,19 @@ theParts
                   _     -> Left  x
               )
 
-theDirEntries :: Prism' (ImgNode' ref) (Set ref)
-theDirEntries =
-  prism DIR (\ x -> case x of
-                DIR s -> Right s
-                _     -> Left  x
+theDir :: Prism' (ImgNode' ref) (Set ref, TimeStamp)
+theDir =
+  prism (uncurry DIR)
+        (\ x -> case x of
+                DIR s t -> Right (s, t)
+                _       -> Left  x
           )
+
+theDirEntries :: Traversal' (ImgNode' ref) (Set ref)
+theDirEntries = theDir . _1
+
+theDirSyncTime :: Traversal' (ImgNode' ref) TimeStamp
+theDirSyncTime = theDir . _2
 
 theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
 theImgRoot
@@ -145,13 +166,22 @@ theRootImgDir = theImgRoot . _1
 theRootImgCol :: Traversal' (ImgNode' ref) ref
 theRootImgCol = theImgRoot . _2
 
-isImgCol :: Prism' (ImgNode' ref) ()
-isImgCol
-  = prism (const COL)
+theImgCol :: Prism' (ImgNode' ref) (MetaData, [ColEntry], TimeStamp)
+theImgCol
+  = prism (\ (x1, x2, x3) -> COL x1 x2 x3)
           (\ x -> case x of
-              COL -> Right ()
-              _   -> Left x
+              COL x1 x2 x3 -> Right (x1, x2, x3)
+              _            -> Left x
           )
+
+theColMetaData :: Traversal' (ImgNode' ref) MetaData
+theColMetaData = theImgCol . _1
+
+theColEntries :: Traversal' (ImgNode' ref) [ColEntry]
+theColEntries = theImgCol . _2
+
+theColSyncTime :: Traversal' (ImgNode' ref) TimeStamp
+theColSyncTime = theImgCol . _3
 
 isDIR :: ImgNode' ref -> Bool
 isDIR DIR{}  = True
@@ -170,7 +200,7 @@ isCOL COL{} = True
 isCOL _     = False
 
 nullImgDir :: ImgNode' ref -> Bool
-nullImgDir (DIR s) = S.null s
+nullImgDir (DIR s _) = S.null s
 nullImgDir _       = True
 
 -- ----------------------------------------
@@ -262,19 +292,22 @@ data ImgPart     = IP !Name !ImgType !TimeStamp !CheckSum
 deriving instance Show ImgPart
 
 instance ToJSON ImgPart where
-  toJSON (IP n t s c) = object
+  toJSON (IP n t s c) = object $
     [ "Name"      .= n
     , "ImgType"   .= t
     , "TimeStamp" .= s
-    , "CheckSum"  .= c
     ]
+    ++
+    if c == zeroCheckSum
+    then []
+    else ["CheckSum"  .= c]
 
 instance FromJSON ImgPart where
   parseJSON = withObject "ImgPart" $ \ o ->
     IP <$> o .: "Name"
        <*> o .: "ImgType"
        <*> o .: "TimeStamp"
-       <*> o .: "CheckSum"
+       <*> o .:? "CheckSum" .!= zeroCheckSum
 
 mkImgPart :: Name -> ImgType -> ImgPart
 mkImgPart n t = IP n t zeroTimeStamp zeroCheckSum
@@ -307,5 +340,52 @@ instance ToJSON ImgType where
 
 instance FromJSON ImgType where
   parseJSON o = read <$> parseJSON o
+
+-- ----------------------------------------
+
+data ColEntry = ImgRef ObjId Name
+              | ColRef ObjId
+
+deriving instance Eq   ColEntry
+deriving instance Ord  ColEntry
+deriving instance Show ColEntry
+
+instance ToJSON ColEntry where
+  toJSON (ImgRef i n) = object
+    [ "ColEntry"  .= ("IMG" :: String)
+    , "ref"       .= i
+    , "part"      .= n
+    ]
+  toJSON (ColRef i) = object
+    [ "ColEntry"  .= ("COL" :: String)
+    , "ref"       .= i
+    ]
+
+instance FromJSON ColEntry where
+  parseJSON = withObject "ColEntry" $ \ o ->
+    do t <- o .: "ColEntry"
+       case t :: String of
+         "IMG" ->
+           ImgRef <$> o .: "ref"
+                  <*> o .: "part"
+         "COL" ->
+           ColRef <$> o .: "ref"
+         _ -> mzero
+
+theColImgRef :: Prism' ColEntry (ObjId, Name)
+theColImgRef =
+  prism (uncurry ImgRef)
+        (\ x -> case x of
+            ImgRef i n -> Right (i, n)
+            _          -> Left  x
+        )
+
+theColColRef :: Prism' ColEntry ObjId
+theColColRef =
+  prism ColRef
+        (\ x -> case x of
+            ColRef i -> Right i
+            _        -> Left  x
+        )
 
 -- ----------------------------------------

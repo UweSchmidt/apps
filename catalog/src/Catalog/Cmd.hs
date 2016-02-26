@@ -19,12 +19,14 @@ import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
 import           Data.ImgAction
+import           Data.MetaData
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
 import           Data.Prim.Prelude
+import           Data.Prim.TimeStamp
 import           Data.RefTree
-
+import System.Directory (removeFile)
 {-}
 import           Catalog.FilePath
 import           Control.Applicative
@@ -39,7 +41,6 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Prim.CheckSum
-import           Data.ImageTree
 import           Data.Prim.TimeStamp
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
@@ -160,7 +161,7 @@ runDry msg cmd = do
     then do
       logg (^. envDryRun) "dry-run" msg
     else do
-      trc $ msg
+      verbose $ msg
       cmd
 
 -- ----------------------------------------
@@ -179,7 +180,7 @@ id2type i = getImgVal i >>= go
       e ^.. ( theParts      . to (const "IMG")  <>
               theDirEntries . to (const "DIR")  <>
               theImgRoot    . to (const "Root") <>
-              isImgCol      . to (const "COL")
+              theImgCol      . to (const "COL")
             )
 
 -- ----------------------------------------
@@ -215,6 +216,11 @@ adjustImg f i =
 adjustDirEntries :: (Set ObjId -> Set ObjId) -> ObjId -> Cmd ()
 adjustDirEntries f i =
   theImgTree . theNodeVal i . theDirEntries %= f
+
+setDirSyncTime :: ObjId -> Cmd ()
+setDirSyncTime i = do
+  t <- now
+  theImgTree . theNodeVal i . theDirSyncTime .= t
 
 {-}
 -- | process all image nodes with a monadic action
@@ -290,7 +296,7 @@ foldMapTree rootf dirf imgf colf i0 = dt >>= process
                   r3 <- go rc
                   return (r1 <> r2 <> r3)
               | isCOL e -> do
-                  let c = e ^. isImgCol
+                  let c = e ^. theImgCol
                   r1 <- colf i c
                   r2 <- return mempty        -- TODO: extend
                   return (r1 <> r2)
@@ -308,13 +314,13 @@ foldMapTree :: Monoid r =>
                (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
                (ObjId -> Set ObjId              -> Cmd r) ->  -- fold an image dir node
                (ObjId -> ImgParts               -> Cmd r) ->  -- fold a single image
-               (ObjId -> ()                     -> Cmd r) ->  -- fold a collection
+               (ObjId -> MetaData -> [ColEntry] -> Cmd r) ->  -- fold a collection
                (ObjId                           -> Cmd r)
 foldMapTree = foldMTree rootC dirC colC
   where
     rootC r1 r2 r3 = r1 <> r2 <> r3
     dirC  r1 rs    = r1 <> mconcat rs
-    colC  r1       = r1
+    colC  r1 rs    = r1 <> mconcat rs
 
 -- | A general fold for an image tree
 --
@@ -324,11 +330,11 @@ foldMapTree = foldMTree rootC dirC colC
 
 foldMTree :: (r1 -> r -> r -> r) ->                          -- combining ROOT res
              (r2 -> [r]    -> r) ->                          -- combining DIR  res
-             (r3           -> r) ->                          -- combining COL  res
+             (r3 -> [r]    -> r) ->                          -- combining COL  res
              (ObjId -> (ObjId, ObjId)         -> Cmd r1) ->  -- fold the root node
              (ObjId -> Set ObjId              -> Cmd r2) ->  -- fold an image dir node
              (ObjId -> ImgParts               -> Cmd r ) ->  -- fold a single image
-             (ObjId -> ()                     -> Cmd r3) ->  -- fold a collection
+             (ObjId -> MetaData -> [ColEntry] -> Cmd r3) ->  -- fold a collection
              (ObjId                           -> Cmd r)
 foldMTree rootC dirC      colC
           rootf dirf imgf colf i0 = dt >>= process
@@ -352,16 +358,21 @@ foldMTree rootC dirC      colC
                   r1 <- rootf i r
                   return (rootC r1 r2 r3)
               | isCOL e -> do
-                  let c = e ^. isImgCol
-                  r1 <- colf i c
-                  return (colC r1)
+                  let (md, cs, _ts) = e ^. theImgCol
+                  r2 <- mapM go $ cs ^.. traverse . theColColRef
+                  r1 <- colf i md cs
+                  return (colC r1 r2)
               | otherwise ->
                   abort $ "foldTree: illegal node"
+
+-- ----------------------------------------
 
 invImages :: Cmd ()
 invImages = do
   _r <- use (theImgTree . rootRef)
   return ()
+
+-- ----------------------------------------
 
 remRec :: ObjId -> Cmd ()
 remRec =
@@ -382,10 +393,38 @@ remRec =
       rmImgNode i
 
     -- do nothing with a collection node
-    colF _i _ =
+    colF _i _ _ =
       return ()
 
+remJson :: ObjId -> Cmd ()
+remJson =
+  foldMapTree rootF dirF imgF colF
+  where
+    rootF _ _   = return ()
+    colF  _ _ _ = return ()
 
+    -- in dirs update sync time
+    dirF  i _ = setDirSyncTime i
+
+    -- remove the json meta data files
+    imgF  i ps = do
+      path <-  id2path i
+      runDry ("remove JSON metadata files for " ++ show (show path)) $ do
+        mapM_ (rmj path) (ps ^. isoImgParts)
+        adjustImg filterJson i
+      where
+        rmj path part
+          | part ^. theImgType == IMGjson = do
+              fp <- toFilePath (substPathName (part ^. theImgName) path)
+              io $ removeFile fp
+          | otherwise =
+              return ()
+
+        filterJson pts =
+          pts & isoImgParts %~ filter (\ p -> p ^. theImgType /= IMGjson)
+
+
+-- ----------------------------------------
 
 listNames :: ObjId -> Cmd String
 listNames r =
@@ -396,10 +435,10 @@ listNames r =
 
     rootC n x1 x2 = n : ind (x1 ++ x2)
     dirC  n xs    = n : ind (concat xs)
-    colC  n       = n : []
+    colC  n xs    = n : ind (concat xs)
     rootF i _     = gn i
     dirF  i _     = gn i
-    colF  i _     = gn i
+    colF  i _ _   = gn i
     imgF i ps     = do
       n <- gn i
       return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
@@ -408,9 +447,10 @@ listPaths' :: ObjId -> Cmd [Path]
 listPaths' r =
   foldMapTree rootf dirf imgf colf r
   where
-    rootf i _ = (:[]) <$> id2path i
-    dirf      = rootf
-    colf      = rootf
+    f i       = (:[]) <$> id2path i
+    rootf i _ = f i
+    dirf  i _ = f i
+    colf  i _ _  = f i
     imgf i ps = do
       pp <- getImgParent i >>= id2path
       r1 <- rootf i ps

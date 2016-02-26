@@ -98,7 +98,7 @@ logg enabled level msg
                  else tell . LogMsg $ fmt
     where
       ind  = 10
-      lln  = 80
+      lln  = 128
       inds = replicate ind ' '
       fmt  = take ind (level ++ ":" ++ inds) ++ msg
       fmt' = unlines $

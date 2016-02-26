@@ -3,12 +3,12 @@
 module Data.Prim.TimeStamp
 where
 
-import           Control.Lens hiding (children)
+import           Control.Lens
+import           Control.Lens.Util
 import           Control.Monad (mzero)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as J
-import           Data.Aeson (ToJSON, FromJSON, toJSON)
-import qualified Data.Text as T
+import           Data.Prim.Prelude
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
 
@@ -35,8 +35,10 @@ instance ToJSON TimeStamp where
   toJSON = toJSON . view timeStamp2string
 
 instance FromJSON TimeStamp where
-  parseJSON (J.String t) = return ((view $ from timeStamp2string) . T.unpack $ t)
-  parseJSON _            = mzero
+  parseJSON (J.String t) =
+    return (t ^. from isoStringText . from timeStamp2string)
+  parseJSON _ =
+    mzero
 
 now :: MonadIO m => m TimeStamp
 now = liftIO (TS <$> X.epochTime)

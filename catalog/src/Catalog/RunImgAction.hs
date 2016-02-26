@@ -56,16 +56,18 @@ runImgAction (ActSeq c1 c2) =
   runImgAction c1 >> runImgAction c2
 
 runImgAction c@(GenCopy i t s ar w h) = catchAll $ do
-  trc $ "runImgAction: " ++ show c
   p  <- id2path i
+  verbose $ "generate image copy ("
+            ++ show w ++ "x" ++ show h
+            ++ ") for image " ++ show (show p)
   tp <- toFilePath (substPathName t p)
   sp <- toFilePath (substPathName s p)
   createImageCopy ar (w, h) tp sp
   return ()
 
 runImgAction c@(GenMeta i t s ty) = do
-  trc $ "runImgAction: " ++ show c
   p  <- id2path i
+  verbose $ "collect metadata for image " ++ show (show p)
   tp <- toFilePath (substPathName t p)
   sp <- toFilePath (substPathName s p)
   m1 <- readMetaData tp
