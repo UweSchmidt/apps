@@ -328,7 +328,8 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 type NameImgType = (Name, ImgType)
 data ImgType     = IMGraw    | IMGmeta   | IMGjson  | IMGjpg | IMGimg | IMGcopy
-                 | IMGimgdir | IMGjpgdir | IMGother | IMGboring
+
+    | IMGimgdir | IMGjpgdir | IMGother | IMGboring
 
 deriving instance Eq   ImgType
 deriving instance Ord  ImgType

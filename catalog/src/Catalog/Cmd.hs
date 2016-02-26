@@ -304,6 +304,37 @@ foldMapTree rootf dirf imgf colf i0 = dt >>= process
                   return mempty
 -- -}
 
+type Act r = ObjId -> Cmd r
+
+foldMT :: (         ObjId -> ImgParts                            -> Cmd r) ->  -- IMG
+          (Act r -> ObjId -> Set ObjId              -> TimeStamp -> Cmd r) ->  -- DIR
+          (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
+          (Act r -> ObjId -> MetaData -> [ColEntry] -> TimeStamp -> Cmd r) ->  -- COL
+           Act r
+foldMT imgA dirA' rootA' colA' i0 = do
+  go i0
+  where
+    dirA  = dirA'  go
+    rootA = rootA' go
+    colA  = colA'  go
+    go i  = do
+      trcObj i $ "foldMT"
+      n <- getTree (theNode i)
+      case n ^. nodeVal of
+        e | isIMG e ->
+            imgA i (e ^. theParts)
+          | isDIR e ->
+              let (es, ts) = e ^. theDir in
+              dirA i es ts
+          | isROOT e ->
+              let (dir, col) = e ^. theImgRoot in
+              rootA i dir col
+          | isCOL e ->
+              let (md, es, ts) = e ^. theImgCol in
+              colA i md es ts
+          | otherwise ->
+              abort "foldMT: illegal argument"
+
 -- | A general foldMap for an image tree
 --
 -- 1. all children are processed by a monadic action
@@ -374,55 +405,75 @@ invImages = do
 
 -- ----------------------------------------
 
-remRec :: ObjId -> Cmd ()
-remRec =
-  foldMapTree rootF dirF imgF colF
+rmR :: ObjId -> Cmd ()
+rmR = foldMT imgA dirA rootA colA
   where
-    -- do nothing with the root node
-    rootF _i _ =
-      return ()
+    imgA i _p = rmImgNode i
 
-    -- remove the directory, as long as it's not the top image dir
-    dirF i _ = do
-      pe <- getImgParent i >>= getImgVal
-      when (not $ isROOT pe) $
+    dirA go i es _ts = do
+      mapM_ go (es ^. isoSetList)               -- process subdirs first
+      pe <- getImgParent i >>= getImgVal        -- remode dir node
+      when (not $ isROOT pe) $                  -- if it's not the top dir
         rmImgNode i
 
-    -- remove the image node
-    imgF i _ =
-      rmImgNode i
+    rootA go _i dir col =
+      go dir >> go col                          -- recurse into dir and col hirachy
+                                                -- but don't change root
+    colA go i _md cs _ts = do
+      mapM_ go (cs ^.. traverse . theColColRef)
+      pe <- getImgParent i >>= getImgVal        -- remove collection node
+      when (not $ isROOT pe) $                  -- if it's not the top collection
+        rmImgNode i
 
-    -- do nothing with a collection node
-    colF _i _ _ =
-      return ()
+-- ----------------------------------------
 
-remJson :: ObjId -> Cmd ()
-remJson =
-  foldMapTree rootF dirF imgF colF
+rmGenFiles :: (ImgPart -> Bool) -> ObjId -> Cmd ()
+rmGenFiles pp =
+  foldMT imgA dirA rootA colA
   where
-    rootF _ _   = return ()
-    colF  _ _ _ = return ()
-
-    -- in dirs update sync time
-    dirF  i _ = setDirSyncTime i
-
-    -- remove the json meta data files
-    imgF  i ps = do
+    imgA i ps = do                              -- remove the generated file(s)
       path <-  id2path i
-      runDry ("remove JSON metadata files for " ++ show (show path)) $ do
+      runDry ("remove metadata or image copy files for " ++ show (show path)) $ do
         mapM_ (rmj path) (ps ^. isoImgParts)
         adjustImg filterJson i
       where
         rmj path part
-          | part ^. theImgType == IMGjson = do
+          | pp part = do
               fp <- toFilePath (substPathName (part ^. theImgName) path)
               io $ removeFile fp
           | otherwise =
               return ()
 
         filterJson pts =
-          pts & isoImgParts %~ filter (\ p -> p ^. theImgType /= IMGjson)
+          pts & isoImgParts %~ filter (not . pp)
 
+    dirA go _i es _ts =                         -- recurse into dir entries
+      mapM_ go (es ^. isoSetList)
+
+    rootA go _i dir _col =                      -- recurse only into dir hierachy
+      go dir
+
+    colA _go _i _md _es _ts =                   -- noop for collections
+      return ()
+
+rmJSON :: ObjId -> Cmd ()
+rmJSON = rmGenFiles isJSON
+  where
+    isJSON p = p ^. theImgType == IMGjson
+
+rmImgCopies :: ObjId -> Cmd ()
+rmImgCopies = rmGenFiles isCopy
+  where
+    isCopy p = p ^. theImgType == IMGcopy
+
+rmImgCopy :: Geo -> ObjId -> Cmd ()
+rmImgCopy (w, h) = rmGenFiles isCopy
+  where
+    isCopy p =
+      p ^. theImgType == IMGcopy
+      &&
+      match (".*[.]" ++ show w ++ "x" ++ show h ++ "[.]jpg")
+            (p ^. theImgName . name2string)
 
 -- ----------------------------------------
 
