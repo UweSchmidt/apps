@@ -70,7 +70,7 @@ idSyncFS recursive i = getImgVal i >>= go
     go e
       | isIMG e = do
           trcObj i "idSyncFS: syncing image"
-          p  <- id2path i
+          p  <- objid2path i
           ps <- collectImgCont i
           syncImg i p ps
 
@@ -97,9 +97,9 @@ syncDirCont :: Bool -> ObjId -> Cmd ()
 syncDirCont recursive i = do
   trcObj i "syncDirCont: syncing entries in dir "
   (subdirs, imgfiles) <- collectDirCont i
-  p  <- id2path i
+  p  <- objid2path i
 
-  cont <- id2contNames i
+  cont <- objid2contNames i
   let lost = filter (`notElem` (subdirs ++ (map (fst . snd . head) imgfiles))) cont
 
   -- remove lost stuff
@@ -142,7 +142,7 @@ collectImgCont i = do
 collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
 collectDirCont i = do
   trcObj i "collectDirCont: group entries in dir "
-  fp <- id2path i >>= toFilePath
+  fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
   trc $ "collectDirCont: entries found " ++ show es
 
@@ -194,7 +194,7 @@ syncImg ip pp xs = do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
     else do
-      p <- id2path i
+      p <- objid2path i
       sync $ "no raw or jpg found for " ++ show (show p) ++ ", parts: " ++ show xs
       rmImgNode i
   where
@@ -226,7 +226,7 @@ checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
   nv <- getImgVal i
   when (nullImgDir nv) $ do
-    p <- id2path i
+    p <- objid2path i
     sync $ "empty image dir ignored " ++ show (show p)
     rmImgNode i
 

@@ -7,11 +7,13 @@
 
 module Catalog.Cmd
        ( module Catalog.Cmd
+       , module Catalog.Cmd.Types
        , module Control.Monad.RWSErrorIO
        , module Control.Monad.Except
        )
 where
 
+import Catalog.Cmd.Types
 import           Control.Lens
 import           Control.Lens.Util
 import           Control.Monad.Except
@@ -27,6 +29,7 @@ import           Data.Prim.Prelude
 import           Data.Prim.TimeStamp
 import           Data.RefTree
 import System.Directory (removeFile)
+
 {-}
 import           Catalog.FilePath
 import           Control.Applicative
@@ -44,60 +47,7 @@ import           Data.Prim.CheckSum
 import           Data.Prim.TimeStamp
 import           System.Posix (FileStatus)
 import qualified System.Posix as X
-import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
 -- -}
-
--- ----------------------------------------
-
-data Env = Env
-  { _copyGeo :: [CopyGeo]
-  , _metaSrc :: [ImgType]
-  , _trc     :: Bool
-  , _verbose :: Bool
-  , _dryRun  :: Bool
-  }
-
-type CopyGeo = ((Int, Int), AspectRatio)
-
-initEnv :: Env
-initEnv = Env
-  { _copyGeo = [ ((1400, 1050), Pad)
-               , (( 160,  160), Pad)
-               , (( 160,  120), Fix)
-               ]
-  , _metaSrc = [IMGraw, IMGimg, IMGmeta]
-  , _trc     = True
-  , _verbose = True
-  , _dryRun  = False
-  }
-
-envCopyGeo :: Lens' Env [CopyGeo]
-envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
-
-envMetaSrc :: Lens' Env [ImgType]
-envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
-
-envTrc :: Lens' Env Bool
-envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)
-
-envVerbose :: Lens' Env Bool
-envVerbose k e = (\ new -> e {_verbose = new}) <$> k (_verbose e)
-
-envDryRun :: Lens' Env Bool
-envDryRun k e = (\ new -> e {_dryRun = new}) <$> k (_dryRun e)
-
-deriving instance Show Env
-
-instance Config Env where
-  traceOn   e = e ^. envTrc
-  verboseOn e = e ^. envVerbose
-
--- ----------------------------------------
-
-type Cmd = Action Env ImgStore
-
-runCmd :: Cmd a -> IO (Either Msg a, ImgStore, Log)
-runCmd cmd = runAction cmd initEnv emptyImgStore
 
 -- ----------------------------------------
 
@@ -124,16 +74,16 @@ getTree :: Getting a ImgTree a -> Cmd a
 getTree l = use (theImgTree . l)
 
 getImgName :: ObjId -> Cmd Name
-getImgName i = use (theImgTree . theNode i . nodeName)
+getImgName i = getTree (theNode i . nodeName)
 
 getImgParent :: ObjId -> Cmd ObjId
-getImgParent i = use (theImgTree . theNode i . parentRef)
+getImgParent i = getTree (theNode i . parentRef)
 
 getImgVal :: ObjId -> Cmd ImgNode
-getImgVal i = use (theImgTree . theNode i . nodeVal)
+getImgVal i = getTree (theNode i . nodeVal)
 
 getImgVals :: ObjId -> Getting a ImgNode a -> Cmd a
-getImgVals i l = use (theImgTree . theNode i . nodeVal . l)
+getImgVals i l = getTree (theNode i . nodeVal . l)
 
 withCWN :: (ObjId -> ImgTree -> Cmd a) -> Cmd a
 withCWN cmd
@@ -167,14 +117,14 @@ runDry msg cmd = do
 -- ----------------------------------------
 
 -- | ref to path
-id2path :: ObjId -> Cmd Path
-id2path i = dt >>= go
+objid2path :: ObjId -> Cmd Path
+objid2path i = dt >>= go
   where
     go t = return (refPath i t)
 
 -- | ref to type
-id2type :: ObjId -> Cmd String
-id2type i = getImgVal i >>= go
+objid2type :: ObjId -> Cmd String
+objid2type i = getImgVal i >>= go
   where
     go e = return $ concat $
       e ^.. ( theParts      . to (const "IMG")  <>
@@ -432,7 +382,7 @@ rmGenFiles pp =
   foldMT imgA dirA rootA colA
   where
     imgA i ps = do                              -- remove the generated file(s)
-      path <-  id2path i
+      path <-  objid2path i
       runDry ("remove metadata or image copy files for " ++ show (show path)) $ do
         mapM_ (rmj path) (ps ^. isoImgParts)
         adjustImg filterJson i
@@ -456,16 +406,19 @@ rmGenFiles pp =
     colA _go _i _md _es _ts =                   -- noop for collections
       return ()
 
+-- remove all JSON files containing metadata
 rmJSON :: ObjId -> Cmd ()
 rmJSON = rmGenFiles isJSON
   where
     isJSON p = p ^. theImgType == IMGjson
 
+-- remove all generated image copies
 rmImgCopies :: ObjId -> Cmd ()
 rmImgCopies = rmGenFiles isCopy
   where
     isCopy p = p ^. theImgType == IMGcopy
 
+-- remove image copies of a given geometry
 rmImgCopy :: Geo -> ObjId -> Cmd ()
 rmImgCopy (w, h) = rmGenFiles isCopy
   where
@@ -478,7 +431,35 @@ rmImgCopy (w, h) = rmGenFiles isCopy
 -- ----------------------------------------
 
 listNames :: ObjId -> Cmd String
-listNames r =
+listNames i0 =
+  unlines <$> foldMT imgA dirA rootA colA i0
+  where
+    nm i = show <$> getImgName i
+    ind n xs = n : map ("  " ++) xs
+
+    imgA i ps = do
+      n <- nm i
+      return $
+        ind n (ps ^.. isoImgParts . traverse . theImgName . name2string)
+
+    dirA go i es ts = do
+      n  <- nm i
+      xs <- mapM go (es ^. isoSetList)
+      return $
+        ind n (concat xs)
+
+    rootA go i dir col = do
+      n   <- nm i
+      dns <- go dir
+      cns <- go col
+      return $
+        ind n (dns ++ cns)
+
+    colA go i md es ts =
+      undefined
+
+listNames' :: ObjId -> Cmd String
+listNames' r =
   unlines <$> foldMTree rootC dirC colC rootF dirF imgF colF r
   where
     gn i = show <$> getImgName i
@@ -493,17 +474,21 @@ listNames r =
     imgF i ps     = do
       n <- gn i
       return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
-
+{-}
+listPaths' :: ObjId -> Cmd [Path]
+listPaths' i =
+  foldMTree rootC dirC colC
+  -- -}
 listPaths' :: ObjId -> Cmd [Path]
 listPaths' r =
   foldMapTree rootf dirf imgf colf r
   where
-    f i       = (:[]) <$> id2path i
+    f i       = (:[]) <$> objid2path i
     rootf i _ = f i
     dirf  i _ = f i
     colf  i _ _  = f i
     imgf i ps = do
-      pp <- getImgParent i >>= id2path
+      pp <- getImgParent i >>= objid2path
       r1 <- rootf i ps
       return ( r1
                ++
@@ -521,7 +506,7 @@ listImages' = do
   where
     listImg :: ObjId -> ImgParts -> Cmd [(Path, [Name])]
     listImg i ps = do
-      p <- id2path i
+      p <- objid2path i
       let pns = ps ^.. isoImgParts . traverse . theImgName
       return [(p, pns)]
 
@@ -552,8 +537,8 @@ fromFilePath f = do
   return $ consPath r' (readPath $ drop (length mp) f)
 
 {-}
-id2contNames :: ObjId -> Cmd [Name]
-id2contNames i = dt >>= go
+objid2contNames :: ObjId -> Cmd [Name]
+objid2contNames i = dt >>= go
   where
     go t =
       return $
@@ -568,8 +553,8 @@ id2contNames i = dt >>= go
         name = to (\ r -> t ^. theNode r . nodeName . to (:[]))
 -- -}
 
-id2contNames :: ObjId -> Cmd [Name]
-id2contNames i = getImgVal i >>= go
+objid2contNames :: ObjId -> Cmd [Name]
+objid2contNames i = getImgVal i >>= go
   where
     go e
       | isIMG e =
@@ -625,14 +610,14 @@ cwDown d = do
   cwSetPath p
 
 cwType :: Cmd String
-cwType = we >>= id2type
+cwType = we >>= objid2type
 
 cwPath :: Cmd Path
-cwPath = we >>= id2path
+cwPath = we >>= objid2path
 
 -- | list names of elements in current node
 cwLs :: Cmd [Name]
-cwLs = we >>= id2contNames
+cwLs = we >>= objid2contNames
 
 -- | convert working node path to file system path
 cwFilePath :: Cmd FilePath
