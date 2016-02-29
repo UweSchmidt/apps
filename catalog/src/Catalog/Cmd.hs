@@ -201,23 +201,6 @@ processImages pf = process
 -- The image hierachy is traversed, but changes in the dir tree do not
 -- affect the traversal
 
-processImages :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
-processImages pf i0 = dt >>= process
-  where
-    process t = go i0
-      where
-        go i = do
-          -- trcObj i "processImgTree: process node "
-          case t ^. theNodeVal i of
-            e | isIMG e ->
-                  pf i (e ^. theParts)
-              | isDIR e ->
-                  mconcat <$> traverse go (e ^. theDirEntries . isoSetList)
-              | isROOT e ->
-                  go (e ^. theRootImgDir)
-              | otherwise ->
-                  return mempty
-
 {-}
 foldMapTree :: Monoid r =>
                (ObjId -> (ObjId, ObjId)         -> Cmd r) ->  -- fold the root node
@@ -252,7 +235,38 @@ foldMapTree rootf dirf imgf colf i0 = dt >>= process
                   return (r1 <> r2)
               | otherwise ->
                   return mempty
+
+processImages' :: Monoid r => (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages' pf i0 = dt >>= process
+  where
+    process t = go i0
+      where
+        go i = do
+          -- trcObj i "processImgTree: process node "
+          case t ^. theNodeVal i of
+            e | isIMG e ->
+                  pf i (e ^. theParts)
+              | isDIR e ->
+                  mconcat <$> traverse go (e ^. theDirEntries . isoSetList)
+              | isROOT e ->
+                  go (e ^. theRootImgDir)
+              | otherwise ->
+                  return mempty
+
 -- -}
+
+-- ----------------------------------------
+
+processImages :: Monoid r =>
+                 (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages imgA i0 =
+  foldMT imgA dirA rootA colA i0
+  where
+    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoSetList)
+    rootA go _i dir _col    = go dir
+    colA  _  _i _md _es _ts = return mempty
+
+-- ----------------------------------------
 
 type Act r = ObjId -> Cmd r
 
@@ -271,20 +285,18 @@ foldMT imgA dirA' rootA' colA' i0 = do
       trcObj i $ "foldMT"
       n <- getTree (theNode i)
       case n ^. nodeVal of
-        e | isIMG e ->
-            imgA i (e ^. theParts)
-          | isDIR e ->
-              let (es, ts) = e ^. theDir in
-              dirA i es ts
-          | isROOT e ->
-              let (dir, col) = e ^. theImgRoot in
-              rootA i dir col
-          | isCOL e ->
-              let (md, es, ts) = e ^. theImgCol in
-              colA i md es ts
-          | otherwise ->
-              abort "foldMT: illegal argument"
+        IMG pts ->
+          imgA i pts
+        DIR es ts ->
+          dirA i es ts
+        ROOT dir col ->
+          rootA i dir col
+        COL md es ts ->
+          colA i md es ts
 
+-- ----------------------------------------
+
+{-} OLD stuff
 -- | A general foldMap for an image tree
 --
 -- 1. all children are processed by a monadic action
@@ -345,7 +357,7 @@ foldMTree rootC dirC      colC
                   return (colC r1 r2)
               | otherwise ->
                   abort $ "foldTree: illegal node"
-
+-- -}
 -- ----------------------------------------
 
 invImages :: Cmd ()
@@ -434,7 +446,7 @@ listNames :: ObjId -> Cmd String
 listNames i0 =
   unlines <$> foldMT imgA dirA rootA colA i0
   where
-    nm i = show <$> getImgName i
+    nm i     = show <$> getImgName i
     ind n xs = n : map ("  " ++) xs
 
     imgA i ps = do
@@ -442,7 +454,7 @@ listNames i0 =
       return $
         ind n (ps ^.. isoImgParts . traverse . theImgName . name2string)
 
-    dirA go i es ts = do
+    dirA go i es _ts = do
       n  <- nm i
       xs <- mapM go (es ^. isoSetList)
       return $
@@ -455,9 +467,18 @@ listNames i0 =
       return $
         ind n (dns ++ cns)
 
-    colA go i md es ts =
-      undefined
+    colA go i _md es _ts = do
+      n   <- nm i
+      cns <- mapM go' es
+      return $
+        ind n (concat cns)
+      where
+        go' (ImgRef _i n) =
+          return [n ^. name2string]
+        go' (ColRef i') =
+          go i'
 
+{-}
 listNames' :: ObjId -> Cmd String
 listNames' r =
   unlines <$> foldMTree rootC dirC colC rootF dirF imgF colF r
@@ -474,27 +495,43 @@ listNames' r =
     imgF i ps     = do
       n <- gn i
       return (n : ind (ps ^. isoImgParts . traverse . theImgName . name2string . to (:[])))
-{-}
+-- -}
+-- {-}
 listPaths' :: ObjId -> Cmd [Path]
-listPaths' i =
-  foldMTree rootC dirC colC
-  -- -}
-listPaths' :: ObjId -> Cmd [Path]
-listPaths' r =
-  foldMapTree rootf dirf imgf colf r
+listPaths' i0 =
+  foldMT imgA dirA rootA colA i0
   where
-    f i       = (:[]) <$> objid2path i
-    rootf i _ = f i
-    dirf  i _ = f i
-    colf  i _ _  = f i
-    imgf i ps = do
-      pp <- getImgParent i >>= objid2path
-      r1 <- rootf i ps
-      return ( r1
-               ++
-               map (pp `snocPath`)
-                   (ps ^.. isoImgParts . traverse . theImgName)
-             )
+    imgA i ps = do
+      p  <- objid2path i
+      let pp = ps ^.. isoImgParts . traverse . theImgName . to (`substPathName` p)
+      return $
+        p : pp
+
+    dirA go i es _ts = do
+      p  <- objid2path i
+      pp <- mapM go (es ^. isoSetList)
+      return $
+        p : concat pp
+
+    rootA go i dir col = do
+      p  <- objid2path i
+      pd <- go dir
+      pc <- go col
+      return $
+        p : pd ++ pc
+
+    colA go i _md es _ts = do
+      p  <- objid2path i
+      pp <- mapM go' es
+      return $
+        p : concat pp
+      where
+        go' :: ColEntry -> Cmd [Path]
+        go' (ImgRef i' n') = do
+          ip <- objid2path i'
+          return [substPathName n' ip]
+        go' (ColRef i') =
+          go i'
 
 listPaths :: ObjId -> Cmd String
 listPaths i = (unlines . map show) <$> listPaths' i

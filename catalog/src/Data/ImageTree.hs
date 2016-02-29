@@ -5,13 +5,14 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Data.ImageTree
-       ( ImgNode', ImgNode
+       ( ImgNode'(..)
+       , ImgNode
        , ImgTree
        , ImgParts
        , ImgPart
        , ImgType(..)
        , NameImgType
-       , ColEntry
+       , ColEntry(..)
        , mkEmptyImgRoot
        , mkImgRoot
        , mkImgNode
