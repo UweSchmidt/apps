@@ -12,8 +12,6 @@ import           Catalog.Cmd
 import           Catalog.FilePath
 import           Control.Arrow ((***))
 import           Control.Lens
-import           Control.Monad.Except
-import           Control.Monad.RWSErrorIO
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import qualified Data.ByteString.Lazy.Char8 as L
@@ -77,7 +75,7 @@ idSyncFS recursive i = getImgVal i >>= go
       | isDIR e = do
           trcObj i "idSyncFS: syncing image dir"
           (do syncDirCont recursive i
-              setDirSyncTime i
+              setSyncTime i
               checkEmptyDir i
             )
             `catchError`
