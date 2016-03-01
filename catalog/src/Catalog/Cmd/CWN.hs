@@ -5,76 +5,26 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Catalog.Cmd
-       ( module Catalog.Cmd
-       , module Catalog.Cmd.Types
-       , module Catalog.Cmd.Basic
-       , module Catalog.Cmd.Fold
-       , module Catalog.Cmd.List
-       , module Catalog.Cmd.Remove
-       , module Control.Monad.RWSErrorIO
-       , module Control.Monad.Except
-       )
+module Catalog.Cmd.CWN
 where
 
 import           Catalog.Cmd.Basic
-import           Catalog.Cmd.Fold
-import           Catalog.Cmd.List
-import           Catalog.Cmd.Remove
 import           Catalog.Cmd.Types
 import           Control.Lens
+import           Control.Lens.Util
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
+import           Data.ImgAction
+import           Data.MetaData
 import           Data.Prim.Name
 import           Data.Prim.Path
 import           Data.Prim.PathId
 import           Data.Prim.Prelude
+import           Data.Prim.TimeStamp
 import           Data.RefTree
-
-
-{-}
-import           Control.Lens.Util
-import           Data.ImgAction
-import           Data.MetaData
-import           Data.Prim.TimeStamp
-import           Catalog.FilePath
-import           Control.Applicative
-import           Control.Arrow (first, (***))
-import           Control.Lens.Util
-import qualified Data.Aeson as J
-import           Data.Aeson hiding (Object, (.=))
-import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy.Char8 as L
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Prim.CheckSum
-import           Data.Prim.TimeStamp
-import           System.Posix (FileStatus)
-import qualified System.Posix as X
 import           System.Directory (removeFile)
--- -}
-
--- ----------------------------------------
-
-initImgStore :: Name -> Name -> FilePath -> Cmd ()
-initImgStore rootName colName mountPath
-  = do r <- liftE $
-            mkEmptyImgRoot rootName dirName colName
-       put $ mkImgStore r mPath (r ^. rootRef)
-  where
-    dirName  = mkName $ takeFileName mountPath
-    mPath    = takeDirectory mountPath
-
--- ----------------------------------------
-
-invImages :: Cmd ()
-invImages = do
-  _r <- use (theImgTree . rootRef)
-  return ()
 
 -- ----------------------------------------
 --
