@@ -1,14 +1,15 @@
 module Catalog.System.ExifTool
 where
 
-import Catalog.Cmd
-import Control.Lens
-import Control.Lens.Util
--- import Data.ImgAction
-import Data.Prim.Prelude
-import Data.ImageTree
-import Data.MetaData
-import Data.Aeson (eitherDecodeStrict')
+import           Catalog.Cmd
+import           Control.Lens
+import           Control.Lens.Util
+import           Data.Prim.Name
+import           Data.Prim.PathId
+import           Data.Prim.Prelude
+import           Data.ImageTree
+import           Data.MetaData
+import           Data.Aeson (eitherDecodeStrict')
 import qualified System.Posix as X
 import qualified Data.ByteString.Lazy.Char8 as LB
 import qualified Data.Aeson.Encode.Pretty as J
@@ -67,6 +68,21 @@ filterMetaData _       _ = emptyMetaData
 
 -- ----------------------------------------
 
+lookupMeta' :: FilePath -> [Name] -> Cmd MetaData
+lookupMeta' f ns = do
+  md <- readMetaData f
+  return (md ^. selectMetaData (`elem` ns))
+
+lookupMeta :: FilePath -> String -> Cmd MetaData
+lookupMeta f n0 = do
+  -- f <- objid2path i >>= (return . (subst))>>= toFilePath
+  trc $ show (f, n)
+  lookupMeta' f n
+  where
+    n = px2a n0
+
+-- ----------------------------------------
+
 mkPar :: String -> String
 mkPar s = "(" ++ s ++ ")"
 
@@ -86,6 +102,7 @@ reRaw = attrGroups2regex
   [ attrExif
   , attrComposite
   , attrMaker
+  , attrFile
   ]
 
 reXmp :: RegexText
@@ -94,6 +111,65 @@ reXmp = attrGroups2regex
   , attrXmp
   ]
 
+-- ----------------------------------------
+
+px2a :: String -> [Name]
+px2a s = map mkName ag20
+{-}
+  case ag20 of
+    [x1] -> mkName x1
+    []   -> emptyName
+    xs   -> error $ "ambigious name abreviation " ++ show s ++ " matches " ++ show xs
+-- -}
+  where
+    (g, n) | null n'   = ("", g')
+           | otherwise = (g', tail n')
+      where
+        (g', n') = span (/= ':') s
+
+    filterNotNull =
+      filter (not . null .snd)
+
+    ag20 = concatMap (\ (x, xs) -> map ((x ++ ":") ++) xs) ag11
+    -- exact name matches are prefered
+
+    ag11
+      | null ag10 = filterNotNull $
+                    map (second (filter (n `isPrefixOf`))) ag01
+      | otherwise = ag10
+
+    ag10 = filterNotNull $
+      map (second (filter (== n))) ag01
+
+    -- exact group matches are prefered
+    ag01
+      | null ag00 = filter ((g `isPrefixOf`) . fst) attrGroups
+      | otherwise = ag00
+
+    ag00
+      | null g    = attrGroups
+      | otherwise = filter ((== g) .fst) attrGroups
+
+-- ----------------------------------------
+
+attrGroups :: [AttrGroup]
+attrGroups =
+  [ attrFile
+  , attrExif
+  , attrComposite
+  , attrXmp
+  ]
+
+attrFile :: AttrGroup
+attrFile =
+  ( "File"
+  , [ "FileName"
+    , "Directory"
+    , "FileSize"
+    , "FileModifyDate"
+    , "MIMEType"
+    ]
+  )
 
 attrExif :: AttrGroup
 attrExif =
@@ -173,3 +249,5 @@ attrXmp =
     , "RawFileName"
     ]
   )
+
+-- ----------------------------------------
