@@ -1,3 +1,5 @@
+-- all IO operations lifted to commands
+
 module Catalog.System.IO
 where
 

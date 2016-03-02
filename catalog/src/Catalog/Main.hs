@@ -1,26 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-name-shadowing #-}
 
 module Catalog.Main
 where
 
-import Catalog.RunImgAction
 import           Catalog.Cmd
-import           Catalog.Sync
 import           Catalog.Rules
+import           Catalog.RunImgAction
+import           Catalog.Sync
+import           Catalog.System.Convert
+import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
+import           Data.ImgAction
+import           Data.MetaData
 import           Data.RefTree
-import qualified System.Posix as X
-import Catalog.System.Convert
-import Catalog.System.ExifTool
-import Data.ImgAction
-import Data.MetaData
 
 {-}
 import           Catalog.FilePath
@@ -106,4 +106,5 @@ c3 c = local (envTrc .~ False) $ do
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 
+runc :: Cmd () -> IO (Either Msg (), ImgStore, Log)
 runc c = runCmd (c3 c)

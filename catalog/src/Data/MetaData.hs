@@ -14,6 +14,7 @@ import qualified Data.Aeson          as J
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
+import qualified Data.Scientific     as SC
 
 -- ----------------------------------------
 
@@ -57,13 +58,21 @@ metaDataAt key = md2obj . at (key ^. name2text) . val2text
     val2text = iso totext fromtext
       where
         totext (Just (J.String t)) = t
-        totext (Just (J.Number n)) = (show n) ^. isoStringText
+        totext (Just (J.Number n)) = (showSc n) ^. isoStringText
         totext _                   = ""
 
         fromtext t
           | T.null t = Nothing
           | otherwise = Just (J.String t)
 
+        showSc n =
+          either showF showI $ SC.floatingOrInteger n
+          where
+            showF :: Double -> String
+            showF _ = show n
+
+            showI :: Integer -> String
+            showI = show
 
 partMetaData :: (Name -> Bool) -> Iso' MetaData (MetaData, MetaData)
 partMetaData predicate = iso part (uncurry mappend)
@@ -94,6 +103,48 @@ lookupByNames ns md =
   where
     vs = filter (not . T.null) $
          map (\ n -> md ^. metaDataAt n) ns
+
+-- ----------------------------------------
+
+getCreateDate :: MetaData -> Maybe (Int, Int, Int)
+getCreateDate md =
+  fst <$> getCreateDateTime md
+
+getCreateTime :: MetaData -> Maybe (Int, Int, Double)
+getCreateTime md = do
+  (_, t) <- getCreateDateTime md
+  case t of
+    (0, 0, 0.0) -> mzero
+    _           -> return t
+
+reDate :: Regex
+reDate = parseRegexExt $
+  "({Y}[0-9]{4}):({M}[0-9]{2}):({D}[0-9]{2}).*"
+
+getCreateDateTime :: MetaData -> Maybe ((Int, Int, Int),(Int, Int, Double))
+getCreateDateTime md =
+  case res of
+    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
+      Just ((read y, read m, read d), (read h, read mi, read s))
+
+    [("Y",y), ("M",m), ("D",d)] ->
+      Just ((read y, read m, read d), (0,0,0.0))
+
+    _ -> Nothing
+  where
+    cd = lookupByNames [ "Composite:SubSecCreateDate"
+                       , "EXIF:CreateDate"
+                       ] md
+    res = matchSubexRE reDateTime $ cd ^. from isoStringText
+
+reDateTime :: Regex
+reDateTime = parseRegexExt $
+  "({Y}[0-9]{4}):({M}[0-9]{2}):({D}[0-9]{2})"
+  ++ "("
+  ++ "[ ]+"
+  ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2}([.][0-9]+)?)"
+  ++ ")?"
+  ++ "([^0-9].*)?"
 
 -- ----------------------------------------
 

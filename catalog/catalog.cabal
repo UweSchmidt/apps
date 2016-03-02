@@ -24,6 +24,7 @@ executable catalog
                      Data.RefTree
                      Data.Function.Util
                      Data.ImageStore
+                     Data.Prim
                      Data.Prim.Name
                      Data.Prim.TimeStamp
                      Data.Prim.Path
@@ -32,12 +33,20 @@ executable catalog
                      Data.Prim.CheckSum
                      Catalog.FilePath
                      Catalog.Cmd
-                     Catalog.System.Convert
-                     Catalog.Prelude
+                     Catalog.Cmd.Basic
+                     Catalog.Cmd.CWN
+                     Catalog.Cmd.Fold
+                     Catalog.Cmd.List
+                     Catalog.Cmd.Remove
+                     Catalog.Cmd.Types
                      Catalog.Main
-                     Catalog.Sync
-                     Catalog.RunImgAction
+                     Catalog.Prelude
                      Catalog.Rules
+                     Catalog.RunImgAction
+                     Catalog.Sync
+                     Catalog.System.Convert
+                     Catalog.System.ExifTool
+                     Catalog.System.IO
                      Control.Lens.Util
   
   -- Other library packages from which modules are imported.
@@ -60,6 +69,7 @@ executable catalog
 --                   , pretty              >= 1.1
                    , process
 --                   , SHA                 >= 1.5
+                   , scientific           >= 0.3
                    , text                 >= 1.0
                    , transformers         >= 0.4
                    , unix                 >= 2.5
