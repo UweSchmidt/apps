@@ -4,15 +4,12 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
+import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
 import           Data.ImageTree
 import           Data.ImgAction
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.Prelude
-import           System.Directory (removeFile)
+import           Data.Prim
 
 -- ----------------------------------------
 
@@ -51,7 +48,7 @@ rmGenFiles pp =
         rmj path part
           | pp part = do
               fp <- toFilePath (substPathName (part ^. theImgName) path)
-              io $ removeFile fp
+              removeFile fp
           | otherwise =
               return ()
 

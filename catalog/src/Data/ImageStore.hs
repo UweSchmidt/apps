@@ -15,33 +15,12 @@ module Data.ImageStore
        )
 where
 
--- import           Catalog.FilePath
--- import           Control.Applicative
--- import           Control.Arrow (first, (***))
-import           Control.Lens hiding (children)
--- import           Control.Lens.Util
--- import           Control.Monad.Except
--- import           Control.Monad.RWSErrorIO
-import qualified Data.Aeson as J
-import           Data.Aeson hiding (Object, (.=))
--- import qualified Data.Aeson.Encode.Pretty as J
--- import qualified Data.ByteString as B
--- import qualified Data.ByteString.Lazy.Char8 as L
+import           Control.Lens
 import           Data.ImageTree
--- import           Data.List (intercalate, partition)
--- import           Data.Map.Strict (Map)
--- import qualified Data.Map.Strict as M
--- import           Data.Maybe
--- import           Data.Prim.CheckSum
--- import           Data.Prim.Name
-import           Data.Prim.PathId
--- import           Data.Prim.Path
--- import           Data.Prim.TimeStamp
+import           Data.Prim
 import           Data.RefTree
--- import           System.FilePath -- ((</>))
--- import           System.Posix (FileStatus)
--- import qualified System.Posix as X
--- import           Text.Regex.XMLSchema.Generic -- (Regex, parseRegex, match, splitSubex)
+
+import qualified Data.Aeson as J
 
 -- ----------------------------------------
 
@@ -57,11 +36,11 @@ instance ToJSON ImgStore where
     ]
 
 instance FromJSON ImgStore where
-  parseJSON = withObject "ImgStore'" $ \ o ->
+  parseJSON = J.withObject "ImgStore'" $ \ o ->
     IS
-    <$> o .: "ImgTree"
-    <*> o .: "MountPath"
-    <*> o .: "CWD"
+    <$> o J..: "ImgTree"
+    <*> o J..: "MountPath"
+    <*> o J..: "CWD"
 
 theImgTree :: Lens' ImgStore ImgTree
 theImgTree k (IS t p w) = (\new -> IS new p w) <$> k t

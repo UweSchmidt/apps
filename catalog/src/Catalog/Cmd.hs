@@ -27,36 +27,8 @@ import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.Prelude
+import           Data.Prim
 import           Data.RefTree
-
-
-{-}
-import           Control.Lens.Util
-import           Data.ImgAction
-import           Data.MetaData
-import           Data.Prim.TimeStamp
-import           Catalog.FilePath
-import           Control.Applicative
-import           Control.Arrow (first, (***))
-import           Control.Lens.Util
-import qualified Data.Aeson as J
-import           Data.Aeson hiding (Object, (.=))
-import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy.Char8 as L
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Prim.CheckSum
-import           Data.Prim.TimeStamp
-import           System.Posix (FileStatus)
-import qualified System.Posix as X
-import           System.Directory (removeFile)
--- -}
 
 -- ----------------------------------------
 

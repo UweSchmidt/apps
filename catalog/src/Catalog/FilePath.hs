@@ -3,9 +3,7 @@
 module Catalog.FilePath where
 
 import Control.Applicative
-import Data.ImageTree
-import Data.Prim.Name
-import Data.Prim.Prelude
+import Data.Prim
 
 -- ----------------------------------------
 
@@ -42,8 +40,9 @@ filePathConfig = map (first parseRegexExt) $
   , (mk1 baseName  ++ mk2 rawExt,  IMGraw)
   , (mk1 baseName' ++ mk2 imgExt,  IMGimg)
   , (mk1 baseName  ++ mk2 xmpExt,  IMGmeta)
-  , (mk1 baseName  ++ mk2 dxoExt,  IMGboring)
   , (mk1 baseName  ++ mk2 jsonExt, IMGjson)
+  , (mk1 baseName  ++ mk2 ptoExt,  IMGhugin)
+  , (mk1 baseName  ++ mk2 dxoExt,  IMGdxo)
   , (mk1 jpgdirName,               IMGjpgdir)
   , (mk1 imgdirName,               IMGimgdir)
   , (jpgdirPre
@@ -63,6 +62,7 @@ filePathConfig = map (first parseRegexExt) $
     imgExt    = "[.](jpp|JPG|gif|tiff|ppm|pgm|pbm)"
     xmpExt    = "[.](xmp|XMP)"
     dxoExt    = "[.]((nef|NEF|rw2|RW2|jpg|JPG)[.]dop)"
+    ptoExt    = "[.]pto"
     jsonExt   = "[.](json)"
     jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"

@@ -26,20 +26,11 @@ module Data.RefTree
        )
 where
 
-import           Data.Prim.Name
-import           Data.Prim.Path
-
+import           Data.Prim
 import           Control.Lens
 import           Control.Monad.Except
--- import           Data.Monoid
 
-import           Data.Aeson (ToJSON, FromJSON)
 import qualified Data.Aeson as J
-
-
-import           Data.Maybe
-
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 
 -- ----------------------------------------

@@ -11,8 +11,8 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
-import           Data.ImageTree
 import           Data.ImgAction
+import           Data.Prim.ImageType
 
 -- ----------------------------------------
 

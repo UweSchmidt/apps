@@ -1,6 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,6 +9,7 @@ import Catalog.RunImgAction
 import           Catalog.Cmd
 import           Catalog.Sync
 import           Catalog.Rules
+import           Catalog.System.IO
 import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
@@ -45,7 +43,7 @@ import           Control.Arrow ((***))
 
 ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
-  mountPath <- io X.getWorkingDirectory
+  mountPath <- getWorkingDirectory
   initImgStore "archive" "collections" (mountPath ++ "/data/photos")
   trcCmd cwPath >> trcCmd cwLs >> return ()
   saveImgStore ""
@@ -81,9 +79,9 @@ ccc = runCmd $ do
   trc "load state from c1.json"
   loadImgStore "c1.json"
   saveImgStore ""
-  listImages >>= io . putStrLn
-  cwListPaths >>= io . putStrLn
-  cwListNames >>= io . putStrLn
+  listImages >>= putStrLn'
+  cwListPaths >>= putStrLn'
+  cwListNames >>= putStrLn'
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 
@@ -93,9 +91,9 @@ c2 = do
   cwRoot
   cwSyncFS
   saveImgStore ""
-  listImages  >>= io . putStrLn
-  cwListPaths >>= io . putStrLn
-  cwListNames >>= io . putStrLn
+  listImages  >>= putStrLn'
+  cwListPaths >>= putStrLn'
+  cwListNames >>= putStrLn'
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 

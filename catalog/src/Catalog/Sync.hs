@@ -1,8 +1,4 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Catalog.Sync
@@ -10,24 +6,15 @@ where
 
 import           Catalog.Cmd
 import           Catalog.FilePath
-import           Control.Arrow ((***))
+import           Catalog.System.IO
 import           Control.Lens
-import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.ByteString.Lazy.Char8 as L
 import           Data.Function.Util
 import           Data.ImageTree
-import qualified Data.List as List
-import           Data.Maybe
-import           Data.Prim.CheckSum
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.TimeStamp
+import           Data.Prim
 import           Data.RefTree
-import           System.FilePath
-import           System.Posix (FileStatus)
-import qualified System.Posix as X
+
+import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as J
 
 -- ----------------------------------------
 
@@ -35,14 +22,14 @@ saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
   trc $ "saveImgStore: save state to " ++ show p
   bs <- uses id J.encodePretty
-  io $ if null p
-       then L.putStrLn bs
-       else L.writeFile p bs
+  if null p
+    then putStrLnLB    bs
+    else writeFileLB p bs
 
 loadImgStore :: FilePath -> Cmd ()
 loadImgStore p = do
   trc $ "loadImgStore: load State from " ++ show p
-  bs <- io $ L.readFile p
+  bs <- readFileLB p
   case J.decode' bs of
     Nothing ->
       abort $ "loadImgStore: JSON input corrupted: " ++ show p
@@ -145,11 +132,11 @@ collectDirCont i = do
   trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
-        List.partition (hasImgType (== IMGother)) es
+        partition (hasImgType (== IMGother)) es
   let (subdirs, rest2) =
-        List.partition (hasImgType (== IMGimgdir)) rest
+        partition (hasImgType (== IMGimgdir)) rest
   let (imgfiles, rest3) =
-        List.partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
+        partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
                                       , IMGjpg, IMGimg,  IMGcopy
                                       ])) rest2
 
@@ -231,20 +218,20 @@ checkEmptyDir i = do
 
 fsStat :: String -> (FileStatus -> Bool) -> FilePath -> Cmd FileStatus
 fsStat msg isFile p = do
-  ex <- io $ X.fileExist p
+  ex <- fileExist p
   when (not ex) $
     abort $ "fs entry not found " ++ show p
-  st <- io $ X.getFileStatus p
+  st <- getFileStatus p
   when (not $ isFile st) $
     abort $ unwords ["fs entry not a", msg, show p]
   return st
 
 
 fsDirStat :: FilePath -> Cmd FileStatus
-fsDirStat = fsStat "directory" X.isDirectory
+fsDirStat = fsStat "directory" isDirectory
 
 fsFileStat :: FilePath -> Cmd FileStatus
-fsFileStat = fsStat "regular file" X.isRegularFile
+fsFileStat = fsStat "regular file" isRegularFile
 
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
@@ -255,7 +242,7 @@ parseDirCont p = do
   return $ es ++ concat jss
   where
     classifyNames =
-      List.partition (hasImgType (/= IMGjpgdir))  -- select jpg img subdirs
+      partition (hasImgType (/= IMGjpgdir))  -- select jpg img subdirs
       .
       filter    (hasImgType (/= IMGboring))  -- remove boring stuff
       .
@@ -274,25 +261,9 @@ parseJpgDirCont p d =
 scanDirCont :: FilePath -> Cmd [FilePath]
 scanDirCont p0 = do
   trc $ "scanDirCont: reading dir " ++ show p0
-  res <- io $ readDir p0
+  res <- readDir p0
   trc $ "scanDirCont: result is " ++ show res
   return res
-  where
-    readDir :: FilePath -> IO [FilePath]
-    readDir p = do
-      s  <- X.openDirStream p
-      xs <- readDirEntries s
-      X.closeDirStream s
-      return xs
-      where
-        readDirEntries s = do
-          e1 <- X.readDirStream s
-          if null e1
-            then return []
-            else do
-              es <- readDirEntries s
-              return (e1 : es)
-
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
 hasImgType p (_, (_, t)) = p t

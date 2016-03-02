@@ -6,7 +6,7 @@ where
 
 import Catalog.Cmd
 import Data.ImgAction
-import Data.Prim.Prelude
+import Data.Prim
 
 -- ----------------------------------------
 

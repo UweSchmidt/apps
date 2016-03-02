@@ -3,9 +3,7 @@
 module Data.ImgAction
 where
 
-import Data.ImageTree
-import Data.Prim.Name
-import Data.Prim.PathId
+import Data.Prim
 
 -- ----------------------------------------
 

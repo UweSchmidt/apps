@@ -10,8 +10,6 @@ module Data.ImageTree
        , ImgTree
        , ImgParts
        , ImgPart
-       , ImgType(..)
-       , NameImgType
        , ColEntry(..)
        , mkEmptyImgRoot
        , mkImgRoot
@@ -50,20 +48,15 @@ module Data.ImageTree
        )
 where
 
-import           Control.Lens hiding ((.=))
+import           Control.Lens
 import           Control.Lens.Util
 import           Control.Monad.Except
-import           Data.Aeson ( (.:), (.=), (.:?), (.!=)
-                            , object, withObject
-                            )
-import qualified Data.Map.Strict as M
 import           Data.MetaData
-import           Data.Prim.CheckSum
-import           Data.Prim.Name
-import           Data.Prim.PathId -- change this to ObjId later
-import           Data.Prim.Prelude
-import           Data.Prim.TimeStamp
+import           Data.Prim
 import           Data.RefTree
+
+import qualified Data.Aeson as J
+import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
 -- ----------------------------------------
@@ -79,43 +72,43 @@ data ImgNode' ref = IMG  !ImgParts
 deriving instance (Show ref) => Show (ImgNode' ref)
 
 instance ToJSON ref => ToJSON (ImgNode' ref) where
-  toJSON (IMG pm) = object
-    [ "ImgNode"     .= ("IMG" :: String)
-    , "parts"       .= pm
+  toJSON (IMG pm) = J.object
+    [ "ImgNode"     J..= ("IMG" :: String)
+    , "parts"       J..= pm
     ]
-  toJSON (DIR rs ts) = object
-    [ "ImgNode"     .= ("DIR" :: String)
-    , "children"    .= S.toList rs
-    , "sync"        .= ts
+  toJSON (DIR rs ts) = J.object
+    [ "ImgNode"     J..= ("DIR" :: String)
+    , "children"    J..= S.toList rs
+    , "sync"        J..= ts
     ]
-  toJSON (ROOT rd rc) = object
-    [ "ImgNode"     .= ("ROOT" :: String)
-    , "archive"     .= rd
-    , "collections" .= rc
+  toJSON (ROOT rd rc) = J.object
+    [ "ImgNode"     J..= ("ROOT" :: String)
+    , "archive"     J..= rd
+    , "collections" J..= rc
     ]
-  toJSON (COL md es ts) = object
-    [ "ImgNode"    .= ("COL" :: String)
-    , "metadata"   .= md
-    , "entries"    .= es
-    , "sync"       .= ts
+  toJSON (COL md es ts) = J.object
+    [ "ImgNode"    J..= ("COL" :: String)
+    , "metadata"   J..= md
+    , "entries"    J..= es
+    , "sync"       J..= ts
     ]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
-  parseJSON = withObject "ImgNode" $ \ o ->
-    do t <- o .: "ImgNode"
+  parseJSON = J.withObject "ImgNode" $ \ o ->
+    do t <- o J..: "ImgNode"
        case t :: String of
          "IMG" ->
-           IMG  <$> o .: "parts"
+           IMG  <$> o J..: "parts"
          "DIR" ->
-           DIR  <$> (S.fromList <$> o .: "children")
-                <*> o .:? "sync" .!= zeroTimeStamp
+           DIR  <$> (S.fromList <$> o J..: "children")
+                <*> o J..:? "sync" J..!= zeroTimeStamp
          "ROOT" ->
-           ROOT <$> o .: "archive"
-                <*> o .: "collections"
+           ROOT <$> o J..: "archive"
+                <*> o J..: "collections"
          "COL" ->
-           COL  <$> o .: "metadata"
-                <*> o .: "entries"
-                <*> o .: "sync"
+           COL  <$> o J..: "metadata"
+                <*> o J..: "entries"
+                <*> o J..: "sync"
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
@@ -293,22 +286,22 @@ data ImgPart     = IP !Name !ImgType !TimeStamp !CheckSum
 deriving instance Show ImgPart
 
 instance ToJSON ImgPart where
-  toJSON (IP n t s c) = object $
-    [ "Name"      .= n
-    , "ImgType"   .= t
-    , "TimeStamp" .= s
+  toJSON (IP n t s c) = J.object $
+    [ "Name"      J..= n
+    , "ImgType"   J..= t
+    , "TimeStamp" J..= s
     ]
     ++
     if c == zeroCheckSum
     then []
-    else ["CheckSum"  .= c]
+    else ["CheckSum"  J..= c]
 
 instance FromJSON ImgPart where
-  parseJSON = withObject "ImgPart" $ \ o ->
-    IP <$> o .: "Name"
-       <*> o .: "ImgType"
-       <*> o .: "TimeStamp"
-       <*> o .:? "CheckSum" .!= zeroCheckSum
+  parseJSON = J.withObject "ImgPart" $ \ o ->
+    IP <$> o J..: "Name"
+       <*> o J..: "ImgType"
+       <*> o J..: "TimeStamp"
+       <*> o J..:? "CheckSum" J..!= zeroCheckSum
 
 mkImgPart :: Name -> ImgType -> ImgPart
 mkImgPart n t = IP n t zeroTimeStamp zeroCheckSum
@@ -327,24 +320,6 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-type NameImgType = (Name, ImgType)
-data ImgType     = IMGraw    | IMGmeta   | IMGjson  | IMGjpg | IMGimg | IMGcopy
-
-    | IMGimgdir | IMGjpgdir | IMGother | IMGboring
-
-deriving instance Eq   ImgType
-deriving instance Ord  ImgType
-deriving instance Show ImgType
-deriving instance Read ImgType
-
-instance ToJSON ImgType where
-  toJSON = toJSON . show
-
-instance FromJSON ImgType where
-  parseJSON o = read <$> parseJSON o
-
--- ----------------------------------------
-
 data ColEntry = ImgRef ObjId Name
               | ColRef ObjId
 
@@ -353,25 +328,25 @@ deriving instance Ord  ColEntry
 deriving instance Show ColEntry
 
 instance ToJSON ColEntry where
-  toJSON (ImgRef i n) = object
-    [ "ColEntry"  .= ("IMG" :: String)
-    , "ref"       .= i
-    , "part"      .= n
+  toJSON (ImgRef i n) = J.object
+    [ "ColEntry"  J..= ("IMG" :: String)
+    , "ref"       J..= i
+    , "part"      J..= n
     ]
-  toJSON (ColRef i) = object
-    [ "ColEntry"  .= ("COL" :: String)
-    , "ref"       .= i
+  toJSON (ColRef i) = J.object
+    [ "ColEntry"  J..= ("COL" :: String)
+    , "ref"       J..= i
     ]
 
 instance FromJSON ColEntry where
-  parseJSON = withObject "ColEntry" $ \ o ->
-    do t <- o .: "ColEntry"
+  parseJSON = J.withObject "ColEntry" $ \ o ->
+    do t <- o J..: "ColEntry"
        case t :: String of
          "IMG" ->
-           ImgRef <$> o .: "ref"
-                  <*> o .: "part"
+           ImgRef <$> o J..: "ref"
+                  <*> o J..: "part"
          "COL" ->
-           ColRef <$> o .: "ref"
+           ColRef <$> o J..: "ref"
          _ -> mzero
 
 theColImgRef :: Prism' ColEntry (ObjId, Name)

@@ -22,6 +22,8 @@ module Data.Prim.Prelude
        , matchSubexRE
          -- Data.Maybe
        , fromMaybe
+       , isNothing
+       , isJust
          -- Data.List
        , intercalate
        , isPrefixOf
