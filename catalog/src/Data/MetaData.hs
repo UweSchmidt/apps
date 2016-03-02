@@ -128,7 +128,7 @@ getCreateDateTime md =
       Just ((read y, read m, read d), (read h, read mi, read s))
 
     [("Y",y), ("M",m), ("D",d)] ->
-      Just ((read y, read m, read d), (0,0,0.0))
+      Just ((read y, read m, read d), (0, 0, 0.0))
 
     _ -> Nothing
   where
@@ -145,6 +145,22 @@ reDateTime = parseRegexExt $
   ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2}([.][0-9]+)?)"
   ++ ")?"
   ++ "([^0-9].*)?"
+
+getFileName :: MetaData -> Maybe Text
+getFileName md =
+  md ^. metaDataAt "File:Filename" . isoTextMaybe
+
+compareByCreateDate :: MetaData -> MetaData -> Ordering
+compareByCreateDate =
+  compareBy [ compareJust' `on` getCreateDateTime
+            , compare `on` getFileName
+            ]
+
+compareByName :: MetaData -> MetaData -> Ordering
+compareByName =
+  compareBy [ compare `on` getFileName
+            ]
+
 
 -- ----------------------------------------
 

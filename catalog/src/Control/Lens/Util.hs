@@ -35,6 +35,15 @@ isoStringLazyByteString = iso LBU.fromString LBU.toString
 isoStringByteString :: Iso' String ByteString
 isoStringByteString = iso BU.fromString BU.toString
 
+isoTextMaybe :: Iso' Text (Maybe Text)
+isoTextMaybe =
+  iso (\ t -> if T.null t then Nothing else Just t)
+      (fromMaybe T.empty)
+
+isoMonoidMaybe :: (Monoid a, Eq a) => Iso' a (Maybe a)
+isoMonoidMaybe =
+  iso (\ t -> if t == mempty then Nothing else Just t)
+      (fromMaybe mempty)
 
 -- a prism for filtering
 
