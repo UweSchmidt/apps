@@ -45,6 +45,29 @@ getImgVals i l = getTree (theNode i . nodeVal . l)
 
 -- ----------------------------------------
 
+getRootId :: Cmd ObjId
+getRootId = getTree rootRef
+
+getRootImgDirId :: Cmd ObjId
+getRootImgDirId = do
+  ri <- getRootId
+  getImgVals ri theRootImgDir
+
+getRootImgColId :: Cmd ObjId
+getRootImgColId = do
+  ri <- getRootId
+  getImgVals ri theRootImgCol
+
+lookupByName :: Name -> ObjId -> Cmd (Maybe (ObjId, ImgNode))
+lookupByName n i = do
+  p <- (`snocPath` n) <$> objid2path i
+  lookupByPath p
+
+lookupByPath :: Path -> Cmd (Maybe (ObjId, ImgNode))
+lookupByPath p = lookupImgPath p <$> dt
+
+-- ----------------------------------------
+
 -- | ref to path
 objid2path :: ObjId -> Cmd Path
 objid2path i = dt >>= go
@@ -102,20 +125,23 @@ fromFilePath f = do
 --
 -- smart constructors
 
-mkImg' :: ImgNode -> ObjId -> Name -> Cmd ObjId
-mkImg' v i n = dt >>= go
+mkImg' :: (ImgNode -> Bool) -> ImgNode -> ObjId -> Name -> Cmd ObjId
+mkImg' isN v i n = dt >>= go
   where
     go t = do
-      (d, t') <- liftE $ mkImgNode n i v t
+      (d, t') <- liftE $ mkNode isN n i v t
       theImgTree .= t'
       trcObj d "mkImg': new image node"
       return d
 
 mkImgDir :: ObjId -> Name -> Cmd ObjId
-mkImgDir = mkImg' emptyImgDir
+mkImgDir = mkImg' isDIR emptyImgDir
+
+mkImgCol :: ObjId -> Name -> Cmd ObjId
+mkImgCol = mkImg' isCOL emptyImgCol
 
 mkImg :: ObjId -> Name -> Cmd ObjId
-mkImg = mkImg' emptyImg
+mkImg = mkImg' isDIR emptyImg
 
 rmImgNode :: ObjId -> Cmd ()
 rmImgNode i = dt >>= go

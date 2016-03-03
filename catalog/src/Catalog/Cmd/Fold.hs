@@ -14,17 +14,6 @@ import           Data.RefTree
 
 -- ----------------------------------------
 
-processImages :: Monoid r =>
-                 (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
-processImages imgA i0 =
-  foldMT imgA dirA rootA colA i0
-  where
-    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoSetList)
-    rootA go _i dir _col    = go dir
-    colA  _  _i _md _es _ts = return mempty
-
--- ----------------------------------------
-
 type Act r = ObjId -> Cmd r
 
 foldMT :: (         ObjId -> ImgParts                            -> Cmd r) ->  -- IMG
@@ -50,5 +39,26 @@ foldMT imgA dirA' rootA' colA' i0 = do
           rootA i dir col
         COL md es ts ->
           colA i md es ts
+
+-- ----------------------------------------
+
+processImgDirs :: Monoid r =>
+                  (         ObjId -> ImgParts               -> Cmd r) ->
+                  (Act r -> ObjId -> Set ObjId -> TimeStamp -> Cmd r) ->
+                  Act r
+processImgDirs imgA dirA =
+  foldMT imgA dirA rootA colA
+  where
+    rootA go _i dir _col    = go dir
+    colA  _  _i _md _es _ts = return mempty
+
+-- ----------------------------------------
+
+processImages :: Monoid r =>
+                 (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+processImages imgA =
+  processImgDirs imgA dirA
+  where
+    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoSetList)
 
 -- ----------------------------------------

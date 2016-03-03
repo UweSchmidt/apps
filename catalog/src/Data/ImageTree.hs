@@ -12,15 +12,18 @@ module Data.ImageTree
        , ImgPart
        , ColEntry(..)
        , mkEmptyImgRoot
+       , mkNode
        , mkImgRoot
-       , mkImgNode
        , mkImgParts
        , mkImgPart
+       , mkColImgRef
+       , mkColColRef
        , emptyImg
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
        , emptyImgParts
+       , lookupImgPath
        , isDIR
        , isIMG
        , isROOT
@@ -220,12 +223,16 @@ mkEmptyImgRoot rootName imgName colName =
 mkImgRoot :: Name -> ImgNode -> ImgTree
 mkImgRoot = mkDirRoot mkObjId
 
-mkImgNode :: (MonadError String m) =>
-             Name ->                       -- name of the node
-             ObjId ->                      -- parent node
-             ImgNode ->                    -- node value
-             ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
-mkImgNode = mkDirNode mkObjId isDIR addChildRef
+mkNode ::  (MonadError String m) =>
+           (ImgNode -> Bool) ->
+           Name ->                       -- name of the node
+           ObjId ->                      -- parent node
+           ImgNode ->                    -- node value
+           ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
+mkNode isN = mkDirNode mkObjId isN addChildRef
+
+lookupImgPath :: Path -> ImgTree -> Maybe (ObjId, ImgNode)
+lookupImgPath = lookupDirPath mkObjId
 
 -- | remove an image node or a dir node without entries
 removeImgNode :: (MonadError String m) =>
@@ -348,6 +355,12 @@ instance FromJSON ColEntry where
          "COL" ->
            ColRef <$> o J..: "ref"
          _ -> mzero
+
+mkColImgRef :: ObjId -> Name -> ColEntry
+mkColImgRef = ImgRef
+
+mkColColRef :: ObjId -> ColEntry
+mkColColRef = ColRef
 
 theColImgRef :: Prism' ColEntry (ObjId, Name)
 theColImgRef =

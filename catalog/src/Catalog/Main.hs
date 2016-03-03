@@ -90,6 +90,7 @@ c2 = do
   loadImgStore "c1.json"
   cwRoot
   cwSyncFS
+  genCollectionsByDir
   saveImgStore ""
   listImages  >>= putStrLn'
   cwListPaths >>= putStrLn'

@@ -341,6 +341,15 @@ attrXmp =
     ]
   )
 
+attrCol :: AttrGroup
+attrCol =
+  ( "COL"
+  , [ "Title"
+    , "Subtitle"
+    , "Comment"
+    , "CreateDate"
+    ]
+  )
 -- ----------------------------------------
 
 -- ----------------------------------------

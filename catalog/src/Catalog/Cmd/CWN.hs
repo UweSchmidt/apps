@@ -1,30 +1,14 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-
 module Catalog.Cmd.CWN
 where
 
 import           Catalog.Cmd.Basic
+import           Catalog.Cmd.List
 import           Catalog.Cmd.Types
 import           Control.Lens
-import           Control.Lens.Util
-import           Control.Monad.Except
-import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImageTree
-import           Data.ImgAction
-import           Data.MetaData
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.Prelude
-import           Data.Prim.TimeStamp
+import           Data.Prim
 import           Data.RefTree
-import           System.Directory (removeFile)
 
 -- ----------------------------------------
 --

@@ -19,6 +19,8 @@ module Data.Prim.Path
        , substPathName
        , showPath
        , path2string
+       , viewTop
+       , viewBase
        )
 where
 
@@ -61,6 +63,10 @@ nullPath :: (Monoid n, Eq n) =>
             Path' n -> Bool
 nullPath = (== emptyPath)
 
+infixr 5 `consPath`
+infixr 5 `snocPath`
+infixr 5 `concPath`
+
 consPath :: (Monoid n, Eq n) =>
             n -> Path' n -> Path' n
 consPath n p
@@ -68,8 +74,7 @@ consPath n p
   | nullPath p  = mkPath n
   | otherwise   = DN n p
 
-snocPath :: (Monoid n, Eq n) =>
-            Path' n -> n -> Path' n
+snocPath :: (Monoid n, Eq n) => Path' n -> n -> Path' n
 snocPath p n = p `concPath` mkPath n
 
 concPath :: (Monoid n, Eq n) =>
@@ -77,17 +82,28 @@ concPath :: (Monoid n, Eq n) =>
 concPath (BN n) p2    = consPath n p2
 concPath (DN n p1) p2 = consPath n $ concPath p1 p2
 
-substPathName :: n -> Path' n -> Path' n
-substPathName n (BN _)    = BN n
-substPathName n (DN n' p) = DN n' (substPathName n p)
+viewBase :: (Monoid n, Eq n) => Iso' (Path' n) (Path' n, n)
+viewBase = iso toPair (uncurry snocPath)
+  where
+    toPair (BN n)   = (emptyPath, n)
+    toPair (DN n p) = (n `consPath` p', n')
+      where
+        (p', n') = toPair p
 
-headPath :: Path' n -> n
-headPath (DN n _p) = n
-headPath (BN n)    = n
+viewTop :: (Monoid n, Eq n) => Iso' (Path' n) (n, Path' n)
+viewTop = iso toPair (uncurry consPath)
+  where
+    toPair (DN n p) = (n, p)
+    toPair (BN n)   = (n, emptyPath)
 
-tailPath :: Path' n -> Path' n
-tailPath (DN _n p) = p
-tailPath p         = p
+headPath :: (Monoid n, Eq n) => Path' n -> n
+headPath = (^. viewTop . _1)
+
+tailPath :: (Monoid n, Eq n) => Path' n -> Path' n
+tailPath = (^. viewTop . _2)
+
+substPathName :: (Monoid n, Eq n) => n -> Path' n -> Path' n
+substPathName n p = p & viewBase . _2 .~ n
 
 showPath :: (Monoid n, Eq n, Show n) => Path' n -> String
 showPath (BN n)

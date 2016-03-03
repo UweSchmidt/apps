@@ -2,12 +2,14 @@
 
 module Catalog.Cmd.Types
        ( module Catalog.Cmd.Types
+       , module Control.Monad
        , module Control.Monad.RWSErrorIO
        , module Control.Monad.Except
        )
 where
 
 import           Control.Lens
+import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore

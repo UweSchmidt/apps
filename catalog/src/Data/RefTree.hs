@@ -23,6 +23,7 @@ module Data.RefTree
        , isDirRoot
        , mkDirNode
        , remDirNode
+       , lookupDirPath
        )
 where
 
@@ -136,6 +137,7 @@ theName r = theNode r . nodeName
 theNodeVal ::  (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) (node ref)
 theNodeVal r = theNode r . nodeVal
 
+-- ----------------------------------------
 
 -- access and modification
 
@@ -163,6 +165,19 @@ mkDirRoot genRef n v
 isDirRoot :: (Ord ref, Show ref) => ref -> DirTree node ref -> Bool
 isDirRoot r t = t ^. theParent r == r
 
+-- lookup a (ref, nodeval) by a path
+lookupDirPath :: (Ord ref, Show ref) =>
+                  (Path -> ref) ->
+                  Path ->
+                  DirTree node ref ->
+                  Maybe (ref, node ref)
+lookupDirPath genRef p t =
+   (\ v -> (i', v)) <$> (t ^? entryAt i' . _Just . nodeVal)
+  where
+    i' = genRef p
+
+
+
 -- | create a new entry with a new ref and modify the parent node
 -- to store the new ref in its node value
 
@@ -188,7 +203,7 @@ mkDirNode genRef isParentDir updateParent n p v t
          )
   where
     pp = refPath p t
-    rp = concPath pp (mkPath n)
+    rp = pp `snocPath` n
     r  = genRef rp
 
 remDirNode :: (MonadError String m, Ord ref, Show ref) =>
