@@ -106,29 +106,34 @@ lookupByNames ns md =
 
 -- ----------------------------------------
 
-getCreateDate :: MetaData -> Maybe (Int, Int, Int)
+getCreateDate :: MetaData -> Maybe (String, String, String)
 getCreateDate md =
   fst <$> getCreateDateTime md
 
-getCreateTime :: MetaData -> Maybe (Int, Int, Double)
+getCreateTime :: MetaData -> Maybe (String, String, String, String)
 getCreateTime md = do
   (_, t) <- getCreateDateTime md
   case t of
-    (0, 0, 0.0) -> mzero
-    _           -> return t
+    ("", "", "", "") -> mzero
+    _                -> return t
 
 reDate :: Regex
 reDate = parseRegexExt $
   "({Y}[0-9]{4}):({M}[0-9]{2}):({D}[0-9]{2}).*"
 
-getCreateDateTime :: MetaData -> Maybe ((Int, Int, Int),(Int, Int, Double))
+getCreateDateTime :: MetaData -> Maybe ( (String, String, String)
+                                       , (String, String, String, String)
+                                       )
 getCreateDateTime md =
   case res of
-    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
-      Just ((read y, read m, read d), (read h, read mi, read s))
-
     [("Y",y), ("M",m), ("D",d)] ->
-      Just ((read y, read m, read d), (0, 0, 0.0))
+      Just ((y, m, d), ("", "", "", ""))
+
+    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
+      Just ((y, m, d), (h, mi, s, ""))
+
+    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s), ("ms",ms)] ->
+      Just ((y, m, d), (h, mi, s, ms))
 
     _ -> Nothing
   where
@@ -137,12 +142,13 @@ getCreateDateTime md =
                        ] md
     res = matchSubexRE reDateTime $ cd ^. from isoStringText
 
+
 reDateTime :: Regex
 reDateTime = parseRegexExt $
-  "({Y}[0-9]{4}):({M}[0-9]{2}):({D}[0-9]{2})"
+  "({Y}[0-9]{4})[-:]({M}[0-9]{2})[-:]({D}[0-9]{2})"
   ++ "("
   ++ "[ ]+"
-  ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2}([.][0-9]+)?)"
+  ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2})({ms}[.][0-9]+)?"
   ++ ")?"
   ++ "([^0-9].*)?"
 
@@ -348,8 +354,8 @@ attrCol =
     , "Subtitle"
     , "Comment"
     , "CreateDate"
+    , "OrderedBy"
     ]
   )
--- ----------------------------------------
 
 -- ----------------------------------------

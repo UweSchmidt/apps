@@ -13,6 +13,7 @@ module Catalog.Cmd
        , module Catalog.Cmd.List
        , module Catalog.Cmd.Remove
        , module Catalog.Cmd.CWN
+       , module Catalog.System.IO
        , module Control.Monad.RWSErrorIO
        , module Control.Monad.Except
        )
@@ -24,6 +25,7 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.List
 import           Catalog.Cmd.Remove
 import           Catalog.Cmd.Types
+import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
 import           Control.Monad.Except
@@ -78,75 +80,102 @@ genCollectionsByDir = do
         -- collect all processed jpg images for a single img
 
         imgA i pts = do
-          trcObj i "genCol img"
           let res = (map (mkColImgRef i) $ sort ns)
-          trcObj i $ "genCol: " ++ show res
+          trcObj i $ "genCol img: " ++ show res
           return res
           where
             ns = pts ^.. isoImgParts
                        . traverse
-                       . is (^. theImgType . to (== IMGimg))
+                       . is (^. theImgType . to (== IMGjpg))
                        . theImgName
 
         -- generate a coresponding collection with all entries
         -- entries are sorted by name
 
         dirA go i es _ts = do
-          trcObj i "genCol dir"
           p  <- objid2path i
           let cp = fp p
           trcObj i $ "genCol dir " ++ show cp
           ic <- mkColByPath cp
 
-          -- TODO: skip update if collection is newer than imgdir
+          dirSyncTime <- getImgVals i  theDirSyncTime
+          colSyncTime <- getImgVals ic theColSyncTime
 
-          -- set collection meta data
-          md <- colMetaData ic
-          adjustMetaData (md <>) ic
+          if colSyncTime >= dirSyncTime
+            then do
+              -- the collection is up to date
+              -- only the subdirs need to be traversed
+              trcObj i "genCol dir: dir is up to date, traversing subdirs"
+              cs  <- filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoSetList)
+              mapM_ (\ i' -> trcObj i' "subdir") cs
+              void $ mapM go cs
+            else do
+              -- set collection meta data
+              -- from current dir contents
+              md <- colMetaData "Name" ic
+              adjustMetaData (md <>) ic
 
-          -- set collection entries, sorted by name
-          cs  <- concat <$> mapM go (es ^. isoSetList)
-          cs' <- sortColEntries cs
-          adjustColEntries (const cs') ic
+              -- set collection entries, sorted by name
+              cs  <- concat <$> mapM go (es ^. isoSetList)
+              cs' <- sortColEntries cs
+              adjustColEntries (const cs') ic
 
-          -- set time processed
-          setSyncTime ic
+              -- set time processed
+              setSyncTime ic
 
           return [mkColColRef ic]
+
+-- collection entries are sorted by name
 
 sortColEntries :: [ColEntry] -> Cmd [ColEntry]
 sortColEntries es = do
   map fst . sortBy (compare `on` snd) <$> mapM mkC es
   where
     mkC :: ColEntry -> Cmd (ColEntry, Name)
+    mkC ce = do
+      n <- getImgName (ce ^. theColImgObjId)
+      return (ce, n)
+{-}
     mkC e@(ImgRef _i n) = return (e, n)
     mkC e@(ColRef i) = do
       n <- getImgName i
       return (e, n)
+-- -}
+
+-- merge old an new entries
+-- old entries are removed from list of new entries
+-- the remaining new entries are appended
 
 mergeColEntries :: [ColEntry] -> [ColEntry] -> [ColEntry]
 mergeColEntries es1 es2 =
   es1 ++ filter (`notElem` es1) es2
 
-colMetaData :: ObjId -> Cmd MetaData
-colMetaData i = do
+
+-- meta data for generated collections
+
+colMetaData :: Text -> ObjId -> Cmd MetaData
+colMetaData oby i = do
   p <- tailPath <$> objid2path i
+  d <- (\ t -> show t ^. isoStringText) <$> atThisMoment
   let t = show p ^. isoStringText
       s = ""
       c = ""
-      d = ""
-  return $ md t s c d
+  return $ md t s c d oby
   where
-    md t s c d =
+    md t s c d o =
       emptyMetaData
       & metaDataAt "COL:Title"      .~ t
       & metaDataAt "COL:Subtitle"   .~ s
       & metaDataAt "COL:Comment"    .~ c
       & metaDataAt "COL:CreateDate" .~ d
+      & metaDataAt "COL:OrderedBy"  .~ o
+
+
+-- create collections recursively, similar to 'mkdir -p'
 
 mkColByPath :: Path -> Cmd ObjId
 mkColByPath p = do
-  trc $ "mkColByPath " ++ show p
+  -- trc $ "mkColByPath " ++ show p
   -- check for legal path
   when (nullPath $ tailPath p) $
     abort $ "mkColByPath: can't create collection " ++show (show p)
@@ -157,7 +186,7 @@ mkColByPath p = do
     Nothing -> do
       let (p1, n) = p ^. viewBase
       ip <- mkColByPath p1
-      trcObj ip $ "mkColByPath " ++ show p1 ++ " " ++ show n
+      -- trcObj ip $ "mkColByPath " ++ show p1 ++ " " ++ show n
       mkImgCol ip n
 
     -- entry already there

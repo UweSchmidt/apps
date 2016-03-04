@@ -3,19 +3,24 @@
 module Catalog.System.IO
 where
 
-import Catalog.Cmd.Types
+import           Catalog.Cmd.Types
 -- import Data.Prim
 
-import qualified System.Posix as X
 import qualified Data.ByteString.Lazy.Char8 as LB
+import           Data.Time.Clock (UTCTime)
+import qualified Data.Time.Clock as C
 import qualified System.Directory as D
+import qualified System.Posix as X
 
 -- ----------------------------------------
 
 type FileStatus = X.FileStatus
 
 fileExist :: FilePath -> Cmd Bool
-fileExist = io . X.fileExist
+fileExist = io . D.doesFileExist
+
+dirExist :: FilePath -> Cmd Bool
+dirExist = io . D.doesDirectoryExist
 
 getFileStatus :: FilePath -> Cmd FileStatus
 getFileStatus = io . X.getFileStatus
@@ -47,16 +52,13 @@ readDir p = io $ do
           es <- readDirEntries s
           return (e1 : es)
 
-isDirectory :: FileStatus -> Bool
-isDirectory = X.isDirectory
-
-isRegularFile :: FileStatus -> Bool
-isRegularFile = X.isRegularFile
-
 putStrLnLB :: LB.ByteString -> Cmd ()
 putStrLnLB = io . LB.putStrLn
 
 putStrLn' :: String -> Cmd ()
 putStrLn' = io . putStrLn
+
+atThisMoment :: Cmd UTCTime
+atThisMoment = io C.getCurrentTime
 
 -- ----------------------------------------

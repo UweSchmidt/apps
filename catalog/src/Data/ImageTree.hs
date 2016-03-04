@@ -42,6 +42,7 @@ module Data.ImageTree
        , theRootImgCol
        , theImgRoot
        , theImgCol
+       , theColImgObjId
        , theColMetaData
        , theColEntries
        , theColSyncTime
@@ -361,6 +362,15 @@ mkColImgRef = ImgRef
 
 mkColColRef :: ObjId -> ColEntry
 mkColColRef = ColRef
+
+theColImgObjId :: Lens' ColEntry ObjId
+theColImgObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
+theColImgObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
+
+
+-- theImgName :: Lens' ImgPart Name
+-- theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
+
 
 theColImgRef :: Prism' ColEntry (ObjId, Name)
 theColImgRef =

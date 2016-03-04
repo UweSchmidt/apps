@@ -71,6 +71,7 @@ executable catalog
 --                   , SHA                 >= 1.5
                    , scientific           >= 0.3
                    , text                 >= 1.0
+                   , time                 >= 1.5
                    , transformers         >= 0.4
                    , unix                 >= 2.5
                    , unordered-containers >= 0.2

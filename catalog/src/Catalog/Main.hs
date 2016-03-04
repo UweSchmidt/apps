@@ -14,8 +14,7 @@ import           Catalog.System.Convert
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Control.Lens
-import           Control.Monad.Except
-import           Control.Monad.RWSErrorIO
+import           Control.Lens.Util
 import           Data.ImageStore
 import           Data.ImageTree
 import           Data.ImgAction
@@ -73,6 +72,9 @@ ccc = runCmd $ do
   rmImgNode refDir1
 
   syncFS refImg
+  genCollectionsByDir
+  trc "2. time gencollectionsbydir"
+  genCollectionsByDir
   saveImgStore ""
   trc "save state to c1.json"
   saveImgStore "c1.json"

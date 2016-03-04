@@ -2,7 +2,6 @@ module Catalog.System.ExifTool
 where
 
 import           Catalog.Cmd
-import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
 import           Data.Prim

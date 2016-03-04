@@ -6,7 +6,6 @@ where
 
 import           Catalog.Cmd
 import           Catalog.FilePath
-import           Catalog.System.IO
 import           Control.Lens
 import           Data.Function.Util
 import           Data.ImageTree
@@ -152,13 +151,7 @@ collectDirCont i = do
          )
   where
     isSubDir fp n =
-      (const True <$> fsDirStat p)
-      `catchError`
-      (\ _ -> do sync $ "error caught, image dir expected " ++ show (show p)
-                 return False
-      )
-      where
-        p = fp </> (n ^. _1 . name2string)
+      dirExist $ fp </> (n ^. _1 . name2string)
 
 type ClassifiedName  = (Name, (Name, ImgType))
 type ClassifiedNames = [ClassifiedName]
@@ -205,8 +198,6 @@ syncParts i pp = do
                & theImgCheckSum  .~ zeroCheckSum
         else p
 
-
-
 checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
   nv <- getImgVal i
@@ -216,22 +207,18 @@ checkEmptyDir i = do
     rmImgNode i
 
 
-fsStat :: String -> (FileStatus -> Bool) -> FilePath -> Cmd FileStatus
-fsStat msg isFile p = do
-  ex <- fileExist p
+fsStat :: String -> (FilePath -> Cmd Bool) -> FilePath -> Cmd FileStatus
+fsStat msg exists p = do
+  ex <- exists p
   when (not ex) $
-    abort $ "fs entry not found " ++ show p
-  st <- getFileStatus p
-  when (not $ isFile st) $
-    abort $ unwords ["fs entry not a", msg, show p]
-  return st
-
+    abort $ "fs entry not found or not a " ++ msg ++ ": " ++ show (show p)
+  getFileStatus p
 
 fsDirStat :: FilePath -> Cmd FileStatus
-fsDirStat = fsStat "directory" isDirectory
+fsDirStat = fsStat "directory" dirExist
 
 fsFileStat :: FilePath -> Cmd FileStatus
-fsFileStat = fsStat "regular file" isRegularFile
+fsFileStat = fsStat "regular file" fileExist
 
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
