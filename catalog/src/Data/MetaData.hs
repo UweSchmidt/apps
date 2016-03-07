@@ -106,42 +106,72 @@ lookupByNames ns md =
 
 -- ----------------------------------------
 
-getCreateDate :: MetaData -> Maybe (String, String, String)
-getCreateDate md =
-  fst <$> getCreateDateTime md
+getCreateMeta :: (String -> res) -> MetaData -> res
+getCreateMeta parse md =
+  parse cd
+  where
+    cd = lookupByNames
+      [ "Composite:SubSecCreateDate"
+      , "EXIF:CreateDate"
+      ] md
+      ^. from isoStringText
 
-getCreateTime :: MetaData -> Maybe (String, String, String, String)
-getCreateTime md = do
-  (_, t) <- getCreateDateTime md
-  case t of
-    ("", "", "", "") -> mzero
-    _                -> return t
+--    res = matchSubexRE reDateTime $ cd ^. from isoStringText
 
-reDate :: Regex
-reDate = parseRegexExt $
-  "({Y}[0-9]{4}):({M}[0-9]{2}):({D}[0-9]{2}).*"
+getFileName :: MetaData -> Maybe Text
+getFileName md =
+  md ^. metaDataAt "File:Filename" . isoTextMaybe
 
-getCreateDateTime :: MetaData -> Maybe ( (String, String, String)
-                                       , (String, String, String, String)
-                                       )
-getCreateDateTime md =
+-- ----------------------------------------
+--
+-- compare function on meta data
+
+compareByCreateDate :: MetaData -> MetaData -> Ordering
+compareByCreateDate =
+  compareBy [ compareJust' `on` getCreateMeta parseDateTime
+            , compare      `on` getFileName
+            ]
+
+compareByName :: MetaData -> MetaData -> Ordering
+compareByName =
+  compareBy [ compare `on` getFileName
+            ]
+
+-- ----------------------------------------
+--
+-- filter meta data enries by image type
+
+filterMetaData :: ImgType -> MetaData -> MetaData
+filterMetaData IMGraw  m = m ^. selectByRegex reRaw
+filterMetaData IMGmeta m = m ^. selectByRegex reXmp
+filterMetaData IMGimg  m = m ^. selectByRegex reRaw
+filterMetaData _       _ = emptyMetaData
+
+-- ----------------------------------------
+--
+-- meta data parsers
+
+parseDateTime :: String -> Maybe ( (String, String, String)
+                                 , (String, String, String, String)
+                                 )
+parseDateTime str =
   case res of
+    -- just year, month, day
     [("Y",y), ("M",m), ("D",d)] ->
       Just ((y, m, d), ("", "", "", ""))
 
+    -- date and time, witoutt msec
     [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
       Just ((y, m, d), (h, mi, s, ""))
 
+    -- date and time with msec
     [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s), ("ms",ms)] ->
       Just ((y, m, d), (h, mi, s, ms))
 
+    -- no match
     _ -> Nothing
   where
-    cd = lookupByNames [ "Composite:SubSecCreateDate"
-                       , "EXIF:CreateDate"
-                       ] md
-    res = matchSubexRE reDateTime $ cd ^. from isoStringText
-
+    res = matchSubexRE reDateTime str
 
 reDateTime :: Regex
 reDateTime = parseRegexExt $
@@ -152,29 +182,17 @@ reDateTime = parseRegexExt $
   ++ ")?"
   ++ "([^0-9].*)?"
 
-getFileName :: MetaData -> Maybe Text
-getFileName md =
-  md ^. metaDataAt "File:Filename" . isoTextMaybe
+-- take the day part from a date/time input
+parseDate :: String -> Maybe (String, String, String)
+parseDate str = fst <$> parseDateTime str
 
-compareByCreateDate :: MetaData -> MetaData -> Ordering
-compareByCreateDate =
-  compareBy [ compareJust' `on` getCreateDateTime
-            , compare `on` getFileName
-            ]
-
-compareByName :: MetaData -> MetaData -> Ordering
-compareByName =
-  compareBy [ compare `on` getFileName
-            ]
-
-
--- ----------------------------------------
-
-filterMetaData :: ImgType -> MetaData -> MetaData
-filterMetaData IMGraw  m = m ^. selectByRegex reRaw
-filterMetaData IMGmeta m = m ^. selectByRegex reXmp
-filterMetaData IMGimg  m = m ^. selectByRegex reRaw
-filterMetaData _       _ = emptyMetaData
+-- take the time part of a full date/time input
+parseTime :: String -> Maybe (String, String, String, String)
+parseTime str = do
+  (_, t) <- parseDateTime str
+  case t of
+    ("", "", "", "") -> mzero
+    _                -> return t
 
 -- ----------------------------------------
 

@@ -31,6 +31,7 @@ module Data.ImageTree
        , nullImgDir
        , isoImgParts
        , theParts
+       , thePartNames
        , theImgName
        , theImgType
        , theImgTimeStamp
@@ -286,6 +287,9 @@ isoImgParts =
   iso (\ (ImgParts pm) -> pm) ImgParts
   .
   isoMapElems (\ (IP n _ _ _) -> n)
+
+thePartNames :: ImgType -> Traversal' ImgParts Name
+thePartNames ty = isoImgParts . traverse . isA (^. theImgType . to (== ty)) . theImgName
 
 -- ----------------------------------------
 

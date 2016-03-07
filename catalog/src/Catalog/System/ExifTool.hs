@@ -1,10 +1,13 @@
 module Catalog.System.ExifTool
 where
 
-import           Catalog.Cmd
+import           Catalog.Cmd.Basic
+import           Catalog.Cmd.Types
+import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
 import           Data.Prim
+import           Data.ImageTree
 import           Data.MetaData
 
 import qualified Data.Aeson.Encode.Pretty as J
@@ -64,5 +67,14 @@ selectJSON f ns = do
 lookupJSON :: FilePath -> [Name] -> Cmd Text
 lookupJSON f ns =
   lookupByNames ns <$> readMetaData f
+
+getMetaData :: ObjId -> Cmd MetaData
+getMetaData i = do
+  pts <- getImgVals i theParts
+  let jsonName = pts ^. thePartNames IMGjson
+  jp  <- substPathName jsonName <$> objid2path i
+  md <- toFilePath jp >>= readMetaData
+  -- trcObj i $ "getmetadata: " ++ show md
+  return md
 
 -- ----------------------------------------

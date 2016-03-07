@@ -47,7 +47,7 @@ isoMonoidMaybe =
 
 -- a prism for filtering
 
-is :: (a -> Bool) -> Prism' a a
-is p = prism id (\ o -> (if p o then Right else Left) o)
+isA :: (a -> Bool) -> Prism' a a
+isA p = prism id (\ o -> (if p o then Right else Left) o)
 
 -- ----------------------------------------

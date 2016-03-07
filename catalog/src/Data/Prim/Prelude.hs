@@ -31,6 +31,7 @@ module Data.Prim.Prelude
        , partition
        , sort
        , sortBy
+       , nub
          -- Data.Function
        , on
          -- System.FilePath
@@ -44,6 +45,7 @@ module Data.Prim.Prelude
        , compareBy
        , compareJust
        , compareJust'
+       , partBy
        )
 where
 
@@ -54,6 +56,7 @@ import qualified Data.ByteString.Lazy as LB
 import           Data.Function
 import           Data.List
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Set (Set)
 import           Data.String (IsString(..))
@@ -91,5 +94,17 @@ compareJust' (Just _ ) _         = LT
 compareJust' _         (Just _ ) = GT
 compareJust' _         _         = EQ
 
+-- ----------------------------------------
+
+-- put all elemnts of a, which have equal e values
+-- into a sublist
+--
+-- partBy (`mod` 3) [0..9] = [[0,3,6,9],[1,4,7],[2,5,8]]
+
+partBy :: (Ord e) => (a -> e) -> [a] -> [[a]]
+partBy f =
+  M.elems
+  . foldr (\ x m -> M.insertWith (++) (f x) [x]
+                    m) M.empty
 
 -- ----------------------------------------

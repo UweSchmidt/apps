@@ -93,6 +93,7 @@ c2 = do
   cwRoot
   cwSyncFS
   genCollectionsByDir
+  genCollectionsByDate
   saveImgStore ""
   listImages  >>= putStrLn'
   cwListPaths >>= putStrLn'
@@ -104,10 +105,11 @@ c3 :: Cmd () -> Cmd ()
 c3 c = local (envTrc .~ False) $ do
   loadImgStore "c1.json"
   cwRoot
-  c
-  saveImgStore "c1.json"
-  rls <- buildRules
-  we >>= applyRules rls >>= runImgAction
+  local (envTrc .~ True) c
+  -- saveImgStore ""
+  -- saveImgStore "c1.json"
+  -- rls <- buildRules
+  -- we >>= applyRules rls >>= runImgAction
 
 runc :: Cmd () -> IO (Either Msg (), ImgStore, Log)
 runc c = runCmd (c3 c)
