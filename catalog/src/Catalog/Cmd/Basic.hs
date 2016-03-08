@@ -61,6 +61,10 @@ getRootImgColId = do
   ri <- getRootId
   getImgVals ri theRootImgCol
 
+existsObjId :: ObjId -> Cmd Bool
+existsObjId i =
+  isJust <$> getTree (entryAt i)
+
 lookupByName :: Name -> ObjId -> Cmd (Maybe (ObjId, ImgNode))
 lookupByName n i = do
   p <- (`snocPath` n) <$> objid2path i
@@ -68,6 +72,25 @@ lookupByName n i = do
 
 lookupByPath :: Path -> Cmd (Maybe (ObjId, ImgNode))
 lookupByPath p = lookupImgPath p <$> dt
+
+-- save lookup by path
+
+getIdNode :: String -> Path -> Cmd (ObjId, ImgNode)
+getIdNode msg p = do
+  mv <- lookupImgPath p <$> dt
+  case mv of
+    Nothing ->
+      abort $ msg ++ " " ++ show (show p)
+    Just res ->
+      return res
+
+-- check path not there
+
+notTherePath :: String -> Path -> Cmd ()
+notTherePath msg p = do
+  exists <- isJust <$> lookupByPath p
+  when exists $
+    abort $ msg ++ " " ++ show (show p)
 
 -- ----------------------------------------
 
@@ -152,6 +175,32 @@ rmImgNode i = dt >>= go
     go t = do
       t' <- liftE $ removeImgNode i t
       theImgTree .= t'
+
+-- ----------------------------------------
+--
+-- simple "file system" ops
+
+-- create a new empty subcollection
+
+mkCollection :: Path -> Cmd ObjId
+mkCollection target'path = do
+  -- parent exists
+  (parent'id, parent'node) <- getIdNode "mkCollection: parent doesn't exist" parent'path
+
+  -- parent is a collection
+  -- TODO exists check
+  unless (isCOL parent'node) $
+    abort $ "mkCollection: parent isn't a collection " ++ show (show parent'path)
+
+  -- check collection does not yet exist
+  notTherePath "mkCollection: target collection already exists" target'path
+
+  -- create a new empty collection and append it to the parent collection
+  col'id <- mkImgCol parent'id target'name
+  adjustColEntries (++ [mkColColRef col'id]) parent'id
+  return col'id
+  where
+    (parent'path, target'name) = target'path ^. viewBase
 
 -- ----------------------------------------
 --

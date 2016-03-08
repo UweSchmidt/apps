@@ -1,4 +1,4 @@
-module Catalog.Cmd.Remove
+module Catalog.Cmd.CopyRemove
 where
 
 import           Catalog.Cmd.Basic
@@ -7,48 +7,61 @@ import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
-import           Data.RefTree
 import           Data.ImageTree
 import           Data.ImgAction
 import           Data.Prim
 
 -- ----------------------------------------
 
+copyCollection :: Path -> Path -> Cmd ()
+copyCollection path'src path'dst = do
+  id'src <- fst <$> getIdNode "copyCollection: source not fouund"     path'src
+  id'dst <- fst <$> getIdNode "copyCollection: destination not found" path'dst
+  copyColRec id'src id'dst
+
 copyColRec :: ObjId -> ObjId -> Cmd ()
 copyColRec src dst = do
-  srcNode <- getTree (theNode src)
-  when (not . isCOL $ srcNode ^. nodeVal) $ do
+  srcVal <- getImgVal src
+  unless (isCOL srcVal) $ do
     p <- objid2path src
     abort $ "copyColRec: source isn't a collection " ++ show (show p)
 
-  dstNode <- getTree (theNode dst)
-  when (not . isCOL $ dstNode ^. nodeVal) $ do
-    p <- objid2path dst
-    abort $ "copyColRec: destination isn't a collection " ++ show (show p)
-
+  name'src    <- getImgName src
   parent'src  <- getImgParent src
   parent'path <- objid2path parent'src
   dst'path    <- objid2path dst
   let editPath = substPathPrefix parent'path dst'path
 
   -- create empty subcollection in destination dir
-  -- TODO
+  let target'path = editPath (snocPath parent'path name'src)
+  void $ createCopy target'path src
 
+  -- copy image and subcollections recursively into new dest collection
   copyEntries editPath src
   where
+
+    createCopy :: Path -> ObjId -> Cmd ObjId
+    createCopy target'path src'id = do
+      col'id <- mkCollection target'path
+      -- copy meta data
+      md  <- getImgVals src'id theColMetaData
+      adjustMetaData (const md) col'id
+      return col'id
+
     -- copy entries copies the s collection into
     -- a destination computed by the source path and
     -- the pf path edit function
-    copyEntries pf s =
-      foldMT imgA dirA rootA colA s
+    copyEntries pf =
+      foldMT imgA dirA rootA colA
       where
         imgA      _i _p      = return ()  -- NOOP
         dirA  _go _i _es _ts = return ()  -- NOOP
         rootA _go _i _d  _c  = return ()  -- NOOP
 
-        colA go i md cs _ts  = do
+        colA go i _md cs _ts  = do
+          dst'i  <- (mkObjId . pf) <$> objid2path i
           dst'cs <- mapM copy cs
-          undefined dst'cs -- TODO
+          adjustColEntries (const dst'cs) dst'i
 
           -- recurse into subcollections
           mapM_ go (cs ^.. traverse . theColColRef)
@@ -57,14 +70,16 @@ copyColRec src dst = do
             copy :: ColEntry -> Cmd ColEntry
             copy r@(ImgRef _i _n) =
               return r
-            -- empty subcollection must be created
-            -- in the destination collection
-            copy (ColRef i) = do
-              new'i <- undefined  -- TODO
-
-              return new'i
+            copy (ColRef i') = do
+              copy'path <- pf <$> objid2path i'
+              mkColColRef <$> createCopy copy'path i'
 
 -- ----------------------------------------
+
+removeEntry :: Path -> Cmd ()
+removeEntry p = do
+  i <- fst <$> getIdNode "removeEntry: entry not found " p
+  rmRec i
 
 rmRec :: ObjId -> Cmd ()
 rmRec = foldMT imgA dirA rootA colA

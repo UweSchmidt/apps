@@ -11,7 +11,7 @@ module Catalog.Cmd
        , module Catalog.Cmd.Basic
        , module Catalog.Cmd.Fold
        , module Catalog.Cmd.List
-       , module Catalog.Cmd.Remove
+       , module Catalog.Cmd.CopyRemove
        , module Catalog.Cmd.CWN
        , module Catalog.Cmd.ArchiveCollection
        , module Catalog.System.IO
@@ -25,7 +25,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.CWN
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.List
-import           Catalog.Cmd.Remove
+import           Catalog.Cmd.CopyRemove
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Control.Lens
