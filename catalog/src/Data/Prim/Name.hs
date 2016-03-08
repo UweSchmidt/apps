@@ -5,7 +5,6 @@ module Data.Prim.Name
 where
 
 import           Data.Prim.Prelude
-import           Control.Lens (Iso', iso, from, (^.))
 import           Control.Monad (mzero)
 import qualified Data.Aeson as J
 import qualified Data.List as L

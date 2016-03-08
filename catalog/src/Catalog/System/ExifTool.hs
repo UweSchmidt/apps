@@ -4,8 +4,6 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
-import           Control.Lens
-import           Control.Lens.Util
 import           Data.Prim
 import           Data.ImageTree
 import           Data.MetaData
@@ -21,7 +19,7 @@ getExifTool f = do
   if ex
     then
       execExifTool ["-groupNames", "-json"] f
-      >>= (return . (^. isoStringByteString))
+      >>= (return . (^. from isoString))
       >>= buildMetaData
     else
       return emptyMetaData

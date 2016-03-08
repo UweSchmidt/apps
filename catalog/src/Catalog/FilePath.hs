@@ -23,8 +23,8 @@ fpToImgType conf path =
   foldr1 (<|>) $
   map parse conf
   where
-    parse (re, ty) =
-      partRes $  matchSubexRE re path
+    parse (e, ty) =
+      partRes $  matchSubexRE e path
       where
 
         partRes [("1", base)] =

@@ -5,8 +5,6 @@
 module Data.MetaData
 where
 
-import           Control.Lens
-import           Control.Lens.Util
 import           Control.Monad
 import           Data.Prim
 
@@ -58,7 +56,7 @@ metaDataAt key = md2obj . at (key ^. name2text) . val2text
     val2text = iso totext fromtext
       where
         totext (Just (J.String t)) = t
-        totext (Just (J.Number n)) = (showSc n) ^. isoStringText
+        totext (Just (J.Number n)) = (showSc n) ^. from isoString
         totext _                   = ""
 
         fromtext t
@@ -114,9 +112,9 @@ getCreateMeta parse md =
       [ "Composite:SubSecCreateDate"
       , "EXIF:CreateDate"
       ] md
-      ^. from isoStringText
+      ^. isoString
 
---    res = matchSubexRE reDateTime $ cd ^. from isoStringText
+--    res = matchSubexRE reDateTime $ cd ^. isoString
 
 getFileName :: MetaData -> Maybe Text
 getFileName md =

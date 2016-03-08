@@ -3,8 +3,6 @@
 module Data.Prim.TimeStamp
 where
 
-import           Control.Lens
-import           Control.Lens.Util
 import           Control.Monad (mzero)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as J
@@ -36,7 +34,7 @@ instance ToJSON TimeStamp where
 
 instance FromJSON TimeStamp where
   parseJSON (J.String t) =
-    return (t ^. from isoStringText . from timeStamp2string)
+    return (t ^. isoString . from timeStamp2string)
   parseJSON _ =
     mzero
 

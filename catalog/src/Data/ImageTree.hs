@@ -53,8 +53,6 @@ module Data.ImageTree
        )
 where
 
-import           Control.Lens
-import           Control.Lens.Util
 import           Control.Monad.Except
 import           Data.MetaData
 import           Data.Prim

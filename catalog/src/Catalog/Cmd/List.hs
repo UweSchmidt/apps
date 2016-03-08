@@ -4,14 +4,9 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
-import           Control.Lens
-import           Control.Lens.Util
 import           Data.ImageStore
 import           Data.ImageTree
-import           Data.Prim.Name
-import           Data.Prim.Path
-import           Data.Prim.PathId
-import           Data.Prim.Prelude
+import           Data.Prim
 import           Data.RefTree
 
 -- ----------------------------------------

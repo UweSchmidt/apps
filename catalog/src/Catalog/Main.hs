@@ -13,8 +13,7 @@ import           Catalog.Sync
 import           Catalog.System.Convert
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
-import           Control.Lens
-import           Control.Lens.Util
+import           Data.Prim
 import           Data.ImageStore
 import           Data.ImageTree
 import           Data.ImgAction

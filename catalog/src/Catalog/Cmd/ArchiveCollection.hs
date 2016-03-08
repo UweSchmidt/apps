@@ -8,8 +8,6 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
-import           Control.Lens
-import           Control.Lens.Util
 import           Data.ImageTree
 import           Data.MetaData
 import           Data.Prim
@@ -110,7 +108,7 @@ processNewImages colSyncTime pc i0 = do
         setupYearCol y' _i = do
           mkColMeta t s c o
           where
-            t = ("Bilder aus " ++ y') ^. isoStringText
+            t = ("Bilder aus " ++ y') ^. from isoString
             s = ""
             c = ""
             o = "Name"
@@ -122,7 +120,7 @@ processNewImages colSyncTime pc i0 = do
                         , month (read m')
                         , y'
                         ]
-                ^. isoStringText
+                ^. from isoString
             s = ""
             c = ""
             o = "Name"
@@ -135,7 +133,7 @@ processNewImages colSyncTime pc i0 = do
                         , month (read m')
                         , y'
                         ]
-                ^. isoStringText
+                ^. from isoString
             s = ""
             c = ""
             o = "DateAndTime"
@@ -178,7 +176,7 @@ genCollectionsByDir = do
     setupDirCol :: ObjId -> Cmd MetaData
     setupDirCol i = do
       p <- (show . tailPath) <$> objid2path i
-      let t = p ^. isoStringText
+      let t = p ^. from isoString
           s = ""
           c = ""
           o =  "ColAndName"
@@ -318,7 +316,7 @@ adjustColBy sortCol cs parent'i = do
 
 mkColMeta :: Text -> Text -> Text -> Text -> Cmd MetaData
 mkColMeta t s c o = do
-  d <- (\ t' -> show t' ^. isoStringText) <$> atThisMoment
+  d <- (\ t' -> show t' ^. from isoString) <$> atThisMoment
   return $
       emptyMetaData
       & metaDataAt "COL:Title"      .~ t
