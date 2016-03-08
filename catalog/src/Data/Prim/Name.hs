@@ -23,6 +23,9 @@ emptyName = mkName ""
 mkName :: String -> Name
 mkName = Name . T.pack
 
+instance IsEmpty Name where
+  isempty (Name n) = T.null n
+
 nullName :: Name -> Bool
 nullName (Name n) = T.null n
 
@@ -42,6 +45,12 @@ substNameSuffix os' ns' n'
     os = fromName os'
     ns = fromName ns'
     n  = fromName n'
+
+instance IsoString Name where
+  isoString = iso fromName mkName
+
+instance IsoText Name where
+  isoText = iso (\ (Name n) -> n) Name
 
 name2string :: Iso' Name String
 name2string = iso fromName mkName

@@ -51,12 +51,14 @@ module Data.Prim.Prelude
          -- lens stuff
        , module Control.Lens
        , IsoString(..)
+       , IsoText(..)
        , isoMapElems
        , isoMapList
        , isoSetList
        , isoTextMaybe
        , isoMonoidMaybe
        , isA
+       , IsEmpty(..)
        )
 where
 
@@ -140,6 +142,17 @@ instance IsoString ByteString where
 
 instance IsoString LazyByteString where
   isoString = iso LBU.toString LBU.fromString
+
+class IsoText a where
+  isoText :: Iso' a Text
+
+instance IsoText Text where
+  isoText = iso id id
+
+-- ----------------------------------------
+
+class IsEmpty a where
+  isempty :: a -> Bool
 
 -- ----------------------------------------
 
