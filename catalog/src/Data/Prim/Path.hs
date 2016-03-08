@@ -17,6 +17,7 @@ module Data.Prim.Path
        , tailPath
        , headPath
        , substPathName
+       , substPathPrefix
        , showPath
        , path2string
        , viewTop
@@ -34,7 +35,7 @@ import Data.Prim.Name
 -- ----------------------------------------
 
 data Path' n = BN !n
-                | DN !n !(Path' n)
+             | DN !n !(Path' n)
 
 type Path = Path' Name
 
@@ -104,6 +105,20 @@ tailPath = (^. viewTop . _2)
 
 substPathName :: (Monoid n, Eq n) => n -> Path' n -> Path' n
 substPathName n p = p & viewBase . _2 .~ n
+
+substPathPrefix :: (Monoid n, Eq n, Show n) =>
+                   Path' n -> Path' n -> (Path' n -> Path' n)
+substPathPrefix old'px new'px p0 =
+  go old'px p0
+  where
+    go px p
+      | nullPath px = new'px `concPath` p
+      | hpx == hp   = go tpx tp
+      | otherwise   = error $
+                      unwords [show old'px, "isn't a prefix of path", show p0]
+      where
+        (hpx, tpx) = px ^. viewTop
+        (hp,  tp ) = p  ^. viewTop
 
 showPath :: (Monoid n, Eq n, Show n) => Path' n -> String
 showPath (BN n)

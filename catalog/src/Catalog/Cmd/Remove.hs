@@ -7,9 +7,62 @@ import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Control.Lens
 import           Control.Lens.Util
+import           Data.RefTree
 import           Data.ImageTree
 import           Data.ImgAction
 import           Data.Prim
+
+-- ----------------------------------------
+
+copyColRec :: ObjId -> ObjId -> Cmd ()
+copyColRec src dst = do
+  srcNode <- getTree (theNode src)
+  when (not . isCOL $ srcNode ^. nodeVal) $ do
+    p <- objid2path src
+    abort $ "copyColRec: source isn't a collection " ++ show (show p)
+
+  dstNode <- getTree (theNode dst)
+  when (not . isCOL $ dstNode ^. nodeVal) $ do
+    p <- objid2path dst
+    abort $ "copyColRec: destination isn't a collection " ++ show (show p)
+
+  parent'src  <- getImgParent src
+  parent'path <- objid2path parent'src
+  dst'path    <- objid2path dst
+  let editPath = substPathPrefix parent'path dst'path
+
+  -- create empty subcollection in destination dir
+  -- TODO
+
+  copyEntries editPath src
+  where
+    -- copy entries copies the s collection into
+    -- a destination computed by the source path and
+    -- the pf path edit function
+    copyEntries pf s =
+      foldMT imgA dirA rootA colA s
+      where
+        imgA      _i _p      = return ()  -- NOOP
+        dirA  _go _i _es _ts = return ()  -- NOOP
+        rootA _go _i _d  _c  = return ()  -- NOOP
+
+        colA go i md cs _ts  = do
+          dst'cs <- mapM copy cs
+          undefined dst'cs -- TODO
+
+          -- recurse into subcollections
+          mapM_ go (cs ^.. traverse . theColColRef)
+          where
+
+            copy :: ColEntry -> Cmd ColEntry
+            copy r@(ImgRef _i _n) =
+              return r
+            -- empty subcollection must be created
+            -- in the destination collection
+            copy (ColRef i) = do
+              new'i <- undefined  -- TODO
+
+              return new'i
 
 -- ----------------------------------------
 

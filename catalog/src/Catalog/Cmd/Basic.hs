@@ -43,6 +43,9 @@ getImgVal i = getTree (theNode i . nodeVal)
 getImgVals :: ObjId -> Getting a ImgNode a -> Cmd a
 getImgVals i l = getTree (theNode i . nodeVal . l)
 
+getImgSubDirs :: Set ObjId -> Cmd [ObjId]
+getImgSubDirs es = filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoSetList)
+
 -- ----------------------------------------
 
 getRootId :: Cmd ObjId

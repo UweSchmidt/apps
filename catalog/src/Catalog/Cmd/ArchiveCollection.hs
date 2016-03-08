@@ -56,7 +56,7 @@ processNewImages colSyncTime pc i0 = do
     dirA go _i es dirSyncTime = do
       es' <- if colSyncTime >= dirSyncTime
              then
-               filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoSetList)
+               getImgSubDirs es
              else
                return (es ^. isoSetList)
       concat <$> mapM go es'
@@ -163,8 +163,9 @@ genCollectionsByDir = do
   -- create root collection for archive dir hierachy
   let (rootName, pc1) = pc  ^. viewTop
   let (colName, _pc2) = pc1 ^. viewTop
-  let img2col p =
-        rootName `consPath` colName `consPath` tailPath p
+  let old'px  = mkPath rootName
+  let new'px  = rootName `consPath` mkPath colName
+  let img2col = substPathPrefix old'px new'px
 
   void $ mkColByPath insertColByName setupDirCol (img2col dp)
 
@@ -216,8 +217,7 @@ genCollectionsByDir = do
               -- the collection is up to date
               -- only the subdirs need to be traversed
               trcObj i "genCol dir: dir is up to date, traversing subdirs"
-              cs  <- filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoSetList)
-              mapM_ (\ i' -> trcObj i' "subdir") cs
+              cs  <- getImgSubDirs es
               void $ mapM go cs
             else do
               -- get collection entries, and insert them into collection
