@@ -38,12 +38,13 @@ genCollectionsByDate = do
 
     setupByDate :: ObjId -> Cmd MetaData
     setupByDate _i = do
-      mkColMeta t s c o
+      mkColMeta t s c o a
       where
         t = "Bilder geordnent nach Datum"
         s = ""
         c = ""
         o = "ColAndName"
+        a = "ReadOnly"
 
 processNewImages :: TimeStamp -> Path -> ObjId -> Cmd ()
 processNewImages colSyncTime pc i0 = do
@@ -106,27 +107,25 @@ processNewImages colSyncTime pc i0 = do
                   ] !! (i - 1)
 
         setupYearCol y' _i = do
-          mkColMeta t s c o
+          mkColMeta t "" "" o a
           where
             t = ("Bilder aus " ++ y') ^. from isoString
-            s = ""
-            c = ""
             o = "Name"
+            a = "ReadOnly"
 
         setupMonthCol y' m' _i = do
-          mkColMeta t s c o
+          mkColMeta t "" "" o a
           where
             t = unwords [ "Bilder aus dem"
                         , month (read m')
                         , y'
                         ]
                 ^. from isoString
-            s = ""
-            c = ""
             o = "Name"
+            a = "ReadOnly"
 
         setupDayCol y' m' d' _i = do
-          mkColMeta t s c o
+          mkColMeta t "" "" o a
           where
             t = unwords [ "Bilder vom"
                         , show (read d' :: Int) ++ "."
@@ -134,9 +133,8 @@ processNewImages colSyncTime pc i0 = do
                         , y'
                         ]
                 ^. from isoString
-            s = ""
-            c = ""
             o = "DateAndTime"
+            a = "ReadOnly"
 
 -- ----------------------------------------
 
@@ -177,10 +175,9 @@ genCollectionsByDir = do
     setupDirCol i = do
       p <- (show . tailPath) <$> objid2path i
       let t = p ^. from isoString
-          s = ""
-          c = ""
-          o =  "ColAndName"
-      mkColMeta t s c o
+          o = "ColAndName"
+          a = "ReadOnly"
+      mkColMeta t "" "" o a
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
@@ -316,8 +313,8 @@ adjustColBy sortCol cs parent'i = do
 
 -- ----------------------------------------
 
-mkColMeta :: Text -> Text -> Text -> Text -> Cmd MetaData
-mkColMeta t s c o = do
+mkColMeta :: Text -> Text -> Text -> Text -> Text -> Cmd MetaData
+mkColMeta t s c o a = do
   d <- (\ t' -> show t' ^. from isoString) <$> atThisMoment
   return $
       mempty
@@ -326,7 +323,7 @@ mkColMeta t s c o = do
       & metaDataAt "COL:Comment"    .~ c
       & metaDataAt "COL:OrderedBy"  .~ o
       & metaDataAt "COL:CreateDate" .~ d
-
+      & metaDataAt "COL:Access"     .~ a
 
 -- create collections recursively, similar to 'mkdir -p'
 

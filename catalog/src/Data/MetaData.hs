@@ -368,6 +368,7 @@ attrCol =
     , "Comment"
     , "CreateDate"
     , "OrderedBy"
+    , "Access"
     ]
   )
 
