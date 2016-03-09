@@ -210,6 +210,10 @@ adjustMetaData :: (MetaData -> MetaData) -> ObjId -> Cmd ()
 adjustMetaData f i =
   theImgTree . theNodeVal i . theColMetaData %= f
 
+adjustColImg :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
+adjustColImg f i =
+  theImgTree . theNodeVal i . theColImg %= f
+
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
 adjustColEntries = adjustNodeVal theColEntries
 
@@ -220,11 +224,7 @@ adjustNodeVal theComp f i =
 setSyncTime :: ObjId -> Cmd ()
 setSyncTime i = do
   t <- now
-  theImgTree . theNodeVal i %= syncTime t
-    where
-      syncTime t (DIR es _ts)    = DIR es t
-      syncTime t (COL md es _ts) = COL md es t
-      syncTime _ n               = n
+  theImgTree . theNodeVal i . theSyncTime .= t
 
 -- ----------------------------------------
 --

@@ -28,7 +28,7 @@ genCollectionsByDate = do
 
   let top'iPath = pc `snocPath` "byCreateDate"
   top'i <- mkColByPath insertColByName setupByDate top'iPath
-  top'iSyncTime <- getImgVals top'i theColSyncTime
+  top'iSyncTime <- getImgVals top'i theSyncTime
 
   -- fill the year/month/day hierachy
   processNewImages top'iSyncTime top'iPath di
@@ -206,8 +206,8 @@ genCollectionsByDir = do
           -- with action for meta data
           ic <- mkColByPath insertColByName setupDirCol cp
 
-          dirSyncTime <- getImgVals i  theDirSyncTime
-          colSyncTime <- getImgVals ic theColSyncTime
+          dirSyncTime <- getImgVals i  theSyncTime
+          colSyncTime <- getImgVals ic theSyncTime
 
           if colSyncTime >= dirSyncTime
             then do

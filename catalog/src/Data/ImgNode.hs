@@ -34,15 +34,15 @@ module Data.ImgNode
        , theImgCheckSum
        , theDir
        , theDirEntries
-       , theDirSyncTime
+       , theSyncTime
        , theRootImgDir
        , theRootImgCol
        , theImgRoot
        , theImgCol
        , theColImgObjId
        , theColMetaData
+       , theColImg
        , theColEntries
-       , theColSyncTime
        , theColColRef
        , theColImgRef
        , addDirEntry
@@ -61,9 +61,13 @@ import qualified Data.Map.Strict as M
 
 
 data ImgNode' ref = IMG  !ImgParts
-                  | DIR  !(DirEntries' ref) !TimeStamp
+                  | DIR  !(DirEntries' ref)    -- the contents of an image dir
+                         !TimeStamp            -- the last sync with the file system
                   | ROOT !ref !ref
-                  | COL  !MetaData ![ColEntry' ref] !TimeStamp
+                  | COL  !MetaData             -- collection meta data
+                         !(Maybe (ref, Name))  -- optional image
+                         ![ColEntry' ref]      -- the list of images and subcollections
+                         !TimeStamp            -- last update
 
 -- ----------------------------------------
 
@@ -72,10 +76,10 @@ deriving instance (Show ref) => Show (ImgNode' ref)
 deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
-  isempty (IMG pts)        = isempty pts
-  isempty (DIR es _ts)     = isempty es
-  isempty (COL _md cs _ts) = isempty cs
-  isempty (ROOT _d _c)     = False
+  isempty (IMG pts)            = isempty pts
+  isempty (DIR es _ts)         = isempty es
+  isempty (COL _md _im cs _ts) = isempty cs
+  isempty (ROOT _d _c)         = False
 
 instance ToJSON ref => ToJSON (ImgNode' ref) where
   toJSON (IMG pm) = J.object
@@ -92,12 +96,15 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     , "archive"     J..= rd
     , "collections" J..= rc
     ]
-  toJSON (COL md es ts) = J.object
+  toJSON (COL md im es ts) = J.object $
     [ "ImgNode"    J..= ("COL" :: String)
     , "metadata"   J..= md
     , "entries"    J..= es
     , "sync"       J..= ts
     ]
+    ++ case im of
+         Nothing -> []
+         Just p  -> ["image" J..= p]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
   parseJSON = J.withObject "ImgNode" $ \ o ->
@@ -113,6 +120,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
                 <*> o J..: "collections"
          "COL" ->
            COL  <$> o J..: "metadata"
+                <*> (Just <$> o J..:? "image") J..!= Nothing
                 <*> o J..: "entries"
                 <*> o J..: "sync"
          _ -> mzero
@@ -127,7 +135,7 @@ emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
 
 emptyImgCol :: ImgNode' ref
-emptyImgCol = COL mempty [] mempty
+emptyImgCol = COL mempty Nothing [] mempty
 
 -- image node optics
 
@@ -149,8 +157,14 @@ theDir =
 theDirEntries :: Traversal' (ImgNode' ref) (DirEntries' ref)
 theDirEntries = theDir . _1
 
-theDirSyncTime :: Traversal' (ImgNode' ref) TimeStamp
-theDirSyncTime = theDir . _2
+-- traverseWords :: Traverasl' State Word8
+-- traverseWords :: Applicative f => (Word8 -> f Word8) -> State -> f State
+-- traverseWords inj (State wa wb) = State <$> inj wa <*> inj wb
+
+theSyncTime :: Traversal' (ImgNode' ref) TimeStamp
+theSyncTime inj (DIR es ts)       = DIR es <$> inj ts
+theSyncTime inj (COL md im es ts) = COL md im es <$> inj ts
+theSyncTime _   n                 = pure n
 
 theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
 theImgRoot
@@ -166,22 +180,23 @@ theRootImgDir = theImgRoot . _1
 theRootImgCol :: Traversal' (ImgNode' ref) ref
 theRootImgCol = theImgRoot . _2
 
-theImgCol :: Prism' (ImgNode' ref) (MetaData, [ColEntry' ref], TimeStamp)
+theImgCol :: Prism' (ImgNode' ref)
+                    (MetaData, (Maybe (ref, Name)), [ColEntry' ref], TimeStamp)
 theImgCol
-  = prism (\ (x1, x2, x3) -> COL x1 x2 x3)
+  = prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
           (\ x -> case x of
-              COL x1 x2 x3 -> Right (x1, x2, x3)
-              _            -> Left x
+              COL x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
+              _               -> Left x
           )
 
 theColMetaData :: Traversal' (ImgNode' ref) MetaData
 theColMetaData = theImgCol . _1
 
-theColEntries :: Traversal' (ImgNode' ref) [ColEntry' ref]
-theColEntries = theImgCol . _2
+theColImg :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
+theColImg = theImgCol . _2
 
-theColSyncTime :: Traversal' (ImgNode' ref) TimeStamp
-theColSyncTime = theImgCol . _3
+theColEntries :: Traversal' (ImgNode' ref) [ColEntry' ref]
+theColEntries = theImgCol . _3
 
 isDIR :: ImgNode' ref -> Bool
 isDIR DIR{}  = True
@@ -279,8 +294,8 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-data ColEntry' ref = ImgRef ref Name
-                   | ColRef ref
+data ColEntry' ref = ImgRef !ref !Name
+                   | ColRef !ref
 
 deriving instance (Eq   ref) => Eq   (ColEntry' ref)
 deriving instance (Ord  ref) => Ord  (ColEntry' ref)
