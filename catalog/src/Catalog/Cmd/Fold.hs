@@ -12,7 +12,7 @@ import           Data.Prim
 type Act r = ObjId -> Cmd r
 
 foldMT :: (         ObjId -> ImgParts                            -> Cmd r) ->  -- IMG
-          (Act r -> ObjId -> Set ObjId              -> TimeStamp -> Cmd r) ->  -- DIR
+          (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
           (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
           (Act r -> ObjId -> MetaData -> [ColEntry] -> TimeStamp -> Cmd r) ->  -- COL
            Act r
@@ -38,8 +38,8 @@ foldMT imgA dirA' rootA' colA' i0 = do
 -- ----------------------------------------
 
 processImgDirs :: Monoid r =>
-                  (         ObjId -> ImgParts               -> Cmd r) ->
-                  (Act r -> ObjId -> Set ObjId -> TimeStamp -> Cmd r) ->
+                  (         ObjId -> ImgParts                -> Cmd r) ->
+                  (Act r -> ObjId -> DirEntries -> TimeStamp -> Cmd r) ->
                   Act r
 processImgDirs imgA dirA =
   foldMT imgA dirA rootA colA
@@ -54,6 +54,6 @@ processImages :: Monoid r =>
 processImages imgA =
   processImgDirs imgA dirA
   where
-    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoSetList)
+    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoDirEntries)
 
 -- ----------------------------------------

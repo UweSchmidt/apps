@@ -36,8 +36,9 @@ getImgVal i = getTree (theNode i . nodeVal)
 getImgVals :: ObjId -> Getting a ImgNode a -> Cmd a
 getImgVals i l = getTree (theNode i . nodeVal . l)
 
-getImgSubDirs :: Set ObjId -> Cmd [ObjId]
-getImgSubDirs es = filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoSetList)
+getImgSubDirs :: DirEntries -> Cmd [ObjId]
+getImgSubDirs es =
+  filterM (\ i' -> getImgVals i' (to isDIR)) (es ^. isoDirEntries)
 
 -- ----------------------------------------
 
@@ -112,7 +113,7 @@ objid2contNames i = getImgVal i >>= go
           return (e ^. theParts . isoImgParts . traverse . theImgName . to (:[]))
 
       | isDIR e =
-          traverse getImgName (e ^. theDirEntries . isoSetList)
+          traverse getImgName (e ^. theDirEntries . isoDirEntries)
 
       | isROOT e = let (i1, i2) = e ^. theImgRoot in do
           n1 <- getImgName i1
@@ -202,7 +203,7 @@ mkCollection target'path = do
 adjustImg :: (ImgParts -> ImgParts) -> ObjId -> Cmd ()
 adjustImg = adjustNodeVal theParts
 
-adjustDirEntries :: (Set ObjId -> Set ObjId) -> ObjId -> Cmd ()
+adjustDirEntries :: (DirEntries -> DirEntries) -> ObjId -> Cmd ()
 adjustDirEntries = adjustNodeVal theDirEntries
 
 adjustMetaData :: (MetaData -> MetaData) -> ObjId -> Cmd ()

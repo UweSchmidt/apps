@@ -24,7 +24,7 @@ listNames i0 =
 
     dirA go i es _ts = do
       n  <- nm i
-      xs <- mapM go (es ^. isoSetList)
+      xs <- mapM go (es ^. isoDirEntries)
       return $
         ind n (concat xs)
 
@@ -58,7 +58,7 @@ listPaths' =
 
     dirA go i es _ts = do
       p  <- objid2path i
-      pp <- mapM go (es ^. isoSetList)
+      pp <- mapM go (es ^. isoDirEntries)
       return $
         p : concat pp
 

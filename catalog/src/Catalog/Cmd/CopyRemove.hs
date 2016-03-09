@@ -85,7 +85,7 @@ rmRec = foldMT imgA dirA rootA colA
     imgA i _p = rmImgNode i
 
     dirA go i es _ts = do
-      mapM_ go (es ^. isoSetList)               -- process subdirs first
+      mapM_ go (es ^. isoDirEntries)               -- process subdirs first
       pe <- getImgParent i >>= getImgVal        -- remode dir node
       when (not $ isROOT pe) $                  -- if it's not the top dir
         rmImgNode i
@@ -122,7 +122,7 @@ rmGenFiles pp =
           pts & isoImgParts %~ filter (not . pp)
 
     dirA go _i es _ts =                         -- recurse into dir entries
-      mapM_ go (es ^. isoSetList)
+      mapM_ go (es ^. isoDirEntries)
 
     rootA go _i dir _col =                      -- recurse only into dir hierachy
       go dir

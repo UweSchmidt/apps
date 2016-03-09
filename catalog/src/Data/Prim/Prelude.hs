@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.Prim.Prelude
        ( ByteString
@@ -56,6 +57,7 @@ module Data.Prim.Prelude
        , IsoString(..)
        , IsoText(..)
        , IsoInteger(..)
+       , IsoMaybe(..)
        , isoMapElems
        , isoMapList
        , isoSetList
@@ -190,6 +192,19 @@ instance IsoInteger Integer where
 instance (Integral a) => IsoInteger a where
   isoInteger = iso toInteger fromInteger
 -- -}
+
+class IsoMaybe a where
+  isoMaybe :: Iso' a (Maybe a)
+
+instance (IsEmpty a, Monoid a) => IsoMaybe a where
+  isoMaybe = iso toM fromM
+    where
+      toM xs
+        | isempty xs = Nothing
+        | otherwise  = Just xs
+
+      fromM Nothing   = mempty
+      fromM (Just xs) = xs
 
 -- ----------------------------------------
 

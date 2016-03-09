@@ -56,7 +56,7 @@ processNewImages colSyncTime pc i0 = do
              then
                getImgSubDirs es
              else
-               return (es ^. isoSetList)
+               return (es ^. isoDirEntries)
       concat <$> mapM go es'
 
     -- read the jpg image part and the create date meta tag
@@ -129,7 +129,7 @@ processNewImages colSyncTime pc i0 = do
           mkColMeta t s c o
           where
             t = unwords [ "Bilder vom"
-                        , show (read d' ::Int) ++ "."
+                        , show (read d' :: Int) ++ "."
                         , month (read m')
                         , y'
                         ]
@@ -198,6 +198,8 @@ genCollectionsByDir = do
         -- generate a coresponding collection with all entries
         -- entries are sorted by name
 
+        dirA :: (ObjId -> Cmd [ColEntry]) ->
+                ObjId -> DirEntries -> TimeStamp -> Cmd [ColEntry]
         dirA go i es _ts = do
           p  <- objid2path i
           let cp = fp p
@@ -219,7 +221,7 @@ genCollectionsByDir = do
               void $ mapM go cs
             else do
               -- get collection entries, and insert them into collection
-              cs  <- concat <$> mapM go (es ^. isoSetList)
+              cs  <- concat <$> mapM go (es ^. isoDirEntries)
               adjustColByName cs ic
 
               -- set time processed
@@ -286,7 +288,7 @@ mergeColEntries es1 es2 =
 -- is sorted afterwards
 mergeColEntries' :: [ColEntry] -> [ColEntry] -> [ColEntry]
 mergeColEntries' ns os =
-  (ns ++ os) ^. (from isoSetList) . isoSetList
+  (ns ++ os) ^. (from isoDirEntries) . isoDirEntries
 
 -- ----------------------------------------
 --

@@ -10,10 +10,12 @@ module Data.ImgNode
        , ImgParts
        , ImgPart
        , ColEntry'(..)
+       , DirEntries'
        , mkImgParts
        , mkImgPart
        , mkColImgRef
        , mkColColRef
+       , mkDirEntries
        , emptyImg
        , emptyImgDir
        , emptyImgRoot
@@ -23,6 +25,7 @@ module Data.ImgNode
        , isROOT
        , isCOL
        , isoImgParts
+       , isoDirEntries
        , theParts
        , thePartNames
        , theImgName
@@ -42,6 +45,8 @@ module Data.ImgNode
        , theColSyncTime
        , theColColRef
        , theColImgRef
+       , addDirEntry
+       , delDirEntry
        )
 where
 
@@ -51,13 +56,12 @@ import           Data.Prim
 
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as M
-import qualified Data.Set as S
 
 -- ----------------------------------------
 
 
 data ImgNode' ref = IMG  !ImgParts
-                  | DIR  !(Set ref) !TimeStamp
+                  | DIR  !(DirEntries' ref) !TimeStamp
                   | ROOT !ref !ref
                   | COL  !MetaData ![ColEntry' ref] !TimeStamp
 
@@ -65,9 +69,7 @@ data ImgNode' ref = IMG  !ImgParts
 
 deriving instance (Show ref) => Show (ImgNode' ref)
 
--- Set isn't a Functor: TODO change Set to []
--- duplicates in dir are not an issue, only Sync manipulates these collections
--- deriving instance Functor ImgNode'
+deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
   isempty (IMG pts)        = isempty pts
@@ -82,7 +84,7 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     ]
   toJSON (DIR rs ts) = J.object
     [ "ImgNode"     J..= ("DIR" :: String)
-    , "children"    J..= S.toList rs
+    , "children"    J..= rs
     , "sync"        J..= ts
     ]
   toJSON (ROOT rd rc) = J.object
@@ -104,7 +106,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          "IMG" ->
            IMG  <$> o J..: "parts"
          "DIR" ->
-           DIR  <$> (S.fromList <$> o J..: "children")
+           DIR  <$> o J..: "children"
                 <*> o J..:? "sync" J..!= mempty
          "ROOT" ->
            ROOT <$> o J..: "archive"
@@ -116,7 +118,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
-emptyImgDir = DIR S.empty mempty
+emptyImgDir = DIR mempty mempty
 
 emptyImg :: ImgNode' ref
 emptyImg = IMG mempty
@@ -136,7 +138,7 @@ theParts
                   _     -> Left  x
               )
 
-theDir :: Prism' (ImgNode' ref) (Set ref, TimeStamp)
+theDir :: Prism' (ImgNode' ref) (DirEntries' ref, TimeStamp)
 theDir =
   prism (uncurry DIR)
         (\ x -> case x of
@@ -144,7 +146,7 @@ theDir =
                 _       -> Left  x
           )
 
-theDirEntries :: Traversal' (ImgNode' ref) (Set ref)
+theDirEntries :: Traversal' (ImgNode' ref) (DirEntries' ref)
 theDirEntries = theDir . _1
 
 theDirSyncTime :: Traversal' (ImgNode' ref) TimeStamp
@@ -338,5 +340,41 @@ theColColRef =
             ColRef i -> Right i
             _        -> Left  x
         )
+
+-- ----------------------------------------
+
+newtype DirEntries' ref = DE [ref]
+
+deriving instance (Eq   ref) => Eq   (DirEntries' ref)
+deriving instance (Ord  ref) => Ord  (DirEntries' ref)
+deriving instance (Show ref) => Show (DirEntries' ref)
+
+deriving instance Functor DirEntries'
+
+instance IsEmpty (DirEntries' ref) where
+  isempty (DE xs) = isempty xs
+
+instance Monoid (DirEntries' ref) where
+  mempty = DE []
+  DE xs `mappend` DE ys = DE $ xs ++ ys
+
+instance (ToJSON ref) => ToJSON (DirEntries' ref) where
+  toJSON (DE rs) = toJSON rs
+
+instance (FromJSON ref) => FromJSON (DirEntries' ref) where
+  parseJSON rs = DE <$> parseJSON rs
+
+mkDirEntries :: [ref] -> DirEntries' ref
+mkDirEntries = DE
+
+isoDirEntries :: Iso' (DirEntries' ref) [ref]
+isoDirEntries = iso (\ (DE xs) -> xs) DE
+
+addDirEntry :: ref -> DirEntries' ref -> DirEntries' ref
+addDirEntry r (DE rs) = DE $ r : rs
+
+delDirEntry :: (Eq ref) => ref -> DirEntries' ref -> DirEntries' ref
+delDirEntry r (DE rs) = DE $ filter (/= r) rs
+
 
 -- ----------------------------------------

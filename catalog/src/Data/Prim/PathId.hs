@@ -4,9 +4,12 @@
 -- not space efficient, but god for testing
 
 module Data.Prim.PathId
-where
+       ( ObjId
+       , mkObjId
+       , objId2path
+       )
+       where
 
-import Data.Maybe
 import Data.Prim.Path
 import Data.Prim.Prelude
 
@@ -25,17 +28,6 @@ readObjId = ObjId . readPath
 
 objId2path :: Iso' ObjId Path
 objId2path = iso (\ (ObjId p) -> p) mkObjId
-
-objId2string :: Iso' ObjId String
-objId2string = iso showObjId readObjId
-
-objId2Maybe :: Iso' ObjId (Maybe ObjId)
-objId2Maybe =
-  iso (\ i -> if isempty i
-              then Nothing
-              else Just i
-      )
-      (fromMaybe mempty)
 
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
@@ -57,5 +49,8 @@ instance ToJSON ObjId where
 
 instance FromJSON ObjId where
   parseJSON o = readObjId <$> parseJSON o
+
+instance IsoString ObjId where
+  isoString = iso showObjId readObjId
 
 -- ----------------------------------------

@@ -10,13 +10,12 @@ import Data.ImgNode
 import Data.Prim
 import Data.RefTree
 
-import qualified Data.Set as S
-
 -- ----------------------------------------
 
-type ImgTree  = DirTree ImgNode' ObjId
-type ImgNode  = ImgNode'  ObjId
-type ColEntry = ColEntry' ObjId
+type ImgTree    = DirTree ImgNode' ObjId
+type ImgNode    = ImgNode'  ObjId
+type ColEntry   = ColEntry' ObjId
+type DirEntries = DirEntries' ObjId
 
 -- ----------------------------------------
 
@@ -56,10 +55,10 @@ removeImgNode :: (MonadError String m) =>
 removeImgNode = remDirNode isempty removeChildRef
 
 addChildRef :: ObjId -> ImgNode -> ImgNode
-addChildRef r n = n & theDirEntries %~ S.insert r
+addChildRef r n = n & theDirEntries %~ addDirEntry r
 
 -- | remove a child from an image dir node
 removeChildRef :: ObjId -> ImgNode -> ImgNode
-removeChildRef r n = n & theDirEntries %~ S.delete r
+removeChildRef r n = n & theDirEntries %~ delDirEntry r
 
 -- ----------------------------------------

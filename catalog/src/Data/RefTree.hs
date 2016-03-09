@@ -24,6 +24,7 @@ module Data.RefTree
        , mkDirNode
        , remDirNode
        , lookupDirPath
+       , mapRefTree
        )
 where
 
@@ -39,19 +40,6 @@ import qualified Data.Map.Strict as M
 data RefTree node ref = RT !ref !(Map ref (node ref))
 
 deriving instance (Show ref, Show (n ref)) => Show (RefTree n ref)
-
-{-}
--- TODO: this isn't a solution, fmap does not fit
--- and the rename must be an Iso
-
-renameRefTree :: (Functor node, Ord ref') => (ref -> ref') -> RefTree node ref -> RefTree node ref'
-renameRefTree f (RT r t) =
-  RT (f r) ( M.foldrWithKey'
-             (\ k v acc -> M.insert (f k) (fmap f v) acc)
-             M.empty
-             t
-           )
--- -}
 
 instance (ToJSON (node ref), ToJSON ref) => ToJSON (RefTree node ref) where
   toJSON (RT r m) = J.object
@@ -77,6 +65,20 @@ entryAt r = entries . at r
 theNode :: (Ord ref, Show ref) =>
            ref -> Lens' (RefTree node ref) (node ref)
 theNode r = entryAt r . checkJust ("atRef: undefined ref " ++ show r)
+
+-- ----------------------------------------
+
+-- exchange the keys of a reftree
+--
+-- almost a functor, f must be an injective function
+
+mapRefTree :: (Functor node, Ord ref') => (ref -> ref') -> RefTree node ref -> RefTree node ref'
+mapRefTree f (RT r t) =
+  RT (f r) ( M.foldrWithKey'
+             (\ k v acc -> M.insert (f k) (fmap f v) acc)
+             M.empty
+             t
+           )
 
 -- ----------------------------------------
 
