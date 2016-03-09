@@ -5,7 +5,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Data.Prim
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.MetaData
 
 import qualified Data.Aeson.Encode.Pretty as J

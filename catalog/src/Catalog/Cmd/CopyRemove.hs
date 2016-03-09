@@ -5,7 +5,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.ImgAction
 import           Data.Prim
 

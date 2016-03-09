@@ -5,9 +5,8 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Data.ImageStore
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.Prim
-import           Data.RefTree
 
 -- ----------------------------------------
 

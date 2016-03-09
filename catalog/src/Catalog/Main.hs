@@ -15,10 +15,9 @@ import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Data.Prim
 import           Data.ImageStore
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.ImgAction
 import           Data.MetaData
-import           Data.RefTree
 
 {-}
 import           Catalog.FilePath

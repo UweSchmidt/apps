@@ -6,9 +6,8 @@ import           Catalog.Cmd.List
 import           Catalog.Cmd.Types
 import           Control.Lens
 import           Data.ImageStore
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.Prim
-import           Data.RefTree
 
 -- ----------------------------------------
 --

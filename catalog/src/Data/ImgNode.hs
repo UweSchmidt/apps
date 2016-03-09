@@ -5,17 +5,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DeriveFunctor #-}
 
-module Data.ImageTree
+module Data.ImgNode
        ( ImgNode'(..)
-       , ImgNode
-       , ImgTree
        , ImgParts
        , ImgPart
        , ColEntry'(..)
-       , ColEntry
-       , mkEmptyImgRoot
-       , mkNode
-       , mkImgRoot
        , mkImgParts
        , mkImgPart
        , mkColImgRef
@@ -24,7 +18,6 @@ module Data.ImageTree
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
-       , lookupImgPath
        , isDIR
        , isIMG
        , isROOT
@@ -49,14 +42,12 @@ module Data.ImageTree
        , theColSyncTime
        , theColColRef
        , theColImgRef
-       , removeImgNode
        )
 where
 
 import           Control.Monad.Except
 import           Data.MetaData
 import           Data.Prim
-import           Data.RefTree
 
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as M
@@ -68,7 +59,7 @@ import qualified Data.Set as S
 data ImgNode' ref = IMG  !ImgParts
                   | DIR  !(Set ref) !TimeStamp
                   | ROOT !ref !ref
-                  | COL  !MetaData ![ColEntry] !TimeStamp
+                  | COL  !MetaData ![ColEntry' ref] !TimeStamp
 
 -- ----------------------------------------
 
@@ -173,7 +164,7 @@ theRootImgDir = theImgRoot . _1
 theRootImgCol :: Traversal' (ImgNode' ref) ref
 theRootImgCol = theImgRoot . _2
 
-theImgCol :: Prism' (ImgNode' ref) (MetaData, [ColEntry], TimeStamp)
+theImgCol :: Prism' (ImgNode' ref) (MetaData, [ColEntry' ref], TimeStamp)
 theImgCol
   = prism (\ (x1, x2, x3) -> COL x1 x2 x3)
           (\ x -> case x of
@@ -184,7 +175,7 @@ theImgCol
 theColMetaData :: Traversal' (ImgNode' ref) MetaData
 theColMetaData = theImgCol . _1
 
-theColEntries :: Traversal' (ImgNode' ref) [ColEntry]
+theColEntries :: Traversal' (ImgNode' ref) [ColEntry' ref]
 theColEntries = theImgCol . _2
 
 theColSyncTime :: Traversal' (ImgNode' ref) TimeStamp
@@ -205,53 +196,6 @@ isROOT _      = False
 isCOL :: ImgNode' ref -> Bool
 isCOL COL{} = True
 isCOL _     = False
-
--- ----------------------------------------
-
--- the tree for the image hierachy
-
-type ImgTree = DirTree ImgNode' ObjId
-type ImgNode = ImgNode' ObjId
-
-mkEmptyImgRoot :: (MonadError String m) =>
-                  Name -> Name -> Name -> m ImgTree
-mkEmptyImgRoot rootName imgName colName =
-  do (_r1,t1) <- mkDirNode mkObjId isROOT addImgArchive imgName r emptyImgDir t0
-     (_r2,t2) <- mkDirNode mkObjId isROOT addImgCol     colName r emptyImgCol t1
-     return t2
-  where
-    t0 = mkDirRoot mkObjId rootName emptyImgRoot
-    r  = t0 ^. rootRef
-
-    addImgArchive r' n = n & theRootImgDir .~ r'
-    addImgCol     r' n = n & theRootImgCol .~ r'
-
-mkImgRoot :: Name -> ImgNode -> ImgTree
-mkImgRoot = mkDirRoot mkObjId
-
-mkNode ::  (MonadError String m) =>
-           (ImgNode -> Bool) ->
-           Name ->                       -- name of the node
-           ObjId ->                      -- parent node
-           ImgNode ->                    -- node value
-           ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
-mkNode isN = mkDirNode mkObjId isN addChildRef
-
-lookupImgPath :: Path -> ImgTree -> Maybe (ObjId, ImgNode)
-lookupImgPath = lookupDirPath mkObjId
-
--- | remove an image node or a dir node without entries
-removeImgNode :: (MonadError String m) =>
-                 ObjId ->
-                 ImgTree -> m ImgTree
-removeImgNode = remDirNode isempty removeChildRef
-
-addChildRef :: ObjId -> ImgNode -> ImgNode
-addChildRef r n = n & theDirEntries %~ S.insert r
-
--- | remove a child from an image dir node
-removeChildRef :: ObjId -> ImgNode -> ImgNode
-removeChildRef r n = n & theDirEntries %~ S.delete r
 
 -- ----------------------------------------
 
@@ -335,8 +279,6 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 data ColEntry' ref = ImgRef ref Name
                    | ColRef ref
-
-type ColEntry = ColEntry' ObjId
 
 deriving instance (Eq   ref) => Eq   (ColEntry' ref)
 deriving instance (Ord  ref) => Ord  (ColEntry' ref)

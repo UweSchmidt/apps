@@ -16,9 +16,8 @@ module Data.ImageStore
 where
 
 import           Control.Lens
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.Prim
-import           Data.RefTree
 
 import qualified Data.Aeson as J
 

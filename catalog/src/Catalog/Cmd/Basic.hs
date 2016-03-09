@@ -10,10 +10,9 @@ where
 
 import           Catalog.Cmd.Types
 import           Data.ImageStore
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
-import           Data.RefTree
 
 -- ----------------------------------------
 

@@ -8,9 +8,8 @@ import           Catalog.Cmd
 import           Catalog.FilePath
 import           Control.Lens
 import           Data.Function.Util
-import           Data.ImageTree
+import           Data.ImgTree
 import           Data.Prim
-import           Data.RefTree
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J

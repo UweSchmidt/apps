@@ -6,7 +6,7 @@ where
 import Catalog.Cmd
 import Catalog.FilePath
 import Control.Lens
-import Data.ImageTree
+import Data.ImgTree
 import Data.ImgAction
 import Data.Prim
 
