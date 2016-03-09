@@ -61,8 +61,8 @@ module Data.Prim.Prelude
        , isoMapElems
        , isoMapList
        , isoSetList
-       , isoTextMaybe
-       , isoMonoidMaybe
+--       , isoTextMaybe
+--       , isoMonoidMaybe
        , isA
        )
 where
@@ -196,6 +196,9 @@ instance (Integral a) => IsoInteger a where
 class IsoMaybe a where
   isoMaybe :: Iso' a (Maybe a)
 
+-- here we need UndecidableInstances extension
+-- AFAIK in this case it's not dangarous
+
 instance (IsEmpty a, Monoid a) => IsoMaybe a where
   isoMaybe = iso toM fromM
     where
@@ -221,18 +224,6 @@ isoMapList = iso M.toList M.fromList
 
 isoSetList :: Ord a => Iso' (Set a) [a]
 isoSetList = iso S.toList S.fromList
-
-isoTextMaybe :: Iso' Text (Maybe Text)
-isoTextMaybe =
-  iso (\ t -> if T.null t then Nothing else Just t)
-      (fromMaybe T.empty)
-
-isoMonoidMaybe :: (Monoid a, Eq a) => Iso' a (Maybe a)
-isoMonoidMaybe =
-  iso (\ t -> if t == mempty then Nothing else Just t)
-      (fromMaybe mempty)
-
--- a prism for filtering
 
 isA :: (a -> Bool) -> Prism' a a
 isA p = prism id (\ o -> (if p o then Right else Left) o)

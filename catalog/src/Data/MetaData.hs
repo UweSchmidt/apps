@@ -115,7 +115,7 @@ getCreateMeta parse md =
 
 getFileName :: MetaData -> Maybe Text
 getFileName md =
-  md ^. metaDataAt "File:Filename" . isoTextMaybe
+  md ^. metaDataAt "File:Filename" . isoMaybe
 
 -- ----------------------------------------
 --
