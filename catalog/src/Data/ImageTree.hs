@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Data.ImageTree
        ( ImgNode'(..)
@@ -10,7 +11,8 @@ module Data.ImageTree
        , ImgTree
        , ImgParts
        , ImgPart
-       , ColEntry(..)
+       , ColEntry'(..)
+       , ColEntry
        , mkEmptyImgRoot
        , mkNode
        , mkImgRoot
@@ -71,6 +73,10 @@ data ImgNode' ref = IMG  !ImgParts
 -- ----------------------------------------
 
 deriving instance (Show ref) => Show (ImgNode' ref)
+
+-- Set isn't a Functor: TODO change Set to []
+-- duplicates in dir are not an issue, only Sync manipulates these collections
+-- deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
   isempty (IMG pts)        = isempty pts
@@ -327,14 +333,18 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-data ColEntry = ImgRef ObjId Name
-              | ColRef ObjId
+data ColEntry' ref = ImgRef ref Name
+                   | ColRef ref
 
-deriving instance Eq   ColEntry
-deriving instance Ord  ColEntry
-deriving instance Show ColEntry
+type ColEntry = ColEntry' ObjId
 
-instance ToJSON ColEntry where
+deriving instance (Eq   ref) => Eq   (ColEntry' ref)
+deriving instance (Ord  ref) => Ord  (ColEntry' ref)
+deriving instance (Show ref) => Show (ColEntry' ref)
+
+deriving instance Functor ColEntry'
+
+instance (ToJSON ref) => ToJSON (ColEntry' ref) where
   toJSON (ImgRef i n) = J.object
     [ "ColEntry"  J..= ("IMG" :: String)
     , "ref"       J..= i
@@ -345,7 +355,7 @@ instance ToJSON ColEntry where
     , "ref"       J..= i
     ]
 
-instance FromJSON ColEntry where
+instance (FromJSON ref) => FromJSON (ColEntry' ref) where
   parseJSON = J.withObject "ColEntry" $ \ o ->
     do t <- o J..: "ColEntry"
        case t :: String of
@@ -356,13 +366,13 @@ instance FromJSON ColEntry where
            ColRef <$> o J..: "ref"
          _ -> mzero
 
-mkColImgRef :: ObjId -> Name -> ColEntry
+mkColImgRef :: ref -> Name -> (ColEntry' ref)
 mkColImgRef = ImgRef
 
-mkColColRef :: ObjId -> ColEntry
+mkColColRef :: ref -> (ColEntry' ref)
 mkColColRef = ColRef
 
-theColImgObjId :: Lens' ColEntry ObjId
+theColImgObjId :: Lens' (ColEntry' ref) ref
 theColImgObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
 theColImgObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
 
@@ -371,7 +381,7 @@ theColImgObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
 -- theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
 
 
-theColImgRef :: Prism' ColEntry (ObjId, Name)
+theColImgRef :: Prism' (ColEntry' ref) (ref, Name)
 theColImgRef =
   prism (uncurry ImgRef)
         (\ x -> case x of
@@ -379,7 +389,7 @@ theColImgRef =
             _          -> Left  x
         )
 
-theColColRef :: Prism' ColEntry ObjId
+theColColRef :: Prism' (ColEntry' ref) ref
 theColColRef =
   prism ColRef
         (\ x -> case x of
