@@ -7,10 +7,13 @@ module Data.Prim.Prelude
        , Set
        , Text
        , Vector
+       , IsEmpty(..)
+       , IsString(..)
          -- Data.Aeson
        , ToJSON(..)
        , FromJSON(..)
-       , IsString(..)
+       , (.=?!)
+       , (.:?!)
          -- Text.Regex.XMLSchema.Generic
        , Regex
        , RegexText
@@ -52,20 +55,23 @@ module Data.Prim.Prelude
        , module Control.Lens
        , IsoString(..)
        , IsoText(..)
+       , IsoInteger(..)
        , isoMapElems
        , isoMapList
        , isoSetList
        , isoTextMaybe
        , isoMonoidMaybe
        , isA
-       , IsEmpty(..)
        )
 where
 
 import           Control.Arrow
 import           Control.Lens
 import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson as J
+import qualified Data.Aeson.Types as J
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.UTF8 as LBU
@@ -127,6 +133,31 @@ partBy f =
 
 -- ----------------------------------------
 
+class IsEmpty a where
+  isempty :: a -> Bool
+
+
+instance IsEmpty [a] where
+  isempty = null
+
+instance IsEmpty (Maybe a) where
+  isempty Nothing = True
+  isempty _       = False
+
+instance IsEmpty Text where
+  isempty = T.null
+
+instance IsEmpty ByteString where
+  isempty = BS.null
+
+instance IsEmpty (Set a) where
+  isempty = S.null
+
+instance IsEmpty (Map k v) where
+  isempty = M.null
+
+-- ----------------------------------------
+
 class IsoString a where
   isoString :: Iso' a String
 
@@ -149,10 +180,16 @@ class IsoText a where
 instance IsoText Text where
   isoText = iso id id
 
--- ----------------------------------------
+class IsoInteger a where
+  isoInteger :: Iso' a Integer
 
-class IsEmpty a where
-  isempty :: a -> Bool
+instance IsoInteger Integer where
+  isoInteger = iso id id
+
+{-    (Use UndecidableInstances to permit this)
+instance (Integral a) => IsoInteger a where
+  isoInteger = iso toInteger fromInteger
+-- -}
 
 -- ----------------------------------------
 
@@ -170,7 +207,6 @@ isoMapList = iso M.toList M.fromList
 isoSetList :: Ord a => Iso' (Set a) [a]
 isoSetList = iso S.toList S.fromList
 
-
 isoTextMaybe :: Iso' Text (Maybe Text)
 isoTextMaybe =
   iso (\ t -> if T.null t then Nothing else Just t)
@@ -185,5 +221,20 @@ isoMonoidMaybe =
 
 isA :: (a -> Bool) -> Prism' a a
 isA p = prism id (\ o -> (if p o then Right else Left) o)
+
+-- ----------------------------------------
+--
+-- mothers little helper for en/decoding optional fileds
+
+(.=?!) :: (ToJSON v, IsEmpty v) =>
+          Text -> v -> [J.Pair]
+t .=?! x
+  | isempty x = []
+  | otherwise = [t J..= x]
+
+(.:?!) :: (FromJSON v, Monoid v) =>
+          J.Object -> Text -> J.Parser v
+o .:?! t =
+  o J..:? t J..!= mempty
 
 -- ----------------------------------------

@@ -19,7 +19,7 @@ filePathToExt ty = snd . fpToImgType fpc
 
 fpToImgType :: FilePathConfig -> FilePath -> (NameImgType, Name)
 fpToImgType conf path =
-  fromMaybe ((mkName path, IMGother), emptyName) $
+  fromMaybe ((mkName path, IMGother), mempty) $
   foldr1 (<|>) $
   map parse conf
   where
@@ -28,7 +28,7 @@ fpToImgType conf path =
       where
 
         partRes [("1", base)] =
-          Just ((mkName base, ty), emptyName)
+          Just ((mkName base, ty), mempty)
         partRes [("1", base), ("2", ext)] =
           Just ((mkName base, ty), mkName ext)
         partRes _ =

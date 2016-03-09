@@ -7,19 +7,12 @@ module Data.Prim.PathId
 where
 
 import Data.Maybe
-import Control.Lens -- (Iso', iso)
-import Data.Aeson (ToJSON, FromJSON, toJSON, parseJSON)
 import Data.Prim.Path
+import Data.Prim.Prelude
 
 -- ----------------------------------------
 
 newtype ObjId = ObjId Path
-
-emptyObjId :: ObjId
-emptyObjId = ObjId emptyPath
-
-nullObjId :: ObjId -> Bool
-nullObjId (ObjId i) = nullPath i
 
 mkObjId :: Path -> ObjId
 mkObjId = ObjId
@@ -38,20 +31,23 @@ objId2string = iso showObjId readObjId
 
 objId2Maybe :: Iso' ObjId (Maybe ObjId)
 objId2Maybe =
-  iso (\ i -> if nullObjId i
+  iso (\ i -> if isempty i
               then Nothing
               else Just i
       )
-      (fromMaybe emptyObjId)
+      (fromMaybe mempty)
 
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 
 instance Monoid ObjId where
-  mempty = emptyObjId
+  mempty = ObjId mempty
   i1 `mappend` i2
-    | nullObjId i1 = i2
+    | isempty i1 = i2
     | otherwise    = i1
+
+instance IsEmpty ObjId where
+  isempty = (== mempty)
 
 instance Show ObjId where
   show = showObjId

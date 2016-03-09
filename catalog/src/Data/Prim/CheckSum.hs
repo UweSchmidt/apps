@@ -2,14 +2,17 @@
 {-# LANGUAGE BangPatterns #-}
 
 module Data.Prim.CheckSum
+       ( CheckSum
+       , mkCheckSum
+       , mkFileCheckSum
+       )
 where
 
-import           Control.Lens (Iso', iso)
-import           Data.Aeson (ToJSON, FromJSON(..), toJSON)
 import           Data.Bits
 import qualified Data.Digest.Murmur64 as MM
 import           Data.Foldable
 import           Data.Word (Word64)
+import           Data.Prim.Prelude
 
 -- ----------------------------------------
 
@@ -27,10 +30,22 @@ fromCheckSum (CS csum) = fromIntegral csum
 toCheckSum :: Integer -> CheckSum
 toCheckSum = CS . fromInteger
 
-checkSum2integer :: Iso' CheckSum Integer
-checkSum2integer = iso fromCheckSum toCheckSum
-
 deriving instance Eq CheckSum
+
+instance IsEmpty CheckSum where
+  isempty = (== zeroCheckSum)
+
+instance Monoid CheckSum where
+  mempty = zeroCheckSum
+  c1 `mappend` c2
+    | isempty c1 = c2
+    | otherwise  = c1
+
+instance IsoInteger CheckSum where
+  isoInteger = iso fromCheckSum toCheckSum
+
+instance IsoString CheckSum where
+  isoString = iso showCheckSum readCheckSum
 
 instance Show CheckSum where
   show = ("0x" ++) . showCheckSum

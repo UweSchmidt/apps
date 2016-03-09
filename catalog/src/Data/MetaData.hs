@@ -23,9 +23,12 @@ newtype MetaData = MD J.Object
 deriving instance Show MetaData
 
 instance Monoid MetaData where
-  mempty                = emptyMetaData
+  mempty                = MD HM.empty
   MD m1 `mappend` MD m2 = MD $ m1 `HM.union` m2
   -- the left map entries are prefered
+
+instance IsEmpty MetaData where
+  isempty (MD md) = HM.null md
 
 instance ToJSON MetaData where
   toJSON (MD m) = J.toJSON [m]
@@ -36,18 +39,12 @@ instance FromJSON MetaData where
       1 -> J.withObject "MetaData" (return . MD) (V.head v)
       _ -> mzero
 
-emptyMetaData :: MetaData
-emptyMetaData = MD HM.empty
-
-nullMetaData :: MetaData -> Bool
-nullMetaData (MD m) = HM.null m
-
 -- ----------------------------------------
 --
 -- MetaData lenses
 
 metaDataAt :: Name -> Lens' MetaData Text
-metaDataAt key = md2obj . at (key ^. name2text) . val2text
+metaDataAt key = md2obj . at (key ^. isoText) . val2text
   where
     md2obj :: Iso' MetaData J.Object
     md2obj = iso (\ (MD m) -> m) MD
@@ -60,7 +57,7 @@ metaDataAt key = md2obj . at (key ^. name2text) . val2text
         totext _                   = ""
 
         fromtext t
-          | T.null t = Nothing
+          | isempty t = Nothing
           | otherwise = Just (J.String t)
 
         showSc n =
@@ -78,7 +75,7 @@ partMetaData predicate = iso part (uncurry mappend)
     part (MD m) = (MD *** MD) $ HM.foldrWithKey pf (HM.empty, HM.empty) m
       where
         pf k v (m1, m2)
-          | predicate (k ^. from name2text) =
+          | predicate (k ^. from isoText) =
               (HM.insert k v m1, m2)
           | otherwise =
               (m1, HM.insert k v m2)
@@ -89,7 +86,7 @@ selectMetaData p = partMetaData p . _1
 selectByRegex :: RegexText -> Lens' MetaData MetaData
 selectByRegex rx' = selectMetaData p
   where
-    p n = matchRE rx' (n ^. name2text)
+    p n = matchRE rx' (n ^. isoText)
 
 selectByNames :: [Name] -> Lens' MetaData MetaData
 selectByNames ns = selectMetaData (`elem` ns)
@@ -99,7 +96,7 @@ lookupByNames :: [Name] -> MetaData -> Text
 lookupByNames ns md =
   head (vs ++ [T.empty])
   where
-    vs = filter (not . T.null) $
+    vs = filter (not . isempty) $
          map (\ n -> md ^. metaDataAt n) ns
 
 -- ----------------------------------------
@@ -143,7 +140,7 @@ filterMetaData :: ImgType -> MetaData -> MetaData
 filterMetaData IMGraw  m = m ^. selectByRegex reRaw
 filterMetaData IMGmeta m = m ^. selectByRegex reXmp
 filterMetaData IMGimg  m = m ^. selectByRegex reRaw
-filterMetaData _       _ = emptyMetaData
+filterMetaData _       _ = mempty
 
 -- ----------------------------------------
 --
@@ -231,7 +228,7 @@ px2a s = map mkName ag20
 {-}
   case ag20 of
     [x1] -> mkName x1
-    []   -> emptyName
+    []   -> mempty
     xs   -> error $ "ambigious name abreviation " ++ show s ++ " matches " ++ show xs
 -- -}
   where

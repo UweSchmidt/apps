@@ -192,12 +192,12 @@ mkDirNode :: (MonadError String m, Ord ref, Show ref) =>
 mkDirNode genRef isParentDir updateParent n p v t
   = do when (has (entryAt r . _Just) t) $
          throwError $ "mkDirNode: entry already exists: " ++ show rp
-       when (not (t ^. theNodeVal p . to isParentDir)) $
+       unless (t ^. theNodeVal p . to isParentDir) $
          throwError $ "mkDirNode: parent node not a dir: " ++ show pp
        return
          ( r
-         , t & entryAt r .~ Just (UL p n v)
-             & theNodeVal p   %~ updateParent r
+         , t & entryAt r    .~ Just (UL p n v)
+             & theNodeVal p %~ updateParent r
          )
   where
     pp = refPath p t
@@ -211,18 +211,18 @@ remDirNode :: (MonadError String m, Ord ref, Show ref) =>
               DirTree node ref ->
               m (DirTree node ref)
 remDirNode removable updateParent r t
-  = do when (hasn't (entryAt r) t) $
+  = do unless (has (entryAt r) t) $
          throwError $ "remDirNode: ref doesn't exist: " ++ show r
 
        when (r `isDirRoot` t) $
          throwError $ "remDirNode: root ref can't be removed"
 
-       when (not (removable (t ^. theNode r . nodeVal))) $
+       unless (removable (t ^. theNode r . nodeVal)) $
          throwError $ "remDirNode: node value not removable, entry: "
                       ++ show (refPath r t)
 
-       return (t & theNodeVal p   %~ updateParent r
-                 & entryAt r      .~ Nothing
+       return (t & theNodeVal p %~ updateParent r
+                 & entryAt r    .~ Nothing
               )
    where
      p = t ^. theParent r

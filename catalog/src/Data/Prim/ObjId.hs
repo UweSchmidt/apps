@@ -3,21 +3,14 @@
 module Data.Prim.ObjId
 where
 
-import           Data.Word
-import           Data.Maybe
 import qualified Data.Digest.Murmur64 as MM
-import           Control.Lens (Iso', iso)
-import           Data.Aeson (ToJSON, FromJSON, toJSON, parseJSON)
+import           Data.Maybe
+import           Data.Prim.Prelude
+import           Data.Word
 
 -- ----------------------------------------
 
 newtype ObjId     = ObjId Word64
-
-emptyObjId :: ObjId
-emptyObjId = toObjId 0
-
-nullObjId :: ObjId -> Bool
-nullObjId (ObjId i) = i == 0
 
 mkObjId :: MM.Hashable64 a => a -> ObjId
 mkObjId = ObjId . MM.asWord64 . MM.hash64
@@ -33,15 +26,24 @@ objId2integer = iso fromObjId toObjId
 
 objId2Maybe :: Iso' ObjId (Maybe ObjId)
 objId2Maybe =
-  iso (\ i -> if nullObjId i
+  iso (\ i -> if isempty i
               then Nothing
               else Just i
       )
-      (fromMaybe emptyObjId)
+      (fromMaybe mempty)
 
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 deriving instance Show ObjId
+
+instance Monoid ObjId where
+  mempty = toObjId 0
+  i1 `mappend` i2
+    | isempty i1 = i2
+    | otherwise  = i1
+
+instance IsEmpty ObjId where
+  isempty = (== mempty)
 
 instance ToJSON ObjId where
   toJSON = toJSON . fromObjId

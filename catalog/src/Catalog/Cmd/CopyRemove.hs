@@ -150,6 +150,6 @@ rmImgCopy (w, h) = rmGenFiles isCopy
       p ^. theImgType == IMGcopy
       &&
       match (".*[.]" ++ show w ++ "x" ++ show h ++ "[.]jpg")
-            (p ^. theImgName . name2string)
+            (p ^. theImgName . isoString)
 
 -- ----------------------------------------

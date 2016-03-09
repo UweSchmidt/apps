@@ -3,14 +3,12 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-
 module Data.Prim.Path
        ( Path'
        , Path
        , readPath
        , mkPath
        , emptyPath
-       , nullPath
        , consPath
        , concPath
        , snocPath
@@ -25,12 +23,10 @@ module Data.Prim.Path
        )
 where
 
-import Control.Lens -- (Iso', iso)
-import Data.Aeson (ToJSON, FromJSON, toJSON, parseJSON)
 import Data.Digest.Murmur64 (Hashable64(..))
-import Data.String (IsString(..))
-import Text.Regex.XMLSchema.Generic (tokenize)
 import Data.Prim.Name
+import Data.Prim.Prelude
+import Text.Regex.XMLSchema.Generic (tokenize)
 
 -- ----------------------------------------
 
@@ -60,10 +56,6 @@ mkPath = BN
 emptyPath :: Monoid n => Path' n
 emptyPath = mkPath mempty
 
-nullPath :: (Monoid n, Eq n) =>
-            Path' n -> Bool
-nullPath = (== emptyPath)
-
 infixr 5 `consPath`
 infixr 5 `snocPath`
 infixr 5 `concPath`
@@ -72,7 +64,7 @@ consPath :: (Monoid n, Eq n) =>
             n -> Path' n -> Path' n
 consPath n p
   | n == mempty = p
-  | nullPath p  = mkPath n
+  | isempty p  = mkPath n
   | otherwise   = DN n p
 
 snocPath :: (Monoid n, Eq n) => Path' n -> n -> Path' n
@@ -112,8 +104,8 @@ substPathPrefix old'px new'px p0 =
   go old'px p0
   where
     go px p
-      | nullPath px = new'px `concPath` p
-      | hpx == hp   = go tpx tp
+      | isempty px = new'px `concPath` p
+      | hpx == hp  = go tpx tp
       | otherwise   = error $
                       unwords [show old'px, "isn't a prefix of path", show p0]
       where
@@ -132,6 +124,13 @@ path2string = iso showPath readPath
 
 deriving instance Eq n  => Eq  (Path' n)
 deriving instance Ord n => Ord (Path' n)
+
+instance (Monoid n, Eq n) => Monoid (Path' n) where
+  mempty = emptyPath
+  mappend = concPath
+
+instance (Monoid n, Eq n) => IsEmpty (Path' n) where
+  isempty = (== emptyPath)
 
 -- deriving instance Show n => Show (Path' n)
 

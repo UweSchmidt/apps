@@ -21,7 +21,7 @@ listNames i0 =
     imgA i ps = do
       n <- nm i
       return $
-        ind n (ps ^.. isoImgParts . traverse . theImgName . name2string)
+        ind n (ps ^.. isoImgParts . traverse . theImgName . isoString)
 
     dirA go i es _ts = do
       n  <- nm i
@@ -43,7 +43,7 @@ listNames i0 =
         ind n (concat cns)
       where
         go' (ImgRef _i n) =
-          return [n ^. name2string]
+          return [n ^. isoString]
         go' (ColRef i') =
           go i'
 

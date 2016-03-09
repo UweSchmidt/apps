@@ -22,7 +22,7 @@ getExifTool f = do
       >>= (return . (^. from isoString))
       >>= buildMetaData
     else
-      return emptyMetaData
+      return mempty
 
 execExifTool :: [String] -> FilePath -> Cmd String
 execExifTool args f
@@ -54,7 +54,7 @@ readMetaData f = do
         Just m ->
           return m
     else
-      return emptyMetaData
+      return mempty
 
 -- ----------------------------------------
 

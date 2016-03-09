@@ -151,7 +151,7 @@ collectDirCont i = do
          )
   where
     isSubDir fp n =
-      dirExist $ fp </> (n ^. _1 . name2string)
+      dirExist $ fp </> (n ^. _1 . isoString)
 
 type ClassifiedName  = (Name, (Name, ImgType))
 type ClassifiedNames = [ClassifiedName]
@@ -195,13 +195,13 @@ syncParts i pp = do
       return $
         if ts > p ^. theImgTimeStamp
         then p & theImgTimeStamp .~ ts
-               & theImgCheckSum  .~ zeroCheckSum
+               & theImgCheckSum  .~ mempty
         else p
 
 checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
   nv <- getImgVal i
-  when (nullImgDir nv) $ do
+  when (isempty nv) $ do
     p <- objid2path i
     sync $ "empty image dir ignored " ++ show (show p)
     rmImgNode i
@@ -225,7 +225,7 @@ parseDirCont p = do
   (es, jpgdirs)  <- classifyNames <$> scanDirCont p
   jss <- mapM
          (parseJpgDirCont p)                       -- process jpg subdirs
-         (jpgdirs ^.. traverse . _1 . name2string) -- (map (fromName . fst) jpgdirs)
+         (jpgdirs ^.. traverse . _1 . isoString)
   return $ es ++ concat jss
   where
     classifyNames =

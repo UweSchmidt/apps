@@ -318,7 +318,7 @@ mkColMeta :: Text -> Text -> Text -> Text -> Cmd MetaData
 mkColMeta t s c o = do
   d <- (\ t' -> show t' ^. from isoString) <$> atThisMoment
   return $
-      emptyMetaData
+      mempty
       & metaDataAt "COL:Title"      .~ t
       & metaDataAt "COL:Subtitle"   .~ s
       & metaDataAt "COL:Comment"    .~ c
@@ -332,7 +332,7 @@ mkColByPath :: (ObjId -> ObjId -> Cmd ()) -> (ObjId -> Cmd MetaData) -> Path -> 
 mkColByPath insertCol setupCol p = do
   trc $ "mkColByPath " ++ show p
   -- check for legal path
-  when (nullPath $ tailPath p) $
+  when (isempty $ tailPath p) $
     abort $ "mkColByPath: can't create collection " ++show (show p)
 
   mid <- lookupByPath p

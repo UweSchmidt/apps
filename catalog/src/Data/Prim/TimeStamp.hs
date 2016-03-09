@@ -1,6 +1,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Data.Prim.TimeStamp
+       ( TimeStamp
+       , now
+       , fsTimeStamp
+       )
 where
 
 import           Control.Monad (mzero)
@@ -14,29 +18,31 @@ import qualified System.Posix as X
 
 newtype TimeStamp = TS X.EpochTime
 
-zeroTimeStamp :: TimeStamp
-zeroTimeStamp = TS $ read "0"
-
-timeStamp2string :: Iso' TimeStamp String
-timeStamp2string
-  = iso (\ (TS t) -> show t) (TS . read)
-
 deriving instance Eq   TimeStamp
 deriving instance Ord  TimeStamp
 deriving instance Show TimeStamp
+
+instance IsoString TimeStamp where
+  isoString = iso (\ (TS t) -> show t) (TS . read)
 
 instance Monoid TimeStamp where
   mempty = zeroTimeStamp
   ts1 `mappend` ts2 = ts1 `max` ts2
 
+instance IsEmpty TimeStamp where
+  isempty = (== zeroTimeStamp)
+
 instance ToJSON TimeStamp where
-  toJSON = toJSON . view timeStamp2string
+  toJSON = toJSON . view isoString
 
 instance FromJSON TimeStamp where
   parseJSON (J.String t) =
-    return (t ^. isoString . from timeStamp2string)
+    return (t ^. isoString . from isoString)
   parseJSON _ =
     mzero
+
+zeroTimeStamp :: TimeStamp
+zeroTimeStamp = TS $ read "0"
 
 now :: MonadIO m => m TimeStamp
 now = liftIO (TS <$> X.epochTime)

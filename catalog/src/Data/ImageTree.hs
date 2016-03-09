@@ -22,13 +22,11 @@ module Data.ImageTree
        , emptyImgDir
        , emptyImgRoot
        , emptyImgCol
-       , emptyImgParts
        , lookupImgPath
        , isDIR
        , isIMG
        , isROOT
        , isCOL
-       , nullImgDir
        , isoImgParts
        , theParts
        , thePartNames
@@ -74,6 +72,12 @@ data ImgNode' ref = IMG  !ImgParts
 
 deriving instance (Show ref) => Show (ImgNode' ref)
 
+instance IsEmpty (ImgNode' ref) where
+  isempty (IMG pts)        = isempty pts
+  isempty (DIR es _ts)     = isempty es
+  isempty (COL _md cs _ts) = isempty cs
+  isempty (ROOT _d _c)     = False
+
 instance ToJSON ref => ToJSON (ImgNode' ref) where
   toJSON (IMG pm) = J.object
     [ "ImgNode"     J..= ("IMG" :: String)
@@ -104,7 +108,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
            IMG  <$> o J..: "parts"
          "DIR" ->
            DIR  <$> (S.fromList <$> o J..: "children")
-                <*> o J..:? "sync" J..!= zeroTimeStamp
+                <*> o J..:? "sync" J..!= mempty
          "ROOT" ->
            ROOT <$> o J..: "archive"
                 <*> o J..: "collections"
@@ -115,16 +119,16 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          _ -> mzero
 
 emptyImgDir :: ImgNode' ref
-emptyImgDir = DIR S.empty zeroTimeStamp
+emptyImgDir = DIR S.empty mempty
 
 emptyImg :: ImgNode' ref
-emptyImg = IMG emptyImgParts
+emptyImg = IMG mempty
 
 emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
 
 emptyImgCol :: ImgNode' ref
-emptyImgCol = COL emptyMetaData [] zeroTimeStamp
+emptyImgCol = COL mempty [] mempty
 
 -- image node optics
 
@@ -196,10 +200,6 @@ isCOL :: ImgNode' ref -> Bool
 isCOL COL{} = True
 isCOL _     = False
 
-nullImgDir :: ImgNode' ref -> Bool
-nullImgDir (DIR s _) = S.null s
-nullImgDir _       = True
-
 -- ----------------------------------------
 
 -- the tree for the image hierachy
@@ -238,7 +238,7 @@ lookupImgPath = lookupDirPath mkObjId
 removeImgNode :: (MonadError String m) =>
                  ObjId ->
                  ImgTree -> m ImgTree
-removeImgNode = remDirNode nullImgDir removeChildRef
+removeImgNode = remDirNode isempty removeChildRef
 
 addChildRef :: ObjId -> ImgNode -> ImgNode
 addChildRef r n = n & theDirEntries %~ S.insert r
@@ -253,8 +253,11 @@ newtype ImgParts = ImgParts (Map Name ImgPart)
 
 deriving instance Show ImgParts
 
+instance IsEmpty ImgParts where
+  isempty (ImgParts im) = isempty im
+
 instance Monoid ImgParts where
-  mempty = emptyImgParts
+  mempty = ImgParts M.empty
 
   ImgParts m1 `mappend` ImgParts m2
     = ImgParts $ M.mergeWithKey combine only1 only2 m1 m2
@@ -273,9 +276,6 @@ instance ToJSON ImgParts where
 
 instance FromJSON ImgParts where
   parseJSON x = (ImgParts . M.fromList) <$> parseJSON x
-
-emptyImgParts :: ImgParts
-emptyImgParts = ImgParts M.empty
 
 mkImgParts :: [ImgPart] -> ImgParts
 mkImgParts ps = ps ^. from isoImgParts
@@ -299,22 +299,19 @@ instance ToJSON ImgPart where
   toJSON (IP n t s c) = J.object $
     [ "Name"      J..= n
     , "ImgType"   J..= t
-    , "TimeStamp" J..= s
     ]
-    ++
-    if c == zeroCheckSum
-    then []
-    else ["CheckSum"  J..= c]
+    ++ ("TimeStamp" .=?! s)       -- optional field
+    ++ ("CheckSum"  .=?! c)       --     "      "
 
 instance FromJSON ImgPart where
   parseJSON = J.withObject "ImgPart" $ \ o ->
-    IP <$> o J..: "Name"
-       <*> o J..: "ImgType"
-       <*> o J..: "TimeStamp"
-       <*> o J..:? "CheckSum" J..!= zeroCheckSum
+    IP <$> o J..:   "Name"
+       <*> o J..:   "ImgType"
+       <*> o   .:?! "TimeStamp"   -- optional field
+       <*> o   .:?! "CheckSum"    --    "       "
 
 mkImgPart :: Name -> ImgType -> ImgPart
-mkImgPart n t = IP n t zeroTimeStamp zeroCheckSum
+mkImgPart n t = IP n t mempty mempty
 
 theImgName :: Lens' ImgPart Name
 theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n

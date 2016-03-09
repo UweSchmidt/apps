@@ -35,13 +35,13 @@ matchRules rs i ps = do
       -- trc $ "matchRule: " ++ show (target, source, map snd sps', pts ^.. traverse . theImgName)
       mconcat <$> mapM apply dps
       where
-        sps = filter (not . nullName . snd) $ sps'
+        sps = filter (not . isempty . snd) $ sps'
         sps' =      map (match' source) pts
         dps = map (\ (p, e) -> DP (toTP $ toTN p e) p) sps
 
         apply :: Deps -> Cmd ImgAction
         apply r@(DP tp sp)
-          | tts == zeroTimeStamp
+          | isempty tts
             ||
             tts < sts =
               act r i
@@ -52,10 +52,10 @@ matchRules rs i ps = do
             sts = sp ^. theImgTimeStamp
 
         match' st ip
-          | (ip ^. theImgType /= st) = (ip, emptyName)
+          | (ip ^. theImgType /= st) = (ip, mempty)
           | otherwise                = (ip, ext)
           where
-            ext = filePathToExt st (ip ^. theImgName . name2string)
+            ext = filePathToExt st (ip ^. theImgName . isoString)
 
         toTP tn =
           case targetPart tn of
