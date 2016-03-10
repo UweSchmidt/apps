@@ -24,16 +24,21 @@ deriving instance Show TimeStamp
 
 instance IsoString TimeStamp where
   isoString = iso (\ (TS t) -> show t) (TS . read)
+  {-# INLINE isoString #-}
 
 instance Monoid TimeStamp where
   mempty = zeroTimeStamp
   ts1 `mappend` ts2 = ts1 `max` ts2
+  {-# INLINE mappend #-}
+  {-# INLINE mempty #-}
 
 instance IsEmpty TimeStamp where
   isempty = (== zeroTimeStamp)
+  {-# INLINE isempty #-}
 
 instance ToJSON TimeStamp where
   toJSON = toJSON . view isoString
+  {-# INLINE toJSON #-}
 
 instance FromJSON TimeStamp where
   parseJSON (J.String t) =
@@ -43,11 +48,13 @@ instance FromJSON TimeStamp where
 
 zeroTimeStamp :: TimeStamp
 zeroTimeStamp = TS $ read "0"
+{-# INLINE zeroTimeStamp #-}
 
 now :: MonadIO m => m TimeStamp
 now = liftIO (TS <$> X.epochTime)
 
 fsTimeStamp :: FileStatus -> TimeStamp
 fsTimeStamp = TS . X.modificationTime
+{-# INLINE fsTimeStamp #-}
 
 -- ----------------------------------------

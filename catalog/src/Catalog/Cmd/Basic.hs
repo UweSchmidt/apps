@@ -20,21 +20,27 @@ import           Data.Prim
 
 dt :: Cmd ImgTree
 dt = use theImgTree
+{-# INLINE dt #-}
 
 getTree :: Getting a ImgTree a -> Cmd a
 getTree l = use (theImgTree . l)
+{-# INLINE getTree #-}
 
 getImgName :: ObjId -> Cmd Name
 getImgName i = getTree (theNode i . nodeName)
+{-# INLINE getImgName #-}
 
 getImgParent :: ObjId -> Cmd ObjId
 getImgParent i = getTree (theNode i . parentRef)
+{-# INLINE getImgParent #-}
 
 getImgVal :: ObjId -> Cmd ImgNode
 getImgVal i = getTree (theNode i . nodeVal)
+{-# INLINE getImgVal #-}
 
 getImgVals :: ObjId -> Getting a ImgNode a -> Cmd a
 getImgVals i l = getTree (theNode i . nodeVal . l)
+{-# INLINE getImgVals #-}
 
 getImgSubDirs :: DirEntries -> Cmd [ObjId]
 getImgSubDirs es =
@@ -44,20 +50,24 @@ getImgSubDirs es =
 
 getRootId :: Cmd ObjId
 getRootId = getTree rootRef
+{-# INLINE getRootId #-}
 
 getRootImgDirId :: Cmd ObjId
 getRootImgDirId = do
   ri <- getRootId
   getImgVals ri theRootImgDir
+{-# INLINE getRootImgDirId #-}
 
 getRootImgColId :: Cmd ObjId
 getRootImgColId = do
   ri <- getRootId
   getImgVals ri theRootImgCol
+{-# INLINE getRootImgColId #-}
 
 existsObjId :: ObjId -> Cmd Bool
 existsObjId i =
   isJust <$> getTree (entryAt i)
+{-# INLINE existsObjId #-}
 
 lookupByName :: Name -> ObjId -> Cmd (Maybe (ObjId, ImgNode))
 lookupByName n i = do
@@ -66,6 +76,7 @@ lookupByName n i = do
 
 lookupByPath :: Path -> Cmd (Maybe (ObjId, ImgNode))
 lookupByPath p = lookupImgPath p <$> dt
+{-# INLINE lookupByPath #-}
 
 -- save lookup by path
 
@@ -130,7 +141,7 @@ objid2contNames i = getImgVal i >>= go
 toFilePath :: Path -> Cmd FilePath
 toFilePath p = do
   mp <- use theMountPath
-  return $ mp ++ tailPath p ^. path2string
+  return $ mp ++ tailPath p ^. isoString
 
 -- | convert a file system path to an image path
 fromFilePath :: FilePath -> Cmd Path
@@ -156,12 +167,15 @@ mkImg' isN v i n = dt >>= go
 
 mkImgDir :: ObjId -> Name -> Cmd ObjId
 mkImgDir = mkImg' isDIR emptyImgDir
+{-# INLINE mkImgDir #-}
 
 mkImgCol :: ObjId -> Name -> Cmd ObjId
 mkImgCol = mkImg' isCOL emptyImgCol
+{-# INLINE mkImgCol #-}
 
 mkImg :: ObjId -> Name -> Cmd ObjId
 mkImg = mkImg' isDIR emptyImg
+{-# INLINE mkImg #-}
 
 rmImgNode :: ObjId -> Cmd ()
 rmImgNode i = dt >>= go

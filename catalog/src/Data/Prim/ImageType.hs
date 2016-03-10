@@ -22,6 +22,7 @@ deriving instance Read ImgType
 
 instance ToJSON ImgType where
   toJSON = toJSON . show
+  {-# INLINE toJSON #-}
 
 instance FromJSON ImgType where
   parseJSON o = read <$> parseJSON o

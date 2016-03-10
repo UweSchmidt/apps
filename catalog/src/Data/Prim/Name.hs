@@ -27,12 +27,15 @@ emptyName = mkName ""
 
 mkName :: String -> Name
 mkName = Name . T.pack
+{-# INLINE mkName #-}
 
 instance IsEmpty Name where
   isempty (Name n) = isempty n
+  {-# INLINE isempty #-}
 
 fromName :: Name -> String
 fromName (Name fsn) = T.unpack $ fsn
+{-# INLINE fromName #-}
 
 isNameSuffix :: Name -> Name -> Bool
 isNameSuffix (Name sx) (Name n) = sx `T.isSuffixOf` n
@@ -53,22 +56,30 @@ deriving instance Ord  Name
 
 instance IsoString Name where
   isoString = iso fromName mkName
+  {-# INLINE isoString #-}
 
 instance IsoText Name where
   isoText = iso (\ (Name n) -> n) Name
+  {-# INLINE isoText #-}
 
 instance Monoid Name where
   mempty = emptyName
   Name n1 `mappend` Name n2 = Name $ n1 `T.append` n2
+  {-# INLINE mempty #-}
+  {-# INLINE mappend #-}
+
 
 instance IsString Name where
   fromString = mkName
+  {-# INLINE fromString #-}
 
 instance Show Name where
   show = fromName
+  {-# INLINE show #-}
 
 instance ToJSON Name where
   toJSON = toJSON . fromName
+  {-# INLINE toJSON #-}
 
 instance FromJSON Name where
   parseJSON (J.String t) = return (t ^. from isoText)

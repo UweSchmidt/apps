@@ -99,6 +99,7 @@ type LazyByteString = LB.ByteString
 compareBy :: [a -> a -> Ordering] -> a -> a -> Ordering
 compareBy fs x1 x2 =
   mconcat $ map (\ cmp -> cmp x1 x2) fs
+{-# INLINE compareBy #-}
 
 
 -- compare only on Just values
@@ -108,6 +109,7 @@ compareBy fs x1 x2 =
 compareJust :: Ord a => Maybe a -> Maybe a -> Ordering
 compareJust (Just x1) (Just x2) = compare x1 x2
 compareJust _         _         = EQ
+{-# INLINE compareJust #-}
 
 
 -- compare with Nothing as largest values
@@ -119,6 +121,7 @@ compareJust' (Just x1) (Just x2) = compare x1 x2
 compareJust' (Just _ ) _         = LT
 compareJust' _         (Just _ ) = GT
 compareJust' _         _         = EQ
+{-# INLINE compareJust' #-}
 
 -- ----------------------------------------
 
@@ -141,22 +144,28 @@ class IsEmpty a where
 
 instance IsEmpty [a] where
   isempty = null
+  {-# INLINE isempty #-}
 
 instance IsEmpty (Maybe a) where
   isempty Nothing = True
   isempty _       = False
+  {-# INLINE isempty #-}
 
 instance IsEmpty Text where
   isempty = T.null
+  {-# INLINE isempty #-}
 
 instance IsEmpty ByteString where
   isempty = BS.null
+  {-# INLINE isempty #-}
 
 instance IsEmpty (Set a) where
   isempty = S.null
+  {-# INLINE isempty #-}
 
 instance IsEmpty (Map k v) where
   isempty = M.null
+  {-# INLINE isempty #-}
 
 -- ----------------------------------------
 
@@ -166,27 +175,33 @@ class IsoString a where
 
 instance IsoString [Char] where
   isoString = iso id id
+  {-# INLINE isoString #-}
 
 instance IsoString Text where
   isoString = iso T.unpack T.pack
+  {-# INLINE isoString #-}
 
 instance IsoString ByteString where
   isoString = iso BU.toString BU.fromString
+  {-# INLINE isoString #-}
 
 instance IsoString LazyByteString where
   isoString = iso LBU.toString LBU.fromString
+  {-# INLINE isoString #-}
 
 class IsoText a where
   isoText :: Iso' a Text
 
 instance IsoText Text where
   isoText = iso id id
+  {-# INLINE isoText #-}
 
 class IsoInteger a where
   isoInteger :: Iso' a Integer
 
 instance IsoInteger Integer where
   isoInteger = iso id id
+  {-# INLINE isoInteger #-}
 
 {-    (Use UndecidableInstances to permit this)
 instance (Integral a) => IsoInteger a where
@@ -205,9 +220,9 @@ instance (IsEmpty a, Monoid a) => IsoMaybe a where
       toM xs
         | isempty xs = Nothing
         | otherwise  = Just xs
-
       fromM Nothing   = mempty
       fromM (Just xs) = xs
+  {-# INLINE isoMaybe #-}
 
 -- ----------------------------------------
 
@@ -216,17 +231,21 @@ instance (IsEmpty a, Monoid a) => IsoMaybe a where
 
 isoMapElems :: Ord k => (e -> k) -> Iso' (Map k e) [e]
 isoMapElems key = iso M.elems (M.fromList . map (\ e -> (key e, e)))
+{-# INLINE isoMapElems #-}
 
 -- an iso for converting between maps and list of pairs
 
 isoMapList :: Ord a => Iso' (Map a b) ([(a, b)])
 isoMapList = iso M.toList M.fromList
+{-# INLINE isoMapList #-}
 
 isoSetList :: Ord a => Iso' (Set a) [a]
 isoSetList = iso S.toList S.fromList
+{-# INLINE isoSetList #-}
 
 isA :: (a -> Bool) -> Prism' a a
 isA p = prism id (\ o -> (if p o then Right else Left) o)
+{-# INLINE isA #-}
 
 -- ----------------------------------------
 --
@@ -237,10 +256,12 @@ isA p = prism id (\ o -> (if p o then Right else Left) o)
 t .=?! x
   | isempty x = []
   | otherwise = [t J..= x]
+{-# INLINE (.=?!) #-}
 
 (.:?!) :: (FromJSON v, Monoid v) =>
           J.Object -> Text -> J.Parser v
 o .:?! t =
   o J..:? t J..!= mempty
+{-# INLINE (.:?!) #-}
 
 -- ----------------------------------------
