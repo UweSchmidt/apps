@@ -36,6 +36,7 @@ mkEmptyImgRoot rootName imgName colName =
 
 mkImgRoot :: Name -> ImgNode -> ImgTree
 mkImgRoot = mkDirRoot mkObjId
+{-# INLINE mkImgRoot #-}
 
 mkNode ::  (MonadError String m) =>
            (ImgNode -> Bool) ->
@@ -44,21 +45,26 @@ mkNode ::  (MonadError String m) =>
            ImgNode ->                    -- node value
            ImgTree -> m (ObjId, ImgTree) -- new ref and modified tree
 mkNode isN = mkDirNode mkObjId isN addChildRef
+{-# INLINE mkNode #-}
 
 lookupImgPath :: Path -> ImgTree -> Maybe (ObjId, ImgNode)
 lookupImgPath = lookupDirPath mkObjId
+{-# INLINE lookupImgPath #-}
 
 -- | remove an image node or a dir node without entries
 removeImgNode :: (MonadError String m) =>
                  ObjId ->
                  ImgTree -> m ImgTree
 removeImgNode = remDirNode isempty removeChildRef
+{-# INLINE removeImgNode #-}
 
 addChildRef :: ObjId -> ImgNode -> ImgNode
 addChildRef r n = n & theDirEntries %~ addDirEntry r
+{-# INLINE addChildRef #-}
 
 -- | remove a child from an image dir node
 removeChildRef :: ObjId -> ImgNode -> ImgNode
 removeChildRef r n = n & theDirEntries %~ delDirEntry r
+{-# INLINE removeChildRef #-}
 
 -- ----------------------------------------

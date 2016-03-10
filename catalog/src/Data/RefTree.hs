@@ -55,16 +55,20 @@ instance (Ord ref, FromJSON (node ref), FromJSON ref) => FromJSON (RefTree node 
 
 rootRef :: Lens' (RefTree node ref) ref
 rootRef k (RT r m) = (\ new -> RT new m) <$> k r
+{-# INLINE rootRef #-}
 
 entries :: Lens' (RefTree node ref) (Map ref (node ref))
 entries k (RT r m) = (\ new -> RT r new) <$> k m
+{-# INLINE entries #-}
 
 entryAt :: (Ord ref) => ref -> Lens' (RefTree node ref) (Maybe (node ref))
 entryAt r = entries . at r
+{-# INLINE entryAt #-}
 
 theNode :: (Ord ref, Show ref) =>
            ref -> Lens' (RefTree node ref) (node ref)
 theNode r = entryAt r . checkJust ("atRef: undefined ref " ++ show r)
+{-# INLINE theNode #-}
 
 -- ----------------------------------------
 
@@ -110,17 +114,21 @@ instance (FromJSON (node ref), FromJSON ref) => FromJSON (UpLink node ref) where
 
 parentRef :: Lens' (UpLink node ref) ref
 parentRef k (UL r n v) = fmap (\ new -> UL new n v) (k r)
+{-# INLINE parentRef #-}
 
 nodeName :: Lens' (UpLink node ref) Name
 nodeName k (UL r n v) = fmap (\ new -> UL r new v) (k n)
+{-# INLINE nodeName #-}
 
 nodeVal :: Lens' (UpLink node ref) (node ref)
 nodeVal k (UL r n v) = fmap (\ new -> UL r n new) (k v)
+{-# INLINE nodeVal #-}
 
 -- ----------------------------------------
 
 checkJust :: String -> Iso' (Maybe a) a
 checkJust msg = iso (fromMaybe (error msg)) Just
+{-# INLINE checkJust #-}
 
 -- ----------------------------------------
 
@@ -130,12 +138,15 @@ type DirTree node ref = RefTree (UpLink node) ref
 
 theParent :: (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) ref
 theParent r = theNode r . parentRef
+{-# INLINE theParent #-}
 
 theName ::  (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) Name
 theName r = theNode r . nodeName
+{-# INLINE theName #-}
 
 theNodeVal ::  (Ord ref, Show ref) => ref -> Lens' (DirTree node ref) (node ref)
 theNodeVal r = theNode r . nodeVal
+{-# INLINE theNodeVal #-}
 
 -- ----------------------------------------
 
@@ -151,6 +162,7 @@ refPath r0 t
       where
         par    = t ^. theParent ref
         isRoot = par == ref
+{-# INLINE refPath #-}
 
 -- | create the root of a DirTree.
 -- It's the only node where the parent ref equals the ref.
@@ -164,6 +176,7 @@ mkDirRoot genRef n v
 
 isDirRoot :: (Ord ref, Show ref) => ref -> DirTree node ref -> Bool
 isDirRoot r t = t ^. theParent r == r
+{-# INLINE isDirRoot #-}
 
 -- lookup a (ref, nodeval) by a path
 lookupDirPath :: (Ord ref, Show ref) =>
@@ -175,6 +188,7 @@ lookupDirPath genRef p t =
    (\ v -> (i', v)) <$> (t ^? entryAt i' . _Just . nodeVal)
   where
     i' = genRef p
+{-# INLINE lookupDirPath #-}
 
 
 

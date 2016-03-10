@@ -26,12 +26,16 @@ instance Monoid MetaData where
   mempty                = MD HM.empty
   MD m1 `mappend` MD m2 = MD $ m1 `HM.union` m2
   -- the left map entries are prefered
+  {-# INLINE mappend #-}
+  {-# INLINE mempty  #-}
 
 instance IsEmpty MetaData where
   isempty (MD md) = HM.null md
+  {-# INLINE isempty #-}
 
 instance ToJSON MetaData where
   toJSON (MD m) = J.toJSON [m]
+  {-# INLINE toJSON #-}
 
 instance FromJSON MetaData where
   parseJSON = J.withArray "MetaData" $ \ v ->
@@ -48,7 +52,9 @@ metaDataAt key = md2obj . at (key ^. isoText) . val2text
   where
     md2obj :: Iso' MetaData J.Object
     md2obj = iso (\ (MD m) -> m) MD
+    {-# INLINE md2obj #-}
 
+    {-# INLINE val2text #-}
     val2text :: Iso' (Maybe J.Value) Text
     val2text = iso totext fromtext
       where
@@ -69,6 +75,8 @@ metaDataAt key = md2obj . at (key ^. isoText) . val2text
             showI :: Integer -> String
             showI = show
 
+{-# INLINE metaDataAt #-}
+
 partMetaData :: (Name -> Bool) -> Iso' MetaData (MetaData, MetaData)
 partMetaData predicate = iso part (uncurry mappend)
   where
@@ -79,17 +87,21 @@ partMetaData predicate = iso part (uncurry mappend)
               (HM.insert k v m1, m2)
           | otherwise =
               (m1, HM.insert k v m2)
+{-# INLINE partMetaData #-}
 
 selectMetaData :: (Name -> Bool) -> Lens' MetaData MetaData
 selectMetaData p = partMetaData p . _1
+{-# INLINE selectMetaData #-}
 
 selectByRegex :: RegexText -> Lens' MetaData MetaData
 selectByRegex rx' = selectMetaData p
   where
     p n = matchRE rx' (n ^. isoText)
+{-# INLINE selectByRegex #-}
 
 selectByNames :: [Name] -> Lens' MetaData MetaData
 selectByNames ns = selectMetaData (`elem` ns)
+{-# INLINE selectByNames #-}
 
 -- lookup a sequence of fields and take first value found
 lookupByNames :: [Name] -> MetaData -> Text
@@ -116,6 +128,7 @@ getCreateMeta parse md =
 getFileName :: MetaData -> Maybe Text
 getFileName md =
   md ^. metaDataAt "File:Filename" . isoMaybe
+{-# INLINE getFileName #-}
 
 -- ----------------------------------------
 --
@@ -126,11 +139,13 @@ compareByCreateDate =
   compareBy [ compareJust' `on` getCreateMeta parseDateTime
             , compare      `on` getFileName
             ]
+{-# INLINE compareByCreateDate #-}
 
 compareByName :: MetaData -> MetaData -> Ordering
 compareByName =
   compareBy [ compare `on` getFileName
             ]
+{-# INLINE compareByName #-}
 
 -- ----------------------------------------
 --
@@ -180,6 +195,7 @@ reDateTime = parseRegexExt $
 -- take the day part from a date/time input
 parseDate :: String -> Maybe (String, String, String)
 parseDate str = fst <$> parseDateTime str
+{-# INLINE parseDate #-}
 
 -- take the time part of a full date/time input
 parseTime :: String -> Maybe (String, String, String, String)
@@ -204,8 +220,6 @@ attrGroups2regex =
 
     mkAlt :: [String] -> String
     mkAlt xs = mkPar $ intercalate "|" $ map mkPar xs
-
-
 
 reRaw :: RegexText
 reRaw = attrGroups2regex

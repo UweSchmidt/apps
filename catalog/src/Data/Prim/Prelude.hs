@@ -61,9 +61,10 @@ module Data.Prim.Prelude
        , isoMapElems
        , isoMapList
        , isoSetList
---       , isoTextMaybe
---       , isoMonoidMaybe
        , isA
+         -- utilities
+       , (.||.)
+       , partitionBy
        )
 where
 
@@ -263,5 +264,24 @@ t .=?! x
 o .:?! t =
   o J..:? t J..!= mempty
 {-# INLINE (.:?!) #-}
+
+-- ----------------------------------------
+
+infixr 2 .||.
+
+-- | Lift boolean 'or' over predicates.
+
+(.||.) :: (a -> Bool) -> (a -> Bool) -> (a -> Bool)
+p .||. q = \ v -> p v || q v
+
+
+-- | group a list of entries by a mapping the
+-- elements to an ordered domain
+
+partitionBy :: (Ord e) => (a -> e) -> [a] -> [[a]]
+partitionBy f =
+  M.elems
+  . foldr (\ x m -> M.insertWith (++) (f x) [x]
+                    m) M.empty
 
 -- ----------------------------------------

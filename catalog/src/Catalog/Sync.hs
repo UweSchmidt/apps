@@ -6,8 +6,6 @@ where
 
 import           Catalog.Cmd
 import           Catalog.FilePath
-import           Control.Lens
-import           Data.Function.Util
 import           Data.ImgTree
 import           Data.Prim
 
@@ -146,7 +144,7 @@ collectDirCont i = do
   trc $ "collectDirEntries: imgfiles "      ++ show imgfiles
 
   return ( realsubdirs ^.. traverse . _1
-         , groupBy (^. _2 . _1) imgfiles
+         , partitionBy (^. _2 . _1) imgfiles
          )
   where
     isSubDir fp n =

@@ -127,15 +127,19 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
 
 emptyImgDir :: ImgNode' ref
 emptyImgDir = DIR mempty mempty
+{-# INLINE emptyImgDir #-}
 
 emptyImg :: ImgNode' ref
 emptyImg = IMG mempty
+{-# INLINE emptyImg #-}
 
 emptyImgRoot :: Monoid ref => ImgNode' ref
 emptyImgRoot = ROOT mempty mempty
+{-# INLINE emptyImgRoot #-}
 
 emptyImgCol :: ImgNode' ref
 emptyImgCol = COL mempty Nothing [] mempty
+{-# INLINE emptyImgCol #-}
 
 -- image node optics
 
@@ -145,6 +149,7 @@ theParts
                   IMG m -> Right m
                   _     -> Left  x
               )
+{-# INLINE theParts #-}
 
 theDir :: Prism' (ImgNode' ref) (DirEntries' ref, TimeStamp)
 theDir =
@@ -153,9 +158,11 @@ theDir =
                 DIR s t -> Right (s, t)
                 _       -> Left  x
           )
+{-# INLINE theDir #-}
 
 theDirEntries :: Traversal' (ImgNode' ref) (DirEntries' ref)
 theDirEntries = theDir . _1
+{-# INLINE theDirEntries #-}
 
 -- traverseWords :: Traverasl' State Word8
 -- traverseWords :: Applicative f => (Word8 -> f Word8) -> State -> f State
@@ -165,54 +172,66 @@ theSyncTime :: Traversal' (ImgNode' ref) TimeStamp
 theSyncTime inj (DIR es ts)       = DIR es <$> inj ts
 theSyncTime inj (COL md im es ts) = COL md im es <$> inj ts
 theSyncTime _   n                 = pure n
+{-# INLINE theSyncTime #-}
 
 theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
-theImgRoot
-  = prism (uncurry ROOT)
-          (\ x -> case x of
-              ROOT rd rc -> Right (rd, rc)
-              _          -> Left x
-          )
+theImgRoot =
+  prism (uncurry ROOT)
+        (\ x -> case x of
+            ROOT rd rc -> Right (rd, rc)
+            _          -> Left x
+        )
+{-# INLINE theImgRoot #-}
 
 theRootImgDir :: Traversal' (ImgNode' ref) ref
 theRootImgDir = theImgRoot . _1
+{-# INLINE theRootImgDir #-}
 
 theRootImgCol :: Traversal' (ImgNode' ref) ref
 theRootImgCol = theImgRoot . _2
+{-# INLINE theRootImgCol #-}
 
 theImgCol :: Prism' (ImgNode' ref)
                     (MetaData, (Maybe (ref, Name)), [ColEntry' ref], TimeStamp)
-theImgCol
-  = prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
-          (\ x -> case x of
-              COL x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
-              _               -> Left x
-          )
+theImgCol =
+  prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
+        (\ x -> case x of
+            COL x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
+            _               -> Left x
+        )
+{-# INLINE theImgCol #-}
 
 theColMetaData :: Traversal' (ImgNode' ref) MetaData
 theColMetaData = theImgCol . _1
+{-# INLINE theColMetaData #-}
 
 theColImg :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
 theColImg = theImgCol . _2
+{-# INLINE theColImg #-}
 
 theColEntries :: Traversal' (ImgNode' ref) [ColEntry' ref]
 theColEntries = theImgCol . _3
+{-# INLINE theColEntries #-}
 
 isDIR :: ImgNode' ref -> Bool
 isDIR DIR{}  = True
 isDIR _      = False
+{-# INLINE isDIR #-}
 
 isIMG :: ImgNode' ref -> Bool
 isIMG IMG{}  = True
 isIMG _      = False
+{-# INLINE isIMG #-}
 
 isROOT :: ImgNode' ref -> Bool
 isROOT ROOT{} = True
 isROOT _      = False
+{-# INLINE isROOT #-}
 
 isCOL :: ImgNode' ref -> Bool
 isCOL COL{} = True
 isCOL _     = False
+{-# INLINE isCOL #-}
 
 -- ----------------------------------------
 
@@ -222,9 +241,11 @@ deriving instance Show ImgParts
 
 instance IsEmpty ImgParts where
   isempty (ImgParts im) = isempty im
+  {-# INLINE isempty #-}
 
 instance Monoid ImgParts where
   mempty = ImgParts M.empty
+  {-# INLINE mempty #-}
 
   ImgParts m1 `mappend` ImgParts m2
     = ImgParts $ M.mergeWithKey combine only1 only2 m1 m2
@@ -240,21 +261,26 @@ instance Monoid ImgParts where
 
 instance ToJSON ImgParts where
   toJSON (ImgParts pm) = toJSON . M.toList $ pm
+  {-# INLINE toJSON #-}
 
 instance FromJSON ImgParts where
   parseJSON x = (ImgParts . M.fromList) <$> parseJSON x
 
 mkImgParts :: [ImgPart] -> ImgParts
 mkImgParts ps = ps ^. from isoImgParts
+{-# INLINE mkImgParts #-}
 
 isoImgParts :: Iso' ImgParts [ImgPart]
 isoImgParts =
   iso (\ (ImgParts pm) -> pm) ImgParts
   .
   isoMapElems (\ (IP n _ _ _) -> n)
+{-# INLINE isoImgParts #-}
 
 thePartNames :: ImgType -> Traversal' ImgParts Name
-thePartNames ty = isoImgParts . traverse . isA (^. theImgType . to (== ty)) . theImgName
+thePartNames ty =
+  isoImgParts . traverse . isA (^. theImgType . to (== ty)) . theImgName
+{-# INLINE thePartNames #-}
 
 -- ----------------------------------------
 
@@ -279,18 +305,23 @@ instance FromJSON ImgPart where
 
 mkImgPart :: Name -> ImgType -> ImgPart
 mkImgPart n t = IP n t mempty mempty
+{-# INLINE mkImgPart #-}
 
 theImgName :: Lens' ImgPart Name
 theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
+{-# INLINE theImgName #-}
 
 theImgType :: Lens' ImgPart ImgType
 theImgType k (IP n t s c) = (\ new -> IP n new s c) <$> k t
+{-# INLINE theImgType #-}
 
 theImgTimeStamp :: Lens' ImgPart TimeStamp
 theImgTimeStamp k (IP n t s c) = (\ new -> IP n t new c) <$> k s
+{-# INLINE theImgTimeStamp #-}
 
 theImgCheckSum :: Lens' ImgPart CheckSum
 theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
+{-# INLINE theImgCheckSum #-}
 
 -- ----------------------------------------
 
@@ -327,13 +358,16 @@ instance (FromJSON ref) => FromJSON (ColEntry' ref) where
 
 mkColImgRef :: ref -> Name -> (ColEntry' ref)
 mkColImgRef = ImgRef
+{-# INLINE mkColImgRef #-}
 
 mkColColRef :: ref -> (ColEntry' ref)
 mkColColRef = ColRef
+{-# INLINE mkColColRef #-}
 
 theColImgObjId :: Lens' (ColEntry' ref) ref
 theColImgObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
 theColImgObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
+{-# INLINE theColImgObjId #-}
 
 
 -- theImgName :: Lens' ImgPart Name
@@ -347,6 +381,7 @@ theColImgRef =
             ImgRef i n -> Right (i, n)
             _          -> Left  x
         )
+{-# INLINE theColImgRef #-}
 
 theColColRef :: Prism' (ColEntry' ref) ref
 theColColRef =
@@ -355,6 +390,7 @@ theColColRef =
             ColRef i -> Right i
             _        -> Left  x
         )
+{-# INLINE theColColRef #-}
 
 -- ----------------------------------------
 
@@ -368,28 +404,38 @@ deriving instance Functor DirEntries'
 
 instance IsEmpty (DirEntries' ref) where
   isempty (DE xs) = isempty xs
+  {-# INLINE isempty #-}
 
 instance Monoid (DirEntries' ref) where
   mempty = DE []
+  {-# INLINE mempty #-}
+
   DE xs `mappend` DE ys = DE $ xs ++ ys
+  {-# INLINE mappend #-}
 
 instance (ToJSON ref) => ToJSON (DirEntries' ref) where
   toJSON (DE rs) = toJSON rs
+  {-# INLINE toJSON #-}
 
 instance (FromJSON ref) => FromJSON (DirEntries' ref) where
   parseJSON rs = DE <$> parseJSON rs
+  {-# INLINE parseJSON #-}
 
 mkDirEntries :: [ref] -> DirEntries' ref
 mkDirEntries = DE
+{-# INLINE mkDirEntries #-}
 
 isoDirEntries :: Iso' (DirEntries' ref) [ref]
 isoDirEntries = iso (\ (DE xs) -> xs) DE
+{-# INLINE isoDirEntries #-}
 
 addDirEntry :: ref -> DirEntries' ref -> DirEntries' ref
 addDirEntry r (DE rs) = DE $ r : rs
+{-# INLINE addDirEntry #-}
 
 delDirEntry :: (Eq ref) => ref -> DirEntries' ref -> DirEntries' ref
 delDirEntry r (DE rs) = DE $ filter (/= r) rs
+{-# INLINE delDirEntry #-}
 
 
 -- ----------------------------------------

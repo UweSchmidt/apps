@@ -47,28 +47,33 @@ instance (FromJSON ref, Ord ref) => FromJSON (ImgStore' ref) where
 
 theImgTree :: Lens' (ImgStore' ref) (DirTree ImgNode' ref)
 theImgTree k (IS t p w) = (\new -> IS new p w) <$> k t
+{-# INLINE theImgTree #-}
 
 theMountPath :: Lens' (ImgStore' ref) FilePath
 theMountPath k (IS t p w) = (\new -> IS t new w) <$> k p
+{-# INLINE theMountPath #-}
 
 theWE :: Lens' (ImgStore' ref) ref
 theWE k (IS t p w) = (\new -> IS t p new) <$> k w
+{-# INLINE theWE #-}
 
 -- almost a functor
 mapImgStore :: (Ord ref') => (ref -> ref') -> ImgStore' ref -> ImgStore' ref'
 mapImgStore f (IS i mp wd) =
   IS (mapRefTree f i) mp (f wd)
+{-# INLINE mapImgStore #-}
 
 -- ----------------------------------------
 
 mkImgStore :: ImgTree -> FilePath -> ObjId -> ImgStore
 mkImgStore = IS
+{-# INLINE mkImgStore #-}
 
 emptyImgStore :: ImgStore
-emptyImgStore
-  = IS r "" (r ^. rootRef)
+emptyImgStore =
+  IS r "" (r ^. rootRef)
   where
     r = mkDirRoot mkObjId "" emptyImgRoot
-
+{-# INLINE emptyImgStore #-}
 
 -- ----------------------------------------
