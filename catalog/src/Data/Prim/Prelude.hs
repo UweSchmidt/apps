@@ -181,7 +181,7 @@ class IsoString a where
   isoString :: Iso' a String
 
 
-instance IsoString [Char] where
+instance IsoString String where
   isoString = iso id id
   {-# INLINE isoString #-}
 
@@ -202,6 +202,10 @@ class IsoText a where
 
 instance IsoText Text where
   isoText = iso id id
+  {-# INLINE isoText #-}
+
+instance IsoText String where
+  isoText = from isoString
   {-# INLINE isoText #-}
 
 class IsoInteger a where
