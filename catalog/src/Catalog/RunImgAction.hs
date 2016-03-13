@@ -17,14 +17,14 @@ runImgAction ActNoop =
 runImgAction (ActSeq c1 c2) =
   runImgAction c1 >> runImgAction c2
 
-runImgAction (GenCopy i t s ar w h) = catchAll $ do
+runImgAction (GenCopy i t s geo) = catchAll $ do
   p  <- objid2path i
   verbose $ "generate image copy ("
-            ++ show w ++ "x" ++ show h
+            ++ geo ^. isoString
             ++ ") for image " ++ show (show p)
   tp <- toFilePath (substPathName t p)
   sp <- toFilePath (substPathName s p)
-  createImageCopy ar (w, h) tp sp
+  createImageCopy geo tp sp
   return ()
 
 runImgAction (GenMeta i t s ty) = do

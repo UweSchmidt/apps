@@ -69,16 +69,16 @@ matchRules rs i ps = do
         toTN part ext =
           part ^. theImgName . to (substNameSuffix ext (fst target))
 
-mkCopyRule :: Int -> Int -> AspectRatio -> Rule
-mkCopyRule w h ar = (rl, act)
+mkCopyRule :: GeoAR -> Rule
+mkCopyRule g = (rl, act)
   where
-    copy'sx = mkName $ "." ++ show w ++ "x" ++ show h ++ ".jpg"
+    copy'sx = mkName $ "." ++ g ^. geoar2pair . _1 . isoString ++ ".jpg"
 
     rl = PT (copy'sx, IMGcopy) IMGjpg
 
     act (DP tp sp) i = do
       return $
-        GenCopy i (tp ^. theImgName) (sp ^. theImgName) ar w h
+        GenCopy i (tp ^. theImgName) (sp ^. theImgName) g
 
 mkMetaRule :: ImgType -> Rule
 mkMetaRule t = (rl, act)
@@ -96,7 +96,7 @@ buildRules = do
   cg <- view envCopyGeo
   cm <- view envMetaSrc
   return $
-    map (uncurry . uncurry $ mkCopyRule) cg
+    map mkCopyRule cg
     ++
     map mkMetaRule cm
 

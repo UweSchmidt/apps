@@ -1,5 +1,6 @@
 module Data.Prim
        ( module Data.Prim.CheckSum
+       , module Data.Prim.Geometry
        , module Data.Prim.ImageType
        , module Data.Prim.Name
        , module Data.Prim.Path
@@ -10,6 +11,7 @@ module Data.Prim
 where
 
 import Data.Prim.CheckSum
+import Data.Prim.Geometry
 import Data.Prim.ImageType
 import Data.Prim.Name
 import Data.Prim.Path

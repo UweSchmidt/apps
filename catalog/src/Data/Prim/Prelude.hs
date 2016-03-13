@@ -26,10 +26,12 @@ module Data.Prim.Prelude
        , matchRE
        , matchSubex
        , matchSubexRE
+       , tokenizeRE'
          -- Data.Maybe
        , fromMaybe
        , isNothing
        , isJust
+       , listToMaybe
          -- Data.List
        , intercalate
        , isPrefixOf
@@ -38,6 +40,9 @@ module Data.Prim.Prelude
        , sort
        , sortBy
        , nub
+         -- Data.Char
+       , toLower
+       , toUpper
          -- Data.Function
        , on
          -- System.FilePath
@@ -65,6 +70,7 @@ module Data.Prim.Prelude
          -- utilities
        , (.||.)
        , partitionBy
+       , searchPos
        )
 where
 
@@ -73,6 +79,7 @@ import           Control.Lens
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
+import           Data.Char (toLower, toUpper)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU
@@ -248,6 +255,14 @@ isA :: (a -> Bool) -> Prism' a a
 isA p = prism id (\ o -> (if p o then Right else Left) o)
 {-# INLINE isA #-}
 
+{-
+-- my first traversal, but Edward already made this, it's named each
+-- works on various other structures
+
+all3 :: Traversal (a, a, a) (b, b, b) a b
+all3 inj (x1, x2, x3) = (,,) <$> inj x1 <*> inj x2 <*> inj x3
+-- -}
+
 -- ----------------------------------------
 --
 -- mothers little helper for en/decoding optional fileds
@@ -283,5 +298,12 @@ partitionBy f =
   M.elems
   . foldr (\ x m -> M.insertWith (++) (f x) [x]
                     m) M.empty
+
+
+-- search the position of the first element for which the predicate holds
+
+searchPos :: (a -> Bool) -> [a] -> Maybe Int
+searchPos p =
+  listToMaybe . map fst . filter (p . snd) . zip [0..]
 
 -- ----------------------------------------

@@ -7,16 +7,11 @@ import Data.Prim
 
 -- ----------------------------------------
 
-data ImgAction = GenCopy ObjId Name Name AspectRatio Int Int
+data ImgAction = GenCopy ObjId Name Name GeoAR
                | GenMeta ObjId Name Name ImgType
                | SyncImg ObjId
                | ActSeq ImgAction ImgAction
                | ActNoop
-
-data AspectRatio = Fix | Pad | Crop
-                 deriving (Eq, Show)
-
-type Geo = (Int, Int)
 
 -- ----------------------------------------
 

@@ -13,13 +13,12 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
-import           Data.ImgAction
-import           Data.Prim.ImageType
+import           Data.Prim
 
 -- ----------------------------------------
 
 data Env = Env
-  { _copyGeo :: [CopyGeo]
+  { _copyGeo :: [GeoAR]
   , _metaSrc :: [ImgType]
   , _trc     :: Bool
   , _verbose :: Bool
@@ -36,9 +35,9 @@ type CopyGeo = ((Int, Int), AspectRatio)
 
 initEnv :: Env
 initEnv = Env
-  { _copyGeo = [ ((1400, 1050), Pad)
-               , (( 160,  160), Pad)
-               , (( 160,  120), Fix)
+  { _copyGeo = [ GeoAR 1400 1050 Pad
+               , GeoAR  160  160 Pad
+               , GeoAR  160  120 Fix
                ]
   , _metaSrc = [IMGraw, IMGimg, IMGmeta]
   , _trc     = True
@@ -46,7 +45,7 @@ initEnv = Env
   , _dryRun  = False
   }
 
-envCopyGeo :: Lens' Env [CopyGeo]
+envCopyGeo :: Lens' Env [GeoAR]
 envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
 
 envMetaSrc :: Lens' Env [ImgType]

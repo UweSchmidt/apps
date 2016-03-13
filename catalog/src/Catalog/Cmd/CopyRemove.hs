@@ -6,7 +6,6 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Data.ImgTree
-import           Data.ImgAction
 import           Data.Prim
 
 -- ----------------------------------------
@@ -145,12 +144,12 @@ rmImgCopies = rmGenFiles isCopy
 
 -- remove image copies of a given geometry
 rmImgCopy :: Geo -> ObjId -> Cmd ()
-rmImgCopy (w, h) = rmGenFiles isCopy
+rmImgCopy g = rmGenFiles isCopy
   where
     isCopy p =
       p ^. theImgType == IMGcopy
       &&
-      match (".*[.]" ++ show w ++ "x" ++ show h ++ "[.]jpg")
+      match (".*[.]" ++ g ^. isoString ++ "[.]jpg")
             (p ^. theImgName . isoString)
 
 -- ----------------------------------------

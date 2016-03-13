@@ -39,7 +39,7 @@ module Data.ImgNode
        , theRootImgCol
        , theImgRoot
        , theImgCol
-       , theColImgObjId
+       , theColObjId
        , theColMetaData
        , theColImg
        , theColEntries
@@ -364,10 +364,10 @@ mkColColRef :: ref -> (ColEntry' ref)
 mkColColRef = ColRef
 {-# INLINE mkColColRef #-}
 
-theColImgObjId :: Lens' (ColEntry' ref) ref
-theColImgObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
-theColImgObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
-{-# INLINE theColImgObjId #-}
+theColObjId :: Lens' (ColEntry' ref) ref
+theColObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
+theColObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
+{-# INLINE theColObjId #-}
 
 
 -- theImgName :: Lens' ImgPart Name

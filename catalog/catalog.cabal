@@ -70,6 +70,7 @@ executable catalog
                    , process
 --                   , SHA                 >= 1.5
                    , scientific           >= 0.3
+                   , string-qq            >= 0.0.2
                    , text                 >= 1.0
                    , time                 >= 1.5
                    , transformers         >= 0.4

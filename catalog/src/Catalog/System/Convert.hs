@@ -5,7 +5,6 @@ module Catalog.System.Convert
 where
 
 import Catalog.Cmd
-import Data.ImgAction
 import Data.Prim
 
 -- ----------------------------------------
@@ -20,43 +19,37 @@ execImageSize f
 
 parseGeo :: String -> Cmd Geo
 parseGeo s =
-  build $
-  matchSubexRE regexGeo s
-  where
-    build [("w",w),("h",h)]
-      = return (read w, read h)
-    build _
-      = abort $ "parseGeo: no parse: " ++ s
-
-regexGeo :: Regex
-regexGeo = parseRegexExt "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*"
+  maybe (abort $ "parseGeo: no parse: " ++ s) return $
+  readGeo' s
 
 -- ----------------------------------------
 
-createImageCopy :: AspectRatio -> Geo -> FilePath -> FilePath -> Cmd ()
-createImageCopy aspect d'geo d s =
+createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd ()
+createImageCopy d'geo d s =
   getImageSize s >>= go
   where
     go s'geo =
       runDry ("create image copy: " ++ show shellCmd) $ do
         execProcess "bash" [] shellCmd >> return ()
       where
-        shellCmd = resizeShellCmd aspect d'geo s'geo d s
+        shellCmd = resizeShellCmd d'geo s'geo d s
 
-resizeShellCmd :: AspectRatio -> Geo -> Geo -> FilePath -> FilePath -> String
-resizeShellCmd aspect d'geo s'geo d s =
+resizeShellCmd :: GeoAR -> Geo -> FilePath -> FilePath -> String
+resizeShellCmd d'g s'geo d s =
   shellCmd
   where
-    ((cw, ch), (xoff, yoff))
+    d'geo       = d'g ^. theGeo
+    aspect      = d'g ^. theAR
+    (Geo cw ch, Geo xoff yoff)
                 = crGeo aspect
-    (w, h)      = rGeo  aspect
+    r           = rGeo  aspect
 
     rGeo Fix    = d'geo
     rGeo _      = resizeGeo s'geo d'geo
 
     crGeo Fix   = cropGeo s'geo d'geo
-    crGeo Pad   = (s'geo, (-1, -1))
-    crGeo Crop  = (s'geo, (0,0))
+    crGeo Pad   = (s'geo, Geo (-1) (-1))
+    crGeo Crop  = (s'geo, Geo 0 0)
 
     unsharp     = [] -- ["-unsharp", "0.7x0.7+1.0+0.05"] -- sharpen option removed
     resize      = ["-thumbnail", geo ++ "!"]
@@ -65,7 +58,7 @@ resizeShellCmd aspect d'geo s'geo d s =
     interlace   = [ "-interlace", "Plane" ]
     isPad       = (xoff == (-1) && yoff == (-1))
     isCrop      = (xoff > 0     || yoff > 0)
-    geo         = show w ++ "x" ++ show h
+    geo         = r ^. isoString
 
     cmdName
         | isPad         = [ "montage" ]
@@ -94,23 +87,23 @@ resizeShellCmd aspect d'geo s'geo d s =
 -- ----------------------------------------
 
 resizeGeo       :: Geo -> Geo -> Geo
-resizeGeo sGeo@(sw, sh) (dw, dh)
+resizeGeo sGeo@(Geo sw sh) (Geo dw dh)
     | sw <= dw && sh <= dh              -- source fits into display
         = sGeo                          -- no downsizing, no magnification
 
     | sw * dh >= dw * sh                -- source wider than display
-        = (dw, (dw * sh `div` sw))     -- maximum width, height scaled down
+        = Geo dw (dw * sh `div` sw)     -- maximum width, height scaled down
 
     | otherwise                         -- source higher than display
-        = ((dh * sw `div` sh), dh)     -- maximum height, width scaled down
+        = Geo (dh * sw `div` sh) dh     -- maximum height, width scaled down
 
 
 cropGeo         :: Geo -> Geo -> (Geo, Geo)
-cropGeo (sw, sh) (dw, dh)
+cropGeo (Geo sw sh) (Geo dw dh)
     | sw *dh >= dw * sh                 -- source wider than reqired
-        = ((sw', sh), (xoff, 0))
+        = (Geo sw' sh, Geo xoff 0)
     | otherwise                         -- sorce highter than required
-        = ((sw, sh'), (0, yoff))
+        = (Geo sw sh', Geo 0 yoff)
     where
     sw'  = dw * sh `div` dh
     xoff = (sw - sw') `div` 2           -- cut off left and right parts
