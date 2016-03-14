@@ -6,6 +6,7 @@ where
 
 import Catalog.Cmd
 import Catalog.FilePath
+import Data.ImageStore
 import Data.ImgTree
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
@@ -13,13 +14,15 @@ import Text.SimpleTemplate
 
 -- ----------------------------------------
 
-type Html = Text
+type Html = [Text]
 
 -- a page config has an name, a geo for the pictures,
 -- a geo for the icons,
 -- and the # icons per row
 
-type PageConfig = (String, (GeoAR, GeoAR, Int))
+type PageConfig = (Text, (GeoAR, GeoAR, Int, EnvTmpl Cmd))
+
+type ActCmd = TmplAct Cmd
 
 -- ----------------------------------------
 
@@ -27,17 +30,35 @@ thePageConfigs :: [PageConfig]
 thePageConfigs =
   [ ("html-1600x1200", ( GeoAR 1600 1200 Pad
                        , GeoAR   160 120 Fix
-                       , 9)
+                       , 9
+                       , photo2Tmpl
+                       )
     )
   , ("html-1400x1050", ( GeoAR 1400 1050 Pad
                        , GeoAR  160  120 Fix
-                       , 9)
+                       , 9
+                       , photo2Tmpl
+                       )
     )
   , ("html-1024x768",  ( GeoAR 1024  768 Pad
                        , GeoAR  160  120 Fix
-                       , 9)
+                       , 9
+                       , photo2Tmpl
+                       )
     )
   ]
+
+-- ----------------------------------------
+
+defaultAct :: ActCmd
+defaultAct n env = do
+  warn $ "evalTemplate: unknown template ref ignored" ++ show (n ^. isoString)
+  return ["${" <> n <> "}"]
+
+addDefaultAct :: EnvTmpl Cmd -> EnvTmpl Cmd
+addDefaultAct = insAct "*" defaultAct
+
+-- ----------------------------------------
 
 pathExpr :: Regex
 pathExpr =
@@ -66,10 +87,24 @@ url2confPathNo f =
 
 genHtmlPage :: FilePath -> Cmd Html
 genHtmlPage p = do
+  mountPath <- use theMountPath
   (config, path, mno) <- url2confPathNo p
+  (geo1, geo2, rows, env) <- fromJustCmd
+    ("can't find config for " ++ config ^. isoString)
+    (lookup config thePageConfigs)
 
-  return ""
+  let env' =
+        env
+        & addDefaultAct
+        & insAct "rootPath"    (atxt mountPath)  -- TODO
+        & insAct "theUpPath"   (atxt "")
+        & insAct "theDuration" (atxt "1")
+        & insAct "theImgGeo"   (atxt $ geo1 ^. isoString)
+        & insAct "theIconGeo"  (atxt'$ return geo2)
 
+  res <- applyTmpl "colPage" env'
+  io $ putStrLn $ (mconcat res ^. isoString)
+  return []
 
 type Neighbors a = (Maybe a, Maybe a, Maybe a) -- prev, next, parent
 

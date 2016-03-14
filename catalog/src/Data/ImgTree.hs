@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Data.ImgTree
        ( module Data.RefTree
        , module Data.ImgNode

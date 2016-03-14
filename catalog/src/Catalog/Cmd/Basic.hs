@@ -147,7 +147,7 @@ toFilePath p = do
 fromFilePath :: FilePath -> Cmd Path
 fromFilePath f = do
   mp <- use theMountPath
-  when (not (mp `isPrefixOf` f)) $
+  unless (mp `isPrefixOf` f) $
     abort $ "fromFilePath: not a legal image path " ++ show f
   r' <- getTree rootRef >>= getImgName
   return $ consPath r' (readPath $ drop (length mp) f)
@@ -243,6 +243,10 @@ setSyncTime i = do
 -- ----------------------------------------
 --
 -- basic Cmd combinators
+
+fromJustCmd :: String -> Maybe a -> Cmd a
+fromJustCmd _   (Just x) = return x
+fromJustCmd msg Nothing  = abort msg
 
 liftE :: Except String a -> Cmd a
 liftE cmd =

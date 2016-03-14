@@ -14,40 +14,45 @@ cabal-version:       >=1.10
 
 executable catalog
   hs-source-dirs:      src
-  main-is:             Main.hs
+  main-is:             Catalog/Main.hs
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
 
   other-modules:     Data.MetaData
                      Data.ImgAction
-                     Data.ImageTree
+                     Data.ImgNode
+                     Data.ImgTree
                      Data.RefTree
-                     Data.Function.Util
                      Data.ImageStore
                      Data.Prim
+                     Data.Prim.ImageType
                      Data.Prim.Name
                      Data.Prim.TimeStamp
                      Data.Prim.Path
                      Data.Prim.PathId
+                     Data.Prim.Prelude
                      Data.Prim.ObjId
+                     Data.Prim.Geometry
                      Data.Prim.CheckSum
                      Catalog.FilePath
                      Catalog.Cmd
+                     Catalog.Cmd.ArchiveCollection
                      Catalog.Cmd.Basic
+                     Catalog.Cmd.CopyRemove
                      Catalog.Cmd.CWN
                      Catalog.Cmd.Fold
                      Catalog.Cmd.List
-                     Catalog.Cmd.Remove
                      Catalog.Cmd.Types
-                     Catalog.Main
-                     Catalog.Prelude
+                     Catalog.Html
+                     Catalog.Html.Photo2
+                     Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.Rules
                      Catalog.RunImgAction
                      Catalog.Sync
                      Catalog.System.Convert
                      Catalog.System.ExifTool
                      Catalog.System.IO
-                     Control.Lens.Util
+                     Text.SimpleTemplate
   
   -- Other library packages from which modules are imported.
   build-depends:     base                 >= 4.5

@@ -3,10 +3,22 @@
 
 module Catalog.Html.Templates.Photo2.AlbumPage where
 
-import qualified Data.Map.Strict as M
-import           Data.Prim
-import           Data.String.QQ
-import           Text.SimpleTemplate
+import Catalog.Cmd.Types
+import Data.Prim
+import Data.String.QQ
+import Text.SimpleTemplate
+
+photo2Tmpl :: EnvTmpl Cmd
+photo2Tmpl =
+  emptyEnvTmpl
+  & insSubTmpl "colPage"     colPage
+  & insSubTmpl "colJS"       colJS
+  & insSubTmpl "colTitle"    colTitle
+  & insSubTmpl "colImg"      colImg
+  & insSubTmpl "colNav"      colNav
+  & insSubTmpl "colContents" colContents
+  & insSubTmpl "colRows"     colRows
+  & insSubTmpl "colIcons"    colIcons
 
 colPage :: Template
 colPage = parseTemplate [s|
@@ -67,8 +79,8 @@ colJS = parseTemplate [s|
       var prevp    = '${thePrevPath}.html]';
       var parentp  = '${theParentPath}.html]';
       var childp   = '${the1ChildPath}.html]';
-      var nextimg  = '[1024x768/${theNextPath}.jpg]';
-      var previmg  = '[1024x768/${thePrevPath}.jpg]';
+      var nextimg  = '${theImgGeo}/${theNextPath}.jpg';
+      var previmg  = '${theImgGeo}/${thePrevPath}.jpg';
       ${theJavaScriptCode}
     </script>
 |]
@@ -179,7 +191,7 @@ colIcons = parseTemplate [s|
 
 -- ----------------------------------------
 
-{- a very simple trest case -}
+{- a very simple trest case }
 
 foo :: Template
 foo = parseTemplate [s|
@@ -197,22 +209,22 @@ content of template with name ${name}
 
 -- ----------------------------------------
 
-e1 :: Env IO
-e1 = Env $ M.fromList
+e1 :: EnvTmpl IO
+e1 = EnvTmpl $ M.fromList
   [ ("variable", txt' value)
   , ("apple", txt' orange)
   , ("bar", evalBar)
   , ("*", defAction)
   ]
   where
-    evalBar :: Text -> Env IO -> IO [Text]
-    evalBar n (Env env) = do
+    evalBar :: Text -> EnvTmpl IO -> IO [Text]
+    evalBar n (EnvTmpl env) = do
       putStrLn $ "inserting template: " ++ n ^.isoString
       evalTemplate bar env'
         where
-          env' = Env $ M.insert "name" (atxt (n ^. isoString)) env
+          env' = EnvTmpl $ M.insert "name" (atxt (n ^. isoString)) env
 
-    defAction :: Text -> Env IO -> IO [Text]
+    defAction :: Text -> EnvTmpl IO -> IO [Text]
     defAction n _env = do
       putStrLn $ "template variable not found: " ++ n ^. isoString
       return ["???"]
