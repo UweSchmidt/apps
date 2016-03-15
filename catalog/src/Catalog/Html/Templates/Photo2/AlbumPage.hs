@@ -75,10 +75,10 @@ colJS = parseTemplate [s|
     <script type="text/javascript">
       ${theJavaScriptCode}
       var duration = 7000 * ${theDuration};
-      var nextp    = '${theNextPath}.html]';
-      var prevp    = '${thePrevPath}.html]';
-      var parentp  = '${theParentPath}.html]';
-      var childp   = '${the1ChildPath}.html]';
+      var nextp    = '${theNextHref}';
+      var prevp    = '${thePrevHref}';
+      var parentp  = '${theParentHref}';
+      var childp   = '${the1ChildHref}';
       var nextimg  = '${theImgGeo}/${theNextPath}.jpg';
       var previmg  = '${theImgGeo}/${thePrevPath}.jpg';
       ${theJavaScriptCode}
@@ -133,7 +133,7 @@ colNav = parseTemplate [s|
                 </a>
               </td>
               <td class="icon2" id="the1ChildNav">
-                <a href="javascript:childPage(&apos;[html-1024x748/${the1ChildPath}.html]&apos;);"
+                <a href="javascript:childPage(&apos;${the1ChildHref}&apos;);"
                    title="1.Bild${the1ChildTitle}"
                    id="the1ChildNav">
                   <img src="[100x75/${the1ChildPath}.jpg]"
@@ -177,7 +177,7 @@ colIcons :: Template
 colIcons = parseTemplate [s|
           <td class="icon"
               id="theAlbumCell">
-            <a href="javascript:childPage(&apos;${theChildPath}.html]&apos;);"
+            <a href="javascript:childPage(&apos;${theChildHref}&apos;);"
                title="${theChildTitle}">
               <img src="[100x75/${theChildPath}.jpg]"
                    width="100"

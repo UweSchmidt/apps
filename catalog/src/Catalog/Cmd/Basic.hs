@@ -89,6 +89,10 @@ getIdNode msg p = do
     Just res ->
       return res
 
+getIdNode' :: Path -> Cmd (ObjId, ImgNode)
+getIdNode' p =
+  getIdNode ("cant' find entry for path " ++ show (p ^. isoString)) p
+
 -- check path not there
 
 notTherePath :: String -> Path -> Cmd ()

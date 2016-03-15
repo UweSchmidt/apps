@@ -20,7 +20,7 @@ type Html = [Text]
 -- a geo for the icons,
 -- and the # icons per row
 
-type PageConfig = (Text, (GeoAR, GeoAR, Int, EnvTmpl Cmd))
+type PageConfig = (String, (GeoAR, GeoAR, Int, EnvTmpl Cmd))
 
 type ActCmd = TmplAct Cmd
 
@@ -70,41 +70,89 @@ pathExpr =
   "(({path}/archive/collections/.*)[.]html)" ++
   ")"
 
-url2confPathNo :: FilePath -> Cmd (Text, Path, Maybe Int)
+isoPicNo :: Iso' Int String
+isoPicNo = iso toS frS
+  where
+    toS =
+      ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ). show
+    frS s =
+      case matchSubex "pic-({no}[0-9]+)" s of
+        [("no", no)] ->
+          read no
+        _ -> -1
+
+url2confPathNo :: FilePath -> Cmd (String, Path, Maybe Int)
 url2confPathNo f =
   case matchSubexRE pathExpr f of
     [("config", config), ("path", path), ("no", no)] ->
-      return ( config ^. isoText
+      return ( config
              , path ^. from isoString
              , Just $ read no
              )
     [("config", config), ("path", path)] ->
-      return ( config ^. isoText
+      return ( config
              , path ^. from isoString
              , Nothing
              )
     _ -> abort $ "can't process document ref " ++ show f
 
+getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.html"
+
 genHtmlPage :: FilePath -> Cmd Html
 genHtmlPage p = do
-  mountPath <- use theMountPath
-  (config, path, mno) <- url2confPathNo p
+  pnp@(config, path, mno) <- url2confPathNo p
   (geo1, geo2, rows, env) <- fromJustCmd
-    ("can't find config for " ++ config ^. isoString)
+    ("can't find config for " ++ show config)
     (lookup config thePageConfigs)
+  (prevHref, nextHref, parentHref) <- pnpHrefs pnp
 
   let env' =
         env
         & addDefaultAct
-        & insAct "rootPath"    (atxt mountPath)  -- TODO
-        & insAct "theUpPath"   (atxt "")
-        & insAct "theDuration" (atxt "1")
-        & insAct "theImgGeo"   (atxt $ geo1 ^. isoString)
-        & insAct "theIconGeo"  (atxt'$ return geo2)
+        & insAct "rootPath"      (atxt' $ use theMountPath)  -- TODO
+        & insAct "theUpPath"     (atxt "")
+        & insAct "theDuration"   (atxt "1")
+        & insAct "theImgGeo"     (atxt $ geo1 ^. isoString)
+        & insAct "theIconGeo"    (atxt'$ return geo2)
+        -- the href's
+        & insAct "thePrevHref"   (atxt $ fromMaybe "" prevHref)
+        & insAct "theNextHref"   (atxt $ fromMaybe "" nextHref)
+        & insAct "theParentHref" (atxt $ fromMaybe "" parentHref)
 
   res <- applyTmpl "colPage" env'
   io $ putStrLn $ (mconcat res ^. isoString)
   return []
+
+pnpHrefs :: (String, Path, Maybe Int) -> Cmd (Neighbors FilePath)
+pnpHrefs (conf, p, Just i0) = do
+  es <- (^. _2 . theColEntries) <$>
+        getIdNode' p
+  return
+    ( (prevP, nextP (length es), parentP)
+      & allNeighbors %~ (\ q -> "/" ++ conf ++ q ++ ".html")
+    )
+    where
+      prevP :: Maybe FilePath
+      prevP
+        | i0 == 0 =
+            Nothing
+        | otherwise =
+            Just $ (p ^. isoString) </> ((i0 - 1) ^. isoPicNo)
+
+      nextP :: Int -> Maybe FilePath
+      nextP j
+        | i0 >= j - 1 =
+            Nothing
+        | otherwise =
+            Just $ (p ^. isoString) </> ((i0 + 1) ^. isoPicNo)
+
+      parentP :: Maybe FilePath
+      parentP =
+        Just $ (p ^. isoString)
+
+pnpHrefs (conf, p, Nothing) = do
+  return (undefined, undefined, undefined)
+
 
 type Neighbors a = (Maybe a, Maybe a, Maybe a) -- prev, next, parent
 
