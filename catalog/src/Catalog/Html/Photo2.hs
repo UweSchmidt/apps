@@ -100,11 +100,15 @@ getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.h
 
 genHtmlPage :: FilePath -> Cmd Html
 genHtmlPage p = do
-  pnp@(config, path, mno) <- url2confPathNo p
+  pnp@(config, this'path, mno) <- url2confPathNo p
   (geo1, geo2, rows, env) <- fromJustCmd
     ("can't find config for " ++ show config)
     (lookup config thePageConfigs)
+
+  (this'i, this'v) <- getIdNode' this'path
   (prevHref, nextHref, parentHref) <- pnpHrefs pnp
+
+  this'img <- thisColImgPath this'i mno
 
   let env' =
         env
@@ -120,17 +124,70 @@ genHtmlPage p = do
         & insAct "theParentHref" (atxt $ fromMaybe "" parentHref)
 
   res <- applyTmpl "colPage" env'
-  io $ putStrLn $ (mconcat res ^. isoString)
+  io $ putStrLn (mconcat res ^. isoString) -- readable test output
   return []
 
+-- ----------------------------------------
+
+thisColImgPath :: ObjId -> Maybe Int -> Cmd FilePath
+
+-- reference of an entry in a collection
+thisColImgPath this'i (Just pos) = do
+  cs <- getImgVals this'i theColEntries
+  case cs ^? ix pos of
+    -- this ref is an image
+    Just (ImgRef j n) ->
+      thisImgPath j n
+
+    -- this ref is a collection
+    Just (ColRef j) ->
+      thisColImgPath j Nothing
+
+    -- this ref isn't there
+    Nothing ->
+      return mempty
+
+-- reference of the collection itself
+thisColImgPath this'i Nothing = do
+  j'img <- getImgVals this'i theColImg
+  case j'img of
+    -- collection has a front page image
+    Just (k, n) ->
+      thisImgPath k n
+    Nothing ->
+      return mempty
+
+thisImgPath :: ObjId -> Name -> Cmd FilePath
+thisImgPath this'i n = do
+  this'p <- objid2path this'i
+  return $ substPathName n this'p ^. isoString
+
+-- ----------------------------------------
+
+type Neighbors a = (Maybe a, Maybe a, Maybe a) -- prev, next, parent
+
+allNeighbors :: Traversal (Neighbors a) (Neighbors b) a b
+allNeighbors = each . _Just
+{-# INLINE allNeighbors #-}
+
+neighborPaths :: Neighbors ObjId -> Cmd (Neighbors Path)
+neighborPaths = traverseOf allNeighbors objid2path
+
+-- ----------------------------------------
+
+-- compute the navigation hrefs for previous, next and parent image/collection
+
 pnpHrefs :: (String, Path, Maybe Int) -> Cmd (Neighbors FilePath)
-pnpHrefs (conf, p, Just i0) = do
+pnpHrefs c = do
+  res <- pnpHrefs' c
+  return (res & allNeighbors %~ (\ q -> "/" ++ (c ^. _1) ++ q ++ ".html"))
+
+pnpHrefs' :: (String, Path, Maybe Int) -> Cmd (Neighbors FilePath)
+pnpHrefs' (_conf, p, Just i0) = do
   es <- (^. _2 . theColEntries) <$>
         getIdNode' p
   return
-    ( (prevP, nextP (length es), parentP)
-      & allNeighbors %~ (\ q -> "/" ++ conf ++ q ++ ".html")
-    )
+    (prevP, nextP (length es), parentP)
     where
       prevP :: Maybe FilePath
       prevP
@@ -150,19 +207,39 @@ pnpHrefs (conf, p, Just i0) = do
       parentP =
         Just $ (p ^. isoString)
 
-pnpHrefs (conf, p, Nothing) = do
-  return (undefined, undefined, undefined)
+pnpHrefs' (_conf, p, Nothing) = do
+  this'i   <- fst <$> getIdNode' p
+  parent'i <- getImgParent this'i
+  parent'v <- getImgVal    parent'i
+  parent'p <- objid2path   parent'i
+  if not $ isCOL parent'v
+    then return (Nothing, Nothing, Nothing)
+    else do
+      let parent's   = parent'p ^. isoString
+      let parent'cs  = parent'v ^. theColEntries
+      let pcs'length = length parent'cs
+      case searchPos ((== this'i) . (^. theColObjId)) parent'cs of
+        Just 0 ->
+          return
+            ( Nothing
+            , if pcs'length > 1
+              then Just $ parent's </> (2::Int) ^. isoPicNo
+              else Nothing
+            , Just parent's
+            )
+        Just i ->
+          return
+            ( Just $ parent's </> (i - 1) ^. isoPicNo
+            , if i < pcs'length - 1
+              then Just $ parent's </> (i + 1) ^. isoPicNo
+              else Nothing
+            , Just parent's
+            )
+        _ -> return (Nothing, Nothing, Nothing)
 
+-- ----------------------------------------
 
-type Neighbors a = (Maybe a, Maybe a, Maybe a) -- prev, next, parent
-
-allNeighbors :: Traversal (Neighbors a) (Neighbors b) a b
-allNeighbors = each . _Just
-{-# INLINE allNeighbors #-}
-
-neighborPaths :: Neighbors ObjId -> Cmd (Neighbors Path)
-neighborPaths = traverseOf allNeighbors objid2path
-
+{- }
 htmlCollection :: Path -> Cmd Html
 htmlCollection col'path = do
   (i, val)  <- getIdNode "htmlCollection: collection not found" col'path
@@ -222,3 +299,5 @@ getNeighbors i = do
           abort $ "getNeighbors: ObjId not found in parent collection" ++ show (show p)
   where
     ref1 ce' = (^. theColObjId) <$> listToMaybe ce'
+
+-- -}
