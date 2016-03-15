@@ -187,25 +187,18 @@ pnpHrefs' (_conf, p, Just i0) = do
   es <- (^. _2 . theColEntries) <$>
         getIdNode' p
   return
-    (prevP, nextP (length es), parentP)
+    ( ixP (i0 - 1) es
+    , ixP (i0 + 1) es
+    , parentP
+    )
     where
-      prevP :: Maybe FilePath
-      prevP
-        | i0 == 0 =
-            Nothing
-        | otherwise =
-            Just $ (p ^. isoString) </> ((i0 - 1) ^. isoPicNo)
-
-      nextP :: Int -> Maybe FilePath
-      nextP j
-        | i0 >= j - 1 =
-            Nothing
-        | otherwise =
-            Just $ (p ^. isoString) </> ((i0 + 1) ^. isoPicNo)
+      ixP :: Int -> [ColEntry] -> Maybe FilePath
+      ixP i xs =
+        (const $ (p ^. isoString) </> (i ^. isoPicNo)) <$> (xs ^? ix i)
 
       parentP :: Maybe FilePath
       parentP =
-        Just $ (p ^. isoString)
+        Just (p ^. isoString)
 
 pnpHrefs' (_conf, p, Nothing) = do
   this'i   <- fst <$> getIdNode' p
