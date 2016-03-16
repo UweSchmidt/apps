@@ -34,6 +34,9 @@ module Data.Prim.Prelude
        , isNothing
        , isJust
        , listToMaybe
+         -- Control.Monad
+       , module Control.Applicative
+       , module Control.Monad
          -- Data.List
        , intercalate
        , isPrefixOf
@@ -76,8 +79,10 @@ module Data.Prim.Prelude
        )
 where
 
+import           Control.Applicative
 import           Control.Arrow
 import           Control.Lens
+import           Control.Monad
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
