@@ -33,7 +33,7 @@ colPage = parseTemplate [s|
     <meta name="generator"   content="Photo Collection System"/>
     <meta name="date"        content="${theDate}"/>
     <link rel="stylesheet"   type="text/css" href="${theUpPath}/config/html-1024x768.css"/>
-    ${colJS}
+${colJS}
     <script type="text/javascript" src="${theUpPath}/config/html-album.js" charset="ISO-8859-1"/>
   </head>
   <body onload="initAlbum();"
@@ -42,19 +42,19 @@ colPage = parseTemplate [s|
     <table class="head">
       <tr>
         <td class="head1">
-          ${colImg}
+${colImg}
         </td>
         <td class="head2">
-          ${colTitle}
+${colTitle}
         </td>
         <td class="head3">
-          ${colNav}
+${colNav}
         </td>
       </tr>
     </table>
     <div class="ruler"/>
     <div class="album-content">
-      ${colContents}
+${colContents}
     </div>
     <div class="ruler"/>
     <table class="head">
@@ -62,7 +62,7 @@ colPage = parseTemplate [s|
         <td class="head1"/>
         <td class="head2"/>
         <td class="head3">
-          ${colNav}
+${colNav}
         </td>
       </tr>
     </table>
@@ -94,8 +94,8 @@ colTitle = parseTemplate [s|
 
 colImg :: Template
 colImg = parseTemplate [s|
-          <img src="[100x75/${thePath}.jpg]"
-               class="icon"
+          <img src="${thisImgRef}"
+               class="icon-${theIconGeoDir}"
                title="${theHeadTitle}"
                alt="${theHeadTitle}"/>
 |]
@@ -112,10 +112,8 @@ colNav = parseTemplate [s|
               <td class="icon2" id="theParentNav">
                 <a href="javascript:parentPage();"
                    title="Album${theParentTitle}">
-                  <img src="[100x75/${theParentPath}.jpg]"
-                       width="50"
-                       height="37"
-                       class="icon2"
+                  <img src="${parentImgRef}"
+                       class="icon2-${theIconGeoDir}"
                        alt="Album${theParentTitle}"/>
                 </a>
               </td>

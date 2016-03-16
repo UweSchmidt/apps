@@ -75,6 +75,9 @@ evalTemplate tmpl env =
 
 -- ----------------------------------------
 
+emptyTmpl :: (Monad m) => TmplAct m
+emptyTmpl _n _env = return []
+
 -- insert a string as it is
 txt :: (Monad m) =>
        String -> TmplAct m

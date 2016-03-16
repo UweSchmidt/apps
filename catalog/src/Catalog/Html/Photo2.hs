@@ -97,6 +97,7 @@ url2confPathNo f =
     _ -> abort $ "can't process document ref " ++ show f
 
 getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.html"
+getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
 
 genHtmlPage :: FilePath -> Cmd Html
 genHtmlPage p = do
@@ -108,7 +109,11 @@ genHtmlPage p = do
   (this'i, this'v) <- getIdNode' this'path
   (prevHref, nextHref, parentHref) <- pnpHrefs pnp
 
-  this'img <- thisColImgPath this'i mno
+  this'img   <- thisColImgPath this'i mno
+  parent'i   <- getImgParent   this'i
+  parent'img <- thisColImgPath parent'i Nothing
+
+  let addGeo2 x = fromMaybe "" ((("/" ++ geo2 ^. isoString) ++) <$> x)
 
   let env' =
         env
@@ -116,12 +121,19 @@ genHtmlPage p = do
         & insAct "rootPath"      (atxt' $ use theMountPath)  -- TODO
         & insAct "theUpPath"     (atxt "")
         & insAct "theDuration"   (atxt "1")
-        & insAct "theImgGeo"     (atxt $ geo1 ^. isoString)
-        & insAct "theIconGeo"    (atxt'$ return geo2)
+        -- the img geo
+        & insAct "theImgGeoDir"  (atxt $ geo1 ^. isoString)
+        & insAct "theIconGeoDir" (atxt $ geo2 ^. isoString)
+        & insAct "theImgGeo"     (atxt $ geo1 ^. theGeo . isoString)
+        & insAct "theIconGeo"    (atxt $ geo2 ^. theGeo . isoString)
         -- the href's
         & insAct "thePrevHref"   (atxt $ fromMaybe "" prevHref)
         & insAct "theNextHref"   (atxt $ fromMaybe "" nextHref)
         & insAct "theParentHref" (atxt $ fromMaybe "" parentHref)
+        -- the img hrefs
+        -- & insAct "thisImgRef"    (atxt $ addGeo2 this'img)
+        -- $ insAct "colImg"        undefined -- (\ n e -> if null this'img then undefined else applyTmpl n e)
+        -- & insAct "parentImgRef"  undefined -- (atxt $ addGeo2 parent'img)
 
   res <- applyTmpl "colPage" env'
   io $ putStrLn (mconcat res ^. isoString) -- readable test output
@@ -129,7 +141,7 @@ genHtmlPage p = do
 
 -- ----------------------------------------
 
-thisColImgPath :: ObjId -> Maybe Int -> Cmd FilePath
+thisColImgPath :: ObjId -> Maybe Int -> Cmd (Maybe FilePath)
 
 -- reference of an entry in a collection
 thisColImgPath this'i (Just pos) = do
@@ -137,7 +149,7 @@ thisColImgPath this'i (Just pos) = do
   case cs ^? ix pos of
     -- this ref is an image
     Just (ImgRef j n) ->
-      thisImgPath j n
+      Just <$> thisImgPath j n
 
     -- this ref is a collection
     Just (ColRef j) ->
@@ -145,7 +157,7 @@ thisColImgPath this'i (Just pos) = do
 
     -- this ref isn't there
     Nothing ->
-      return mempty
+      return Nothing
 
 -- reference of the collection itself
 thisColImgPath this'i Nothing = do
@@ -153,9 +165,9 @@ thisColImgPath this'i Nothing = do
   case j'img of
     -- collection has a front page image
     Just (k, n) ->
-      thisImgPath k n
+      Just <$> thisImgPath k n
     Nothing ->
-      return mempty
+      return Nothing
 
 thisImgPath :: ObjId -> Name -> Cmd FilePath
 thisImgPath this'i n = do
