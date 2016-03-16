@@ -40,6 +40,7 @@ instance (Monad m) => Functor (TmplAct' m) where
 
 instance (Monad m) => Applicative (TmplAct' m) where
   pure x = TA $ \ _n _env -> return [x]
+  {-# INLINE pure #-}
 
   f <*> act = TA $ \ n env -> do
     fs <- runTmplAct f   n env
@@ -48,6 +49,7 @@ instance (Monad m) => Applicative (TmplAct' m) where
 
 instance (Monad m) => Monad (TmplAct' m) where
   return = pure
+  {-# INLINE return #-}
 
   act >>= f = TA $ \ n env -> do
     xs <- runTmplAct act n env
@@ -55,6 +57,8 @@ instance (Monad m) => Monad (TmplAct' m) where
 
 instance (Monad m) => Alternative (TmplAct' m) where
   empty = TA $ \ _n _env -> return []
+  {-# INLINE empty #-}
+
   act1 <|> act2 = TA $ \ n env -> do
     xs <- runTmplAct act1 n env
     ys <- runTmplAct act2 n env
@@ -63,25 +67,32 @@ instance (Monad m) => Alternative (TmplAct' m) where
 instance (Monad m) => MonadPlus (TmplAct' m) where
   mzero = empty
   mplus = (<|>)
+  {-# INLINE mplus #-}
+  {-# INLINE mzero #-}
 
 instance (Monad m) => MonadReader (TmplName, TmplEnv m) (TmplAct' m) where
   ask = TA $ \ n env -> return [(n, env)]
+  {-# INLINE ask #-}
 
   local f act = TA $ \ n env ->
     let (n', env') = curry f n env in runTmplAct act n' env'
 
 liftTA :: Monad m => m a -> TmplAct' m a
 liftTA act = TA $ \ _n _env -> (:[]) <$> act
+{-# INLINE liftTA #-}
 
 askTmplName :: Monad m => TmplAct' m TmplName
 askTmplName = view _1 -- TA $ \ n _env -> return [n]
+{-# INLINE askTmplName #-}
 
 askTmplEnv :: Monad m => TmplAct' m (TmplEnv m)
 askTmplEnv = view _2 -- TA $ \ _n env -> return [env]
+{-# INLINE askTmplEnv #-}
 
 localTmplEnv :: (TmplEnv m -> TmplEnv m) -> TmplAct' m a -> TmplAct' m a
 localTmplEnv f act = TA $ \ n env ->
   runTmplAct act n (f env)
+{-# INLINE localTmplEnv #-}
 
 ttxt :: (Monad m, IsoText a) => a -> TmplAct' m Text
 ttxt x = return (x ^. isoText)
@@ -96,6 +107,7 @@ tpt x = return (x ^. to escPlainText . isoText)
 
 instance Monoid (TmplEnv m) where
   mempty = TE (M.empty, M.empty)
+  {-# INLINE mempty #-}
 
   (TE te1) `mappend` (TE te2) =
     TE $ (M.union (fst te1) *** M.union (snd te1)) te2
@@ -104,17 +116,20 @@ instance Monoid (TmplEnv m) where
 insAct' :: TmplName -> TmplAct' m Text -> TmplEnv m -> TmplEnv m
 insAct' n act e =
   e & theTmplAct n .~ Just act
+{-# INLINE insAct' #-}
 
 
 insTmpl' :: TmplName -> Tmpl -> TmplEnv m -> TmplEnv m
 insTmpl' n tmpl e =
   e & theTmplEnv n .~ Just tmpl
+{-# INLINE insTmpl' #-}
 
 
 insSubTmpl' :: Monad m => TmplName -> Tmpl -> TmplEnv m -> TmplEnv m
 insSubTmpl' n tmpl e =
   e & theTmplEnv n .~ Just tmpl
     & theTmplAct n .~ Just applyTmpl'
+{-# INLINE insSubTmpl' #-}
 
 -- ----------------------------------------
 
@@ -122,12 +137,15 @@ theTEnv :: Iso' (TmplEnv m) ( Map TmplName (TmplAct' m Text)
                             , Map TmplName Tmpl
                             )
 theTEnv = iso (\ (TE p) -> p) TE
+{-# INLINE theTEnv #-}
 
 theTmplAct :: Text -> Lens' (TmplEnv m) (Maybe (TmplAct' m Text))
 theTmplAct n = theTEnv . _1 . at n
+{-# INLINE theTmplAct #-}
 
 theTmplEnv :: Text -> Lens' (TmplEnv m) (Maybe Tmpl)
 theTmplEnv n = theTEnv . _2 . at n
+{-# INLINE theTmplEnv #-}
 
 -- ----------------------------------------
 
@@ -140,11 +158,13 @@ evalPart (Right n) = TA $ \ _n env -> do
 
 evalTmpl :: Monad m => Tmpl -> TmplAct' m Text
 evalTmpl ts = msum $ map evalPart ts
+{-# INLINE evalTmpl #-}
 
 -- specialized form of runTmplAct
 applyTmpl' :: Monad m => TmplAct' m Text
 applyTmpl' = TA $ \ n env ->
   runTmplAct (evalTmpl (env ^. theTmplEnv n . _Just)) n env
+{-# INLINE applyTmpl' #-}
 
 -- apply a template for a whole sequence of values
 -- the template name determines the place where the values
@@ -164,6 +184,16 @@ applySeq :: Monad m =>
 applySeq n act xs = msum $ map lact xs
   where
     lact i = localTmplEnv (insAct' n (act i)) $ applyTmpl'
+
+
+applySeqs :: Monad m =>
+             [(TmplName, a -> TmplAct' m Text)] -> [a] -> TmplAct' m Text
+applySeqs as xs = msum $ map act xs
+  where
+    act x = localTmplEnv (ins x) $ applyTmpl'
+    ins x = foldr (uncurry ins1) id as
+      where
+        ins1 n ac f = insAct' n (ac x) . f
 
 applyCond :: Monad m =>
              Bool -> TmplAct' m a -> TmplAct' m a
@@ -359,38 +389,22 @@ ee1 =
   & insAct' "theo" (tatt "hello " <|> askTmplName <|> tatt " bye")
   & insTmpl' "t4" t4'
   & insAct' "t4" (applyTmpl' <|> applyTmpl')
+
+  -- a first kind of simple loop wit a single name "no"
   & insTmpl' "t5" t5'
-  & insAct' "t5" (applySeq' [1..5])
+  & insAct' "t5" (applySeq "no" (return . (^. isoString . to escAttrVal . isoText)) [1..(5::Int)])
+
+  -- template t6' with name "t6"
+  -- is inserted 3 times with the values 123, 456 and 789 at name "x""
+  -- and the positions 1, 2 and 3 at name "no""
   & insTmpl' "t6" t6'
-  & insAct' "t6" (applySeq "x" (tatt . show) ['a'..'f'])
+  & insAct' "t6" (applySeqs [ ("x",  return . (^. _2 . isoString . to escAttrVal . isoText))
+                            , ("no", return . (^. _1 . isoString . to escAttrVal . isoText))
+                            ] $ zip [(1::Int)..] [123, 456, 789::Int]
+                 )
 
 condTxt :: Text -> TmplAct' IO Text
 condTxt t = applyCond (isempty t) (tatt (t ^. isoString))
-
-applySeq' :: [Int] -> TmplAct' IO Text
-applySeq' xs = msum $ map act xs
-  where
-    act i = localTmplEnv (insAct' "no" (tatt (show i))) $ applyTmpl'
-
--- applySeq' :: TmplName -> (a -> TmplAct' IO Text) -> [a] -> TmplAct' IO Text
-{- }
-  & insAct' "*" (TA $ \ n _env -> do
-                    putStrLn $ "unknown template var ignored: " ++ n ^.isoString
-                    return []
-               )
-
-  & theEnvAct "xxx" .~ Just (\ _n _env -> return ["yyy"])
-  & insAct "theo" (\ n _env -> return ["hello", n, "bye"])
-  & insAct "t2" (\ n env -> do
-                    print n
-                    print (env ^. theEnvT . _2)
-                    applyTmpl n env
-                )
-  & insAct "t3" applyTmpl
-  & insTmpl "t1" t1
-  & insTmpl "t2" t2
-  & insTmpl "t3" t3
--- -}
 
 t1' :: Template
 t1' = parseTemplate "abc${xxx}x${t2}yz${theo}123${t3}456${unknown}789${t5}++${t6}"
@@ -408,10 +422,10 @@ t5' :: Template
 t5' = parseTemplate "[${no}]"
 
 t6' :: Template
-t6' = parseTemplate " ${x} "
+t6' = parseTemplate " ${no}. ${x} "
 
 xxx :: IO [Text]
 xxx = runTmplAct applyTmpl' "t1" ee1
 
-
+-- -}
 -- ----------------------------------------

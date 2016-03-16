@@ -204,6 +204,12 @@ instance IsoString LazyByteString where
   isoString = iso LBU.toString LBU.fromString
   {-# INLINE isoString #-}
 
+instance IsoString Int where
+  isoString = iso show read
+
+instance IsoString Integer where
+  isoString = iso show read
+
 class IsoText a where
   isoText :: Iso' a Text
 
