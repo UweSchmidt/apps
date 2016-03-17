@@ -7,7 +7,6 @@ module Data.Prim.TimeStamp
        )
 where
 
-import           Control.Monad (mzero)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as J
 import           Data.Prim.Prelude

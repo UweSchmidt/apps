@@ -8,20 +8,26 @@ import Data.Prim
 import Data.String.QQ
 import Text.SimpleTemplate
 
-photo2Tmpl :: EnvTmpl Cmd
+photo2Tmpl :: TmplEnv Cmd
 photo2Tmpl =
-  emptyEnvTmpl
-  & insSubTmpl "colPage"     colPage
-  & insSubTmpl "colJS"       colJS
-  & insSubTmpl "colTitle"    colTitle
-  & insSubTmpl "colImg"      colImg
-  & insSubTmpl "colNav"      colNav
-  & insSubTmpl "colContents" colContents
-  & insSubTmpl "colRows"     colRows
-  & insSubTmpl "colIcons"    colIcons
+  mempty
+  & insSubTmpl "colPage"       colPage
+  & insSubTmpl "colJS"         colJS
+  & insSubTmpl "colTitle"      colTitle
+  & insSubTmpl "colImg"        colImg
+  & insSubTmpl "colNav"        colNav
+  & insSubTmpl "colContents"   colContents
+  & insSubTmpl "colRows"       colRows
+  & insSubTmpl "colIcons"      colIcons
+  & insSubTmpl "theNextImgRef" theNextImgRef
+  & insSubTmpl "thePrevImgRef" thePrevImgRef
+  & insSubTmpl "parentNav"     parentNav
+  & insSubTmpl "prevNav"       prevNav
+  & insSubTmpl "nextNav"       nextNav
+  & insSubTmpl "child1Nav"     child1Nav
 
-colPage :: Template
-colPage = parseTemplate [s|
+colPage :: Tmpl
+colPage = parseTmpl [s|
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
@@ -32,9 +38,9 @@ colPage = parseTemplate [s|
     <meta name="author"      content="Uwe Schmidt"/>
     <meta name="generator"   content="Photo Collection System"/>
     <meta name="date"        content="${theDate}"/>
-    <link rel="stylesheet"   type="text/css" href="${theUpPath}/config/html-1024x768.css"/>
+    <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
 ${colJS}
-    <script type="text/javascript" src="${theUpPath}/config/html-album.js" charset="ISO-8859-1"/>
+    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"/>
   </head>
   <body onload="initAlbum();"
         class="album"
@@ -70,170 +76,139 @@ ${colNav}
 </html>
 |]
 
-colJS :: Template
-colJS = parseTemplate [s|
+colJS :: Tmpl
+colJS = parseTmpl [s|
     <script type="text/javascript">
       ${theJavaScriptCode}
       var duration = 7000 * ${theDuration};
+      var thisp    = '${thisHref}';
       var nextp    = '${theNextHref}';
       var prevp    = '${thePrevHref}';
       var parentp  = '${theParentHref}';
       var childp   = '${the1ChildHref}';
-      var nextimg  = '${theImgGeo}/${theNextPath}.jpg';
-      var previmg  = '${theImgGeo}/${thePrevPath}.jpg';
+      var nextimg  = '${theNextImgRef}';
+      var previmg  = '${thePrevImgRef}';
       ${theJavaScriptCode}
     </script>
 |]
 
-colTitle :: Template
-colTitle = parseTemplate [s|
+theNextImgRef :: Tmpl
+theNextImgRef = parseTmpl "/${theImgGeo}${nextImgRef}"
+
+thePrevImgRef :: Tmpl
+thePrevImgRef = parseTmpl "/${theImgGeo}${prevImgRef}"
+
+colTitle :: Tmpl
+colTitle = parseTmpl [s|
           <div class="title">${theTitle}</div>
           <div class="subtitle">${theSubTitle}</div>
           <div class="resources">${theResources}</div>
 |]
 
-colImg :: Template
-colImg = parseTemplate [s|
-          <img src="${thisImgRef}"
+colImg :: Tmpl
+colImg = parseTmpl [s|
+          <img src="/${theIconGeo}${thisImgRef}"
                class="icon-${theIconGeoDir}"
                title="${theHeadTitle}"
                alt="${theHeadTitle}"/>
 |]
 
-col :: Template
-col = parseTemplate [s|
+col :: Tmpl
+col = parseTmpl [s|
 |]
 
-colNav :: Template
-colNav = parseTemplate [s|
+colNav :: Tmpl
+colNav = parseTmpl [s|
           <table class="nav" align="right">
             <tr>
               <td class="icon2">&nbsp;</td>
               <td class="icon2" id="theParentNav">
-                <a href="javascript:parentPage();"
-                   title="Album${theParentTitle}">
-                  <img src="${parentImgRef}"
-                       class="icon2-${theIconGeoDir}"
-                       alt="Album${theParentTitle}"/>
-                </a>
+${parentNav}
               </td>
               <td class="icon2">&nbsp;</td>
             </tr>
             <tr>
               <td class="icon2" id="thePrevNav">
-                <a href="javascript:prevPage();"
-                   title="zur&uuml;ck${thePrevTitle}">
-                  <img src="[100x75/${thePrevPath}.jpg]"
-                       width="50"
-                       height="37"
-                       class="icon2"
-                       alt="zur&uuml;ck${thePrevTitle}"/>
-                </a>
+${prevNav}
               </td>
               <td class="icon2" id="the1ChildNav">
-                <a href="javascript:childPage(&apos;${the1ChildHref}&apos;);"
-                   title="1.Bild${the1ChildTitle}"
-                   id="the1ChildNav">
-                  <img src="[100x75/${the1ChildPath}.jpg]"
-                       width="50"
-                       height="37"
-                       class="icon2"
-                       alt="1.Bild${the1ChildPath}"/>
-                </a>
+${child1Nav}
               </td>
               <td class="icon2" id="theNextNav">
-                <a href="javascript:nextPage();"
-                   title="weiter${theNextTitle}">
-                  <img src="[100x75/${theNextPath}.jpg]"
-                       width="50"
-                       height="37"
-                       class="icon2"
-                       alt="weiter${theNextTitle}"/>
-                </a>
+${nextNav}
               </td>
             </tr>
           </table>
 |]
 
+parentNav :: Tmpl
+parentNav = parseTmpl [s|
+                <a href="javascript:parentPage();"
+                   title="Album${theParentTitle}">
+                  <img src="/${theIconGeo}${parentImgRef}"
+                       class="icon2-${theIconGeoDir}"
+                       alt="Album${theParentTitle}"/>
+                </a>
+|]
 
-colContents :: Template
-colContents = parseTemplate [s|
+nextNav :: Tmpl
+nextNav = parseTmpl [s|
+                <a href="javascript:nextPage();"
+                   title="weiter${theNextTitle}">
+                  <img src="/${theIconGeo}${nextImgRef}"
+                       class="icon2-${theIconGeoDir}"
+                       alt="weiter${theNextTitle}"/>
+                </a>
+|]
+
+prevNav :: Tmpl
+prevNav = parseTmpl [s|
+                <a href="javascript:prevPage();"
+                   title="zur&uuml;ck${thePrevTitle}">
+                  <img src="/${theIconGeo}${prevImgRef}"
+                       class="icon2-${theIconGeoDir}"
+                       alt="zur&uuml;ck${thePrevTitle}"/>
+                </a>
+|]
+
+child1Nav :: Tmpl
+child1Nav = parseTmpl [s|
+                <a href="javascript:childPage(&apos;${the1ChildHref}&apos;);"
+                   title="1.Bild${the1ChildTitle}"
+                   id="the1ChildNav">
+                  <img src="/${theIconGeo}${child1ImgRef}"
+                       class="icon2-${theIconGeoDir}"
+                       alt="1.Bild${the1ChildHref}"/>
+                </a>
+|]
+
+
+colContents :: Tmpl
+colContents = parseTmpl [s|
       <table>
-        ${colRows}
+${colRows}
       </table>
 |]
 
 
-colRows :: Template
-colRows = parseTemplate [s|
+colRows :: Tmpl
+colRows = parseTmpl [s|
         <tr id="theAlbumRow" size="9">
-          ${colIcons}
+${colIcons}
         </tr>
 |]
 
-colIcons :: Template
-colIcons = parseTemplate [s|
+colIcons :: Tmpl
+colIcons = parseTmpl [s|
           <td class="icon"
               id="theAlbumCell">
             <a href="javascript:childPage(&apos;${theChildHref}&apos;);"
                title="${theChildTitle}">
-              <img src="[100x75/${theChildPath}.jpg]"
-                   width="100"
-                   height="75"
-                   class="icon"
+              <img src="/${theIconGeo}${theChildPath}"
+                   class="icon-${theIconGeoDir}"
                    alt="${theChildTitle}"/>
             </a>
           </td>
 |]
 
-
--- ----------------------------------------
-
-{- a very simple trest case }
-
-foo :: Template
-foo = parseTemplate [s|
-Well here is a ${variable}
-and another one ${apple}
-in a pece of text
-her is the ${bar}
-here's an undefined macro ${xxx}
-|]
-
-bar :: Template
-bar = parseTemplate [s|
-content of template with name ${name}
-|]
-
--- ----------------------------------------
-
-e1 :: EnvTmpl IO
-e1 = EnvTmpl $ M.fromList
-  [ ("variable", txt' value)
-  , ("apple", txt' orange)
-  , ("bar", evalBar)
-  , ("*", defAction)
-  ]
-  where
-    evalBar :: Text -> EnvTmpl IO -> IO [Text]
-    evalBar n (EnvTmpl env) = do
-      putStrLn $ "inserting template: " ++ n ^.isoString
-      evalTemplate bar env'
-        where
-          env' = EnvTmpl $ M.insert "name" (atxt (n ^. isoString)) env
-
-    defAction :: Text -> EnvTmpl IO -> IO [Text]
-    defAction n _env = do
-      putStrLn $ "template variable not found: " ++ n ^. isoString
-      return ["???"]
-
-    value :: IO GeoAR
-    value = do
-      print (42::Int) >> return (GeoAR 1024 768 Pad)
-
-    orange :: IO String
-    orange = do
-      print "inserting an orange" >> return "orange"
-
--- -}
 -- ----------------------------------------

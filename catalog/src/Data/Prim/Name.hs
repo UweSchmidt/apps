@@ -10,7 +10,6 @@ module Data.Prim.Name
 where
 
 import           Data.Prim.Prelude
-import           Control.Monad (mzero)
 import qualified Data.Aeson as J
 import qualified Data.List as L
 import qualified Data.Text as T
