@@ -116,20 +116,22 @@ genHtmlPage p = do
     ("can't find config for " ++ show config)
     (lookup config thePageConfigs)
 
-  this'i     <- colref2objid this'ref
+  -- this entry
+  this'i    <- colref2objid this'ref
+  this'img  <- colImgPath   this'i mno
+  this'val  <- getImgVal    this'i
 
-  paths@(prev'path, next'path, parent'path) <- pnpPaths this'ref
-  let (prev'href, next'href, parent'href) = paths2hrefs config paths
+  -- prev, next and parent
+  pnp'hrefs@(prev'href, next'href, parent'href) <-
+    (\ p' -> p' & (each . _Just) %~ path2href config) <$>
+    pnpPaths this'ref
 
-  child1'href                         <- return Nothing -- TODO
+  (parent'img, prev'img, next'img) <- traverseOf each imgPath' pnp'hrefs
 
-  this'img   <- colImgPath this'i mno
-  parent'i   <- getImgParent   this'i
-  parent'img <- colImgPath parent'i Nothing
---  prev'pnp   <- url2confPathNo prev'path
---  prev'i     <- mkObjId (prev'pnp ^. _2)
-  prev'img   <- return Nothing  -- TODO
-  next'img   <- return Nothing  -- TODO
+  let cs  = this'val ^. theColEntries
+  let cs1 = cs ^? ix 0
+
+  child1'href <- return Nothing -- maybe (return Nothing) (\ ) $ cs1
   child1'img <- return Nothing  -- TODO
 
   let addGeo2 x = fromMaybe "" ((("/" ++ geo2 ^. isoString) ++) <$> x)
@@ -140,11 +142,13 @@ genHtmlPage p = do
         & insAct "rootPath"      (liftTA (use theMountPath) >>= tatt)
         & insAct "theUpPath"     (return "")
         & insAct "theDuration"   (return "1")
+
         -- the img geo
         & insAct "theImgGeoDir"  (tatt $ geo1 ^. isoString)
         & insAct "theIconGeoDir" (tatt $ geo2 ^. isoString)
         & insAct "theImgGeo"     (tatt $ geo1 ^. theGeo . isoString)
         & insAct "theIconGeo"    (tatt $ geo2 ^. theGeo . isoString)
+
         -- the href's
         & insAct "thisHref"      (tatt $ p)
         & insAct "thePrevHref"   (tatt $ fromMaybe "" prev'href)
@@ -152,14 +156,16 @@ genHtmlPage p = do
         & insAct "theParentHref" (tatt $ fromMaybe "" parent'href)
         & insAct "theChild1Href" (tatt $ fromMaybe "" child1'href)
         -- & insAct "theChildHref"  (tatt $ fromMaybe "" child1'href)
+
         -- the img hrefs
         & insAct "thePrevImgRef" (applyNotNull prev'img)
         & insAct "theNextImgRef" (applyNotNull next'img)
-        & insAct "parentImgRef"  (tatt $ blankImg parent'img)
-        & insAct "prevImgRef"    (tatt $ blankImg prev'img)
-        & insAct "nextImgRef"    (tatt $ blankImg next'img)
-        & insAct "child1ImgRef"  (tatt $ blankImg child1'img)
+        & insAct "parentImgRef"  (blankImg parent'img)
+        & insAct "prevImgRef"    (blankImg prev'img)
+        & insAct "nextImgRef"    (blankImg next'img)
+        & insAct "child1ImgRef"  (blankImg child1'img)
         & insAct "colImg"        (applyNotNull this'img)
+
         -- the nav templates
         & insAct "parentNav"     (applyNotNull parent'href)
         & insAct "prevNav"       (applyNotNull prev'href)
@@ -210,19 +216,20 @@ thisImgPath this'i n = do
   this'p <- objid2path this'i
   return $ substPathName n this'p ^. isoString
 
-blankImg :: Maybe FilePath -> FilePath
-blankImg = fromMaybe "/assets/icons/blank.jpg"
+blankImg :: Maybe FilePath -> ActCmd Text
+blankImg f = (liftTA $ blankImg' f) >>= tatt
+
+blankImg' :: Maybe FilePath -> Cmd FilePath
+blankImg' =
+  maybe ((++ "/icons/blank.jpg") <$> view envAssets) return
 
 -- ----------------------------------------
 
-type Neighbors a = (Maybe a, Maybe a, Maybe a) -- prev, next, parent
+type Neighbors a = (Maybe a, Maybe a, Maybe a)
 
-allNeighbors :: Traversal (Neighbors a) (Neighbors b) a b
-allNeighbors = each . _Just
-{-# INLINE allNeighbors #-}
-
-neighborPaths :: Neighbors ObjId -> Cmd (Neighbors Path)
-neighborPaths = traverseOf allNeighbors objid2path
+-- allNeighbors :: Traversal (Neighbors a) (Neighbors b) a b
+-- allNeighbors = each . _Just
+-- {-# INLINE allNeighbors #-}
 
 -- ----------------------------------------
 
@@ -238,9 +245,18 @@ colref2objid (p, Just pos) = do
 
 -- compute the navigation hrefs for previous, next and parent image/collection
 
-paths2hrefs :: String -> Neighbors FilePath -> Neighbors FilePath
-paths2hrefs c p3 =
-  p3 & allNeighbors %~ (\ q -> "/" ++ c ++ q ++ ".html")
+path2href :: String -> FilePath -> FilePath
+path2href c p = "/" ++ c ++ p ++ ".html"
+
+childrenPaths :: String -> ObjId -> [ColEntry] -> Cmd [FilePath]
+childrenPaths c i cs = do
+  p <- objid2path i
+  return $
+    map ( path2href c
+          .
+          (\ pos -> p ^. isoString </> (pos ^. isoPicNo))
+        )
+    [0 .. length cs -1]
 
 pnpPaths :: ColRef Path -> Cmd (Neighbors FilePath)
 pnpPaths (p, Just i0) = do

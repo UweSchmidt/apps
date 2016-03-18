@@ -2,7 +2,6 @@
 
 module Catalog.Cmd.Types
        ( module Catalog.Cmd.Types
-       , module Control.Monad
        , module Control.Monad.RWSErrorIO
        , module Control.Monad.Except
        )
@@ -20,6 +19,7 @@ import           Data.Prim
 data Env = Env
   { _copyGeo :: [GeoAR]
   , _metaSrc :: [ImgType]
+  , _assets  :: FilePath
   , _trc     :: Bool
   , _verbose :: Bool
   , _dryRun  :: Bool
@@ -40,6 +40,7 @@ initEnv = Env
                , GeoAR  160  120 Fix
                ]
   , _metaSrc = [IMGraw, IMGimg, IMGmeta]
+  , _assets  = "/assets"
   , _trc     = True
   , _verbose = True
   , _dryRun  = False
@@ -50,6 +51,9 @@ envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
 
 envMetaSrc :: Lens' Env [ImgType]
 envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
+
+envAssets :: Lens' Env FilePath
+envAssets k e = (\ new -> e {_assets = new}) <$> k (_assets e)
 
 envTrc :: Lens' Env Bool
 envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)
