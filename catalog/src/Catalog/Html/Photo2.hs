@@ -5,11 +5,12 @@ module Catalog.Html.Photo2
 where
 
 import Catalog.Cmd
-import Catalog.FilePath
 import Data.ImageStore
 import Data.ImgTree
+import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
+import Catalog.System.ExifTool
 import Text.SimpleTemplate
 
 -- ----------------------------------------
@@ -59,14 +60,15 @@ thePageConfigs =
 addDefaultAct :: TmplEnv Cmd -> TmplEnv Cmd
 addDefaultAct =
   insAct "*" (do n <- askTmplName
-                 liftTA $ warn $ "evalTmpl: unknown template ref ignored" ++ show (n ^. isoString)
+                 liftTA $ warn $ "evalTmpl: unknown template ref ignored: "
+                                 ++ show (n ^. isoString)
                  empty
              )
 
 -- ----------------------------------------
 
-pathExpr :: Regex
-pathExpr =
+pagePathExpr :: Regex
+pagePathExpr =
   parseRegexExt $
   "/({config}[a-z]+-[0-9]+x[0-9]+)" ++
   "(" ++
@@ -74,6 +76,7 @@ pathExpr =
   "{|}" ++
   "(({path}/archive/collections/.*)[.]html)" ++
   ")"
+
 
 isoPicNo :: Iso' Int String
 isoPicNo = iso toS frS
@@ -86,9 +89,11 @@ isoPicNo = iso toS frS
           read no
         _ -> -1
 
+-- ----------------------------------------
+
 url2confPathNo :: FilePath -> Cmd (String, ColRef Path)
 url2confPathNo f =
-  case matchSubexRE pathExpr f of
+  case matchSubexRE pagePathExpr f of
     [("config", config), ("path", path), ("no", no)] ->
       return ( config
              , ( path ^. from isoString
@@ -103,45 +108,204 @@ url2confPathNo f =
              )
     _ -> abort $ "can't process document ref " ++ show f
 
+-- TODO : remove it
 url2pathNo :: FilePath -> Cmd (ColRef Path)
 url2pathNo f = snd <$> url2confPathNo f
 
-getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.html"
-getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
+-- ----------------------------------------
+
+url2confObjId :: FilePath -> Cmd (String, ColRef ObjId)
+url2confObjId f = do
+  (c, p) <- url2confPathNo f
+  mi     <- crPath2crObjId p
+  i      <- fromJustCmd ("no entry found for href " ++ show f) mi
+  return (c, i)
+
+url2objId :: FilePath -> Cmd (ColRef ObjId)
+url2objId f = snd <$> url2confObjId f
+
+-- convert a path ref into an object ref
+crPath2crObjId :: ColRef Path -> Cmd (Maybe (ColRef ObjId))
+crPath2crObjId (p, cix) = do
+  i <- fst <$> getIdNode' p
+  normColRef (i, cix)
+
+-- ----------------------------------------
+
+-- normalize a colref
+-- if the result sub index is Nothing, the ref points to a collection
+-- else the ref points to an image
+
+normColRef :: ColRef ObjId -> Cmd (Maybe (ColRef ObjId))
+normColRef cr@(_i, Nothing) =
+  return $ Just cr
+normColRef cr@(i, Just pos) = do
+  val <- getImgVal i
+  case val ^? theColEntries . ix pos of
+    Just (ImgRef _ _) ->  -- ref to an image
+      return $ Just cr
+    Just (ColRef j) ->    -- ref to a sub collection
+      return $ Just (j, Nothing)
+    Nothing ->            -- index out of bounds
+      return Nothing
+
+-- ----------------------------------------
+--
+-- navigation in the collection tree
+--
+-- 1 step up, 1 step down (indexed),
+-- and to the left or right by an offset
+
+parentColRef :: ColRef ObjId -> Cmd (Maybe (ColRef ObjId))
+parentColRef (i, Nothing) = do
+  parent'i <- getImgParent i
+  iscol    <- isCOL <$> getImgVal parent'i
+  return $
+    if iscol
+    then Just (parent'i, Nothing)
+    else Nothing
+
+parentColRef (i, Just _) =
+  return $ Just (i, Nothing)
+
+childColRef :: Int -> ColRef ObjId -> Cmd (Maybe (ColRef ObjId))
+childColRef pos (i, Nothing) = do
+  cs <- getImgVals i theColEntries
+  case cs ^? ix pos of
+    Just _ ->
+      normColRef (i, Just pos)
+    Nothing ->  -- index out of bounds
+      return Nothing
+childColRef _pos _ =
+  return Nothing
+
+ixColRef :: ColRef ObjId -> Cmd (Maybe Int)
+ixColRef (_, Just pos) =
+  return $ Just pos
+ixColRef cr@(i, Nothing) = do
+  mp'i <- parentColRef cr
+  case mp'i of
+    Nothing ->
+      return $ Nothing
+    Just (j, _) -> do
+      cs <- getImgVals j theColEntries
+      return $
+        searchPos ((== i) . (^. theColObjId)) cs
+
+neighborColRef :: Int -> ColRef ObjId -> Cmd (Maybe (ColRef ObjId))
+neighborColRef offset cr@(_i, Nothing) = do -- col neighbor
+  -- position in parent col
+  mpos <- ixColRef cr
+  case mpos of
+    Nothing ->
+      return Nothing
+    Just pos -> do
+      x <- parentColRef cr       -- 1 level up
+      case x of
+        Just parent'cr ->
+          childColRef (pos + offset) parent'cr -- 1 level down
+        _ ->
+          return Nothing
+
+neighborColRef offset (i, Just pos) = -- img neighbor
+  normColRef (i, Just $ pos + offset)
+
+prevColRef, nextColRef :: ColRef ObjId -> Cmd (Maybe (ColRef ObjId))
+prevColRef = neighborColRef (-1)
+nextColRef = neighborColRef   1
+
+-- ----------------------------------------
+
+-- the main entry for a HTML page
 
 genHtmlPage :: FilePath -> Cmd Html
 genHtmlPage p = do
-  pnp@(config, this'ref@(this'path, mno)) <- url2confPathNo p
-  (geo1, geo2, rows, env) <- fromJustCmd
-    ("can't find config for " ++ show config)
-    (lookup config thePageConfigs)
+  ( pageConf,
+    this'cr@(this'i, _pos)) <- url2confObjId p
+
+  (geo1, geo2, no'rows, env) <- fromJustCmd
+    ("can't find config for " ++ show pageConf)
+    (lookup pageConf thePageConfigs)
+
+
+  -- pnp@(config, this'ref@(this'path, mno)) <- url2confPathNo p
 
   -- this entry
-  this'i    <- colref2objid this'ref
-  this'img  <- colImgPath   this'i mno
-  this'val  <- getImgVal    this'i
+  this'img    <- colImgPath               this'cr
+  this'cs     <- getImgVals this'i theColEntries  -- for a col: get the entries, for an img: empty
+  this'meta   <- colImgMeta               this'cr
+
+  parent'cr   <- parentColRef             this'cr
+  parent'href <- colHref pageConf   `bmb` parent'cr
+  parent'img  <- colImgPath         `bmb` parent'cr
+  parent'meta <- colImgMeta         `bmb` parent'cr
+
+  prev'cr     <- prevColRef               this'cr
+  prev'href   <- colHref pageConf   `bmb` prev'cr
+  prev'img    <- colImgPath         `bmb` prev'cr
+  prev'meta   <- colImgMeta         `bmb` prev'cr
+
+  next'cr     <- nextColRef               this'cr
+  next'href   <- colHref pageConf   `bmb` next'cr
+  next'img    <- colImgPath         `bmb` next'cr
+  next'meta   <- colImgMeta         `bmb` next'cr
+
+  child1'cr   <- childColRef 0            this'cr
+  child1'href <- colHref pageConf   `bmb` child1'cr
+  child1'img  <- colImgPath         `bmb` child1'cr
+  child1'meta <- colImgMeta         `bmb` child1'cr
+
+  let getTitle md   = md ^. metaDataAt "COL:Title" . isoString
+
+  let this'title    = getTitle this'meta
+  let this'subtitle = this'meta   ^. metaDataAt "COL:SubTitle" . isoString
+  let this'resource = this'meta   ^. metaDataAt "COL:Resource" . isoString
+
+  let parent'title  = getTitle parent'meta
+  let prev'title    = getTitle prev'meta
+  let next'title    = getTitle next'meta
+  let child1'title  = getTitle child1'meta
 
   -- prev, next and parent
-  pnp'hrefs@(prev'href, next'href, parent'href) <-
-    (\ p' -> p' & (each . _Just) %~ path2href config) <$>
-    pnpPaths this'ref
+  -- pnp'paths@(prev'path, next'path, parent'path) <- pnpPaths this'ref
 
-  (parent'img, prev'img, next'img) <- traverseOf each imgPath' pnp'hrefs
+  -- let pnp'hrefs@(prev'href', next'href', parent'href') =
+  --      (\ p' -> p' & (each . _Just) %~ path2href config) pnp'paths
 
-  let cs  = this'val ^. theColEntries
-  let cs1 = cs ^? ix 0
+  -- (parent'img',   prev'img',   next'img')   <- traverseOf each imgPath'  pnp'hrefs
+  -- (parent'title', prev'title', next'title') <- traverseOf each getTitle' pnp'paths
 
-  child1'href <- return Nothing -- maybe (return Nothing) (\ ) $ cs1
-  child1'img <- return Nothing  -- TODO
+  children'crs    <- mapM (flip childColRef this'cr) $
+                     [0 .. length this'cs - 1]
+  children'hrefs  <- mapM (colHref pageConf `bmb`) children'crs
+  children'imgs   <- mapM (colImgPath       `bmb`) children'crs
+  children'meta   <- mapM (colImgMeta       `bmb`) children'crs
 
-  let addGeo2 x = fromMaybe "" ((("/" ++ geo2 ^. isoString) ++) <$> x)
+  let children'titles = map getTitle children'meta
+  let children'4      = zip4 children'hrefs children'imgs children'titles [(0::Int)..]
+
+  -- children'hrefs  <- childrenPaths config this'i cs
+  -- children'imgs   <- mapM imgPath'' children'hrefs
+  -- children'titles <- sequence $ map (uncurry childTitle) $ zip [0..] cs
+  -- let children = zip4 children'hrefs children'imgs children'titles [(0::Int)..]
+
+  -- let child1'href'  = listToMaybe children'hrefs
+  -- let child1'img'   = join $ listToMaybe children'imgs  -- join 2 Maybe's
+  -- let child1'title' = listToMaybe children'titles
+
+  let addColon x = if isempty x then x else ": "++ x
 
   let env' =
         env
         & addDefaultAct
-        & insAct "rootPath"      (liftTA (use theMountPath) >>= tatt)
+        & insAct "rootPath"      (return "") -- (liftTA (use theMountPath) >>= tatt)
         & insAct "theUpPath"     (return "")
         & insAct "theDuration"   (return "1")
+        & insAct "theDate"       (liftTA (show <$> atThisMoment) >>= tatt)
+        & insAct "theTitle"      (tatt this'title)
+        & insAct "theSubTitle"   (tatt this'subtitle)
+        & insAct "theResource"   (tatt this'resource)
+        & insAct "theHeadTitle"  (tatt this'title)
 
         -- the img geo
         & insAct "theImgGeoDir"  (tatt $ geo1 ^. isoString)
@@ -150,21 +314,27 @@ genHtmlPage p = do
         & insAct "theIconGeo"    (tatt $ geo2 ^. theGeo . isoString)
 
         -- the href's
-        & insAct "thisHref"      (tatt $ p)
-        & insAct "thePrevHref"   (tatt $ fromMaybe "" prev'href)
-        & insAct "theNextHref"   (tatt $ fromMaybe "" next'href)
-        & insAct "theParentHref" (tatt $ fromMaybe "" parent'href)
-        & insAct "theChild1Href" (tatt $ fromMaybe "" child1'href)
-        -- & insAct "theChildHref"  (tatt $ fromMaybe "" child1'href)
+        & insAct "thisHref"      (tatt p)
+        & insAct "thePrevHref"   (tatt prev'href)
+        & insAct "theNextHref"   (tatt next'href)
+        & insAct "theParentHref" (tatt parent'href)
+        & insAct "theChild1Href" (tatt child1'href)
+
+        -- the titles
+        & insAct "theParentTitle" (tatt $ addColon parent'title)
+        & insAct "theChild1Title" (tatt $ addColon child1'title)
+        & insAct "thePrevTitle"   (tatt $ addColon prev'title)
+        & insAct "theNextTitle"   (tatt $ addColon next'title)
 
         -- the img hrefs
-        & insAct "thePrevImgRef" (applyNotNull prev'img)
-        & insAct "theNextImgRef" (applyNotNull next'img)
-        & insAct "parentImgRef"  (blankImg parent'img)
-        & insAct "prevImgRef"    (blankImg prev'img)
-        & insAct "nextImgRef"    (blankImg next'img)
-        & insAct "child1ImgRef"  (blankImg child1'img)
-        & insAct "colImg"        (applyNotNull this'img)
+        & insAct "thePrevImgRef"    (applyNotNull prev'href)
+        & insAct "theNextImgRef"    (applyNotNull next'href)
+        & insAct "theChild1ImgRef"  (applyNotNull child1'href)
+        & insAct "parentImgRef"     (blankImg parent'img)
+        & insAct "prevImgRef"       (blankImg prev'img)
+        & insAct "nextImgRef"       (blankImg next'img)
+        & insAct "child1ImgRef"     (blankImg child1'img)
+        & insAct "colImg"           (applyNotNull this'img)
 
         -- the nav templates
         & insAct "parentNav"     (applyNotNull parent'href)
@@ -172,10 +342,38 @@ genHtmlPage p = do
         & insAct "nextNav"       (applyNotNull next'href)
         & insAct "child1Nav"     (applyNotNull child1'href)
 
+        -- the contents, a nested loop over all children
+        -- 4 infos are available per image, the "href"" for the image page,
+        -- the the "src" of the image, the title, and the position in the collection
 
-        -- & insAct "thisImgRef"    (tatt $ addGeo2 this'img)
-        -- $ insAct "colImg"        undefined -- (\ n e -> if null this'img then undefined else applyTmpl n e)
-        -- & insAct "parentImgRef"  undefined -- (tatt $ addGeo2 parent'img)
+        & insAct "colContents"   (applyNotNull children'4) -- content only inserted when there are any entries
+        & insAct "colRows" ( applySeqs
+                             [ ( "colIcons"
+                               , \ row ->
+                                 applySeqs               -- generate a single row
+                                 [ ( "theChildHref"
+                                   , \ x -> tatt $ x ^. _1
+                                   )
+                                 , ( "theChildImgRef"
+                                   , \ x -> blankImg $ x ^. _2
+                                   )
+                                 , ( "theChildTitle"
+                                   , \ x -> tatt $
+                                            let s = x ^. _3
+                                                i = x ^. _4
+                                            in if isempty s
+                                               then show (i + 1) ++ ". Bild"
+                                               else s
+                                   )
+                                 , ( "theChildId"
+                                   , \ x -> tatt $ x ^. _4 . isoPicNo
+                                   )
+                                 ]
+                                 row
+                               )
+                             ]
+                             (divideAt no'rows children'4) -- divide entries into rows
+                           )
 
   res <- runTmplAct applyTmpl "colPage" env'
   io $ putStrLn (mconcat res ^. isoString) -- readable test output
@@ -183,37 +381,80 @@ genHtmlPage p = do
 
 -- ----------------------------------------
 
-colImgPath :: ObjId -> Maybe Int -> Cmd (Maybe FilePath)
+bmb :: (Monad m, Monoid b) => (a -> m b) -> Maybe a -> m b
+bmb cmd = maybe (return mempty) cmd
 
--- reference of an entry in a collection
-colImgPath this'i (Just pos) = do
-  cs <- getImgVals this'i theColEntries
+{-}
+cmd :: ColRef ObjId -> Cmd (Maybe a)
+cr  ::  Maybe (ColRef ObjId)
+=>
+cmd `bmb` cr :: Cmd (Maybe a)
+
+
+-- -}
+-- ----------------------------------------
+
+childTitle :: Int -> ColEntry -> Cmd String
+childTitle pos (ImgRef _ _) =
+  return $ "Bild " ++ show (pos + 1)
+
+childTitle pos (ColRef i) = do
+  t <- getImgVals i (theColMetaData . metaDataAt "COL:Title" . isoString)
+  return $
+    if isempty t
+    then "Album " ++ show (pos + 1)
+    else t
+
+-- ----------------------------------------
+
+colHref :: String -> ColRef ObjId -> Cmd FilePath
+colHref cf (i, cix) = do
+  p <- objid2path i
+  let fp =
+        case cix of
+          Nothing ->
+            p ^. isoString
+          Just pos ->
+            (p ^. isoString) </> (pos ^. isoPicNo)
+  return $ path2href cf fp
+
+-- ----------------------------------------
+
+colImgMeta :: ColRef ObjId -> Cmd MetaData
+colImgMeta (i, Just pos) = do  -- img meta data
+  cs <- getImgVals i theColEntries
   case cs ^? ix pos of
-    -- this ref is an image
+    Just (ImgRef j _n) ->
+      getMetaData j
+    _ ->
+      return mempty
+
+colImgMeta (i, Nothing) =     -- col meta data
+  getImgVals i theColMetaData
+
+-- ----------------------------------------
+
+colImgPath :: ColRef ObjId -> Cmd (Maybe FilePath)
+colImgPath (i, Just pos) = do  -- image ref
+  cs <- getImgVals i theColEntries
+  case cs ^? ix pos of
     Just (ImgRef j n) ->
       Just <$> thisImgPath j n
-
-    -- this ref is a collection
-    Just (ColRef j) ->
-      colImgPath j Nothing
-
-    -- this ref isn't there
-    Nothing ->
+    _ ->
       return Nothing
 
--- reference of the collection itself
-colImgPath this'i Nothing = do
-  j'img <- getImgVals this'i theColImg
+colImgPath (i, Nothing) = do -- col ref
+  j'img <- getImgVals i theColImg
   case j'img of
     -- collection has a front page image
     Just (k, n) ->
       Just <$> thisImgPath k n
-    Nothing ->
+    _ ->
       return Nothing
 
 thisImgPath :: ObjId -> Name -> Cmd FilePath
-thisImgPath this'i n = do
-  this'p <- objid2path this'i
+thisImgPath i n = do
+  this'p <- objid2path i
   return $ substPathName n this'p ^. isoString
 
 blankImg :: Maybe FilePath -> ActCmd Text
@@ -305,13 +546,12 @@ pnpPaths (p, Nothing) = do
             )
         _ -> return (Nothing, Nothing, Nothing)
 
+imgPath'' :: FilePath -> Cmd (Maybe FilePath)
+imgPath'' f = url2pathNo f >>= imgPath
+
 imgPath' :: Maybe FilePath -> Cmd (Maybe FilePath)
-imgPath' Nothing =
-  return Nothing
-
-imgPath' (Just f) =
-  url2pathNo f >>= imgPath
-
+imgPath' Nothing  = return Nothing
+imgPath' (Just f) = imgPath'' f
 
 imgPath :: ColRef Path -> Cmd (Maybe FilePath)
 imgPath (p, Nothing) = do
@@ -336,66 +576,3 @@ imgPath (p, Just pos) = do
       imgPath (p', Nothing)
 
 -- ----------------------------------------
-
-{- }
-htmlCollection :: Path -> Cmd Html
-htmlCollection col'path = do
-  (i, val)  <- getIdNode "htmlCollection: collection not found" col'path
-  unless (isCOL val) $
-    abort $ "htmlCollection: not a collection" ++ show (show col'path)
-  htmlCol i
-
-
-htmlCol :: ObjId -> Cmd Html
-htmlCol i = do
-  -- the path of the collection
-  i'p <- objid2path i
-
-  -- the ids of the neighbors, and the pos in parent collection
-  -- neded for nav info
-  (neighbor'is, _pos) <- getNeighbors i
-
-  -- the paths of the neighbors, needed in href's
-  neighbor'ps         <- traverseOf allNeighbors objid2path neighbor'is
-
-  -- the image parts of the neighbors, needed for img refs
-  -- and the names of the neighbors
-  neighbos'ims        <- traverseOf allNeighbors getImgParts neighbor'is
-
-  -- the meta data collection image and contents
-  (COL md mbi cs _ts) <- getImgVal i
-
-  -- the image parts and the names of all images in the collection
-  cs'ims              <- traverseOf traverse getColParts cs
-
-  return undefined
-
-getImgParts :: ObjId -> Cmd (ImgParts, Name)
-getImgParts = undefined
-
-getColParts :: ColEntry -> Cmd (Path, (ImgParts, Name))
-getColParts = undefined
-
-getNeighbors :: ObjId -> Cmd (Neighbors ObjId, Int)
-getNeighbors i = do
-  i'p <- getImgParent i
-  v'p <- getImgVal i'p
-  if (not $ isCOL v'p)
-    then return ((Nothing, Nothing, Nothing), 0)  -- top collection hasn't a parent coll nor neighbors
-    else do
-      let ce = v'p ^. theColEntries
-      case searchPos (\c' -> c' ^. theColObjId == i) ce of
-        Just 0 ->
-          return ((Nothing, ref1 $ tail ce, Just i'p), 0)
-        Just i' ->
-          let ce1 = drop (i' - 1) ce
-              r1  = ref1 ce1
-              r2  = ref1 (drop 2 ce1)
-          in return ((r1, r2, Just i'p), i')
-        Nothing -> do
-          p <- objid2path i
-          abort $ "getNeighbors: ObjId not found in parent collection" ++ show (show p)
-  where
-    ref1 ce' = (^. theColObjId) <$> listToMaybe ce'
-
--- -}

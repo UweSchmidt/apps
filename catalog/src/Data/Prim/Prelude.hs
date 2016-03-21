@@ -45,6 +45,8 @@ module Data.Prim.Prelude
        , sort
        , sortBy
        , nub
+       , zip3
+       , zip4
          -- Data.Char
        , toLower
        , toUpper
@@ -75,6 +77,7 @@ module Data.Prim.Prelude
          -- utilities
        , (.||.)
        , partitionBy
+       , divideAt
        , searchPos
        )
 where
@@ -108,48 +111,6 @@ import           Text.Regex.XMLSchema.Generic
 import           Text.Regex.XMLSchema.Generic.RegexParser
 
 type LazyByteString = LB.ByteString
-
--- ----------------------------------------
-
-compareBy :: [a -> a -> Ordering] -> a -> a -> Ordering
-compareBy fs x1 x2 =
-  mconcat $ map (\ cmp -> cmp x1 x2) fs
-{-# INLINE compareBy #-}
-
-
--- compare only on Just values
---
--- useful in compareBy when Nothing values occur
-
-compareJust :: Ord a => Maybe a -> Maybe a -> Ordering
-compareJust (Just x1) (Just x2) = compare x1 x2
-compareJust _         _         = EQ
-{-# INLINE compareJust #-}
-
-
--- compare with Nothing as largest values
---
--- default with compare: Nothing is smallest
-
-compareJust' :: Ord a => Maybe a -> Maybe a -> Ordering
-compareJust' (Just x1) (Just x2) = compare x1 x2
-compareJust' (Just _ ) _         = LT
-compareJust' _         (Just _ ) = GT
-compareJust' _         _         = EQ
-{-# INLINE compareJust' #-}
-
--- ----------------------------------------
-
--- put all elemnts of a, which have equal e values
--- into a sublist
---
--- partBy (`mod` 3) [0..9] = [[0,3,6,9],[1,4,7],[2,5,8]]
-
-partBy :: (Ord e) => (a -> e) -> [a] -> [[a]]
-partBy f =
-  M.elems
-  . foldr (\ x m -> M.insertWith (++) (f x) [x]
-                    m) M.empty
 
 -- ----------------------------------------
 
@@ -316,11 +277,62 @@ partitionBy f =
   . foldr (\ x m -> M.insertWith (++) (f x) [x]
                     m) M.empty
 
+divideAt :: Int -> [a] -> [[a]]
+divideAt n
+  | n <= 1    = map (:[])
+  | otherwise = go
+  where
+    go [] = []
+    go xs = ys : go xs'
+      where
+        (ys, xs') = splitAt n xs
 
 -- search the position of the first element for which the predicate holds
 
 searchPos :: (a -> Bool) -> [a] -> Maybe Int
 searchPos p =
   listToMaybe . map fst . filter (p . snd) . zip [0..]
+
+-- ----------------------------------------
+
+-- put all elemnts of a, which have equal e values
+-- into a sublist
+--
+-- partBy (`mod` 3) [0..9] = [[0,3,6,9],[1,4,7],[2,5,8]]
+
+partBy :: (Ord e) => (a -> e) -> [a] -> [[a]]
+partBy f =
+  M.elems
+  . foldr (\ x m -> M.insertWith (++) (f x) [x]
+                    m) M.empty
+
+-- ----------------------------------------
+
+compareBy :: [a -> a -> Ordering] -> a -> a -> Ordering
+compareBy fs x1 x2 =
+  mconcat $ map (\ cmp -> cmp x1 x2) fs
+{-# INLINE compareBy #-}
+
+
+-- compare only on Just values
+--
+-- useful in compareBy when Nothing values occur
+
+compareJust :: Ord a => Maybe a -> Maybe a -> Ordering
+compareJust (Just x1) (Just x2) = compare x1 x2
+compareJust _         _         = EQ
+{-# INLINE compareJust #-}
+
+
+-- compare with Nothing as largest values
+--
+-- default with compare: Nothing is smallest
+
+compareJust' :: Ord a => Maybe a -> Maybe a -> Ordering
+compareJust' (Just x1) (Just x2) = compare x1 x2
+compareJust' (Just _ ) _         = LT
+compareJust' _         (Just _ ) = GT
+compareJust' _         _         = EQ
+{-# INLINE compareJust' #-}
 
 -- ----------------------------------------

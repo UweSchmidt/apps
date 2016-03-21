@@ -380,6 +380,7 @@ attrCol =
   , [ "Title"
     , "Subtitle"
     , "Comment"
+    , "Resource"
     , "CreateDate"
     , "OrderedBy"
     , "Access"

@@ -105,10 +105,13 @@ c3 c = local (envTrc .~ False) $ do
   loadImgStore "c1.json"
   cwRoot
   local (envTrc .~ True) c
-  -- saveImgStore ""
+  --  saveImgStore ""
   -- saveImgStore "c1.json"
   -- rls <- buildRules
   -- we >>= applyRules rls >>= runImgAction
 
 runc :: Cmd () -> IO (Either Msg (), ImgStore, Log)
 runc c = runCmd (c3 c)
+
+getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.html"
+getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"

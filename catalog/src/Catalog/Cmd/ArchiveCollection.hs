@@ -315,7 +315,7 @@ adjustColBy sortCol cs parent'i = do
 
 mkColMeta :: Text -> Text -> Text -> Text -> Text -> Cmd MetaData
 mkColMeta t s c o a = do
-  d <- (\ t' -> show t' ^. from isoString) <$> atThisMoment
+  d <- (\ t' -> show t' ^. isoText) <$> atThisMoment
   return $
       mempty
       & metaDataAt "COL:Title"      .~ t

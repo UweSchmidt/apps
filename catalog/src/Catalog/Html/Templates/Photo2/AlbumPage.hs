@@ -11,20 +11,21 @@ import Text.SimpleTemplate
 photo2Tmpl :: TmplEnv Cmd
 photo2Tmpl =
   mempty
-  & insSubTmpl "colPage"       colPage
-  & insSubTmpl "colJS"         colJS
-  & insSubTmpl "colTitle"      colTitle
-  & insSubTmpl "colImg"        colImg
-  & insSubTmpl "colNav"        colNav
-  & insSubTmpl "colContents"   colContents
-  & insSubTmpl "colRows"       colRows
-  & insSubTmpl "colIcons"      colIcons
-  & insSubTmpl "theNextImgRef" theNextImgRef
-  & insSubTmpl "thePrevImgRef" thePrevImgRef
-  & insSubTmpl "parentNav"     parentNav
-  & insSubTmpl "prevNav"       prevNav
-  & insSubTmpl "nextNav"       nextNav
-  & insSubTmpl "child1Nav"     child1Nav
+  & insSubTmpl "colPage"         colPage
+  & insSubTmpl "colJS"           colJS
+  & insSubTmpl "colTitle"        colTitle
+  & insSubTmpl "colImg"          colImg
+  & insSubTmpl "colNav"          colNav
+  & insSubTmpl "colContents"     colContents
+  & insSubTmpl "colRows"         colRows
+  & insSubTmpl "colIcons"        colIcons
+  & insSubTmpl "theNextImgRef"   theNextImgRef
+  & insSubTmpl "thePrevImgRef"   thePrevImgRef
+  & insSubTmpl "theChild1ImgRef" theChild1ImgRef
+  & insSubTmpl "parentNav"       parentNav
+  & insSubTmpl "prevNav"         prevNav
+  & insSubTmpl "nextNav"         nextNav
+  & insSubTmpl "child1Nav"       child1Nav
 
 colPage :: Tmpl
 colPage = parseTmpl [s|
@@ -79,16 +80,16 @@ ${colNav}
 colJS :: Tmpl
 colJS = parseTmpl [s|
     <script type="text/javascript">
-      ${theJavaScriptCode}
+      <!--
       var duration = 7000 * ${theDuration};
       var thisp    = '${thisHref}';
       var nextp    = '${theNextHref}';
       var prevp    = '${thePrevHref}';
       var parentp  = '${theParentHref}';
-      var childp   = '${the1ChildHref}';
+      var childp   = '${theChild1Href}';
       var nextimg  = '${theNextImgRef}';
       var previmg  = '${thePrevImgRef}';
-      ${theJavaScriptCode}
+      -->
     </script>
 |]
 
@@ -98,11 +99,14 @@ theNextImgRef = parseTmpl "/${theImgGeo}${nextImgRef}"
 thePrevImgRef :: Tmpl
 thePrevImgRef = parseTmpl "/${theImgGeo}${prevImgRef}"
 
+theChild1ImgRef :: Tmpl
+theChild1ImgRef = parseTmpl "/${theImgGeo}${child1ImgRef}"
+
 colTitle :: Tmpl
 colTitle = parseTmpl [s|
           <div class="title">${theTitle}</div>
           <div class="subtitle">${theSubTitle}</div>
-          <div class="resources">${theResources}</div>
+          <div class="resources">${theResource}</div>
 |]
 
 colImg :: Tmpl
@@ -131,7 +135,7 @@ ${parentNav}
               <td class="icon2" id="thePrevNav">
 ${prevNav}
               </td>
-              <td class="icon2" id="the1ChildNav">
+              <td class="icon2" id="theChild1Nav">
 ${child1Nav}
               </td>
               <td class="icon2" id="theNextNav">
@@ -173,19 +177,19 @@ prevNav = parseTmpl [s|
 
 child1Nav :: Tmpl
 child1Nav = parseTmpl [s|
-                <a href="javascript:childPage(&apos;${the1ChildHref}&apos;);"
-                   title="1.Bild${the1ChildTitle}"
-                   id="the1ChildNav">
+                <a href="javascript:childPage(&apos;${theChild1Href}&apos;);"
+                   title="1. Bild${theChild1Title}"
+                   id="theChild1Nav">
                   <img src="/${theIconGeo}${child1ImgRef}"
                        class="icon2-${theIconGeoDir}"
-                       alt="1.Bild${the1ChildHref}"/>
+                       alt="1. Bild${theChild1Title}"/>
                 </a>
 |]
 
 
 colContents :: Tmpl
 colContents = parseTmpl [s|
-      <table>
+      <table class="col-contents">
 ${colRows}
       </table>
 |]
@@ -193,18 +197,17 @@ ${colRows}
 
 colRows :: Tmpl
 colRows = parseTmpl [s|
-        <tr id="theAlbumRow" size="9">
+        <tr class="col-row">
 ${colIcons}
         </tr>
 |]
 
 colIcons :: Tmpl
 colIcons = parseTmpl [s|
-          <td class="icon"
-              id="theAlbumCell">
+          <td class="icon-${theIconGeoDir}" id="${theChildId}">
             <a href="javascript:childPage(&apos;${theChildHref}&apos;);"
                title="${theChildTitle}">
-              <img src="/${theIconGeo}${theChildPath}"
+              <img src="/${theIconGeo}${theChildImgRef}"
                    class="icon-${theIconGeoDir}"
                    alt="${theChildTitle}"/>
             </a>

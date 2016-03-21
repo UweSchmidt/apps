@@ -1,0 +1,322 @@
+/* fonts, colors, cursor, padding, visibility */
+
+body {
+  font-family:	Verdana, sans-serif;
+}
+
+body.album {
+  color:               white;   /*#ff0000;*/
+  background-color:    #333333; /*#666666;*/
+  overflow: hidden;
+}
+
+body.picture {
+  color:               white;   /*#ff0000;*/
+  background-color:    #333333; /*#666666;*/
+  background-repeat: no-repeat;
+  background-position:  center;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+a {
+  text-decoration:none;
+}
+
+a:link {
+  text-decoration:none;
+  color:	#ffff00;
+}
+
+a:visited {
+  text-decoration:none;
+  color:	#ffff00;
+}
+
+a:hover {
+  text-decoration:none;
+  color:	#ff9900;
+}
+
+a:active {
+  text-decoration:none;
+  color:	#ff0000;
+}
+
+a:focus {
+  text-decoration:none;
+  color:	#ff0000;
+}
+
+td.head2 div.title, td.head2 div.subtitle, td.head2 div.resources {
+  color:            #bbbbbb ; /*white;*/ /* #300008; */  /*#002060;*/
+}
+
+
+.title, .subtitle, .resources .info, .back, .forward, .up {
+  color:            white; /* #300008; */  /*#002060;*/
+  background-color: transparent;
+}
+
+.title, .back, .forward, .up {
+  font-size:   40px;
+  font-weight: bold;
+}
+
+.subtitle {
+  font-size:   28px;
+  font-weight: bold;
+}
+
+.resources {
+  font-size:   18px;
+  font-weight: bold;
+}
+
+.info {
+  font-size:18px;
+}
+
+.back, .forward, .up {
+  text-align:     center;
+  vertical-align: middle;
+}
+
+.title-area, .info-area {
+  background-color: transparent;
+  cursor:                  text;
+}
+
+/* visibility of navigation and info boxes */
+
+a.back span, a.forward span, a.up span {
+  visibility: hidden;
+}
+
+a.back:hover span, a.forward:hover span, a.up:hover span {
+  visibility: visible;
+}
+
+div.title-area div.title-area-line, div.info-area div.info-area-content {
+  visibility: hidden;
+}
+
+div.title-area div.title-area-line, div.info-area div.info-area-content {
+  padding-left:   20px;
+  padding-right:  20px;
+  padding-top:    15px;
+  padding-bottom: 15px;
+}
+
+/* div.title-area:hover div.title-area-line, div.info-area:hover div.info-area-content, */
+
+/* if colors for dialog background areas change, update colors for icon generation in Makefile */
+
+a.back:hover {
+  visibility:       visible;
+  opacity:              0.6;
+  background-image: url(left-75x75.gif);
+}
+
+a.forward:hover {
+  visibility:       visible;
+  opacity:              0.6;
+  background-image: url(right-75x75.gif);
+}
+
+a.up:hover {
+  visibility:       visible;
+  opacity:              0.6;
+  background-image: url(up-75x75.gif);
+}
+
+table.info tr th {
+  text-align: right;
+  vertical-align: top;
+  padding-right: .5em;
+}
+
+table.info tr td {
+  text-align: left;
+  vertical-align: top;
+  padding-left: .5em;
+  overflow: hidden;
+}
+
+/* positioning and size */
+
+body.picture {
+  width:      1600px;
+  height:     1200px;
+}
+
+body.album {
+  width:      1570px;
+  height:       auto;
+}
+
+body {
+  position: absolute;
+  width:      1600px;
+  height:     1200px;
+
+  margin:        0px;
+  border:        0px;
+  padding:       0px;
+}
+
+
+div.title-area {
+  position: absolute;
+  right:         0px;
+  bottom:      200px;
+  width:       200px;
+  height:     1000px;
+}
+
+
+div.title-area div.title-area-line {
+  position: absolute;
+  bottom:     -200px; /*   0px;*/
+  right:       200px;
+  height:       auto;
+  min-height:  200px;
+  width:      1360px;
+}
+
+div.info-area {
+  position: absolute;
+  left:          0px;
+  bottom:        0px;
+  height:      200px;
+  width:      1400px;
+}
+
+div.info-area div.info-area-content {
+  position: absolute;
+  bottom:        0px;
+  height:       auto;
+  min-height:  200px;
+  width:      1360px;
+}
+
+.forward {
+  position: absolute;
+  right:         0px;
+  bottom:        0px;
+  width:        75px;
+  height:       75px;
+}
+
+.back {
+  position: absolute;
+  right:       100px;
+  bottom:        0px;
+  width:        75px;
+  height:       75px;
+}
+
+.up {
+  position: absolute;
+  right:       100px;
+  bottom:      100px;
+  width:        75px;
+  height:       75px;
+}
+
+/* ------------------------------------------------------------ */
+
+table.head {
+  width:             100%;
+  min-height:       190px;
+  height:            auto;
+  border-spacing:     0px;
+
+  background-color: transparent;
+}
+
+table.head tr td.head1 {
+  padding:           15px;
+  width:            160px;
+  height:           120px;
+  vertical-align:     top;
+
+  background-color: transparent;
+  border:         0px solid red;
+}
+
+table.head tr td.head2 {
+  text-align:     left;
+  vertical-align:  top;
+  padding:        15px;
+
+  background-color: transparent;
+  border:         0px solid red;
+}
+
+table.head tr td.head3 {
+  width: 260px;
+  padding-top:    15px;
+  padding-bottom: 15px;
+  padding-left:   15px;
+  padding-right:  15px;
+  text-align: right;
+  vertical-align: top;
+
+  background-color: transparent;
+  border:0px solid red;
+}
+
+div.ruler {
+  width:             1538px;
+  height:               5px;
+  margin-left:         15px;
+  margin-right:        17px;
+  background-color: #bbbbbb;
+}
+
+table.nav {
+  background-color: transparent;
+  border-spacing:           0px;
+  border-collapse:     collapse;
+}
+
+table.nav tr td {
+  padding: 3px;
+}
+
+img.icon {
+  width:          160px;
+/*  height:         120px; */
+  height:         160px;
+  border: 0px solid red;
+}
+
+img.icon2 {
+  width:           80px;
+/*  height:          60px; */
+  height:          80px;
+  border: 0px solid red;
+}
+
+div.album-content {
+  padding-top:             15px;
+  padding-left:            15px;
+  background-color: transparent;
+}
+
+div.album-content > table {
+  border-spacing:   0px;
+  border: 0px solid red;
+}
+
+div.album-content > table tr td {
+  padding-left:             0px;
+  padding-top:              0px;
+  padding-right:           12px;
+  padding-bottom:           9px;
+  background-color: transparent;
+  border:       0px solid black;
+}
+
+/* ------------------------------------------------------------ */
