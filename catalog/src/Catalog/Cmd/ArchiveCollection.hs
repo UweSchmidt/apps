@@ -318,12 +318,12 @@ mkColMeta t s c o a = do
   d <- (\ t' -> show t' ^. isoText) <$> atThisMoment
   return $
       mempty
-      & metaDataAt "COL:Title"      .~ t
-      & metaDataAt "COL:Subtitle"   .~ s
-      & metaDataAt "COL:Comment"    .~ c
-      & metaDataAt "COL:OrderedBy"  .~ o
-      & metaDataAt "COL:CreateDate" .~ d
-      & metaDataAt "COL:Access"     .~ a
+      & metaDataAt "descr:Title"      .~ t
+      & metaDataAt "descr:Subtitle"   .~ s
+      & metaDataAt "descr:Comment"    .~ c
+      & metaDataAt "descr:OrderedBy"  .~ o
+      & metaDataAt "descr:CreateDate" .~ d
+      & metaDataAt "descr:Access"     .~ a
 
 -- create collections recursively, similar to 'mkdir -p'
 

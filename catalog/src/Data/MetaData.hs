@@ -329,6 +329,7 @@ attrMaker =
   ( "MakerNotes"
   , [ "ColorSpace"
     , "DaylightSavings"
+    , "FocusDistance"
     , "FocusMode"
     , "Quality"
     , "SerialNumber"
@@ -347,7 +348,6 @@ attrComposite =
     , "CircleOfConfusion"
     , "DOF"
     , "Flash"
-    , "FocalLength35efl"
     , "FocalLength35efl"
     , "FOV"
     , "GPSLatitudeRef"
@@ -369,6 +369,7 @@ attrXmp =
   ("XMP"
   , [ "GPSLatitude"
     , "GPSLongitude"
+    , "GPSAltitude"
     , "Format"
     , "RawFileName"
     ]
@@ -376,9 +377,14 @@ attrXmp =
 
 attrCol :: AttrGroup
 attrCol =
-  ( "COL"
+  ( "descr"
   , [ "Title"
     , "Subtitle"
+    , "TitleEnglish"
+    , "TitleLatin"
+    , "Web"
+    , "Wikipedia"
+    , "GoogleMaps"
     , "Comment"
     , "Resource"
     , "CreateDate"

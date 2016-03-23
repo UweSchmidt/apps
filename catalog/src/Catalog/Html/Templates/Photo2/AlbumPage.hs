@@ -27,9 +27,52 @@ photo2Tmpl =
   & insSubTmpl "nextNav"         nextNav
   & insSubTmpl "child1Nav"       child1Nav
 
+  -- picture page templates
+  & insSubTmpl "picPage"         picPage
+  & insSubTmpl "picImg"          picImg
+  & insSubTmpl "picTitle"        picTitle
+  & insSubTmpl "picInfo"         picInfo
+  & insSubTmpl "picNav"          picNav
+
+  -- exif info
+  & insSubTmpl "descrTitle"         descrTitle
+  & insSubTmpl "descrSubtitle"      descrSubtitle
+  & insSubTmpl "descrTitleEnglish"  descrTitleEnglish
+  & insSubTmpl "descrTitleLatin"    descrTitleLatin
+  & insSubTmpl "descrComment"       descrComment
+  & insSubTmpl "descrResource"      descrResource
+  & insSubTmpl "descrWeb"           descrWeb
+  & insSubTmpl "descrWikipedia"     descrWikipedia
+  & insSubTmpl "descrGoogleMaps"    descrGoogleMaps
+
+  & insSubTmpl "geoGPSLatitude"     geoGPSLatitude
+  & insSubTmpl "geoGPSLongitude"    geoGPSLongitude
+  & insSubTmpl "geoGPSAltitude"     geoGPSAltitude
+
+  & insSubTmpl "exifCreateDate"     exifCreateDate
+  & insSubTmpl "camCameraModelName" camCameraModelName
+  & insSubTmpl "camLens"            camLens
+  & insSubTmpl "camLensID"          camLensID
+  & insSubTmpl "exifExposureTime"   exifExposureTime
+  & insSubTmpl "exifExposureMode"   exifExposureMode
+  & insSubTmpl "exifExposureProgram" exifExposureProgram
+  & insSubTmpl "exifExposureCompensation" exifExposureCompensation
+  & insSubTmpl "exifFNumber"        exifFNumber
+  & insSubTmpl "exifFocusDistance"  exifFocusDistance
+  & insSubTmpl "exifDepthOfField"   exifDepthOfField
+  & insSubTmpl "exifISO"            exifISO
+  & insSubTmpl "exifFocalLength"    exifFocalLength
+  & insSubTmpl "exifFocalLengthIn35mmFormat" exifFocalLengthIn35mmFormat
+  & insSubTmpl "exifShootingMode"   exifShootingMode
+  & insSubTmpl "exifWhiteBalance"   exifWhiteBalance
+  & insSubTmpl "exifImageSize"      exifImageSize
+  & insSubTmpl "fileFileModificationDateTime" fileFileModificationDateTime
+  & insSubTmpl "fileRefRaw"         fileRefRaw
+
+
 colPage :: Tmpl
 colPage = parseTmpl [s|
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
   <head>
@@ -213,5 +256,367 @@ colIcons = parseTmpl [s|
             </a>
           </td>
 |]
+
+-- ----------------------------------------
+
+picPage :: Tmpl
+picPage = parseTmpl [s|
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <base href="${rootPath}"/>
+    <title>${theHeadTitle}</title>
+    <meta name="description" content="Web Photo Album"/>
+    <meta name="author"      content="Uwe Schmidt"/>
+    <meta name="generator"   content="Photo Collection System"/>
+    <meta name="date"        content="${theDate}"/>
+    <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
+${colJS}
+    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"/>
+  </head>
+  <body onload="initPicture();"
+        class="picture">
+${picImg}
+${picTitle}
+${picInfo}
+${picNav}
+  </body>
+</html>
+|]
+
+picImg :: Tmpl
+picImg = parseTmpl [s|
+    <div class="picture">
+       <table class="picture">
+         <tr>
+           <td class="picture">
+             <img src="/${theImgGeo}${thisImgRef}"
+                  class="img-${theImgGeo}"/>
+           </td>
+         </tr>
+       </table>
+    </div>
+|]
+
+picTitle :: Tmpl
+picTitle = parseTmpl [s|
+    <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
+      <div class="title-area-line" id="title-area-line">
+        <div class="title">${theTitle}</div>
+        <div class="subtitle">${theSubTitle}</div>
+        <div class="resource">${theResource}</div>
+      </div>
+    </div>
+|]
+
+picInfo :: Tmpl
+picInfo = parseTmpl [s|
+    <div class="info-area" onmouseover="showInfo();" onmouseout="hideInfo();">
+      <div class="info-area-content" id="info-area-content">
+        <div class="info">
+          <div class="subtitle">Bild-Daten</div>
+          <table class="info">
+${descrTitle}
+${descrSubtitle}
+${descrTitleEnglish}
+${descrTitleLatin}
+${descrComment}
+${descrResource}
+${descrWeb}
+${descrWikipedia}
+${descrGoogleMaps}
+${geoGPSLatitude}
+${geoGPSLongitude}
+${geoGPSAltitude}
+${exifCreateDate}
+${camCameraModelName}
+${camLens}
+${camLensID}
+${exifFocalLength}
+${exifFocalLengthIn35mmFormat}
+${exifExposureTime}
+${exifExposureMode}
+${exifExposureProgram}
+${exifExposureCompensation}
+${exifFNumber}
+${exifFocusDistance}
+${exifDepthOfField}
+${exifISO}
+${exifShootingMode}
+${exifWhiteBalance}
+${exifImageSize}
+${fileFileModificationDateTime}
+${fileRefRaw}
+          </table>
+        </div>
+      </div>
+    </div>
+|]
+
+
+descrTitle :: Tmpl
+descrTitle = parseTmpl [s|
+            <tr class="info" id="descr:Title">
+              <th>Titel</th>
+              <td>${descrTitleVal}</td>
+            </tr>
+|]
+
+descrSubtitle :: Tmpl
+descrSubtitle = parseTmpl [s|
+            <tr class="info" id="descr:Subtitle">
+              <th>Untertitel</th>
+              <td>${descrSubtitleVal}</td>
+            </tr>
+|]
+
+descrTitleEnglish :: Tmpl
+descrTitleEnglish = parseTmpl [s|
+            <tr class="info" id="descr:TitleEnglish">
+              <th>Titel (engl.)</th>
+              <td>${descrTitleEnglishVal}</td>
+            </tr>
+|]
+
+descrTitleLatin :: Tmpl
+descrTitleLatin = parseTmpl [s|
+            <tr class="info" id="descr:TitleLatin">
+              <th>Titel (lat.)</th>
+              <td>${descrTitleLatinVal}</td>
+            </tr>
+|]
+
+descrComment :: Tmpl
+descrComment = parseTmpl [s|
+            <tr class="info" id="descr:Comment">
+              <th>Kommentar</th>
+              <td>${descrCommentVal}</td>
+            </tr>
+|]
+
+descrResource :: Tmpl
+descrResource = parseTmpl [s|
+            <tr class="info" id="descr:Resource">
+              <th>Quellen</th>
+              <td>${descrResourceVal}</td>
+            </tr>
+|]
+
+descrWeb :: Tmpl
+descrWeb = parseTmpl [s|
+            <tr class="info" id="descr:Web">
+              <th>Web</th>
+              <td>${descrWebVal}</td>
+            </tr>
+|]
+
+descrWikipedia :: Tmpl
+descrWikipedia = parseTmpl [s|
+            <tr class="info" id="descr:Wikipedia">
+              <th>Wikipedia</th>
+              <td>${descrWikipediaVal}</td>
+            </tr>
+|]
+
+descrGoogleMaps :: Tmpl
+descrGoogleMaps = parseTmpl [s|
+            <tr class="info" id="descr:GoogleMaps">
+              <th>Karte</th>
+              <td>
+                <a href="${descrGoogleMapsVal}">${geoGPSPositionVal}</a>
+              </td>
+            </tr>
+|]
+
+geoGPSLatitude :: Tmpl
+geoGPSLatitude = parseTmpl [s|
+            <tr class="info" id="geo:GPSLatitude">
+              <th>Breitengrad</th>
+              <td>${"geoGPSLatitudeVal"}</td>
+            </tr>
+|]
+
+geoGPSLongitude :: Tmpl
+geoGPSLongitude = parseTmpl [s|
+            <tr class="info" id="geo:GPSLatitude">
+              <th>L&auml;ngengrad</th>
+              <td>${"geoGPSLongitudeVal"}</td>
+            </tr>
+|]
+
+geoGPSAltitude :: Tmpl
+geoGPSAltitude = parseTmpl [s|
+           Val}<tr class="info" id="geo:GPSAltitude">${
+              <th>H&ouml;he</th>
+              <td>[geo:GPSAltitude]</td>
+            </tr>
+|]
+
+exifCreateDate :: Tmpl
+exifCreateDate = parseTmpl [s|
+            <tr class="info" id="exif:CreateDate">
+              <th>Aufnahmedatum</th>
+              <td>${exifCreateDateVal}</td>
+            </tr>
+|]
+
+camCameraModelName :: Tmpl
+camCameraModelName = parseTmpl [s|
+            <tr class="info" id="cam:CameraModelName">
+              <th>Kamera</th>
+              <td>${camCameraModelNameVal}</td>
+            </tr>
+|]
+
+camLens :: Tmpl
+camLens = parseTmpl [s|
+            <tr class="info" id="cam:Lens">
+              <th>Objektiv</th>
+              <td>${camLensVal}</td>
+            </tr>
+|]
+
+camLensID :: Tmpl
+camLensID = parseTmpl [s|
+            <tr class="info" id="cam:LensID">
+              <th>Objektiv Typ</th>
+              <td>${camLensIDVal}</td>
+            </tr>
+|]
+
+exifExposureTime :: Tmpl
+exifExposureTime = parseTmpl [s|
+            <tr class="info" id="exif:ExposureTime">
+              <th>Belichtungszeit</th>
+              <td>${exifExposureTimeVal}</td>
+            </tr>
+|]
+
+exifExposureMode :: Tmpl
+exifExposureMode = parseTmpl [s|
+            <tr class="info" id="exif:ExposureMode">
+              <th>Belichtungsmessung</th>
+              <td>${exifExposureModeVal}</td>
+            </tr>
+|]
+
+exifExposureProgram :: Tmpl
+exifExposureProgram = parseTmpl [s|
+            <tr class="info" id="exif:ExposureProgram">
+              <th>Aufnahmebetriebsart</th>
+              <td>${exifExposureProgramVal}</td>
+            </tr>
+|]
+
+exifExposureCompensation :: Tmpl
+exifExposureCompensation = parseTmpl [s|
+            <tr class="info" id="exif:ExposureCompensation">
+              <th>Belichtungskorrektur</th>
+              <td>${exifExposureCompensationVal}</td>
+            </tr>
+|]
+
+exifFNumber :: Tmpl
+exifFNumber = parseTmpl [s|
+            <tr class="info" id="exif:FNumber">
+              <th>Blende</th>
+              <td>${exifFNumberVal}</td>
+            </tr>
+|]
+
+exifFocusDistance :: Tmpl
+exifFocusDistance = parseTmpl [s|
+            <tr class="info" id="exif:FocusDistance">
+              <th>Entfernung</th>
+              <td>${exifFocusDistanceVal}</td>
+            </tr>
+|]
+
+exifDepthOfField :: Tmpl
+exifDepthOfField = parseTmpl [s|
+            <tr class="info" id="exif:DepthOfField">
+              <th>Tiefensch&auml;rfe</th>
+              <td>${exifDepthOfFieldVal}</td>
+            </tr>
+|]
+
+exifISO :: Tmpl
+exifISO = parseTmpl [s|
+            <tr class="info" id="exif:ISO">
+              <th>ISO</th>
+              <td>${exifISOVal}</td>
+            </tr>
+|]
+
+exifFocalLength :: Tmpl
+exifFocalLength = parseTmpl [s|
+            <tr class="info" id="exif:FocalLength">
+              <th>Brennweite</th>
+              <td>${exifFocalLengthVal}</td>
+            </tr>
+|]
+
+exifFocalLengthIn35mmFormat :: Tmpl
+exifFocalLengthIn35mmFormat = parseTmpl [s|
+            <tr class="info" id="exif:FocalLengthIn35mmFormat">
+              <th>Brennweite in 35mm</th>
+              <td>${exifFocalLengthIn35mmFormatVal}</td>
+            </tr>
+|]
+
+exifShootingMode :: Tmpl
+exifShootingMode = parseTmpl [s|
+            <tr class="info" id="exif:ShootingMode">
+              <th>Aufnahmemodus</th>
+              <td>${exifShootingModeVal}</td>
+            </tr>
+|]
+
+exifWhiteBalance :: Tmpl
+exifWhiteBalance = parseTmpl [s|
+            <tr class="info" id="exif:WhiteBalance">
+              <th>Wei&szlig;abgleich</th>
+              <td>${exifWhiteBalanceVal}</td>
+            </tr>
+|]
+
+exifImageSize :: Tmpl
+exifImageSize = parseTmpl [s|
+            <tr class="info" id="exif:ImageSize">
+              <th>Geometrie</th>
+              <td>${exifImageSizeVal}</td>
+            </tr>
+|]
+
+fileFileModificationDateTime :: Tmpl
+fileFileModificationDateTime = parseTmpl [s|
+            <tr class="info" id="file:FileModificationDateTime">
+              <th>Bearbeitet</th>
+              <td>${fileFileModificationDateTimeVal}</td>
+            </tr>
+|]
+
+fileRefRaw :: Tmpl
+fileRefRaw = parseTmpl [s|
+            <tr class="info" id="file:RefRaw">
+              <th>Raw-Datei</th>
+              <td>${fileRefRawVal}</td>
+            </tr>
+|]
+
+picNav :: Tmpl
+picNav = parseTmpl [s|
+    <a href="javascript:parentPage()" title="Album" class="up" id="theUpButton">
+      <span id="theContainingAlbum">&nbsp;</span>
+    </a>
+    <a href="javascript:prevPage()" title="zur&uuml;ck" class="back" id="theBackButton">
+      <span id="thePreviousPic">&nbsp;</span>
+    </a>
+    <a href="javascript:nextPage()" title="weiter" class="forward" id="theForwardButton">
+      <span id="theNextPic">&nbsp;</span>
+    </a>
+|]
+
 
 -- ----------------------------------------
