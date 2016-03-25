@@ -2,6 +2,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DefaultSignatures #-}
+
 
 module Data.Prim.Prelude
        ( ByteString
@@ -136,6 +138,10 @@ instance IsEmpty ByteString where
   isempty = BS.null
   {-# INLINE isempty #-}
 
+instance IsEmpty LazyByteString where
+  isempty = LB.null
+  {-# INLINE isempty #-}
+
 instance IsEmpty (Set a) where
   isempty = S.null
   {-# INLINE isempty #-}
@@ -149,6 +155,9 @@ instance IsEmpty (Map k v) where
 class IsoString a where
   isoString :: Iso' a String
 
+  default isoString :: (Read a, Show a) => Iso' a String
+  isoString = iso show read
+  {-# INLINE isoString #-}
 
 instance IsoString String where
   isoString = iso id id
@@ -166,11 +175,12 @@ instance IsoString LazyByteString where
   isoString = iso LBU.toString LBU.fromString
   {-# INLINE isoString #-}
 
-instance IsoString Int where
-  isoString = iso show read
+instance IsoString Int
 
-instance IsoString Integer where
-  isoString = iso show read
+instance IsoString Integer
+
+
+-- ----------------------------------------
 
 class IsoText a where
   isoText :: Iso' a Text
@@ -183,22 +193,21 @@ instance IsoText String where
   isoText = from isoString
   {-# INLINE isoText #-}
 
+-- ----------------------------------------
+
 class IsoInteger a where
   isoInteger :: Iso' a Integer
 
-instance IsoInteger Integer where
-  isoInteger = iso id id
+  default isoInteger :: (Integral a) => Iso' a Integer
+  isoInteger = iso toInteger fromInteger
   {-# INLINE isoInteger #-}
 
-{-    (Use UndecidableInstances to permit this)
-instance (Integral a) => IsoInteger a where
-  isoInteger = iso toInteger fromInteger
--- -}
+-- ----------------------------------------
 
 class IsoMaybe a where
   isoMaybe :: Iso' a (Maybe a)
 
-instance (IsEmpty a, Monoid a) => IsoMaybe a where
+  default isoMaybe :: (IsEmpty a, Monoid a) => Iso' a (Maybe a)
   isoMaybe = iso toM fromM
     where
       toM xs
@@ -207,6 +216,11 @@ instance (IsEmpty a, Monoid a) => IsoMaybe a where
       fromM Nothing   = mempty
       fromM (Just xs) = xs
   {-# INLINE isoMaybe #-}
+
+instance IsoMaybe String
+instance IsoMaybe Text
+instance IsoMaybe ByteString
+instance IsoMaybe LazyByteString
 
 take1st :: (IsoMaybe a, Monoid a) => [a] -> a
 take1st xs = mconcat (map (^. isoMaybe) xs) ^. from isoMaybe
