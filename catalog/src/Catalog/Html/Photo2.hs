@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Catalog.Html.Photo2
 where
@@ -252,11 +253,14 @@ genHtmlPage p = do
   child1'img  <- colImgPath         `bmb` child1'cr
   child1'meta <- colImgMeta         `bmb` child1'cr
 
-  let getTitle md   = md ^. metaDataAt "descr:Title" . isoString
+  let getMD md n    = md ^. metaDataAt n . isoString
+  let getTitle md   = take1st [ getMD md "descr:Title"
+                              , getMD md "File:FileName"
+                              ]
 
   let this'title    = getTitle this'meta
-  let this'subtitle = this'meta   ^. metaDataAt "descr:SubTitle" . isoString
-  let this'resource = this'meta   ^. metaDataAt "descr:Resource" . isoString
+  let this'subtitle = getMD this'meta "descr:SubTitle"
+  let this'resource = getMD this'meta "descr:Resource"
 
   let parent'title  = getTitle parent'meta
   let prev'title    = getTitle prev'meta
@@ -373,7 +377,10 @@ genHtmlPage p = do
 insMetaData :: MetaData -> TmplEnv Cmd -> TmplEnv Cmd
 insMetaData md env =
   env
-  & insMD "descrTitle"                   (gmd "descr:Title")
+  & insMD "descrTitle"                   (take1st [ gmd "descr:Title"
+                                                  , gmd "File:FileName"
+                                                  ]
+                                         )
   & insMD "descrSubtitle"                (gmd "descr:Subtitle")
   & insMD "descrTitleEnglish"            (gmd "descr:TitleEnglish")
   & insMD "descrTitleLatin"              (gmd "descr:TitleLatin")
@@ -451,6 +458,7 @@ colHref cf (i, cix) = do
 colImgMeta :: ColRef -> Cmd MetaData
 colImgMeta (i, Just pos) = do  -- img meta data
   cs <- getImgVals i theColEntries
+  trcObj i $ "colimgmeta for pos " ++ show pos
   case cs ^? ix pos of
     Just (ImgRef j _n) ->
       getMetaData j

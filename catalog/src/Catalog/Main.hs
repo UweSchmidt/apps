@@ -93,6 +93,7 @@ c2 = do
   cwSyncFS
   genCollectionsByDir
   genCollectionsByDate
+  saveImgStore "c1.json"
   saveImgStore ""
   listImages  >>= putStrLn'
   cwListPaths >>= putStrLn'
@@ -118,3 +119,7 @@ getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.h
 
 getYYY :: Cmd Html
 getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
+
+main :: IO ()
+main = do
+  void $ runc $ getXXX >> return ()

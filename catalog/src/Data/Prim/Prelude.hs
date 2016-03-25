@@ -70,6 +70,7 @@ module Data.Prim.Prelude
        , IsoText(..)
        , IsoInteger(..)
        , IsoMaybe(..)
+       , take1st
        , isoMapElems
        , isoMapList
        , isoSetList
@@ -197,9 +198,6 @@ instance (Integral a) => IsoInteger a where
 class IsoMaybe a where
   isoMaybe :: Iso' a (Maybe a)
 
--- here we need UndecidableInstances extension
--- AFAIK in this case it's not dangarous
-
 instance (IsEmpty a, Monoid a) => IsoMaybe a where
   isoMaybe = iso toM fromM
     where
@@ -209,6 +207,9 @@ instance (IsEmpty a, Monoid a) => IsoMaybe a where
       fromM Nothing   = mempty
       fromM (Just xs) = xs
   {-# INLINE isoMaybe #-}
+
+take1st :: (IsoMaybe a, Monoid a) => [a] -> a
+take1st xs = mconcat (map (^. isoMaybe) xs) ^. from isoMaybe
 
 -- ----------------------------------------
 
