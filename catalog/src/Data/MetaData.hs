@@ -439,10 +439,10 @@ attrCol =
     , "Wikipedia"
     , "GoogleMaps"
     , "Comment"
-    , "Resource"
     , "CreateDate"
     , "OrderedBy"
     , "Access"
+    , "Duration"
     ]
   )
 

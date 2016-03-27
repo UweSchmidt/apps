@@ -260,7 +260,10 @@ genHtmlPage p = do
 
   let this'title    = getTitle this'meta
   let this'subtitle = getMD this'meta "descr:SubTitle"
-  let this'resource = getMD this'meta "descr:Resource"
+  let this'comment  = getMD this'meta "descr:Comment"
+  let this'duration = take1st [ getMD this'meta "descr:Duration"
+                              , "1.0"
+                              ]
 
   let parent'title  = getTitle parent'meta
   let prev'title    = getTitle prev'meta
@@ -287,7 +290,7 @@ genHtmlPage p = do
         & insAct "theDate"       (liftTA (show <$> atThisMoment) >>= xtxt)
         & insAct "theTitle"      (xtxt this'title)
         & insAct "theSubTitle"   (xtxt this'subtitle)
-        & insAct "theResource"   (xtxt this'resource)
+        & insAct "theComment"    (xtxt this'comment)
         & insAct "theHeadTitle"  (xtxt this'title)
 
         -- the img geo
@@ -385,9 +388,8 @@ insMetaData md env =
   & insMD "descrTitleEnglish"            (gmd "descr:TitleEnglish")
   & insMD "descrTitleLatin"              (gmd "descr:TitleLatin")
   & insMD "descrComment"                 (gmd "descr:Comment")
-  & insMD "descrResource"                (gmd "descr:Resource")
-  & insMD "descrWeb"                     (gmd "descr:Web")        -- TODO
-  & insMD "descrWikipedia"               (gmd "descr:Wikipedia")  -- TODO
+  & insMD "descrWeb"                     (gmd "descr:Web")
+  & insMD "descrWikipedia"               (gmd "descr:Wikipedia")
   & insMDmaps "descrGoogleMaps"          (gmd "Composite:GPSPosition")
 
   & insMD "exifCreateDate"               (gmd "EXIF:CreateDate")

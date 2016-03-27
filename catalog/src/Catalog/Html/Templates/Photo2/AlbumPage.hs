@@ -40,7 +40,6 @@ photo2Tmpl =
   & insSubTmpl "descrTitleEnglish"  descrTitleEnglish
   & insSubTmpl "descrTitleLatin"    descrTitleLatin
   & insSubTmpl "descrComment"       descrComment
-  & insSubTmpl "descrResource"      descrResource
   & insSubTmpl "descrWeb"           descrWeb
   & insSubTmpl "descrWikipedia"     descrWikipedia
   & insSubTmpl "descrGoogleMaps"    descrGoogleMaps
@@ -149,7 +148,7 @@ colTitle :: Tmpl
 colTitle = parseTmpl [s|
           <div class="title">${theTitle}</div>
           <div class="subtitle">${theSubTitle}</div>
-          <div class="resources">${theResource}</div>
+          <div class="comment">${theComment}</div>
 |]
 
 colImg :: Tmpl
@@ -305,7 +304,7 @@ picTitle = parseTmpl [s|
       <div class="title-area-line" id="title-area-line">
         <div class="title">${theTitle}</div>
         <div class="subtitle">${theSubTitle}</div>
-        <div class="resource">${theResource}</div>
+        <div class="comment">${theComment}</div>
       </div>
     </div>
 |]
@@ -322,7 +321,6 @@ ${descrSubtitle}
 ${descrTitleEnglish}
 ${descrTitleLatin}
 ${descrComment}
-${descrResource}
 ${descrWeb}
 ${descrWikipedia}
 ${descrGoogleMaps}
@@ -395,19 +393,11 @@ descrComment = parseTmpl [s|
             </tr>
 |]
 
-descrResource :: Tmpl
-descrResource = parseTmpl [s|
-            <tr class="info" id="descr:Resource">
-              <th>Quellen</th>
-              <td>${descrResourceVal}</td>
-            </tr>
-|]
-
 descrWeb :: Tmpl
 descrWeb = parseTmpl [s|
             <tr class="info" id="descr:Web">
               <th>Web</th>
-              <td>${descrWebVal}</td>
+              <td><a href="${descrWebVal}">${descrWebVal}</a></td>
             </tr>
 |]
 
@@ -415,7 +405,7 @@ descrWikipedia :: Tmpl
 descrWikipedia = parseTmpl [s|
             <tr class="info" id="descr:Wikipedia">
               <th>Wikipedia</th>
-              <td>${descrWikipediaVal}</td>
+              <td><a href="${descrWikipediaVal}">Wikipedia</a></td>
             </tr>
 |]
 
