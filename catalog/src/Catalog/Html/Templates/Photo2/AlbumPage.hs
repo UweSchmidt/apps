@@ -424,7 +424,7 @@ descrGoogleMaps = parseTmpl [s|
             <tr class="info" id="descr:GoogleMaps">
               <th>Karte</th>
               <td>
-                <a href="${descrGoogleMapsVal}">${geoGPSPositionVal}</a>
+                <a href="https://maps.google.de/maps/@${locGoogleMaps},17z">${descrGoogleMapsVal}</a>
               </td>
             </tr>
 |]

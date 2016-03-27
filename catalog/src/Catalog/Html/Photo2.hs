@@ -281,33 +281,33 @@ genHtmlPage p = do
   let env' =
         env
         & addDefaultAct
-        & insAct "rootPath"      (return "") -- (liftTA (use theMountPath) >>= tatt)
+        & insAct "rootPath"      (return "") -- (liftTA (use theMountPath) >>= xtxt)
         & insAct "theUpPath"     (return "")
         & insAct "theDuration"   (return "1")
-        & insAct "theDate"       (liftTA (show <$> atThisMoment) >>= tatt)
-        & insAct "theTitle"      (tatt this'title)
-        & insAct "theSubTitle"   (tatt this'subtitle)
-        & insAct "theResource"   (tatt this'resource)
-        & insAct "theHeadTitle"  (tatt this'title)
+        & insAct "theDate"       (liftTA (show <$> atThisMoment) >>= xtxt)
+        & insAct "theTitle"      (xtxt this'title)
+        & insAct "theSubTitle"   (xtxt this'subtitle)
+        & insAct "theResource"   (xtxt this'resource)
+        & insAct "theHeadTitle"  (xtxt this'title)
 
         -- the img geo
-        & insAct "theImgGeoDir"  (tatt $ geo1 ^. isoString)
-        & insAct "theIconGeoDir" (tatt $ geo2 ^. isoString)
-        & insAct "theImgGeo"     (tatt $ geo1 ^. theGeo . isoString)
-        & insAct "theIconGeo"    (tatt $ geo2 ^. theGeo . isoString)
+        & insAct "theImgGeoDir"  (xtxt $ geo1 ^. isoString)
+        & insAct "theIconGeoDir" (xtxt $ geo2 ^. isoString)
+        & insAct "theImgGeo"     (xtxt $ geo1 ^. theGeo . isoString)
+        & insAct "theIconGeo"    (xtxt $ geo2 ^. theGeo . isoString)
 
         -- the href's
-        & insAct "thisHref"      (tatt p)
-        & insAct "thePrevHref"   (tatt prev'href)
-        & insAct "theNextHref"   (tatt next'href)
-        & insAct "theParentHref" (tatt parent'href)
-        & insAct "theChild1Href" (tatt child1'href)
+        & insAct "thisHref"      (xtxt p)
+        & insAct "thePrevHref"   (xtxt prev'href)
+        & insAct "theNextHref"   (xtxt next'href)
+        & insAct "theParentHref" (xtxt parent'href)
+        & insAct "theChild1Href" (xtxt child1'href)
 
         -- the titles
-        & insAct "theParentTitle" (tatt $ addColon parent'title)
-        & insAct "theChild1Title" (tatt $ addColon child1'title)
-        & insAct "thePrevTitle"   (tatt $ addColon prev'title)
-        & insAct "theNextTitle"   (tatt $ addColon next'title)
+        & insAct "theParentTitle" (xtxt $ addColon parent'title)
+        & insAct "theChild1Title" (xtxt $ addColon child1'title)
+        & insAct "thePrevTitle"   (xtxt $ addColon prev'title)
+        & insAct "theNextTitle"   (xtxt $ addColon next'title)
 
         -- the img hrefs
         & insAct "thePrevImgRef"    (applyNotNull prev'href)
@@ -336,13 +336,13 @@ genHtmlPage p = do
                                , \ row ->
                                  applySeqs               -- generate a single row
                                  [ ( "theChildHref"
-                                   , \ x -> tatt $ x ^. _1
+                                   , \ x -> xtxt $ x ^. _1
                                    )
                                  , ( "theChildImgRef"
                                    , \ x -> blankImg $ x ^. _2
                                    )
                                  , ( "theChildTitle"
-                                   , \ x -> tatt $
+                                   , \ x -> xtxt $
                                             let s = x ^. _3
                                                 i = x ^. _4
                                             in if isempty s
@@ -350,7 +350,7 @@ genHtmlPage p = do
                                                else s
                                    )
                                  , ( "theChildId"
-                                   , \ x -> tatt $ x ^. _4 . isoPicNo
+                                   , \ x -> xtxt $ x ^. _4 . isoPicNo
                                    )
                                  ]
                                  row
@@ -388,7 +388,7 @@ insMetaData md env =
   & insMD "descrResource"                (gmd "descr:Resource")
   & insMD "descrWeb"                     (gmd "descr:Web")        -- TODO
   & insMD "descrWikipedia"               (gmd "descr:Wikipedia")  -- TODO
-  & insMD "descrGoogleMaps"              (gmd "descr:GoogleMaps") -- TODO compute google maps url
+  & insMDmaps "descrGoogleMaps"          (gmd "Composite:GPSPosition")
 
   & insMD "exifCreateDate"               (gmd "EXIF:CreateDate")
   & insMD "camCameraModelName"           (gmd "EXIF:Model")
@@ -422,7 +422,12 @@ insMetaData md env =
       | otherwise    = env' & insAct (name <> "Val") (return res)
 
     gmd :: Name -> Text
-    gmd name = md ^. metaDataAt name . isoString . to escPlainText . isoText
+    gmd name = md ^. metaDataAt name . isoString . to escHTML . isoText
+
+    insMDmaps name res env' =
+      env'
+      & insMD name res
+      & insAct "locGoogleMaps" (xtxt $ res ^. isoString . to loc2googleMapsUrl . from isoMaybe)
 
 -- ----------------------------------------
 
@@ -514,7 +519,7 @@ addDefaultAct =
 
 blankImg :: Maybe FilePath -> ActCmd Text
 blankImg f =
-  (liftTA $ blankImg' f) >>= tatt
+  (liftTA $ blankImg' f) >>= xtxt
   where
     blankImg' =
       maybe ((++ "/icons/blank.jpg") <$> view envAssets) return

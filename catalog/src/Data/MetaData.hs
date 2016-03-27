@@ -5,14 +5,13 @@
 module Data.MetaData
 where
 
-import           Control.Monad
 import           Data.Prim
-
 import qualified Data.Aeson          as J
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
+import           Text.Printf
 
 -- ----------------------------------------
 
@@ -204,6 +203,60 @@ parseTime str = do
   case t of
     ("", "", "", "") -> mzero
     _                -> return t
+
+-- ----------------------------------------
+
+reDeg :: Regex
+reDeg = parseRegexExt $
+  "({deg}[0-9]+) +deg +({min}[0-9]+)' +({sec}[.0-9]+)\" +({dir}[NWES])"
+
+reLongLat :: Regex
+reLongLat = parseRegexExt $
+  "({lat}[^NS]+[NS]),? +({long}[^WE]+[WE])"
+
+-- | "degrees minutes seconds" to "decimal degrees" (google url format)
+parseDeg :: String -> Maybe (Int, Int, Double, Char)
+parseDeg loc =
+  case matchSubexRE reDeg loc of
+    [("deg", deg), ("min", mn), ("sec", sec), ("dir", dir)] ->
+      Just (read deg, read mn, read sec, head dir)
+    _ ->
+      Nothing
+
+deg2DegDec :: (Int, Int, Double, Char) -> Double
+deg2DegDec (d, m, s, dir) =
+  (d' + m'/60 + s/3600) *
+  ( if dir == 'W'
+       ||
+       dir == 'S'
+    then (0-1)
+    else 1
+  )
+  where
+    d' = fromIntegral d
+    m' = fromIntegral m
+
+latLong2DegDec :: String -> Maybe (Double, Double)
+latLong2DegDec loc =
+  case matchSubexRE reLongLat loc of
+     [("lat", lat), ("long", long)] -> do
+       lat'  <- deg2DegDec <$> parseDeg lat
+       long' <- deg2DegDec <$> parseDeg long
+       return (lat', long')
+     _ ->
+       Nothing
+
+latLong2googleMapsUrl :: (Double, Double) -> String
+latLong2googleMapsUrl (lat, long) =
+  lat' ++ "," ++ long'
+  where
+    format = printf "%12.9f"
+    lat'   = format lat
+    long'  = format long
+
+loc2googleMapsUrl :: String -> Maybe String
+loc2googleMapsUrl loc =
+  latLong2googleMapsUrl <$> latLong2DegDec loc
 
 -- ----------------------------------------
 

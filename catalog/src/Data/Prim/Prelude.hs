@@ -50,8 +50,7 @@ module Data.Prim.Prelude
        , zip3
        , zip4
          -- Data.Char
-       , toLower
-       , toUpper
+       , module Data.Char
          -- Data.Function
        , on
          -- System.FilePath

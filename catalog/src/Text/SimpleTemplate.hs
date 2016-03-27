@@ -12,6 +12,7 @@ where
 import           Control.Monad.Reader
 import qualified Data.Map.Strict as M
 import           Data.Prim.Prelude
+import           Data.Char
 
 -- ----------------------------------------
 
@@ -114,11 +115,8 @@ localTmplEnv f act = TA $ \ n env ->
 ttxt :: (Monad m, IsoText a) => a -> TmplAct m Text
 ttxt x = return (x ^. isoText)
 
-tatt :: (Monad m) => String -> TmplAct m Text
-tatt x = return (x ^. to escAttrVal . isoText)
-
-tpt :: (Monad m) => String -> TmplAct m Text
-tpt x = return (x ^. to escPlainText . isoText)
+xtxt :: (Monad m) => String -> TmplAct m Text
+xtxt x = return (x ^. to escHTML . isoText)
 
 -- ----------------------------------------
 
@@ -190,7 +188,7 @@ applyTmpl = TA $ \ n env ->
 --
 -- > insAct "t6" act
 -- > where
--- >   act = applySeq "x" (tatt . show) [1..5]
+-- >   act = applySeq "x" (xtxt . show) [1..5]
 --
 -- installs for the template "t6" an action, which will insert the template
 -- for "t6" 5 times, and the template name "x" determines the place, where
@@ -223,12 +221,21 @@ applyNotNull x = applyCond (not $ isempty x) applyTmpl
 
 -- ----------------------------------------
 
--- escape functions
-escAttrVal :: String -> String
-escAttrVal = id
-
-escPlainText :: String -> String
-escPlainText = id
+escHTML :: String -> String
+escHTML = concatMap escChar
+  where
+    escChar c
+      | c > '~' = esc
+      | isAlphaNum c = box
+      | isSpace c    = box
+      | c `elem` xc  = esc
+      | c < ' '      = esc
+      | otherwise    = box
+      where
+        xc :: String
+        xc = "<>&'\""
+        box = [c]
+        esc = "&#" ++ show (fromEnum c) ++ ";"
 
 -- ----------------------------------------
 
@@ -243,26 +250,26 @@ ee1 =
                    liftTA $ putStrLn $ "unknown template var ignored: " ++ n ^.isoString
                    empty
                 )
-  & insAct "xxx" (tatt "yyy")
-  & insAct "theo" (tatt "hello " <|> askTmplName <|> tatt " bye")
+  & insAct "xxx" (xtxt "yyy")
+  & insAct "theo" (xtxt "hello " <|> askTmplName <|> xtxt " bye")
   & insTmpl "t4" t4
   & insAct "t4" (applyTmpl <|> applyTmpl)
 
   -- a first kind of simple loop wit a single name "no"
   & insTmpl "t5" t5
-  & insAct "t5" (applySeq "no" (return . (^. isoString . to escAttrVal . isoText)) [1..(5::Int)])
+  & insAct "t5" (applySeq "no" (return . (^. isoString . to escHTML . isoText)) [1..(5::Int)])
 
   -- template t6 with name "t6"
   -- is inserted 3 times with the values 123, 456 and 789 at name "x""
   -- and the positions 1, 2 and 3 at name "no""
   & insTmpl "t6" t6
-  & insAct "t6" (applySeqs [ ("x",  return . (^. _2 . isoString . to escAttrVal . isoText))
-                            , ("no", return . (^. _1 . isoString . to escAttrVal . isoText))
+  & insAct "t6" (applySeqs [ ("x",  return . (^. _2 . isoString . to escHTML . isoText))
+                            , ("no", return . (^. _1 . isoString . to escHTML . isoText))
                             ] $ zip [(1::Int)..] [123, 456, 789::Int]
                  )
 
 condTxt :: Text -> TmplAct IO Text
-condTxt t = applyCond (isempty t) (tatt (t ^. isoString))
+condTxt t = applyCond (isempty t) (xtxt (t ^. isoString))
 
 t1 :: Tmpl
 t1 = parseTmpl "abc${xxx}x${t2}yz${theo}123${t3}456${unknown}789${t5}++${t6}"
