@@ -60,16 +60,19 @@ invImages = do
 
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
-  trc $ "saveImgStore: save state to " ++ show p
   bs <- uses id J.encodePretty
   if null p
     then putStrLnLB    bs
-    else writeFileLB p bs
+    else do
+      p' <- (</> p) <$> view envMountPath
+      trc $ "saveImgStore: save state to " ++ show p'
+      writeFileLB p' bs
 
 loadImgStore :: FilePath -> Cmd ()
 loadImgStore p = do
-  trc $ "loadImgStore: load State from " ++ show p
-  bs <- readFileLB p
+  p' <- (</> p) <$> view envMountPath
+  trc $ "loadImgStore: load State from " ++ show p'
+  bs <- readFileLB p'
   case J.decode' bs of
     Nothing ->
       abort $ "loadImgStore: JSON input corrupted: " ++ show p
@@ -89,10 +92,10 @@ initState :: Env -> IO (Either String ImgStore)
 initState env = do
   (res, store, _log) <- runCmd' env $ do
     mp' <- view envMountPath
-    ap' <- view envArchivePath
     jp' <- view envJsonArchive
-    initImgStore "archive" "collections" (mp' ++ ap')
-    loadImgStore (mp' ++ jp')
+    initImgStore "archive" "collections"
+                 (mp' </> "photos")
+    loadImgStore jp'
   case res of
     Left msg ->
       return (Left $ show msg)

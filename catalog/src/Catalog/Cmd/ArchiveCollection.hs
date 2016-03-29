@@ -14,6 +14,18 @@ import           Data.Prim
 
 -- ----------------------------------------
 
+genCollectionRootMeta :: Cmd ()
+genCollectionRootMeta = do
+  ic <- getRootImgColId
+  md <- mkColMeta t s c o a
+  adjustMetaData (md <>) ic
+  where
+    t = "Bilder von Uwe und Petra"
+    s = ""
+    c = ""
+    o = ""
+    a = "ReadOnly"
+
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
 

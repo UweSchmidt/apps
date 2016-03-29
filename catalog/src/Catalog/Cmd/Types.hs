@@ -19,12 +19,10 @@ import           Data.Prim
 data Env = Env
   { _copyGeo     :: [GeoAR]
   , _metaSrc     :: [ImgType]
-  , _assets      :: FilePath
   , _trc         :: Bool
   , _verbose     :: Bool
   , _dryRun      :: Bool
   , _port        :: Int
-  , _archivePath :: FilePath
   , _jsonArchive :: FilePath
   , _mountPath   :: FilePath
   }
@@ -44,14 +42,12 @@ defaultEnv = Env
                    , GeoAR  160  120 Fix
                    ]
   , _metaSrc     = [IMGraw, IMGimg, IMGmeta]
-  , _assets      = "/assets"       -- with mountPath as prefix
   , _trc         = True
   , _verbose     = True
   , _dryRun      = False
   , _port        = 3001
-  , _jsonArchive = "/catalog.json" -- with mountPath as prefix
-  , _archivePath = "/data/photos"
-  , _mountPath   = "."
+  , _jsonArchive = "catalog.json" -- rel to mount path
+  , _mountPath   = "./data"
   }
 
 envCopyGeo :: Lens' Env [GeoAR]
@@ -59,9 +55,6 @@ envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
 
 envMetaSrc :: Lens' Env [ImgType]
 envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
-
-envAssets :: Lens' Env FilePath
-envAssets k e = (\ new -> e {_assets = new}) <$> k (_assets e)
 
 envTrc :: Lens' Env Bool
 envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)
@@ -77,9 +70,6 @@ envPort k e = (\ new -> e {_port = new}) <$> k (_port e)
 
 envJsonArchive :: Lens' Env FilePath
 envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
-
-envArchivePath :: Lens' Env FilePath
-envArchivePath k e = (\ new -> e {_archivePath = new}) <$> k (_archivePath e)
 
 envMountPath :: Lens' Env FilePath
 envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)

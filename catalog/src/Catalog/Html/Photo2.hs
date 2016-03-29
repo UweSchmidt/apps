@@ -66,7 +66,7 @@ pagePathExpr =
   "(" ++
   "(({path}/archive/collections/.*)(/pic-({no}[0-9]+))[.]html)" ++
   "{|}" ++
-  "(({path}/archive/collections/.*)[.]html)" ++
+  "(({path}/archive/collections(/.*)?)[.]html)" ++
   ")"
 
 
@@ -216,8 +216,12 @@ nextColRef = neighborColRef   1
 
 -- the main entry for a HTML page
 
-genHtmlPage :: FilePath -> Cmd Html
-genHtmlPage p = do
+genHtmlPage :: FilePath -> Cmd Text
+genHtmlPage p =
+  mconcat <$> genHtmlPage' p
+
+genHtmlPage' :: FilePath -> Cmd Html
+genHtmlPage' p = do
   ( pageConf,
     this'cr@(this'i, pos)) <- url2confObjId p
 
@@ -372,8 +376,8 @@ genHtmlPage p = do
              else "picPage"
 
   res <- runTmplAct applyTmpl tmpl env'
-  io $ putStrLn (mconcat res ^. isoString) -- readable test output
-  return []
+  -- io $ putStrLn (mconcat res ^. isoString) -- readable test output
+  return res
 
 -- ----------------------------------------
 
@@ -390,7 +394,7 @@ insMetaData md env =
   & insMD "descrComment"                 (gmd "descr:Comment")
   & insMD "descrWeb"                     (gmd "descr:Web")
   & insMD "descrWikipedia"               (gmd "descr:Wikipedia")
-  & insMDmaps "descrGoogleMaps"          (gmd "Composite:GPSPosition")
+  & insMDmaps "descrGoogleMaps"          (md ^. metaDataAt "Composite:GPSPosition")
 
   & insMD "exifCreateDate"               (gmd "EXIF:CreateDate")
   & insMD "camCameraModelName"           (gmd "EXIF:Model")
@@ -426,10 +430,13 @@ insMetaData md env =
     gmd :: Name -> Text
     gmd name = md ^. metaDataAt name . isoString . to escHTML . isoText
 
-    insMDmaps name res env' =
+    insMDmaps :: Text -> Text -> TmplEnv Cmd -> TmplEnv Cmd
+    insMDmaps name res' env' =
       env'
-      & insMD name res
-      & insAct "locGoogleMaps" (xtxt $ res ^. isoString . to loc2googleMapsUrl . from isoMaybe)
+      & insMD name (res ^. to escHTML . isoText)
+      & insAct "locGoogleMaps" (xtxt $ res ^. to loc2googleMapsUrl . from isoMaybe)
+      where
+        res = res' ^. isoString
 
 -- ----------------------------------------
 
@@ -521,9 +528,6 @@ addDefaultAct =
 
 blankImg :: Maybe FilePath -> ActCmd Text
 blankImg f =
-  (liftTA $ blankImg' f) >>= xtxt
-  where
-    blankImg' =
-      maybe ((++ "/icons/blank.jpg") <$> view envAssets) return
+  xtxt $ fromMaybe "/assets/icons/blank.jpg" f
 
 -- ----------------------------------------

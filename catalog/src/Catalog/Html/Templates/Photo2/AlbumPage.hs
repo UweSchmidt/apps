@@ -83,7 +83,8 @@ colPage = parseTmpl [s|
     <meta name="date"        content="${theDate}"/>
     <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
 ${colJS}
-    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"/>
+    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1">
+    </script>
   </head>
   <body onload="initAlbum();"
         class="album"
@@ -101,15 +102,15 @@ ${colNav}
         </td>
       </tr>
     </table>
-    <div class="ruler"/>
+    <div class="ruler"></div>
     <div class="album-content">
 ${colContents}
     </div>
-    <div class="ruler"/>
+    <div class="ruler"></div>
     <table class="head">
       <tr>
-        <td class="head1"/>
-        <td class="head2"/>
+        <td class="head1"></td>
+        <td class="head2"></td>
         <td class="head3">
 ${colNav}
         </td>
@@ -153,7 +154,7 @@ colTitle = parseTmpl [s|
 
 colImg :: Tmpl
 colImg = parseTmpl [s|
-          <img src="/${theIconGeo}${thisImgRef}"
+          <img src="/${theIconGeoDir}${thisImgRef}"
                class="icon-${theIconGeoDir}"
                title="${theHeadTitle}"
                alt="${theHeadTitle}"/>
@@ -191,7 +192,7 @@ parentNav :: Tmpl
 parentNav = parseTmpl [s|
                 <a href="javascript:parentPage();"
                    title="Album${theParentTitle}">
-                  <img src="/${theIconGeo}${parentImgRef}"
+                  <img src="/${theIconGeoDir}${parentImgRef}"
                        class="icon2-${theIconGeoDir}"
                        alt="Album${theParentTitle}"/>
                 </a>
@@ -201,7 +202,7 @@ nextNav :: Tmpl
 nextNav = parseTmpl [s|
                 <a href="javascript:nextPage();"
                    title="weiter${theNextTitle}">
-                  <img src="/${theIconGeo}${nextImgRef}"
+                  <img src="/${theIconGeoDir}${nextImgRef}"
                        class="icon2-${theIconGeoDir}"
                        alt="weiter${theNextTitle}"/>
                 </a>
@@ -211,7 +212,7 @@ prevNav :: Tmpl
 prevNav = parseTmpl [s|
                 <a href="javascript:prevPage();"
                    title="zur&uuml;ck${thePrevTitle}">
-                  <img src="/${theIconGeo}${prevImgRef}"
+                  <img src="/${theIconGeoDir}${prevImgRef}"
                        class="icon2-${theIconGeoDir}"
                        alt="zur&uuml;ck${thePrevTitle}"/>
                 </a>
@@ -222,7 +223,7 @@ child1Nav = parseTmpl [s|
                 <a href="javascript:childPage(&apos;${theChild1Href}&apos;);"
                    title="1. Bild${theChild1Title}"
                    id="theChild1Nav">
-                  <img src="/${theIconGeo}${child1ImgRef}"
+                  <img src="/${theIconGeoDir}${child1ImgRef}"
                        class="icon2-${theIconGeoDir}"
                        alt="1. Bild${theChild1Title}"/>
                 </a>
@@ -249,7 +250,7 @@ colIcons = parseTmpl [s|
           <td class="icon-${theIconGeoDir}" id="${theChildId}">
             <a href="javascript:childPage(&apos;${theChildHref}&apos;);"
                title="${theChildTitle}">
-              <img src="/${theIconGeo}${theChildImgRef}"
+              <img src="/${theIconGeoDir}${theChildImgRef}"
                    class="icon-${theIconGeoDir}"
                    alt="${theChildTitle}"/>
             </a>
@@ -272,7 +273,7 @@ picPage = parseTmpl [s|
     <meta name="date"        content="${theDate}"/>
     <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
 ${colJS}
-    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"/>
+    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"></script>
   </head>
   <body onload="initPicture();"
         class="picture">
@@ -290,8 +291,8 @@ picImg = parseTmpl [s|
        <table class="picture">
          <tr>
            <td class="picture">
-             <img src="/${theImgGeo}${thisImgRef}"
-                  class="img-${theImgGeo}"/>
+             <img src="/${theImgGeoDir}${thisImgRef}"
+                  class="img-${theImgGeoDir}"/>
            </td>
          </tr>
        </table>

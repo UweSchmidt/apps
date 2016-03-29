@@ -13,6 +13,8 @@ import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
 import           Text.Printf
 
+-- import Debug.Trace
+
 -- ----------------------------------------
 
 newtype MetaData = MD J.Object

@@ -107,12 +107,14 @@ import qualified Data.Set as S
 import           Data.String (IsString(..))
 import           Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import           Data.Vector (Vector)
 import           System.FilePath
 import           Text.Regex.XMLSchema.Generic
 import           Text.Regex.XMLSchema.Generic.RegexParser
 
 type LazyByteString = LB.ByteString
+type LazyText       = LT.Text
 
 -- ----------------------------------------
 
@@ -164,6 +166,10 @@ instance IsoString String where
 
 instance IsoString Text where
   isoString = iso T.unpack T.pack
+  {-# INLINE isoString #-}
+
+instance IsoString LazyText where
+  isoString = iso LT.unpack LT.pack
   {-# INLINE isoString #-}
 
 instance IsoString ByteString where

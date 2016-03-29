@@ -41,8 +41,8 @@ import           Control.Arrow ((***))
 
 ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
-  mountPath <- getWorkingDirectory
-  initImgStore "archive" "collections" (mountPath ++ "/data/photos")
+  mountPath <- (</> "data") <$> getWorkingDirectory
+  initImgStore "archive" "collections" (mountPath </> "photos")
   trcCmd cwPath >> trcCmd cwLs >> return ()
   saveImgStore ""
 
@@ -70,7 +70,9 @@ ccc = runCmd $ do
   rmImgNode pic2
   rmImgNode refDir1
 
+
   syncFS refImg
+  genCollectionRootMeta
   genCollectionsByDir
   trc "2. time gencollectionsbydir"
   genCollectionsByDir
@@ -101,7 +103,7 @@ c2 = do
   rls <- buildRules
   we >>= applyRules rls >>= runImgAction
 
-c3 :: Cmd () -> Cmd ()
+c3 :: Cmd a -> Cmd a
 c3 c = local (envTrc .~ False) $ do
   loadImgStore "catalog.json"
   cwRoot
@@ -111,13 +113,16 @@ c3 c = local (envTrc .~ False) $ do
   -- rls <- buildRules
   -- we >>= applyRules rls >>= runImgAction
 
-runc :: Cmd () -> IO (Either Msg (), ImgStore, Log)
+runc :: Cmd a -> IO (Either Msg a, ImgStore, Log)
 runc c = runCmd (c3 c)
 
-getXXX :: Cmd Html
+getXXX :: Cmd Text
 getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.html"
 
-getYYY :: Cmd Html
+getZZZ :: Cmd Text
+getZZZ = genHtmlPage "/html-1600x1200/archive/collections/byCreateDate/2015/01/18/pic-0002.html"
+
+getYYY :: Cmd Text
 getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
 
 main :: IO ()

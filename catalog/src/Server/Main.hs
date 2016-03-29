@@ -1,19 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Server.Main where
 
-import           Catalog.Cmd (Env, Cmd, runAction, initEnv, initState, envPort, envVerbose)
-import           Data.Prim.Prelude ((^.))
+import           Catalog.Cmd (Env, Cmd, runAction, initEnv, initState, envPort, envVerbose, envMountPath)
+import           Catalog.Html.Photo2 (genHtmlPage)
+import           Control.Concurrent.MVar
+import           Control.Monad.Except
+import           Control.Monad.IO.Class
 import           Data.ImageStore (ImgStore)
+import           Data.Monoid ((<>))
+import           Data.Prim.Prelude -- (Text, (^.), isoString, isoText, from, to, intercalate)
+import qualified Data.Text as T
 import           Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
+import           Network.Wai
 import qualified Network.Wai.Handler.Warp as W
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           System.Exit (die)
 import           Web.Scotty --                           (middleware, scotty)
-import Web.Scotty.Internal.Types
-import Control.Concurrent.MVar
-import Control.Monad.IO.Class
-import Control.Monad.Except
+import           Web.Scotty.Internal.Types
 
 -- import           Network.Wai.Middleware.Static        (addBase, noDots,
 --                                                       staticPolicy, (>->))
@@ -52,6 +56,29 @@ runModyCmd env mvr mvm cmd = do
 
 -- ----------------------------------------
 
+reqPath :: Request -> Text
+reqPath req = "/" <> (T.intercalate "/" $ pathInfo req)
+
+reqMatch :: RegexText -> Request -> Maybe [Param]
+reqMatch re req
+  | matchRE re path = Just [("path", path ^. from strict)]
+  | otherwise = Nothing
+  where
+    path = reqPath req
+
+matchPath :: Text -> RoutePattern
+matchPath re = function $ reqMatch (parseRegexExt re)
+
+
+-- ----------------------------------------
+
+fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
+fileWithMime ap mt fp = do
+  setHeader "Content-Type" (mt ^. lazy)
+  file (ap ++ fp)
+
+-- ----------------------------------------
+
 main :: IO ()
 main = do
   env  <- initEnv
@@ -64,8 +91,10 @@ main' env state = do
   mvRead <- newMVar state
   mvMody <- newMVar state
 
-  let runRead = runReadCmd env mvRead
-  let runMody = runModyCmd env mvRead mvMody
+  let runRead  = runReadCmd env mvRead
+  let runMody  = runModyCmd env mvRead mvMody
+
+  let mimeFile = fileWithMime (env ^. envMountPath)
 
   -- start scotty
   opts <- getOptions env
@@ -75,9 +104,33 @@ main' env state = do
     -- defined routes
     get "/" $ text "the home page"
     get "/help" $ text "help not yet available"
-    get "/emil" $ do
-      text "emil not at home"
-      status status403
+
+    get (matchPath "/assets/javascript/.*[.]js") $ do
+      param "path" >>= mimeFile "text/javascript"
+
+    get (matchPath "/assets/css/.*[.]css") $ do
+      param "path" >>= mimeFile "text/css"
+
+    get (matchPath "/assets/icons/favicon.ico") $ do
+      param "path" >>= mimeFile "image/x-icob"
+
+    get (matchPath "/[a-zA-Z]+-[0-9]+x[0-9]+/archive/collections(/.*)?[.]html") $ do
+      p <- param "path"
+      res <- runRead $ genHtmlPage p
+      html (res ^. lazy)
+
+    get (matchPath ".*") $ do
+      p <- param "path"
+      text $ "file " <> p <> "not in archive"
+      status status404
+
+    get (matchPath "/[a-zA-Z]+-[0-9]+x[0-9]+/.*[.]jpg") $ do
+      p <- param "path"
+      html $ "<html><head></head><body><h1>image href found: " <> p <> "</body></html>"
+
+    get (function $ \ req -> Just [("xxx", pathInfo req ^. to show . from isoString)]) $ do
+      x <- param "xxx"
+      text x
 
 -- ----------------------------------------
 
