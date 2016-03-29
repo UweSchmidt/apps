@@ -9,29 +9,6 @@ import           Catalog.FilePath
 import           Data.ImgTree
 import           Data.Prim
 
-import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
-
--- ----------------------------------------
-
-saveImgStore :: FilePath -> Cmd ()
-saveImgStore p = do
-  trc $ "saveImgStore: save state to " ++ show p
-  bs <- uses id J.encodePretty
-  if null p
-    then putStrLnLB    bs
-    else writeFileLB p bs
-
-loadImgStore :: FilePath -> Cmd ()
-loadImgStore p = do
-  trc $ "loadImgStore: load State from " ++ show p
-  bs <- readFileLB p
-  case J.decode' bs of
-    Nothing ->
-      abort $ "loadImgStore: JSON input corrupted: " ++ show p
-    Just st ->
-      put st
-
 -- ----------------------------------------
 
 cwSyncFS :: Cmd ()

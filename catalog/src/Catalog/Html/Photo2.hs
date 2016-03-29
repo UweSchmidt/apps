@@ -286,12 +286,12 @@ genHtmlPage p = do
         & addDefaultAct
         & insAct "rootPath"      (return "") -- (liftTA (use theMountPath) >>= xtxt)
         & insAct "theUpPath"     (return "")
-        & insAct "theDuration"   (return "1")
         & insAct "theDate"       (liftTA (show <$> atThisMoment) >>= xtxt)
         & insAct "theTitle"      (xtxt this'title)
         & insAct "theSubTitle"   (xtxt this'subtitle)
         & insAct "theComment"    (xtxt this'comment)
         & insAct "theHeadTitle"  (xtxt this'title)
+        & insAct "theDuration"   (xtxt this'duration)
 
         -- the img geo
         & insAct "theImgGeoDir"  (xtxt $ geo1 ^. isoString)

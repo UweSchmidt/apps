@@ -75,10 +75,10 @@ ccc = runCmd $ do
   trc "2. time gencollectionsbydir"
   genCollectionsByDir
   saveImgStore ""
-  trc "save state to c1.json"
-  saveImgStore "c1.json"
-  trc "load state from c1.json"
-  loadImgStore "c1.json"
+  trc "save state to catalog.json"
+  saveImgStore "catalog.json"
+  trc "load state from catalog.json"
+  loadImgStore "catalog.json"
   saveImgStore ""
   listImages >>= putStrLn'
   cwListPaths >>= putStrLn'
@@ -88,12 +88,12 @@ ccc = runCmd $ do
 
 c2 :: Cmd ()
 c2 = do
-  loadImgStore "c1.json"
+  loadImgStore "catalog.json"
   cwRoot
   cwSyncFS
   genCollectionsByDir
   genCollectionsByDate
-  saveImgStore "c1.json"
+  saveImgStore "catalog.json"
   saveImgStore ""
   listImages  >>= putStrLn'
   cwListPaths >>= putStrLn'
@@ -103,11 +103,11 @@ c2 = do
 
 c3 :: Cmd () -> Cmd ()
 c3 c = local (envTrc .~ False) $ do
-  loadImgStore "c1.json"
+  loadImgStore "catalog.json"
   cwRoot
   local (envTrc .~ True) c
   --  saveImgStore ""
-  -- saveImgStore "c1.json"
+  -- saveImgStore "catalog.json"
   -- rls <- buildRules
   -- we >>= applyRules rls >>= runImgAction
 

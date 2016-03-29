@@ -17,12 +17,16 @@ import           Data.Prim
 -- ----------------------------------------
 
 data Env = Env
-  { _copyGeo :: [GeoAR]
-  , _metaSrc :: [ImgType]
-  , _assets  :: FilePath
-  , _trc     :: Bool
-  , _verbose :: Bool
-  , _dryRun  :: Bool
+  { _copyGeo     :: [GeoAR]
+  , _metaSrc     :: [ImgType]
+  , _assets      :: FilePath
+  , _trc         :: Bool
+  , _verbose     :: Bool
+  , _dryRun      :: Bool
+  , _port        :: Int
+  , _archivePath :: FilePath
+  , _jsonArchive :: FilePath
+  , _mountPath   :: FilePath
   }
 
 deriving instance Show Env
@@ -33,17 +37,21 @@ instance Config Env where
 
 type CopyGeo = ((Int, Int), AspectRatio)
 
-initEnv :: Env
-initEnv = Env
-  { _copyGeo = [ GeoAR 1400 1050 Pad
-               , GeoAR  160  160 Pad
-               , GeoAR  160  120 Fix
-               ]
-  , _metaSrc = [IMGraw, IMGimg, IMGmeta]
-  , _assets  = "/assets"
-  , _trc     = True
-  , _verbose = True
-  , _dryRun  = False
+defaultEnv :: Env
+defaultEnv = Env
+  { _copyGeo     = [ GeoAR 1400 1050 Pad
+                   , GeoAR  160  160 Pad
+                   , GeoAR  160  120 Fix
+                   ]
+  , _metaSrc     = [IMGraw, IMGimg, IMGmeta]
+  , _assets      = "/assets"       -- with mountPath as prefix
+  , _trc         = True
+  , _verbose     = True
+  , _dryRun      = False
+  , _port        = 3001
+  , _jsonArchive = "/catalog.json" -- with mountPath as prefix
+  , _archivePath = "/data/photos"
+  , _mountPath   = "."
   }
 
 envCopyGeo :: Lens' Env [GeoAR]
@@ -64,11 +72,26 @@ envVerbose k e = (\ new -> e {_verbose = new}) <$> k (_verbose e)
 envDryRun :: Lens' Env Bool
 envDryRun k e = (\ new -> e {_dryRun = new}) <$> k (_dryRun e)
 
+envPort :: Lens' Env Int
+envPort k e = (\ new -> e {_port = new}) <$> k (_port e)
+
+envJsonArchive :: Lens' Env FilePath
+envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
+
+envArchivePath :: Lens' Env FilePath
+envArchivePath k e = (\ new -> e {_archivePath = new}) <$> k (_archivePath e)
+
+envMountPath :: Lens' Env FilePath
+envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)
+
 -- ----------------------------------------
 
 type Cmd = Action Env ImgStore
 
 runCmd :: Cmd a -> IO (Either Msg a, ImgStore, Log)
-runCmd cmd = runAction cmd initEnv emptyImgStore
+runCmd cmd = runAction cmd defaultEnv emptyImgStore
+
+runCmd' :: Env -> Cmd a -> IO (Either Msg a, ImgStore, Log)
+runCmd' env cmd = runAction cmd env emptyImgStore
 
 -- ----------------------------------------

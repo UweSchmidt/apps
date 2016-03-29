@@ -29,13 +29,14 @@ import           Catalog.Cmd.CopyRemove
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Control.Lens
--- import           Control.Lens.Util
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImgTree
--- import           Data.MetaData
 import           Data.Prim
+import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as J
+
 
 -- ----------------------------------------
 
@@ -54,5 +55,48 @@ invImages :: Cmd ()
 invImages = do
   _r <- use (theImgTree . rootRef)
   return ()
+
+-- ----------------------------------------
+
+saveImgStore :: FilePath -> Cmd ()
+saveImgStore p = do
+  trc $ "saveImgStore: save state to " ++ show p
+  bs <- uses id J.encodePretty
+  if null p
+    then putStrLnLB    bs
+    else writeFileLB p bs
+
+loadImgStore :: FilePath -> Cmd ()
+loadImgStore p = do
+  trc $ "loadImgStore: load State from " ++ show p
+  bs <- readFileLB p
+  case J.decode' bs of
+    Nothing ->
+      abort $ "loadImgStore: JSON input corrupted: " ++ show p
+    Just st ->
+      put st
+
+-- ----------------------------------------
+--
+-- initialization on program start
+
+initEnv :: IO Env
+initEnv = do
+  return defaultEnv -- TODO process getArgs
+
+
+initState :: Env -> IO (Either String ImgStore)
+initState env = do
+  (res, store, _log) <- runCmd' env $ do
+    mp' <- view envMountPath
+    ap' <- view envArchivePath
+    jp' <- view envJsonArchive
+    initImgStore "archive" "collections" (mp' ++ ap')
+    loadImgStore (mp' ++ jp')
+  case res of
+    Left msg ->
+      return (Left $ show msg)
+    Right () ->
+      return (Right store)
 
 -- ----------------------------------------
