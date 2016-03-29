@@ -12,7 +12,7 @@ category:            development
 build-type:          Simple
 cabal-version:       >=1.10
 
-library: catalog
+library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -42,7 +42,6 @@ library: catalog
                      Catalog.Cmd.Fold
                      Catalog.Cmd.List
                      Catalog.Cmd.Types
-                     Catalog.Html
                      Catalog.Html.Photo2
                      Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.Rules
@@ -86,31 +85,40 @@ library: catalog
                    
   GHC-Options: -Wall -fwarn-tabs
  
-executable catserver
+executable catalog-server
   hs-source-dirs:      src
   main-is:             Server/Main.hs
   default-language:    Haskell2010
   -- other-modules:       
+
   other-extensions:    OverloadedStrings
-  build-depends:       aeson >= 0.9
-                     , aeson-pretty >= 0.7
-                     , base >=4.7
-                     , bytestring >= 0.10
-                     , catalog
-                     , http-types >= 0.9
-                     , hxt-regex-xmlschema >= 9.2
-                     , lens >= 4.13
-                     , murmur-hash >= 0.1
-                     , scientific >= 0.3
-                     , scotty
-                     , string-qq >= 0.0.2
+
+  build-depends:       aeson
+                     , aeson-pretty
+                     , base
+                     , bytestring
+                     , containers
+                     , directory
+                     , filepath
+                     , hxt-regex-xmlschema
+                     , lens
+                     , monad-error-rws-io
+                     , mtl
+                     , murmur-hash
+                     , scientific
+                     , string-qq
                      , text
-                     , time >= 1.5
-                     , unix >= 2.7
-                     , unordered-containers >= 0.2
-                     , utf8-string >= 1.0
-                     , vector >= 0.11
-                     , wai >= 3.2
-                     , wai-extra >=3.0.0
+                     , time
+                     , transformers
+                     , unix
+                     , unordered-containers
+                     , utf8-string
+                     , vector
+                     
+                     , catalog
+                     , http-types   >= 0.9
+                     , scotty       >= 0.1.10
+                     , wai          >= 3.2
+                     , wai-extra    >=3.0.0
                      , wai-middleware-static
-                     , warp >= 3.2.2
+                     , warp         >= 3.2.2

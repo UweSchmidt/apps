@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Server.Main where
+module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initEnv, initState, envPort, envVerbose, envMountPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
