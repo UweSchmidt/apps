@@ -4,9 +4,8 @@ module Catalog.System.IO
 where
 
 import           Catalog.Cmd.Types
--- import Data.Prim
-
 import qualified Data.ByteString.Lazy.Char8 as LB
+import           Data.Prim.TimeStamp
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Time.Clock as C
 import qualified System.Directory as D
@@ -25,6 +24,10 @@ dirExist = io . D.doesDirectoryExist
 getFileStatus :: FilePath -> Cmd FileStatus
 getFileStatus = io . X.getFileStatus
 
+getModiTime :: FilePath -> Cmd TimeStamp
+getModiTime f = do
+  fsTimeStamp <$> getFileStatus f
+
 writeFileLB :: FilePath -> LB.ByteString -> Cmd ()
 writeFileLB f = io . LB.writeFile f
 
@@ -33,6 +36,9 @@ readFileLB = io . LB.readFile
 
 removeFile :: FilePath -> Cmd ()
 removeFile = io . D.removeFile
+
+createDir :: FilePath -> Cmd ()
+createDir = io . D.createDirectoryIfMissing True
 
 getWorkingDirectory :: Cmd FilePath
 getWorkingDirectory = io X.getWorkingDirectory

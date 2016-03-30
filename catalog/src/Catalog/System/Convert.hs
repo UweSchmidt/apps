@@ -1,11 +1,69 @@
 module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
+       , genImage
        )
 where
 
 import Catalog.Cmd
+import Catalog.System.IO
 import Data.Prim
+import Control.Monad
+
+-- ----------------------------------------
+
+-- generate an image of a given geometry from an original image
+-- from the archive or assets
+-- geometry is specified by the the first part of the url2
+--
+-- example:             "/fix-160x120/archive/photo/pic-30.jpg"
+--
+-- subdir is dst dir is "mountPath/fix-160x120"
+-- org img is           "mountPath/photo/pic-30.jpg"
+
+genImage :: FilePath -> Cmd FilePath
+genImage url = do
+  maybe notThere doit $ imgPath2Geo url
+    where
+      notThere =
+        abort $ "image not found: " ++ show url
+
+      doit :: (GeoAR, FilePath) -> Cmd FilePath
+      doit (geo, path) = do
+        mp <- view envMountPath
+        let src = mp ++ path
+        let dst = mp </> (geo ^. isoString) ++ path
+        sx <- fileExist src
+        unless sx notThere
+        dx <- fileExist dst
+        dt <- if dx
+              then getModiTime dst
+              else return mempty
+        st <- getModiTime src
+        unless (dt > st) $ do
+          createDir $ takeDirectory dst
+          createImageCopy geo dst src
+        return dst
+
+imgPathExpr :: Regex
+imgPathExpr =
+  parseRegexExt $
+  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
+
+imgPath2Geo :: FilePath -> Maybe (GeoAR, FilePath)
+imgPath2Geo p =
+  case matchSubexRE imgPathExpr p of
+    -- remove the redundant "/archive" part for images from the archive
+    [("geoar", geoar), ("topdir", "/archive"), ("path", path)] ->
+      Just (geoar ^. from isoString, path)
+
+    -- remain the top dir part, e.g for "/assets/icons/blank.jpg""
+    [("geoar", geoar), ("topdir", topdir), ("path", path)] ->
+      Just (geoar ^. from isoString, topdir ++ path)
+
+    -- wrong url
+    _ ->
+      Nothing
 
 -- ----------------------------------------
 

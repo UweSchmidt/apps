@@ -3,10 +3,13 @@
 module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initEnv, initState, envPort, envVerbose, envMountPath)
+import           Catalog.System.Convert (genImage)
 import           Catalog.Html.Photo2 (genHtmlPage)
 import           Control.Concurrent.MVar
+import           Control.Exception (SomeException, try, catch, toException)
 import           Control.Monad.Except
 import           Control.Monad.IO.Class
+import           Control.Monad.RWSErrorIO (Msg(..))
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))
 import           Data.Prim.Prelude -- (Text, (^.), isoString, isoText, from, to, intercalate)
@@ -35,11 +38,14 @@ import           Web.Scotty.Internal.Types
 runReadCmd :: Env -> MVar ImgStore -> Cmd a -> ActionM a
 runReadCmd env mvs cmd = do
   res <- liftIO runc
-  either (throwError . stringError . show) return res
+  either (\ e -> raise (show e ^. isoText . lazy)) return res
   where
     runc = do
       store <- readMVar mvs
-      (res, _store, _log) <- runAction cmd env store
+      res <-
+        ((^. _1) <$> runAction cmd env store)
+        `catch`
+        (\ e -> return (Left . Msg . show $ (e :: SomeException))) -- TODO this still does not catch: error "some error"
       return res
 
 runModyCmd :: Env -> MVar ImgStore -> MVar ImgStore -> Cmd a -> ActionM a
@@ -50,6 +56,9 @@ runModyCmd env mvr mvm cmd = do
     runc = do
       store <- takeMVar mvm
       (res, new'store, _log) <- runAction cmd env store
+
+      -- TODO try to catch: error "some error" like in runReadCmd
+
       _old <- swapMVar mvr new'store
       putMVar mvm new'store
       return res
@@ -118,6 +127,11 @@ main' env state = do
       p <- param "path"
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
+
+    get (matchPath "/.*[.]jpg") $ do
+      p <- param "path"
+      f <- runRead $ genImage p
+      fileWithMime "" "image/jpeg" f
 
     get (matchPath ".*") $ do
       p <- param "path"

@@ -137,10 +137,10 @@ colJS = parseTmpl [s|
 |]
 
 theNextImgRef :: Tmpl
-theNextImgRef = parseTmpl "/${theImgGeo}${nextImgRef}"
+theNextImgRef = parseTmpl "/${theImgGeoDir}${nextImgRef}"
 
 thePrevImgRef :: Tmpl
-thePrevImgRef = parseTmpl "/${theImgGeo}${prevImgRef}"
+thePrevImgRef = parseTmpl "/${theImgGeoDir}${prevImgRef}"
 
 theChild1ImgRef :: Tmpl
 theChild1ImgRef = parseTmpl "/${theImgGeo}${child1ImgRef}"
