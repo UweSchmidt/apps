@@ -325,7 +325,7 @@ genHtmlPage' p = do
         & insAct "prevImgRef"       (blankImg prev'img)
         & insAct "nextImgRef"       (blankImg next'img)
         & insAct "child1ImgRef"     (blankImg child1'img)
-        & insAct "colImg"           (applyNotNull this'img)
+        -- & insAct "colImg"           (applyNotNull this'img)
 
         -- the nav templates
         & insAct "parentNav"     (applyNotNull parent'href)

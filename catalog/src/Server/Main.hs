@@ -69,15 +69,14 @@ reqPath :: Request -> Text
 reqPath req = "/" <> (T.intercalate "/" $ pathInfo req)
 
 reqMatch :: RegexText -> Request -> Maybe [Param]
-reqMatch re req
-  | matchRE re path = Just [("path", path ^. from strict)]
+reqMatch e req
+  | matchRE e path = Just [("path", path ^. from strict)]
   | otherwise = Nothing
   where
     path = reqPath req
 
 matchPath :: Text -> RoutePattern
-matchPath re = function $ reqMatch (parseRegexExt re)
-
+matchPath e = function $ reqMatch (parseRegexExt e)
 
 -- ----------------------------------------
 

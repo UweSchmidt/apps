@@ -9,6 +9,7 @@ import Catalog.Cmd
 import Catalog.System.IO
 import Data.Prim
 import Control.Monad
+import Debug.Trace
 
 -- ----------------------------------------
 
@@ -34,7 +35,8 @@ genImage url = do
         let src = mp ++ path
         let dst = mp </> (geo ^. isoString) ++ path
         sx <- fileExist src
-        unless sx notThere
+        unless sx $
+          traceShow (src, sx) notThere
         dx <- fileExist dst
         dt <- if dx
               then getModiTime dst

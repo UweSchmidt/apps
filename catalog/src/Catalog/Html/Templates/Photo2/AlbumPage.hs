@@ -87,7 +87,7 @@ ${colJS}
     </script>
   </head>
   <body onload="initAlbum();"
-        class="album"
+        class="album album-${theImgGeo}"
         id="theAlbumBody">
     <table class="head">
       <tr>
@@ -276,7 +276,7 @@ ${colJS}
     <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"></script>
   </head>
   <body onload="initPicture();"
-        class="picture">
+        class="picture picture-${theImgGeo}">
 ${picImg}
 ${picTitle}
 ${picInfo}
@@ -302,7 +302,8 @@ picImg = parseTmpl [s|
 picTitle :: Tmpl
 picTitle = parseTmpl [s|
     <div class="title-area" onmouseover="showTitle();" onmouseout="hideTitle();">
-      <div class="title-area-line" id="title-area-line">
+      <div class="title-area-line title-area-line-${theImgGeo}"
+           id="title-area-line">
         <div class="title">${theTitle}</div>
         <div class="subtitle">${theSubTitle}</div>
         <div class="comment">${theComment}</div>
@@ -313,7 +314,8 @@ picTitle = parseTmpl [s|
 picInfo :: Tmpl
 picInfo = parseTmpl [s|
     <div class="info-area" onmouseover="showInfo();" onmouseout="hideInfo();">
-      <div class="info-area-content" id="info-area-content">
+      <div class="info-area-content info-area-content-${theImgGeo}"
+           id="info-area-content">
         <div class="info">
           <div class="subtitle">Bild-Daten</div>
           <table class="info">
@@ -424,7 +426,7 @@ geoGPSLatitude :: Tmpl
 geoGPSLatitude = parseTmpl [s|
             <tr class="info" id="geo:GPSLatitude">
               <th>Breitengrad</th>
-              <td>${"geoGPSLatitudeVal"}</td>
+              <td>${geoGPSLatitudeVal}</td>
             </tr>
 |]
 
@@ -432,7 +434,7 @@ geoGPSLongitude :: Tmpl
 geoGPSLongitude = parseTmpl [s|
             <tr class="info" id="geo:GPSLatitude">
               <th>L&auml;ngengrad</th>
-              <td>${"geoGPSLongitudeVal"}</td>
+              <td>${geoGPSLongitudeVal}</td>
             </tr>
 |]
 
@@ -440,7 +442,7 @@ geoGPSAltitude :: Tmpl
 geoGPSAltitude = parseTmpl [s|
            Val}<tr class="info" id="geo:GPSAltitude">${
               <th>H&ouml;he</th>
-              <td>[geo:GPSAltitude]</td>
+              <td>${geo:GPSAltitudeVal}</td>
             </tr>
 |]
 
