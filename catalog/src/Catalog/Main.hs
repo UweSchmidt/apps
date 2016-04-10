@@ -122,6 +122,9 @@ getXXX = genHtmlPage "/html-1600x1200/archive/collections/photos/2015/pic-0001.h
 getZZZ :: Cmd Text
 getZZZ = genHtmlPage "/html-1600x1200/archive/collections/byCreateDate/2015/01/18/pic-0002.html"
 
+getUUU :: Cmd Text
+getUUU = genHtmlPage "/html-1600x1200/archive/collections/byCreateDate/2015/01.html"
+
 getYYY :: Cmd Text
 getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
 

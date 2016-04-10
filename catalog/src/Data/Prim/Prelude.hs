@@ -49,6 +49,7 @@ module Data.Prim.Prelude
        , nub
        , zip3
        , zip4
+       , zip5
          -- Data.Char
        , module Data.Char
          -- Data.Function

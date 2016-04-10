@@ -11,7 +11,8 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.ExifTool
+import Catalog.System.Convert (genIcon)
+import Catalog.System.ExifTool (getMetaData)
 import Text.SimpleTemplate
 
 -- ----------------------------------------
@@ -108,7 +109,7 @@ url2pathNo f = snd <$> url2confPathNo f
 
 -- ----------------------------------------
 
-url2confObjId :: FilePath -> Cmd (String, ColRef' ObjId)
+url2confObjId :: FilePath -> Cmd (String, ColRef)
 url2confObjId f = do
   (c, p) <- url2confPathNo f
   mi     <- crPath2crObjId p
@@ -281,7 +282,12 @@ genHtmlPage' p = do
   children'meta   <- mapM (colImgMeta       `bmb`) children'crs
 
   let children'titles = map getTitle children'meta
-  let children'4      = zip4 children'hrefs children'imgs children'titles [(0::Int)..]
+  let children'5      = zip5
+                        children'crs
+                        children'hrefs
+                        children'imgs
+                        children'titles
+                        [(0::Int)..]
 
   let addColon x      = if isempty x then x else ": "++ x
 
@@ -320,11 +326,12 @@ genHtmlPage' p = do
         & insAct "thePrevImgRef"    (applyNotNull prev'href)
         & insAct "theNextImgRef"    (applyNotNull next'href)
         & insAct "theChild1ImgRef"  (applyNotNull child1'href)
-        & insAct "thisImgRef"       (blankImg this'img)
-        & insAct "parentImgRef"     (blankImg parent'img)
-        & insAct "prevImgRef"       (blankImg prev'img)
-        & insAct "nextImgRef"       (blankImg next'img)
-        & insAct "child1ImgRef"     (blankImg child1'img)
+        & insAct "thisImgRef"       (blankIcon (Just this'cr) this'img)
+        & insAct "parentImgRef"     (blankIcon parent'cr parent'img)
+        & insAct "prevImgRef"       (blankIcon prev'cr   prev'img)
+        & insAct "nextImgRef"       (blankIcon next'cr   next'img)
+        & insAct "child1ImgRef"     (blankIcon child1'cr child1'img)
+        -- always take the blank image for the colImg
         -- & insAct "colImg"           (applyNotNull this'img)
 
         -- the nav templates
@@ -337,33 +344,33 @@ genHtmlPage' p = do
         -- 4 infos are available per image, the "href"" for the image page,
         -- the the "src" of the image, the title, and the position in the collection
 
-        & insAct "colContents"   (applyNotNull children'4) -- content only inserted when there are any entries
+        & insAct "colContents"   (applyNotNull children'5) -- content only inserted when there are any entries
         & insAct "colRows" ( applySeqs
                              [ ( "colIcons"
                                , \ row ->
                                  applySeqs               -- generate a single row
                                  [ ( "theChildHref"
-                                   , \ x -> xtxt $ x ^. _1
+                                   , \ x -> xtxt $ x ^. _2
                                    )
                                  , ( "theChildImgRef"
-                                   , \ x -> blankImg $ x ^. _2
+                                   , \ x -> blankIcon (x ^. _1) (x ^. _3)
                                    )
                                  , ( "theChildTitle"
                                    , \ x -> xtxt $
-                                            let s = x ^. _3
-                                                i = x ^. _4
+                                            let s = x ^. _4
+                                                i = x ^. _5
                                             in if isempty s
                                                then show (i + 1) ++ ". Bild"
                                                else s
                                    )
                                  , ( "theChildId"
-                                   , \ x -> xtxt $ x ^. _4 . isoPicNo
+                                   , \ x -> xtxt $ x ^. _5 . isoPicNo
                                    )
                                  ]
                                  row
                                )
                              ]
-                             (divideAt no'rows children'4) -- divide entries into rows
+                             (divideAt no'rows children'5) -- divide entries into rows
                            )
 
         -- the meta data templates
@@ -529,5 +536,58 @@ addDefaultAct =
 blankImg :: Maybe FilePath -> ActCmd Text
 blankImg f =
   xtxt $ fromMaybe "/assets/icons/blank.jpg" f
+
+blankIcon :: Maybe ColRef -> Maybe FilePath -> ActCmd Text
+blankIcon _ (Just f) =
+  xtxt f -- return (f ^. isoText)             -- image there
+
+blankIcon (Just (i, Nothing)) _ = do
+  -- ref to a collection, try to generate a collection icon
+  p <- liftTA imgpath
+  xtxt $ maybe "/assets/icons/blank.jpg" id p
+  where
+    imgpath = do
+      trcObj i $ "blankicon: "
+      p <- (^. isoString) <$> objid2path i
+      path2img p
+
+blankIcon _ _ =      -- image not there
+  xtxt "/assets/icons/blank.jpg"
+
+path2img :: FilePath -> Cmd (Maybe FilePath)
+path2img f = do
+  trc $ "path2img: " ++ f
+  case matchSubexRE ymdRE f of
+    [("year", y)] ->
+      genAssetIcon y y
+    [("year", y), ("month", m)] ->
+      genAssetIcon y (toN m ++ "." ++ y)
+    [("year", y), ("month", m), ("day", d)] ->
+      genAssetIcon y (toN d ++ "." ++ toN m ++ "." ++ y)
+    _ ->
+      return Nothing
+  where
+    toN :: String -> String
+    toN s = show i
+      where
+        i :: Int
+        i = read s
+
+-- regex for collections sorted by date
+
+ymdRE :: Regex
+ymdRE =
+  parseRegexExt $
+  "/archive/collections/byCreateDate/({year}[0-9]{4})"
+  ++
+  "(/({month}[0-9]{2})(/({day}[0-9]{2}))?)?"
+
+genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
+genAssetIcon px s = do
+  trc $ "genAssetIcon: " ++ f
+  genIcon f s   -- call convert with string s, please no "/"-es in s
+  return $ Just f
+  where
+    f = "/assets/icons/generated" </> px </> s ++ ".jpg"
 
 -- ----------------------------------------

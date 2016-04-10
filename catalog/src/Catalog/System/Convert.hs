@@ -2,14 +2,38 @@ module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
        , genImage
+       , genIcon
        )
 where
 
 import Catalog.Cmd
-import Catalog.System.IO
 import Data.Prim
-import Control.Monad
-import Debug.Trace
+-- import Debug.Trace
+
+-- ----------------------------------------
+
+genIcon :: FilePath -> String -> Cmd ()
+genIcon path t = do
+  dst <- (++ path) <$> view envMountPath
+  dx  <- fileExist dst
+  unless dx $ do
+    createDir $ takeDirectory dst
+    execProcess "bash" [] (shellCmd dst) >> return ()
+  where
+    shellCmd dst =
+      unwords $
+      [ "convert"
+      , "-background 'rgb(255,255,255)'"
+      , "-fill 'rgb(192,64,64)'"
+      , "-font ComicSans"
+      , "-size 600x400"
+      , "-pointsize 100"
+      , "-gravity center"
+      , "label:'" ++ t ++ "'"
+      , "-background 'rgb(128,128,128)'"
+      , "-vignette 0x40"
+      , dst
+      ]
 
 -- ----------------------------------------
 
@@ -36,13 +60,13 @@ genImage url = do
         let dst = mp </> (geo ^. isoString) ++ path
         sx <- fileExist src
         unless sx $
-          traceShow (src, sx) notThere
+          notThere
         dx <- fileExist dst
-        dt <- if dx
+        dw <- if dx
               then getModiTime dst
               else return mempty
-        st <- getModiTime src
-        unless (dt > st) $ do
+        sw <- getModiTime src
+        unless (dw > sw) $ do
           createDir $ takeDirectory dst
           createImageCopy geo dst src
         return dst
