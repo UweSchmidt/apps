@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
@@ -27,13 +28,34 @@ genIcon path t = do
       , "-fill 'rgb(192,64,64)'"
       , "-font ComicSans"
       , "-size 600x400"
-      , "-pointsize 100"
+      , "-pointsize " ++ ps'
       , "-gravity center"
-      , "label:'" ++ t ++ "'"
+      , "label:'" ++ t' ++ "'"
       , "-background 'rgb(128,128,128)'"
       , "-vignette 0x40"
       , dst
       ]
+    (t', ps')
+      | multiline = (t0, ps0)
+      | len <= 10 = (t, "100")
+      | len <= 20 = (t1 ++ "\\n" ++ t2, "80")
+      | otherwise = (s1 ++ "\\n" ++ s2 ++ "\\n" ++ s3, "60")
+      where
+        ls        = lines t
+        lsn       = length ls
+        multiline = lsn > 1
+        t0        = intercalate "\\n" ls
+        ps0
+          | lsn == 2  = "80"
+          | lsn == 3  = "60"
+          | lsn == 4  = "50"
+          | otherwise = "40"
+        len       = length t
+        len2      = len `div` 2
+        len3      = len `div` 3
+        (t1, t2)  = splitAt len2 t
+        (s1, r2)  = splitAt len3 t
+        (s2, s3) = splitAt len3 r2
 
 -- ----------------------------------------
 

@@ -555,39 +555,70 @@ blankIcon _ _ =      -- image not there
   xtxt "/assets/icons/blank.jpg"
 
 path2img :: FilePath -> Cmd (Maybe FilePath)
-path2img f = do
-  trc $ "path2img: " ++ f
-  case matchSubexRE ymdRE f of
-    [("year", y)] ->
+path2img f
+  | [("year", y)] <- m1 =
       genAssetIcon y y
-    [("year", y), ("month", m)] ->
-      genAssetIcon y (toN m ++ "." ++ y)
-    [("year", y), ("month", m), ("day", d)] ->
-      genAssetIcon y (toN d ++ "." ++ toN m ++ "." ++ y)
-    _ ->
+
+  | [("year", y), ("month", m)] <- m1 =
+      let s = toN m ++ "." ++ y
+      in
+        genAssetIcon (y </> s) s
+
+  | [("year", y), ("month", m), ("day", d)] <- m1 =
+      let s = toN d ++ "." ++ toN m ++ "." ++ y
+      in
+        genAssetIcon (y </> s) s
+
+  | [("name", n)] <- m2 =
+      genAssetIcon n n
+
+  | f == "/archive/collections/byCreateDate" =
+      genAssetIcon "byCreateDate" "nach\nAufnahme-\nDatum"
+
+  | f == "/archive/collections/photos" =
+      genAssetIcon "photos" "alle\nOrdner"
+
+  | f == "/archive/collections" =
+      genAssetIcon "collections" "alle\nBilder"
+
+  | otherwise =
       return Nothing
   where
+    m1 = matchSubexRE ymdRE f
+    m2 = matchSubexRE dirRE f
+
     toN :: String -> String
     toN s = show i
       where
         i :: Int
         i = read s
 
--- regex for collections sorted by date
 
-ymdRE :: Regex
+
+ymdRE :: Regex -- for collections sorted by date
 ymdRE =
   parseRegexExt $
-  "/archive/collections/byCreateDate/({year}[0-9]{4})"
+  "/archive/collections/byCreateDate"
+  ++
+  "/({year}[0-9]{4})"
   ++
   "(/({month}[0-9]{2})(/({day}[0-9]{2}))?)?"
 
+dirRE :: Regex -- for collections for all folders
+dirRE =
+  parseRegexExt $
+  "/archive/collections/photos"
+  ++
+  "(/[^/]+)*"
+  ++
+  "(/({name}[^/]+))"
+
 genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
 genAssetIcon px s = do
-  trc $ "genAssetIcon: " ++ f
+  trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
   genIcon f s   -- call convert with string s, please no "/"-es in s
   return $ Just f
   where
-    f = "/assets/icons/generated" </> px </> s ++ ".jpg"
+    f = "/assets/icons/generated" </> px ++ ".jpg"
 
 -- ----------------------------------------
