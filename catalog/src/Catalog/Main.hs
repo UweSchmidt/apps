@@ -14,11 +14,11 @@ import           Catalog.System.IO
 import           Data.Prim
 import           Data.ImageStore
 import           Data.ImgTree
-import           Data.ImgAction
 import           Data.MetaData
 import           Catalog.Html.Photo2
 
 {-}
+import           Data.ImgAction
 import           Catalog.Rules
 import           Catalog.RunImgAction
 import           Catalog.FilePath

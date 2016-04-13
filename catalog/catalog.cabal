@@ -18,7 +18,6 @@ library
 
   exposed-modules:   Catalog.Main
                      Data.MetaData
-                     Data.ImgAction
                      Data.ImgNode
                      Data.ImgTree
                      Data.RefTree
