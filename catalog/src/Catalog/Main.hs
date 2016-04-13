@@ -85,8 +85,8 @@ ccc = runCmd $ do
   listImages >>= putStrLn'
   cwListPaths >>= putStrLn'
   cwListNames >>= putStrLn'
-  rls <- buildRules
-  we >>= applyRules rls >>= runImgAction
+  -- rls <- buildRules
+  -- we >>= applyRules rls >>= runImgAction
 
 c2 :: Cmd ()
 c2 = do
@@ -100,8 +100,8 @@ c2 = do
   listImages  >>= putStrLn'
   cwListPaths >>= putStrLn'
   cwListNames >>= putStrLn'
-  rls <- buildRules
-  we >>= applyRules rls >>= runImgAction
+  -- rls <- buildRules
+  -- we >>= applyRules rls >>= runImgAction
 
 c3 :: Cmd a -> Cmd a
 c3 c = local (envTrc .~ False) $ do

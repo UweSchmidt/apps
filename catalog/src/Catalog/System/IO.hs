@@ -28,6 +28,13 @@ getModiTime :: FilePath -> Cmd TimeStamp
 getModiTime f = do
   fsTimeStamp <$> getFileStatus f
 
+getModiTime' :: FilePath -> Cmd TimeStamp
+getModiTime' f = do
+  ex <- fileExist f
+  if ex
+    then getModiTime f
+    else return mempty
+
 writeFileLB :: FilePath -> LB.ByteString -> Cmd ()
 writeFileLB f = io . LB.writeFile f
 

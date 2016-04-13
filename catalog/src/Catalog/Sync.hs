@@ -6,6 +6,7 @@ where
 
 import           Catalog.Cmd
 import           Catalog.FilePath
+import Catalog.System.ExifTool
 import           Data.ImgTree
 import           Data.Prim
 
@@ -160,6 +161,7 @@ syncParts i pp = do
   ps  <- getImgVals i (theParts . isoImgParts)
   ps' <- traverse syncPart ps
   adjustImg (const $ mkImgParts ps') i
+  syncMetaData i
   where
     syncPart p = do
       fsp <- toFilePath (pp `snocPath` (p ^. theImgName))

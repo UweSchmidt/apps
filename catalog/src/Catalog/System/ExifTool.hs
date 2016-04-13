@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Catalog.System.ExifTool
 where
 
@@ -5,6 +7,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Data.Prim
+import Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 
@@ -56,23 +59,57 @@ readMetaData f = do
     else
       return mempty
 
+getMetaData :: ObjId -> Cmd MetaData
+getMetaData i =
+  objid2path i >>= exifPath >>= readMetaData
+
 -- ----------------------------------------
 
-selectJSON :: FilePath -> [Name] -> Cmd MetaData
-selectJSON f ns = do
-  (^. selectByNames ns) <$> readMetaData f
+syncMetaData :: ObjId -> Cmd ()
+syncMetaData i = do
+  ip <- objid2path i
 
-lookupJSON :: FilePath -> [Name] -> Cmd Text
-lookupJSON f ns =
-  lookupByNames ns <$> readMetaData f
+  p  <- exifPath ip          -- the exif file path
+  px <- fileExist p
+  unless px $ do             -- the dir for the exif file
+    createDir $ takeDirectory p
+  ts <- if px
+        then getModiTime p   -- the time stamp
+        else return mempty
 
-getMetaData :: ObjId -> Cmd MetaData
-getMetaData i = do
-  pts <- getImgVals i theParts
-  let jsonName = pts ^. thePartNames IMGjson
-  jp  <- substPathName jsonName <$> objid2path i
-  md <- toFilePath jp >>= readMetaData
-  -- trcObj i $ "getmetadata: " ++ show md
-  return md
+  ps <- getImgVals i (theParts . isoImgParts)
+  -- trcObj i $ "syncMetaData: syncing exif data " ++ show p ++ " " ++ show ps
+  mapM_ (syncMD ip p ts) ps
+  return ()
+
+syncMD :: Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
+syncMD ip fp ts pt = do
+  when ( ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
+         &&
+         tw >= ts                             -- part has been changed
+       ) $ do
+    sp <- toFilePath (substPathName tn ip)
+    trc $ "syncMD: syncing with " ++ show sp
+    m1 <- readMetaData fp
+    m2 <- filterMetaData ty <$> getExifTool sp
+    writeMetaData fp (m2 <> m1)
+  where
+    ty = pt ^. theImgType
+    tw = pt ^. theImgTimeStamp
+    tn = pt ^. theImgName
+
+-- ----------------------------------------
+
+-- build a file path from an internal image path
+--
+-- "/archive/photos/2016/emil"
+-- -->
+-- "<mountpath>/exif-meta/photos/2016/emil.json"
+
+exifPath :: Path -> Cmd FilePath
+exifPath ip = do
+  mp <- use theMountPath
+  return $
+    mp </> "exif-meta" ++ tailPath ip ^. isoString ++ ".json"
 
 -- ----------------------------------------

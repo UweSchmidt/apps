@@ -93,11 +93,14 @@ mkMetaRule t = (rl, act)
 
 buildRules :: Cmd [Rule]
 buildRules = do
-  cg <- view envCopyGeo
+  -- generation of image copies disabled
+  -- this is done on the fly when generating HTML pages
+
+  -- cg <- view envCopyGeo
   cm <- view envMetaSrc
   return $
-    map mkCopyRule cg
-    ++
+    -- map mkCopyRule cg
+    -- ++
     map mkMetaRule cm
 
 -- ----------------------------------------

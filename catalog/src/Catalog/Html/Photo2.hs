@@ -539,7 +539,8 @@ blankImg f =
 
 blankIcon :: Maybe ColRef -> Maybe FilePath -> ActCmd Text
 blankIcon _ (Just f) =
-  xtxt f -- return (f ^. isoText)             -- image there
+  -- image there
+  xtxt f
 
 blankIcon (Just (i, Nothing)) _ = do
   -- ref to a collection, try to generate a collection icon
@@ -547,11 +548,12 @@ blankIcon (Just (i, Nothing)) _ = do
   xtxt $ maybe "/assets/icons/blank.jpg" id p
   where
     imgpath = do
-      trcObj i $ "blankicon: "
+      -- trcObj i $ "blankicon: "
       p <- (^. isoString) <$> objid2path i
       path2img p
 
-blankIcon _ _ =      -- image not there
+blankIcon _ _ =
+  -- image not there
   xtxt "/assets/icons/blank.jpg"
 
 path2img :: FilePath -> Cmd (Maybe FilePath)
@@ -615,7 +617,7 @@ dirRE =
 
 genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
 genAssetIcon px s = do
-  trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
+  -- trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
   genIcon f s   -- call convert with string s, please no "/"-es in s
   return $ Just f
   where
