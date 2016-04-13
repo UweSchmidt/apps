@@ -44,8 +44,6 @@ library
                      Catalog.Cmd.Types
                      Catalog.Html.Photo2
                      Catalog.Html.Templates.Photo2.AlbumPage
-                     Catalog.Rules
-                     Catalog.RunImgAction
                      Catalog.Sync
                      Catalog.System.Convert
                      Catalog.System.ExifTool

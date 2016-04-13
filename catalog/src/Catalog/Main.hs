@@ -7,8 +7,6 @@ module Catalog.Main
 where
 
 import           Catalog.Cmd
-import           Catalog.Rules
-import           Catalog.RunImgAction
 import           Catalog.Sync
 import           Catalog.System.Convert
 import           Catalog.System.ExifTool
@@ -21,6 +19,8 @@ import           Data.MetaData
 import           Catalog.Html.Photo2
 
 {-}
+import           Catalog.Rules
+import           Catalog.RunImgAction
 import           Catalog.FilePath
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
