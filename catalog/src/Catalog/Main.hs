@@ -42,7 +42,7 @@ import           Control.Arrow ((***))
 ccc :: IO (Either Msg (), ImgStore, Log)
 ccc = runCmd $ do
   mountPath <- (</> "data") <$> getWorkingDirectory
-  initImgStore "archive" "collections" (mountPath </> "photos")
+  initImgStore n'archive n'collections (mountPath </> s'photos)
   trcCmd cwPath >> trcCmd cwLs >> return ()
   saveImgStore ""
 

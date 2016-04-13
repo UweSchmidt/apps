@@ -13,6 +13,7 @@ import           Control.Monad.RWSErrorIO (Msg(..))
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))
 import           Data.Prim.Prelude -- (Text, (^.), isoString, isoText, from, to, intercalate)
+import           Data.Prim.Constants
 import qualified Data.Text as T
 import           Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
 import           Network.Wai
@@ -78,6 +79,25 @@ reqMatch e req
 matchPath :: Text -> RoutePattern
 matchPath e = function $ reqMatch (parseRegexExt e)
 
+matchJS :: RoutePattern
+matchJS = matchPath $ (ps'javascript ++ "/.*[.]js") ^. isoText
+
+matchCSS :: RoutePattern
+matchCSS = matchPath $ (ps'css ++ "/.*[.]css") ^. isoText
+
+matchHTML :: RoutePattern
+matchHTML = matchPath $ ps'html ^. isoText
+  where
+    ps'html =
+      "/[a-zA-Z]+-[0-9]+x[0-9]+"
+      ++
+      ps'collections
+      ++
+      "(/.*)?[.]html"
+
+matchJPG :: RoutePattern
+matchJPG = matchPath "/.*[.]jpg"
+
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
@@ -113,35 +133,39 @@ main' env state = do
     get "/" $ text "the home page"
     get "/help" $ text "help not yet available"
 
-    get (matchPath "/assets/javascript/.*[.]js") $ do
+    get matchJS $ do
       param "path" >>= mimeFile "text/javascript"
 
-    get (matchPath "/assets/css/.*[.]css") $ do
+    get matchCSS $ do
       param "path" >>= mimeFile "text/css"
 
-    get (matchPath "/assets/icons/favicon.ico") $ do
-      param "path" >>= mimeFile "image/x-icob"
-
-    get (matchPath "/[a-zA-Z]+-[0-9]+x[0-9]+/archive/collections(/.*)?[.]html") $ do
+    get matchHTML $ do
       p <- param "path"
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
 
-    get (matchPath "/.*[.]jpg") $ do
+    get matchJPG $ do
       p <- param "path"
       f <- runRead $ genImage p
       fileWithMime "" "image/jpeg" f
+
+    get (matchPath "/assets/icons/favicon.ico") $ do
+      param "path" >>= mimeFile "image/x-icob"
 
     get (matchPath ".*") $ do
       p <- param "path"
       text $ "file " <> p <> "not in archive"
       status status404
 
+    -- test, test, test
     get (matchPath "/[a-zA-Z]+-[0-9]+x[0-9]+/.*[.]jpg") $ do
       p <- param "path"
       html $ "<html><head></head><body><h1>image href found: " <> p <> "</body></html>"
 
-    get (function $ \ req -> Just [("xxx", pathInfo req ^. to show . from isoString)]) $ do
+    -- test, test, test
+    get (function $
+         \ req -> Just [("xxx", pathInfo req ^. to show . from isoString)]
+        ) $ do
       x <- param "xxx"
       text x
 

@@ -93,8 +93,8 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     ]
   toJSON (ROOT rd rc) = J.object
     [ "ImgNode"     J..= ("ROOT" :: String)
-    , "archive"     J..= rd
-    , "collections" J..= rc
+    , t'archive     J..= rd
+    , t'collections J..= rc
     ]
   toJSON (COL md im es ts) = J.object $
     [ "ImgNode"    J..= ("COL" :: String)
@@ -116,8 +116,8 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
            DIR  <$> o J..: "children"
                 <*> o J..:? "sync" J..!= mempty
          "ROOT" ->
-           ROOT <$> o J..: "archive"
-                <*> o J..: "collections"
+           ROOT <$> o J..: t'archive
+                <*> o J..: t'collections
          "COL" ->
            COL  <$> o J..: "metadata"
                 <*> (Just <$> o J..:? "image") J..!= Nothing

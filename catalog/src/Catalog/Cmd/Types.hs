@@ -17,9 +17,7 @@ import           Data.Prim
 -- ----------------------------------------
 
 data Env = Env
-  { _copyGeo     :: [GeoAR]
-  , _metaSrc     :: [ImgType]
-  , _trc         :: Bool
+  { _trc         :: Bool
   , _verbose     :: Bool
   , _dryRun      :: Bool
   , _port        :: Int
@@ -37,24 +35,13 @@ type CopyGeo = ((Int, Int), AspectRatio)
 
 defaultEnv :: Env
 defaultEnv = Env
-  { _copyGeo     = [ GeoAR 1400 1050 Pad
-                   , GeoAR  160  160 Pad
-                   , GeoAR  160  120 Fix
-                   ]
-  , _metaSrc     = [IMGraw, IMGimg, IMGmeta]
-  , _trc         = True
+  { _trc         = True
   , _verbose     = True
   , _dryRun      = False
   , _port        = 3001
   , _jsonArchive = "catalog.json" -- rel to mount path
   , _mountPath   = "./data"
   }
-
-envCopyGeo :: Lens' Env [GeoAR]
-envCopyGeo k e = (\ new -> e {_copyGeo = new}) <$> k (_copyGeo e)
-
-envMetaSrc :: Lens' Env [ImgType]
-envMetaSrc k e = (\ new -> e {_metaSrc = new}) <$> k (_metaSrc e)
 
 envTrc :: Lens' Env Bool
 envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)

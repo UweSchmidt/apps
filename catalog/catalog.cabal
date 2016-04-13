@@ -23,15 +23,16 @@ library
                      Data.RefTree
                      Data.ImageStore
                      Data.Prim
+                     Data.Prim.CheckSum
+                     Data.Prim.Constants
+                     Data.Prim.Geometry
                      Data.Prim.ImageType
                      Data.Prim.Name
-                     Data.Prim.TimeStamp
                      Data.Prim.Path
                      Data.Prim.PathId
                      Data.Prim.Prelude
                      Data.Prim.ObjId
-                     Data.Prim.Geometry
-                     Data.Prim.CheckSum
+                     Data.Prim.TimeStamp
                      Catalog.FilePath
                      Catalog.Cmd
                      Catalog.Cmd.ArchiveCollection

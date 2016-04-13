@@ -535,7 +535,7 @@ addDefaultAct =
 
 blankImg :: Maybe FilePath -> ActCmd Text
 blankImg f =
-  xtxt $ fromMaybe "/assets/icons/blank.jpg" f
+  xtxt $ fromMaybe ps'blank f
 
 blankIcon :: Maybe ColRef -> Maybe FilePath -> ActCmd Text
 blankIcon _ (Just f) =
@@ -545,7 +545,7 @@ blankIcon _ (Just f) =
 blankIcon (Just (i, Nothing)) _ = do
   -- ref to a collection, try to generate a collection icon
   p <- liftTA imgpath
-  xtxt $ maybe "/assets/icons/blank.jpg" id p
+  xtxt $ maybe ps'blank id p
   where
     imgpath = do
       -- trcObj i $ "blankicon: "
@@ -554,7 +554,7 @@ blankIcon (Just (i, Nothing)) _ = do
 
 blankIcon _ _ =
   -- image not there
-  xtxt "/assets/icons/blank.jpg"
+  xtxt ps'blank
 
 path2img :: FilePath -> Cmd (Maybe FilePath)
 path2img f
@@ -574,14 +574,14 @@ path2img f
   | [("name", n)] <- m2 =
       genAssetIcon n n
 
-  | f == "/archive/collections/byCreateDate" =
-      genAssetIcon "byCreateDate" "nach\nAufnahme-\nDatum"
+  | f == ps'byCreateDate =           -- "/archive/collections/byCreateDate"
+      genAssetIcon s'byCreateDate "nach\nAufnahme-\nDatum"
 
-  | f == "/archive/collections/photos" =
-      genAssetIcon "photos" "alle\nOrdner"
+  | f == ps'photos =                 -- "/archive/collections/photos"
+      genAssetIcon s'photos "alle\nOrdner"
 
-  | f == "/archive/collections" =
-      genAssetIcon "collections" "alle\nBilder"
+  | f == ps'collections =            -- "/archive/collections"
+      genAssetIcon s'collections "alle\nBilder"
 
   | otherwise =
       return Nothing
@@ -600,7 +600,7 @@ path2img f
 ymdRE :: Regex -- for collections sorted by date
 ymdRE =
   parseRegexExt $
-  "/archive/collections/byCreateDate"
+  ps'byCreateDate                    -- "/archive/collections/byCreateDate"
   ++
   "/({year}[0-9]{4})"
   ++
@@ -609,7 +609,7 @@ ymdRE =
 dirRE :: Regex -- for collections for all folders
 dirRE =
   parseRegexExt $
-  "/archive/collections/photos"
+  ps'photos                          -- "/archive/collections/photos"
   ++
   "(/[^/]+)*"
   ++
@@ -621,6 +621,6 @@ genAssetIcon px s = do
   genIcon f s   -- call convert with string s, please no "/"-es in s
   return $ Just f
   where
-    f = "/assets/icons/generated" </> px ++ ".jpg"
+    f = ps'iconsgen </> px ++ ".jpg"
 
 -- ----------------------------------------

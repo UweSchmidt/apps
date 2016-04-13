@@ -93,8 +93,8 @@ initState env = do
   (res, store, _log) <- runCmd' env $ do
     mp' <- view envMountPath
     jp' <- view envJsonArchive
-    initImgStore "archive" "collections"
-                 (mp' </> "photos")
+    initImgStore n'archive n'collections
+                 (mp' </> s'photos)
     loadImgStore jp'
   case res of
     Left msg ->
