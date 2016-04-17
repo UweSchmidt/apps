@@ -16,6 +16,9 @@ import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Catalog.Html.Photo2
+import System.IO
+import System.Exit
+import qualified System.Posix as X
 
 {-}
 import           Data.ImgAction
@@ -113,6 +116,49 @@ c3 c = local (envTrc .~ False) $ do
   -- rls <- buildRules
   -- we >>= applyRules rls >>= runImgAction
 
+syncMain :: IO ()
+syncMain = do
+  mountPath <- (</> "data") <$> X.getWorkingDirectory
+  res <- (^. _1) <$> runCmd (syncCatalog jsonPath mountPath)
+  either
+    (\ e -> do hPutStrLn stderr $ show e
+               exitFailure
+    )
+    return
+    res
+  where
+    jsonPath = "catalog1.json"
+
+syncCatalog :: FilePath -> FilePath -> Cmd ()
+syncCatalog jsonPath0 mountPath = do
+  trc "create archive root"
+  initImgStore n'archive n'collections (mountPath </> s'photos)
+
+  let jsonPath = mountPath </> jsonPath0
+  ex <- fileExist jsonPath
+  when ex $ do
+    trc $ "read the current archive data from file " ++ show jsonPath
+    loadImgStore jsonPath
+
+  trc "get the archive and the image root"
+  refRoot <- use (theImgTree . rootRef)
+  refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
+
+  trc "sync the archive with the file system"
+  syncFS refImg
+
+  trc "create the collections for the archive dirs"
+  trc "and the collections per date"
+  genCollectionRootMeta
+  genCollectionsByDir
+
+  trc $ "save state to " ++ show jsonPath
+  saveImgStore jsonPath
+
+  trc "load state from json catalog and list all entries"
+  loadImgStore jsonPath
+  cwListNames >>= putStrLn'
+
 runc :: Cmd a -> IO (Either Msg a, ImgStore, Log)
 runc c = runCmd (c3 c)
 
@@ -128,6 +174,9 @@ getUUU = genHtmlPage "/html-1600x1200/archive/collections/byCreateDate/2015/01.h
 getYYY :: Cmd Text
 getYYY = genHtmlPage "/html-1600x1200/archive/collections/photos/2015.html"
 
-main :: IO ()
-main = do
+main1 :: IO ()
+main1 = do
   void $ runc $ getXXX >> return ()
+
+main :: IO ()
+main = syncMain

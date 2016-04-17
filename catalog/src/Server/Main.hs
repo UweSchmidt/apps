@@ -101,9 +101,9 @@ matchJPG = matchPath "/.*[.]jpg"
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
-fileWithMime ap mt fp = do
+fileWithMime px mt fp = do
   setHeader "Content-Type" (mt ^. lazy)
-  file (ap ++ fp)
+  file (px ++ fp)
 
 -- ----------------------------------------
 
@@ -149,8 +149,8 @@ main' env state = do
       f <- runRead $ genImage p
       fileWithMime "" "image/jpeg" f
 
-    get (matchPath "/assets/icons/favicon.ico") $ do
-      param "path" >>= mimeFile "image/x-icob"
+    get (matchPath "/.*[.]ico") $ do
+      mimeFile "image/x-icon" "/assets/icons/favicon.ico"
 
     get (matchPath ".*") $ do
       p <- param "path"

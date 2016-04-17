@@ -166,10 +166,21 @@ body.album-1400x1050 {
   margin-right: 10px;
 }
 
-table.picture {
-  border-spacing: 0px;
+div.picture {
+  width  : 100%;
+  height : 100%;
 }
 
+table.picture {
+  border-spacing: 0px;
+  width  : 100%;
+  height : 100%;
+}
+
+td.picture {
+  text-align     : center;
+  vertical-align : middle;
+}
 /* title and info area */
 
 div.title-area-line, div.info-area-content {

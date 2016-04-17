@@ -77,11 +77,12 @@ colPage = parseTmpl [s|
   <head>
     <base href="${rootPath}"/>
     <title>${theHeadTitle}</title>
-    <meta name="description" content="Web Photo Album"/>
-    <meta name="author"      content="Uwe Schmidt"/>
-    <meta name="generator"   content="Photo Collection System"/>
-    <meta name="date"        content="${theDate}"/>
-    <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
+    <meta name="description"  content="Web Photo Album"/>
+    <meta name="author"       content="Uwe Schmidt"/>
+    <meta name="generator"    content="Photo Collection System"/>
+    <meta name="date"         content="${theDate}"/>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+    <link rel="stylesheet"    type="text/css" href="/assets/css/html-album.css"/>
 ${colJS}
     <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1">
     </script>
