@@ -103,7 +103,7 @@ collectDirCont i = do
   trcObj i "collectDirCont: group entries in dir "
   fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
-  trc $ "collectDirCont: entries found " ++ show es
+  -- trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
         partition (hasImgType (== IMGother)) es
@@ -157,7 +157,7 @@ syncImg ip pp xs = do
 
 syncParts :: ObjId -> Path -> Cmd ()
 syncParts i pp = do
-  trcObj i $ "syncParts: syncing img parts for "
+  -- trcObj i $ "syncParts: syncing img parts for "
   ps  <- getImgVals i (theParts . isoImgParts)
   ps' <- traverse syncPart ps
   adjustImg (const $ mkImgParts ps') i
@@ -225,7 +225,7 @@ scanDirCont :: FilePath -> Cmd [FilePath]
 scanDirCont p0 = do
   trc $ "scanDirCont: reading dir " ++ show p0
   res <- readDir p0
-  trc $ "scanDirCont: result is " ++ show res
+  -- trc $ "scanDirCont: result is " ++ show res
   return res
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool

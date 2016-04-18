@@ -67,7 +67,7 @@ photo2Tmpl =
   & insSubTmpl "exifImageSize"      exifImageSize
   & insSubTmpl "fileFileModificationDateTime" fileFileModificationDateTime
   & insSubTmpl "fileRefRaw"         fileRefRaw
-
+  & insSubTmpl "fileRefJpg"         fileRefJpg
 
 colPage :: Tmpl
 colPage = parseTmpl [s|
@@ -348,8 +348,9 @@ ${exifISO}
 ${exifShootingMode}
 ${exifWhiteBalance}
 ${exifImageSize}
-${fileFileModificationDateTime}
 ${fileRefRaw}
+${fileRefJpg}
+${fileFileModificationDateTime}
           </table>
         </div>
       </div>
@@ -441,9 +442,9 @@ geoGPSLongitude = parseTmpl [s|
 
 geoGPSAltitude :: Tmpl
 geoGPSAltitude = parseTmpl [s|
-           Val}<tr class="info" id="geo:GPSAltitude">${
+            <tr class="info" id="geo:GPSAltitude">
               <th>H&ouml;he</th>
-              <td>${geo:GPSAltitudeVal}</td>
+              <td>${geoGPSAltitudeVal}</td>
             </tr>
 |]
 
@@ -596,6 +597,14 @@ fileRefRaw = parseTmpl [s|
             <tr class="info" id="file:RefRaw">
               <th>Raw-Datei</th>
               <td>${fileRefRawVal}</td>
+            </tr>
+|]
+
+fileRefJpg :: Tmpl
+fileRefJpg = parseTmpl [s|
+            <tr class="info" id="file:RefJpg">
+              <th>JPG-Datei</th>
+              <td>${fileRefJpgVal}</td>
             </tr>
 |]
 

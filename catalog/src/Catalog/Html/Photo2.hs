@@ -45,7 +45,7 @@ thePageConfigs =
                        )
     )
   , ("html-1400x1050", ( GeoAR 1400 1050 Pad
-                       , GeoAR  160  120 Fix
+                       , GeoAR  140  105 Fix
                        , 9
                        , photo2Tmpl
                        )
@@ -235,7 +235,11 @@ genHtmlPage' p = do
 
   -- this entry
   this'img    <- colImgPath               this'cr
-  this'cs     <- getImgVals this'i theColEntries  -- for a col: get the entries, for an img: empty
+  this'fname  <- ((^. from isoMaybe) . fmap (^. isoString)) <$>
+                 colImgName               this'cr
+
+  -- for a col: get the entries, for an img: empty
+  this'cs     <- getImgVals this'i theColEntries
   this'meta   <- colImgMeta               this'cr
 
   parent'cr   <- parentColRef             this'cr
@@ -259,11 +263,11 @@ genHtmlPage' p = do
   child1'meta <- colImgMeta         `bmb` child1'cr
 
   let getMD md n    = md ^. metaDataAt n . isoString
-  let getTitle md   = take1st [ getMD md "descr:Title"
-                              , getMD md "File:FileName"
-                              ]
+  let getTitle md   = getMD md "descr:Title"
 
-  let this'title    = getTitle this'meta
+  let this'title    = take1st [ getTitle this'meta
+                              , this'fname
+                              ]
   let this'subtitle = getMD this'meta "descr:SubTitle"
   let this'comment  = getMD this'meta "descr:Comment"
   let this'duration = take1st [ getMD this'meta "descr:Duration"
@@ -345,36 +349,39 @@ genHtmlPage' p = do
         -- the the "src" of the image, the title, and the position in the collection
 
         & insAct "colContents"   (applyNotNull children'5) -- content only inserted when there are any entries
-        & insAct "colRows" ( applySeqs
-                             [ ( "colIcons"
-                               , \ row ->
-                                 applySeqs               -- generate a single row
-                                 [ ( "theChildHref"
-                                   , \ x -> xtxt $ x ^. _2
-                                   )
-                                 , ( "theChildImgRef"
-                                   , \ x -> blankIcon (x ^. _1) (x ^. _3)
-                                   )
-                                 , ( "theChildTitle"
-                                   , \ x -> xtxt $
-                                            let s = x ^. _4
-                                                i = x ^. _5
-                                            in if isempty s
-                                               then show (i + 1) ++ ". Bild"
-                                               else s
-                                   )
-                                 , ( "theChildId"
-                                   , \ x -> xtxt $ x ^. _5 . isoPicNo
-                                   )
-                                 ]
-                                 row
-                               )
-                             ]
-                             (divideAt no'rows children'5) -- divide entries into rows
-                           )
+        & insAct "colRows"
+          ( applySeqs
+            [ ( "colIcons"
+              , \ row ->
+                applySeqs               -- generate a single row
+                [ ( "theChildHref"
+                  , \ x -> xtxt $ x ^. _2
+                  )
+                , ( "theChildImgRef"
+                  , \ x -> blankIcon (x ^. _1) (x ^. _3)
+                  )
+                , ( "theChildTitle"
+                  , \ x -> xtxt $
+                           let s = x ^. _4
+                               i = x ^. _5
+                           in if isempty s
+                              then show (i + 1) ++ ". Bild"
+                              else s
+                  )
+                , ( "theChildId"
+                  , \ x -> xtxt $ x ^. _5 . isoPicNo
+                  )
+                ]
+                row
+              )
+            ]
+            (divideAt no'rows children'5) -- divide entries into rows
+          )
 
         -- the meta data templates
         & insMetaData this'meta
+        & insAct "fileRefJpg"    (applyNotNull this'fname)
+        & insAct "fileRefJpgVal" (xtxt this'fname)
 
   -- to gen an image page the template name must be exchanged
 
@@ -391,10 +398,7 @@ genHtmlPage' p = do
 insMetaData :: MetaData -> TmplEnv Cmd -> TmplEnv Cmd
 insMetaData md env =
   env
-  & insMD "descrTitle"                   (take1st [ gmd "descr:Title"
-                                                  , gmd "File:FileName"
-                                                  ]
-                                         )
+  & insMD "descrTitle"                   (gmd "descr:Title")
   & insMD "descrSubtitle"                (gmd "descr:Subtitle")
   & insMD "descrTitleEnglish"            (gmd "descr:TitleEnglish")
   & insMD "descrTitleLatin"              (gmd "descr:TitleLatin")
@@ -421,11 +425,14 @@ insMetaData md env =
   & insMD "exifWhiteBalance"             (gmd "EXIF:WhiteBalance")
   & insMD "exifImageSize"                (gmd "Composite:ImageSize")
   & insMD "fileFileModificationDateTime" (gmd "File:FileModifyDate")
-  & insMD "fileRefRaw"                   (gmd "File:Directory" <> "/" <> gmd "File:FileName")
-
+  & insMD "fileRefRaw"                   (gmd "File:Directory"
+                                          <> "/" <>
+                                          gmd "File:FileName"
+                                         )
   & insMD "geoGPSLatitude"               (gmd "XMP:GPSLatitude")
   & insMD "geoGPSLongitude"              (gmd "XMP:GPSLongitude")
-  & insMD "geoGPSAltitude"               (gmd "XMP:GPSAltitude")
+  -- altitude disabled, XMP altitude is nonsense
+  & insMD "geoGPSAltitude"               (gmd "???:GPSAltitude")
   & insMD "geoGPSPosition"               (gmd "Composite:GPSPosition")
 
   where
@@ -490,6 +497,19 @@ colImgMeta (i, Nothing) =     -- col meta data
   getImgVals i theColMetaData
 
 -- ----------------------------------------
+
+colImgName :: ColRef -> Cmd (Maybe Name)
+colImgName (i, Just pos) = do
+  cs <- getImgVals i theColEntries
+  return $
+    case cs ^? ix pos of
+      Just (ImgRef _j n) ->
+        Just n
+      _ ->
+        Nothing
+colImgName _ =
+  return Nothing
+
 
 colImgPath :: ColRef -> Cmd (Maybe FilePath)
 colImgPath (i, Just pos) = do  -- image ref

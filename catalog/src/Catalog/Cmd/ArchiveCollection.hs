@@ -84,7 +84,7 @@ processNewImages colSyncTime pc i0 = do
           return []
         Just ymd -> do
           let res = [(ymd, mkColImgRef i n) | n <- ns]
-          trcObj i $ "processnewimages res: " ++ show res
+          -- trcObj i $ "processnewimages res: " ++ show res
           return [(ymd, mkColImgRef i n) | n <- ns]
       where
         ns = pts ^.. thePartNames IMGjpg
@@ -94,7 +94,7 @@ processNewImages colSyncTime pc i0 = do
     addToCol dcs = do
       let ymd = fst . head $ dcs
           cs  = map snd dcs
-      trc $ "addToCol " ++ show dcs
+      trc $ "addToCol " ++ show (length dcs) ++ " new images"
       -- check or create y/m/d hierachy
       (yc, mc, dc) <-mkDateCol ymd
       adjustColByDate cs dc
@@ -199,7 +199,7 @@ genCollectionsByDir = do
 
         imgA i pts = do
           let res = (map (mkColImgRef i) $ sort ns)
-          trcObj i $ "genCol img: " ++ show res
+          -- trcObj i $ "genCol img: " ++ show res
           return res
           where
             ns = pts ^.. thePartNames IMGjpg

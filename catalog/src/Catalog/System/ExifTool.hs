@@ -46,7 +46,7 @@ writeMetaData f m =
 
 readMetaData :: FilePath -> Cmd MetaData
 readMetaData f = do
-  trc $ "readMetadata from " ++ show f
+  -- trc $ "readMetadata from " ++ show f
   ex <- fileExist f
   if ex
     then do

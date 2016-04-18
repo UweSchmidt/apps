@@ -151,6 +151,7 @@ syncCatalog jsonPath0 mountPath = do
   trc "and the collections per date"
   genCollectionRootMeta
   genCollectionsByDir
+  genCollectionsByDate
 
   trc $ "save state to " ++ show jsonPath
   saveImgStore jsonPath
