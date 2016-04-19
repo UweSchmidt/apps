@@ -4,7 +4,6 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
-import           Catalog.System.IO
 import           Data.ImgTree
 import           Data.Prim
 
@@ -12,7 +11,7 @@ import           Data.Prim
 
 copyCollection :: Path -> Path -> Cmd ()
 copyCollection path'src path'dst = do
-  id'src <- fst <$> getIdNode "copyCollection: source not fouund"     path'src
+  id'src <- fst <$> getIdNode "copyCollection: source not found"      path'src
   id'dst <- fst <$> getIdNode "copyCollection: destination not found" path'dst
   copyColRec id'src id'dst
 
@@ -85,7 +84,7 @@ rmRec = foldMT imgA dirA rootA colA
     imgA i _p = rmImgNode i
 
     dirA go i es _ts = do
-      mapM_ go (es ^. isoDirEntries)               -- process subdirs first
+      mapM_ go (es ^. isoDirEntries)            -- process subdirs first
       pe <- getImgParent i >>= getImgVal        -- remode dir node
       when (not $ isROOT pe) $                  -- if it's not the top dir
         rmImgNode i
@@ -101,6 +100,72 @@ rmRec = foldMT imgA dirA rootA colA
 
 -- ----------------------------------------
 
+-- traverse all collections and
+-- remove entries of images not longer there
+-- this is neccessary for consistent collections,
+-- when a sync has been done
+-- and some images have been deleted
+--
+-- after a sync run and before the byDate collections are
+-- updated, removed images must also be removed in the collections
+-- especially in the byDate colections
+
+-- TODO: test test test
+
+cleanupCollection :: Cmd ()
+cleanupCollection =
+  -- start with collection root
+  getRootImgColId >>= cleanup
+  where
+    cleanup :: ObjId -> Cmd ()
+    cleanup i = do
+      n <- getTree (theNode i)
+      case n ^. nodeVal of
+        COL _md im es _ts -> do
+          cleanupIm i im
+          cleanupEs i es
+        _ ->
+          return ()
+      where
+        cleanupIm :: ObjId -> Maybe (ObjId, Name) -> Cmd ()
+        cleanupIm i' (Just (j, _n)) = do
+          ex <- exImg j
+          unless ex $
+            adjustColImg (const Nothing) i'
+        cleanupIm _ Nothing =
+          return ()
+
+        cleanupEs :: ObjId -> [ColEntry] -> Cmd ()
+        cleanupEs i' es = do
+          es' <- filterM cleanupE es
+          unless (es' == es) $
+            adjustColEntries (const es') i'
+          where
+            cleanupE :: ColEntry -> Cmd Bool
+            cleanupE (ImgRef j _n) = do
+              exImg j
+            cleanupE (ColRef j) = do
+              -- recurse into subcollection and cleanup
+              cleanup j
+              j'not'empty <- (not . null) <$> getImgVals j theColEntries
+              -- if collection is empty, remove it
+              unless j'not'empty $
+                rmRec j
+              return j'not'empty
+
+        exImg :: ObjId -> Cmd Bool
+        exImg i' = do
+          me <- getTree (entryAt i')
+          return $
+            case me of
+              Just e
+                | isIMG (e ^. nodeVal) ->
+                  True
+              _ ->
+                False
+
+-- ----------------------------------------
+{- }
 rmGenFiles :: (ImgPart -> Bool) -> ObjId -> Cmd ()
 rmGenFiles pp =
   foldMT imgA dirA rootA colA
@@ -151,5 +216,5 @@ rmImgCopy g = rmGenFiles isCopy
       &&
       match (".*[.]" ++ g ^. isoString ++ "[.]jpg")
             (p ^. theImgName . isoString)
-
+-- -}
 -- ----------------------------------------

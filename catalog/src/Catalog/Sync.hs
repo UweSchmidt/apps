@@ -4,11 +4,11 @@
 module Catalog.Sync
 where
 
-import           Catalog.Cmd
-import           Catalog.FilePath
+import Catalog.Cmd
+import Catalog.FilePath
 import Catalog.System.ExifTool
-import           Data.ImgTree
-import           Data.Prim
+import Data.ImgTree
+import Data.Prim
 
 -- ----------------------------------------
 
