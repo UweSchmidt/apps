@@ -30,6 +30,9 @@ module Data.Prim.Prelude
        , matchRE
        , matchSubex
        , matchSubexRE
+       , sed
+       , sedExt
+       , sedRE
        , tokenizeRE'
          -- Data.Maybe
        , fromMaybe

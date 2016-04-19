@@ -20,11 +20,11 @@ genCollectionRootMeta = do
   md <- mkColMeta t s c o a
   adjustMetaData (md <>) ic
   where
-    t = "Bilder von Uwe und Petra"
+    t = tt'collections
     s = ""
     c = ""
     o = ""
-    a = "ReadOnly"
+    a = ta'readonly
 
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
@@ -38,7 +38,7 @@ genCollectionsByDate = do
   -- create root col for year/month/day hierachy
   -- "/archive/collections/byCreateDate"
 
-  let top'iPath = pc `snocPath` "byCreateDate"
+  let top'iPath = pc `snocPath` n'bycreatedate
   top'i <- mkColByPath insertColByName setupByDate top'iPath
   top'iSyncTime <- getImgVals top'i theSyncTime
 
@@ -52,11 +52,11 @@ genCollectionsByDate = do
     setupByDate _i = do
       mkColMeta t s c o a
       where
-        t = "Bilder geordnent nach Datum"
+        t = tt'bydate
         s = ""
         c = ""
-        o = "ColAndName"
-        a = "ReadOnly"
+        o = to'colandname
+        a = ta'readonly
 
 processNewImages :: TimeStamp -> Path -> ObjId -> Cmd ()
 processNewImages colSyncTime pc i0 = do
@@ -83,7 +83,7 @@ processNewImages colSyncTime pc i0 = do
         Nothing ->
           return []
         Just ymd -> do
-          let res = [(ymd, mkColImgRef i n) | n <- ns]
+          -- let res = [(ymd, mkColImgRef i n) | n <- ns]
           -- trcObj i $ "processnewimages res: " ++ show res
           return [(ymd, mkColImgRef i n) | n <- ns]
       where
@@ -113,40 +113,26 @@ processNewImages colSyncTime pc i0 = do
         pm = py `snocPath` mkName m
         pd = pm `snocPath` mkName d
 
-        month :: Int -> String
-        month i = [ "Januar", "Februar", "März", "April", "Mai", "Juni"
-                  , "Juli", "August", "September","Oktober", "November", "Dezember"
-                  ] !! (i - 1)
-
         setupYearCol y' _i = do
           mkColMeta t "" "" o a
           where
-            t = ("Bilder aus " ++ y') ^. from isoString
-            o = "Name"
-            a = "ReadOnly"
+            t = tt'year y'
+            o = to'name
+            a = ta'readonly
 
         setupMonthCol y' m' _i = do
           mkColMeta t "" "" o a
           where
-            t = unwords [ "Bilder aus dem"
-                        , month (read m')
-                        , y'
-                        ]
-                ^. from isoString
-            o = "Name"
-            a = "ReadOnly"
+            t = tt'month y' m'
+            o = to'name
+            a = ta'readonly
 
         setupDayCol y' m' d' _i = do
           mkColMeta t "" "" o a
           where
-            t = unwords [ "Bilder vom"
-                        , show (read d' :: Int) ++ "."
-                        , month (read m')
-                        , y'
-                        ]
-                ^. from isoString
-            o = "DateAndTime"
-            a = "ReadOnly"
+            t = tt'day y' m' d'
+            o = to'dateandtime
+            a = ta'readonly
 
 -- ----------------------------------------
 
@@ -185,10 +171,13 @@ genCollectionsByDir = do
     -- meta data for generated collections
     setupDirCol :: ObjId -> Cmd MetaData
     setupDirCol i = do
-      p <- (show . tailPath) <$> objid2path i
+      -- remove the 2 top level dirs
+      -- remove leading "/"
+
+      p <- (drop 1 . show . tailPath . tailPath) <$> objid2path i
       let t = p ^. from isoString
-          o = "ColAndName"
-          a = "ReadOnly"
+          o = to'colandname
+          a = ta'readonly
       mkColMeta t "" "" o a
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]

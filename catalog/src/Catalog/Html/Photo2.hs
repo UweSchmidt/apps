@@ -50,8 +50,8 @@ thePageConfigs =
                        , photo2Tmpl
                        )
     )
-  , ("html-1024x768",  ( GeoAR 1024  768 Pad
-                       , GeoAR  160  120 Fix
+  , ("html-1280x800",  ( GeoAR 1280  800 Pad
+                       , GeoAR  120   90 Fix
                        , 9
                        , photo2Tmpl
                        )
@@ -594,8 +594,8 @@ path2img f
   | [("name", n)] <- m2 =
       genAssetIcon n n
 
-  | f == ps'byCreateDate =           -- "/archive/collections/byCreateDate"
-      genAssetIcon s'byCreateDate "nach\nAufnahme-\nDatum"
+  | f == ps'bycreatedate =           -- "/archive/collections/byCreateDate"
+      genAssetIcon s'bycreatedate "nach\nAufnahme-\nDatum"
 
   | f == ps'photos =                 -- "/archive/collections/photos"
       genAssetIcon s'photos "alle\nOrdner"
@@ -620,7 +620,7 @@ path2img f
 ymdRE :: Regex -- for collections sorted by date
 ymdRE =
   parseRegexExt $
-  ps'byCreateDate                    -- "/archive/collections/byCreateDate"
+  ps'bycreatedate                    -- "/archive/collections/byCreateDate"
   ++
   "/({year}[0-9]{4})"
   ++

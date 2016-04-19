@@ -7,12 +7,12 @@ import Data.Prim.Path
 import Data.Prim.Prelude
 
 n'archive
-  , n'byCreateDate
+  , n'bycreatedate
   , n'collections
   , n'photos :: Name
 
 n'archive      = "archive"
-n'byCreateDate = "byCreateDate"
+n'bycreatedate = "bycreatedate"
 n'collections  = "collections"
 n'photos       = "photos"
 
@@ -24,27 +24,27 @@ t'archive     = n'archive     ^. isoText
 t'collections = n'collections ^. isoText
 t'photos      = n'photos      ^. isoText
 
-s'byCreateDate
+s'bycreatedate
   , s'collections
   , s'photos :: String
 
-s'byCreateDate = n'byCreateDate ^. isoString
+s'bycreatedate = n'bycreatedate ^. isoString
 s'collections  = n'collections  ^. isoString
 s'photos       = n'photos       ^. isoString
 
 
 p'archive
   , p'collections
-  , p'byCreateDate
+  , p'bycreatedate
   , p'photos :: Path
 
 p'archive      = mkPath n'archive
 p'collections  = p'archive     `snocPath` n'collections
-p'byCreateDate = p'collections `snocPath` n'byCreateDate
+p'bycreatedate = p'collections `snocPath` n'bycreatedate
 p'photos       = p'collections `snocPath` n'photos
 
 ps'collections
-  , ps'byCreateDate
+  , ps'bycreatedate
   , ps'photos
   , ps'assets
   , ps'icons
@@ -54,7 +54,7 @@ ps'collections
   , ps'blank :: FilePath
 
 ps'collections  = p'collections  ^. isoString
-ps'byCreateDate = p'byCreateDate ^. isoString
+ps'bycreatedate = p'bycreatedate ^. isoString
 ps'photos       = p'photos       ^. isoString
 ps'assets       = "/assets"
 ps'icons        = ps'assets </> "icons"
@@ -62,3 +62,55 @@ ps'iconsgen     = ps'icons  </> "generated"
 ps'blank        = ps'icons  </> "blank.jpg"
 ps'javascript   = ps'assets </> "javascript"
 ps'css          = ps'assets </> "css"
+
+-- ----------------------------------------
+
+-- constants for generated collections
+
+tt'bydate
+  , tt'collections :: Text
+
+tt'bydate =  "Bilder geordnent nach Datum"
+tt'collections = "Bilder von Uwe und Petra"
+
+tt'year :: String -> Text
+tt'year y = ("Bilder aus " ++ y) ^. isoText
+
+tt'month :: String -> String -> Text
+tt'month y m =
+  unwords [ "Bilder aus dem"
+          , de'month (read m)
+          , y
+          ]
+  ^. isoText
+
+tt'day :: String -> String -> String -> Text
+tt'day y m d =
+  unwords [ "Bilder vom"
+          , show  (read d :: Int) ++ "."
+          , de'month (read m)
+          , y
+          ]
+  ^. isoText
+
+
+ta'readonly :: Text
+ta'readonly = "readonly"
+
+
+to'colandname
+  , to'dateandtime
+  , to'name :: Text
+
+to'colandname  = "colandname"
+to'dateandtime = "dateandtime"
+to'name        = "name"
+
+-- ----------------------------------------
+
+de'month :: Int -> String
+de'month i = [ "Januar", "Februar", "März", "April", "Mai", "Juni"
+             , "Juli", "August", "September","Oktober", "November", "Dezember"
+             ] !! (i - 1)
+
+-- ----------------------------------------

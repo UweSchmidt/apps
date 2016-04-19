@@ -119,7 +119,7 @@ c3 c = local (envTrc .~ False) $ do
 syncMain :: IO ()
 syncMain = do
   mountPath <- (</> "data") <$> X.getWorkingDirectory
-  res <- (^. _1) <$> runCmd (syncCatalog jsonPath mountPath)
+  res <- (^. _1) <$> runCmd (local (envTrc .~ False) $ syncCatalog jsonPath mountPath)
   either
     (\ e -> do hPutStrLn stderr $ show e
                exitFailure

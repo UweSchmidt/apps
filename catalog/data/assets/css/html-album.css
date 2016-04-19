@@ -152,11 +152,30 @@ body.picture-1400x1050 {
   height: 1050px;
 }
 
+body.picture-1280x800 {
+  width:  1280px;
+  height:  800px;
+}
+
 body.album-1600x1200 {
   width:        1570px;
   height:       auto;
   margin-left:  15px;
   margin-right: 15px;
+}
+
+body.album-1400x1050 {
+  width:        1380px;
+  height:       auto;
+  margin-left:  10px;
+  margin-right: 10px;
+}
+
+body.album-1280x800 {
+  width:        1250px;
+  height:       auto;
+  margin-left:  5px;
+  margin-right: 5px;
 }
 
 td.icon-fix-160x120 {
@@ -169,11 +188,9 @@ td.icon-fix-140x105 {
   padding-right: 1px;
 }
 
-body.album-1400x1050 {
-  width:        1380px;
-  height:       auto;
-  margin-left:  10px;
-  margin-right: 10px;
+td.icon-fix-120x90 {
+  padding:       0px;
+  padding-right: 2px;
 }
 
 div.picture {
@@ -217,6 +234,14 @@ div.title-area-line-1400x1050, div.info-area-content-1400x1050 {
   padding-top:    10px;
   padding-bottom: 10px;
   width:        1250px; /* 900 + 2*15 = 930, 120px left for navi */
+}
+
+div.title-area-line-1280x800, div.info-area-content-1280x800 {
+  padding-left:   15px;
+  padding-right:  15px;
+  padding-top:    10px;
+  padding-bottom: 10px;
+  width:        1030px;
 }
 
 .forward {
@@ -325,6 +350,18 @@ img.icon-fix-140x105 {
 img.icon2-fix-140x105 {
   width:           72px;
   height:          54px;
+  border: 0px solid red;
+}
+
+img.icon-fix-120x90 {
+  width:          120px;
+  height:          90px;
+  border: 0px solid red;
+}
+
+img.icon2-fix-120x90 {
+  width:           60px;
+  height:          45px;
   border: 0px solid red;
 }
 
