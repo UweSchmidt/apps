@@ -41,7 +41,7 @@ listNames i0 =
       return $
         ind n (concat cns)
       where
-        go' (ImgRef _i n) =
+        go' (ImgRef _i n _m) =
           return [n ^. isoString]
         go' (ColRef i') =
           go i'
@@ -76,7 +76,7 @@ listPaths' =
         p : concat pp
       where
         go' :: ColEntry -> Cmd [Path]
-        go' (ImgRef i' n') = do
+        go' (ImgRef i' n' _m') = do
           ip <- objid2path i'
           return [substPathName n' ip]
         go' (ColRef i') =

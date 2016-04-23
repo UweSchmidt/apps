@@ -137,7 +137,7 @@ normColRef cr@(_i, Nothing) =
 normColRef cr@(i, Just pos) = do
   val <- getImgVal i
   case val ^? theColEntries . ix pos of
-    Just (ImgRef _ _) ->  -- ref to an image
+    Just (ImgRef _ _ _) ->  -- ref to an image
       return $ Just cr
     Just (ColRef j) ->    -- ref to a sub collection
       return $ Just (j, Nothing)
@@ -245,22 +245,22 @@ genHtmlPage' p = do
   parent'cr   <- parentColRef             this'cr
   parent'href <- colHref pageConf   `bmb` parent'cr
   parent'img  <- colImgPath         `bmb` parent'cr
-  parent'meta <- colImgMeta         `bmb` parent'cr
+  parent'meta <- colImgMeta0        `bmb` parent'cr
 
   prev'cr     <- prevColRef               this'cr
   prev'href   <- colHref pageConf   `bmb` prev'cr
   prev'img    <- colImgPath         `bmb` prev'cr
-  prev'meta   <- colImgMeta         `bmb` prev'cr
+  prev'meta   <- colImgMeta0        `bmb` prev'cr
 
   next'cr     <- nextColRef               this'cr
   next'href   <- colHref pageConf   `bmb` next'cr
   next'img    <- colImgPath         `bmb` next'cr
-  next'meta   <- colImgMeta         `bmb` next'cr
+  next'meta   <- colImgMeta0        `bmb` next'cr
 
   child1'cr   <- childColRef 0            this'cr
   child1'href <- colHref pageConf   `bmb` child1'cr
   child1'img  <- colImgPath         `bmb` child1'cr
-  child1'meta <- colImgMeta         `bmb` child1'cr
+  child1'meta <- colImgMeta0        `bmb` child1'cr
 
   let getMD md n    = md ^. metaDataAt n . isoString
   let getTitle md   = getMD md "descr:Title"
@@ -283,7 +283,7 @@ genHtmlPage' p = do
                      [0 .. length this'cs - 1]
   children'hrefs  <- mapM (colHref pageConf `bmb`) children'crs
   children'imgs   <- mapM (colImgPath       `bmb`) children'crs
-  children'meta   <- mapM (colImgMeta       `bmb`) children'crs
+  children'meta   <- mapM (colImgMeta0      `bmb`) children'crs
 
   let children'titles = map getTitle children'meta
   let children'5      = zip5
@@ -484,16 +484,24 @@ colHref cf (i, cix) = do
 -- ----------------------------------------
 
 colImgMeta :: ColRef -> Cmd MetaData
-colImgMeta (i, Just pos) = do  -- img meta data
+colImgMeta = colImgMeta' True
+
+colImgMeta0 :: ColRef -> Cmd MetaData
+colImgMeta0 = colImgMeta' False
+
+colImgMeta' :: Bool -> ColRef -> Cmd MetaData
+colImgMeta' gm (i, Just pos) = do  -- img meta data
   cs <- getImgVals i theColEntries
-  trcObj i $ "colimgmeta for pos " ++ show pos
   case cs ^? ix pos of
-    Just (ImgRef j _n) ->
-      getMetaData j
+    Just (ImgRef j _n m)
+      | gm ->
+          getMetaData j
+      | otherwise ->
+          return m
     _ ->
       return mempty
 
-colImgMeta (i, Nothing) =     -- col meta data
+colImgMeta' _ (i, Nothing) =     -- col meta data
   getImgVals i theColMetaData
 
 -- ----------------------------------------
@@ -503,7 +511,7 @@ colImgName (i, Just pos) = do
   cs <- getImgVals i theColEntries
   return $
     case cs ^? ix pos of
-      Just (ImgRef _j n) ->
+      Just (ImgRef _j n _m) ->
         Just n
       _ ->
         Nothing
@@ -515,7 +523,7 @@ colImgPath :: ColRef -> Cmd (Maybe FilePath)
 colImgPath (i, Just pos) = do  -- image ref
   cs <- getImgVals i theColEntries
   case cs ^? ix pos of
-    Just (ImgRef j n) ->
+    Just (ImgRef j n _m) ->
       Just <$> buildImgPath j n
     _ ->
       return Nothing

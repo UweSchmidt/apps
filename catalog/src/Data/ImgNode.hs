@@ -325,21 +325,21 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-data ColEntry' ref = ImgRef !ref !Name
+data ColEntry' ref = ImgRef !ref !Name !MetaData
                    | ColRef !ref
 
-deriving instance (Eq   ref) => Eq   (ColEntry' ref)
-deriving instance (Ord  ref) => Ord  (ColEntry' ref)
 deriving instance (Show ref) => Show (ColEntry' ref)
 
 deriving instance Functor ColEntry'
 
 instance (ToJSON ref) => ToJSON (ColEntry' ref) where
-  toJSON (ImgRef i n) = J.object
+  toJSON (ImgRef i n m) = J.object $
     [ "ColEntry"  J..= ("IMG" :: String)
     , "ref"       J..= i
     , "part"      J..= n
     ]
+    ++ ("metadata" .=?! m)        -- optional meta data (title, comment, ...)
+
   toJSON (ColRef i) = J.object
     [ "ColEntry"  J..= ("COL" :: String)
     , "ref"       J..= i
@@ -352,12 +352,13 @@ instance (FromJSON ref) => FromJSON (ColEntry' ref) where
          "IMG" ->
            ImgRef <$> o J..: "ref"
                   <*> o J..: "part"
+                  <*> o   .:?! "metadata"
          "COL" ->
            ColRef <$> o J..: "ref"
          _ -> mzero
 
 mkColImgRef :: ref -> Name -> (ColEntry' ref)
-mkColImgRef = ImgRef
+mkColImgRef i n = ImgRef i n mempty
 {-# INLINE mkColImgRef #-}
 
 mkColColRef :: ref -> (ColEntry' ref)
@@ -365,8 +366,8 @@ mkColColRef = ColRef
 {-# INLINE mkColColRef #-}
 
 theColObjId :: Lens' (ColEntry' ref) ref
-theColObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
-theColObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
+theColObjId k (ImgRef i n m) = (\ new -> ImgRef new n m) <$> k i
+theColObjId k (ColRef i)     = (\ new -> ColRef new)     <$> k i
 {-# INLINE theColObjId #-}
 
 
@@ -374,12 +375,12 @@ theColObjId k (ColRef i)   = (\ new -> ColRef new)   <$> k i
 -- theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
 
 
-theColImgRef :: Prism' (ColEntry' ref) (ref, Name)
+theColImgRef :: Prism' (ColEntry' ref) (ref, Name, MetaData)
 theColImgRef =
-  prism (uncurry ImgRef)
+  prism (\ (i, n, m) -> ImgRef i n m)
         (\ x -> case x of
-            ImgRef i n -> Right (i, n)
-            _          -> Left  x
+            ImgRef i n m -> Right (i, n, m)
+            _            -> Left  x
         )
 {-# INLINE theColImgRef #-}
 

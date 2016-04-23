@@ -65,7 +65,7 @@ copyColRec src dst = do
           where
 
             copy :: ColEntry -> Cmd ColEntry
-            copy r@(ImgRef _i _n) =
+            copy r@(ImgRef _i _n _m) =
               return r
             copy (ColRef i') = do
               copy'path <- pf <$> objid2path i'
@@ -140,11 +140,11 @@ cleanupCollections = do
         cleanupEs :: ObjId -> [ColEntry] -> Cmd ()
         cleanupEs i' es = do
           es' <- filterM cleanupE es
-          unless (es' == es) $
+          unless (length es' == length es) $
             adjustColEntries (const es') i'
           where
             cleanupE :: ColEntry -> Cmd Bool
-            cleanupE (ImgRef j n) = do
+            cleanupE (ImgRef j n _m) = do
               exImg j n
             cleanupE (ColRef j) = do
               -- recurse into subcollection and cleanup

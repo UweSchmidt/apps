@@ -239,8 +239,8 @@ sortByName =
     -- collections come first and are sorted by name
     -- images are sorted by name and part name
     getVal :: ColEntry -> Cmd (Either Name (Name, Name))
-    getVal (ColRef j)    = Left                    <$> getImgName j
-    getVal (ImgRef j n1) = (\ n -> Right (n, n1))  <$> getImgName j
+    getVal (ColRef j)       = Left                    <$> getImgName j
+    getVal (ImgRef j n1 _m) = (\ n -> Right (n, n1))  <$> getImgName j
 
 sortByDate :: [ColEntry] -> Cmd [ColEntry]
 sortByDate =
@@ -254,7 +254,7 @@ sortByDate =
 
     getVal (ColRef j) =
       Left <$> getImgName j -- should never occur
-    getVal (ImgRef j n1) = do
+    getVal (ImgRef j n1 _m) = do
       md  <- getMetaData j
       let t = getCreateMeta parseTime md
       return $ Right (t, n1)
@@ -279,7 +279,9 @@ sortColEntries' getVal cmpVal es = do
 
 mergeColEntries :: [ColEntry] -> [ColEntry] -> [ColEntry]
 mergeColEntries es1 es2 =
-  es1 ++ filter (`notElem` es1) es2
+  es1 ++ filter (`notIn` map (^. theColObjId) es1) es2
+  where
+    notIn e' es' = (e' ^. theColObjId) `notElem` es'
 
 -- a faster version, where the result is unordered
 -- duplicates are removed, useful when the list of entries
