@@ -112,10 +112,12 @@ rmRec = foldMT imgA dirA rootA colA
 
 -- TODO: test test test
 
-cleanupCollection :: Cmd ()
-cleanupCollection =
+cleanupCollections :: Cmd ()
+cleanupCollections = do
+  trc "cleanupcollections: check existance images referenced in collections"
   -- start with collection root
   getRootImgColId >>= cleanup
+  trc "cleanupcollections: finished"
   where
     cleanup :: ObjId -> Cmd ()
     cleanup i = do
@@ -128,9 +130,9 @@ cleanupCollection =
           return ()
       where
         cleanupIm :: ObjId -> Maybe (ObjId, Name) -> Cmd ()
-        cleanupIm i' (Just (j, _n)) = do
-          ex <- exImg j
-          unless ex $
+        cleanupIm i' (Just (j, n)) = do
+          ex <- exImg j n
+          unless ex $ do
             adjustColImg (const Nothing) i'
         cleanupIm _ Nothing =
           return ()
@@ -142,8 +144,8 @@ cleanupCollection =
             adjustColEntries (const es') i'
           where
             cleanupE :: ColEntry -> Cmd Bool
-            cleanupE (ImgRef j _n) = do
-              exImg j
+            cleanupE (ImgRef j n) = do
+              exImg j n
             cleanupE (ColRef j) = do
               -- recurse into subcollection and cleanup
               cleanup j
@@ -153,16 +155,19 @@ cleanupCollection =
                 rmRec j
               return j'not'empty
 
-        exImg :: ObjId -> Cmd Bool
-        exImg i' = do
+        exImg :: ObjId -> Name -> Cmd Bool
+        exImg i' n' = do
           me <- getTree (entryAt i')
-          return $
-            case me of
-              Just e
-                | isIMG (e ^. nodeVal) ->
-                  True
-              _ ->
-                False
+          let ex = case me of
+                Just e
+                  | isIMG (e ^. nodeVal) ->
+                    let ns = e ^.. nodeVal . theParts . thePartNames IMGjpg in
+                    n' `elem` ns
+                _ ->
+                  False
+          unless ex $ do
+            trc  $ "exImg: image ref found in a collection for a deleted image: " ++ show (i', n')
+          return ex
 
 -- ----------------------------------------
 {- }
