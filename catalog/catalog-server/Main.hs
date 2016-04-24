@@ -2,14 +2,15 @@
 
 module Main where
 
-import           Catalog.Cmd (Env, Cmd, runAction, initEnv, initState, envPort, envVerbose, envMountPath)
+import ServerOptions(mainWithArgs)
+import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
 import           Catalog.System.Convert (genImage)
 import           Catalog.Html.Photo2 (genHtmlPage)
 import           Control.Concurrent.MVar
 import           Control.Exception (SomeException, try, catch, toException)
 import           Control.Monad.Except
 import           Control.Monad.IO.Class
-import           Control.Monad.RWSErrorIO (Msg(..))
+import qualified Control.Monad.RWSErrorIO as RWS
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))
 import           Data.Prim.Prelude -- (Text, (^.), isoString, isoText, from, to, intercalate)
@@ -46,7 +47,8 @@ runReadCmd env mvs cmd = do
       res <-
         ((^. _1) <$> runAction cmd env store)
         `catch`
-        (\ e -> return (Left . Msg . show $ (e :: SomeException))) -- TODO this still does not catch: error "some error"
+        -- TODO this still does not catch: error "some error"
+        (\ e -> return (Left . RWS.Msg . show $ (e :: SomeException)))
       return res
 
 runModyCmd :: Env -> MVar ImgStore -> MVar ImgStore -> Cmd a -> ActionM a
@@ -108,8 +110,7 @@ fileWithMime px mt fp = do
 -- ----------------------------------------
 
 main :: IO ()
-main = do
-  env  <- initEnv
+main = mainWithArgs $ \ env -> do
   est  <- initState env
   either die (main' env) est
 

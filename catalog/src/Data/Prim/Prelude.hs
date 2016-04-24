@@ -95,7 +95,7 @@ import           Control.Monad
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
-import           Data.Char (toLower, toUpper)
+import           Data.Char
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU

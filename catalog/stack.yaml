@@ -6,6 +6,7 @@ resolver: lts-5.9
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- './catalog-server'
 - '../monad-error-rws-io'
 - location:
     git: https://github.com/UweSchmidt/cmdtheline.git

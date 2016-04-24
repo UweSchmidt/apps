@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
@@ -37,7 +38,7 @@ genIcon path t = do
       ]
     (t', ps')
       | multiline = (t0, ps0)
-      | len <= 10 = (t, "100")
+      | len <= 10 = (t, "92")
       | len <= 20 = (t1 ++ "\\n" ++ t2, "80")
       | otherwise = (s1 ++ "\\n" ++ s2 ++ "\\n" ++ s3, "60")
       where
