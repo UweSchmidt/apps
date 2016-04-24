@@ -13,7 +13,12 @@ mainWithArgs theServer = run (theApp <$> oAll, appInfo)
   where
     theApp :: (Env -> Env) -> IO ()
     theApp setOpts = do
-      theServer (setOpts defaultEnv)
+      theServer (setOpts env0)
+        where
+          env0 = -- the server defaults
+            defaultEnv
+            & envTrc     .~ False
+            & envVerbose .~ True
 
 appInfo :: TermInfo
 appInfo =
@@ -24,6 +29,7 @@ appInfo =
 oAll
   , oVerbose
   , oTrc
+  , oQuiet
   , oPort
   , oMountPath
   , oArchive :: Term (Env -> Env)
@@ -31,17 +37,32 @@ oAll
 oAll =
   oVerbose
   <..> oTrc
+  <..> oQuiet
   <..> oPort
   <..> oMountPath
   <..> oArchive
 
 oVerbose =
-  convFlag (envVerbose .~) $
+  convFlag setVerbose $
   (optInfo ["v", "verbose"]) { optDoc = "Turn on verbose output." }
+  where
+    setVerbose True  = envVerbose .~ False
+    setVerbose False = id
 
 oTrc =
-  convFlag (envTrc .~) $
+  convFlag setTrc $
   (optInfo ["t", "trc"]) { optDoc = "Turn on trace output." }
+  where
+    setTrc True  = envTrc .~ False
+    setTrc False = id
+
+oQuiet =
+  convFlag setQuiet $
+  (optInfo ["q", "quiet"]) { optDoc = "Turn off verbose and trace output." }
+  where
+    setQuiet True  e = e & envVerbose .~ False
+                         & envTrc     .~ False
+    setQuiet False e = e
 
 oPort =
   convStringValue "PORT must be a number" setPort $

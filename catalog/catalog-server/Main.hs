@@ -172,9 +172,6 @@ main' env state = do
 
 -- ----------------------------------------
 
-
--- ----------------------------------------
-
 getOptions :: Env -> IO Options
 getOptions env = do
   let port = env ^. envPort
