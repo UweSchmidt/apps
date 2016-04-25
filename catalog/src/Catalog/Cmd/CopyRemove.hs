@@ -84,6 +84,7 @@ rmRec = foldMT imgA dirA rootA colA
     imgA i _p = rmImgNode i
 
     dirA go i es _ts = do
+      trc $ "dirA: " ++ show (es ^. isoDirEntries)
       mapM_ go (es ^. isoDirEntries)            -- process subdirs first
       pe <- getImgParent i >>= getImgVal        -- remode dir node
       when (not $ isROOT pe) $                  -- if it's not the top dir
@@ -114,7 +115,7 @@ rmRec = foldMT imgA dirA rootA colA
 
 cleanupCollections :: Cmd ()
 cleanupCollections = do
-  trc "cleanupcollections: check existance images referenced in collections"
+  trc "cleanupcollections: existence check of images referenced in collections"
   -- start with collection root
   getRootImgColId >>= cleanup
   trc "cleanupcollections: finished"

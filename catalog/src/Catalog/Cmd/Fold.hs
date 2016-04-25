@@ -26,6 +26,7 @@ foldMT imgA dirA' rootA' colA' i0 = do
     go i  = do
       -- trcObj i $ "foldMT"
       n <- getTree (theNode i)
+      -- trc $ "foldMT: " ++ show n
       case n ^. nodeVal of
         IMG pts ->
           imgA i pts

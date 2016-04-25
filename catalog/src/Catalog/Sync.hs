@@ -28,13 +28,13 @@ idSyncFS recursive i = getImgVal i >>= go
   where
     go e
       | isIMG e = do
-          trcObj i "idSyncFS: syncing image"
+          -- trcObj i "idSyncFS: syncing image"
           p  <- objid2path i
           ps <- collectImgCont i
           syncImg i p ps
 
       | isDIR e = do
-          trcObj i "idSyncFS: syncing image dir"
+          -- trcObj i "idSyncFS: syncing image dir"
           (do syncDirCont recursive i
               setSyncTime i
               checkEmptyDir i
@@ -46,7 +46,7 @@ idSyncFS recursive i = getImgVal i >>= go
             )
           return ()
       | isROOT e = do
-          trcObj i "idSyncFS: syncing root"
+          -- trcObj i "idSyncFS: syncing root"
           idSyncFS recursive (e ^. theRootImgDir)
 
       | otherwise =
@@ -54,7 +54,7 @@ idSyncFS recursive i = getImgVal i >>= go
 
 syncDirCont :: Bool -> ObjId -> Cmd ()
 syncDirCont recursive i = do
-  trcObj i "syncDirCont: syncing entries in dir "
+  -- trcObj i "syncDirCont: syncing entries in dir "
   (subdirs, imgfiles) <- collectDirCont i
   p  <- objid2path i
 
@@ -73,7 +73,7 @@ syncDirCont recursive i = do
   where
 
     syncSubDir p n = do
-      trc $ "syncSubDir: " ++ show i ++ ", " ++ show p ++ ", " ++ show n
+      trc $ "syncSubDir: " ++ show p ++ "/" ++ show n
 
       notex <- isNothing <$> getTree (entryAt new'i)
       when notex $
@@ -87,7 +87,7 @@ syncDirCont recursive i = do
 
       -- will be done in rmImgNode
       -- adjustDirEntries (S.delete new'i) i
-      rmImgNode new'i
+      rmRec new'i
       where
         new'i = mkObjId (p `snocPath` n)
 
@@ -100,7 +100,7 @@ collectImgCont i = do
 
 collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
 collectDirCont i = do
-  trcObj i "collectDirCont: group entries in dir "
+  -- trcObj i "collectDirCont: group entries in dir "
   fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
   -- trc $ "collectDirCont: entries found " ++ show es
@@ -117,9 +117,12 @@ collectDirCont i = do
   mapM_ (\ n -> sync $ "fs entry ignored " ++ show (fst n)) others
   realsubdirs <- filterM (isSubDir fp) subdirs
 
-  trc $ "collectDirCont: files ignored " ++ show rest3
-  trc $ "collectDirCont: subdirs "       ++ show realsubdirs
-  trc $ "collectDirCont: imgfiles "      ++ show imgfiles
+  unless (null rest3) $
+    trc $ "collectDirCont: files ignored " ++ show rest3
+  unless (null realsubdirs) $
+    trc $ "collectDirCont: subdirs "       ++ show realsubdirs
+  unless (null imgfiles) $
+    trc $ "collectDirCont: imgfiles "      ++ show imgfiles
 
   return ( realsubdirs ^.. traverse . _1
          , partitionBy (^. _2 . _1) imgfiles
@@ -223,7 +226,7 @@ parseJpgDirCont p d =
 
 scanDirCont :: FilePath -> Cmd [FilePath]
 scanDirCont p0 = do
-  trc $ "scanDirCont: reading dir " ++ show p0
+  -- trc $ "scanDirCont: reading dir " ++ show p0
   res <- readDir p0
   -- trc $ "scanDirCont: result is " ++ show res
   return res

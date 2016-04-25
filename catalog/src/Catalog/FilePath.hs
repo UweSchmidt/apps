@@ -67,7 +67,7 @@ filePathConfig = map (first parseRegexExt) $
     jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"
 
-    imgdirName = "[-_A-Za-z0-9]+" -- no do
+    imgdirName = "[-+._A-Za-z0-9]+" -- no do
     jpgdirName =
       "("
       ++ ( intercalate "|"
