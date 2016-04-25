@@ -14,6 +14,7 @@ import           Photo2.Arrow
 import           Photo2.FilePath
 import           Photo2.Html
 import           Photo2.ImportDialog
+import           Photo2.ToJson
 
 import           System.Process              (system)
 
@@ -169,6 +170,7 @@ parseCmd c@"list"          args                         = parseLs'' (getTreeAndP
 parseCmd c@"cat"           args                         = parseCat                                    c args
 parseCmd c@"isalbum"       args                         = parseIsAlbum                                c args
 parseCmd c@"dump"          args                         = parseDump                                   c args
+parseCmd c@"tojson"        args                         = parseToJson                                 c args
 
 parseCmd "relatives" args       = parseRelatives args
 parseCmd "load"      args       = parseLoad      args
@@ -227,6 +229,13 @@ parseCmd "cd"        args       = parseCd               args
 
 parseCmd "xxx" args             = parseTest             args
 
+parseCmd "export" _args =
+  parseCmd "open" []
+  ++
+  parseCmd "tojson" []
+  ++
+  parseCmd "q" []
+
 parseCmd "?" []
     = outputCmd usage
     where
@@ -269,6 +278,8 @@ parseCmd "?" []
             , "  ls-mod [path]              list all modified entries"
             , "  cat    [path]              list the contents of an entry, default is current working album"
             , "  dump   [path]              list the contents of a whole album, default is current working album"
+            , "  tojson [path]              export collection tree into \"export.json\" file"
+            , "  export                     opens an archive, performs a tojson command and quits the app"
             , "  find path kre vre          list all pictures with matching attribute key and value"
             , "  relatives [path]           list the paths of the parent, the previous and the next entry"
             , ""
@@ -466,6 +477,13 @@ parseDump c                     = parseWdCmd' dump c
                                   dump = getTree
                                          />>>/
                                          showXmlVal xpAlbumTree
+
+parseToJson                     :: String -> [String] -> [Cmd]
+parseToJson c                   = parseWdCmd' (ld />>>/ toj) c
+                                  where
+                                  toj = colToJson "export.json"
+                                  ld = changeAlbums $
+                                    processTreeSelfAndDesc ( const $ this )
 
 parseRelatives          :: [String] -> [Cmd]
 parseRelatives          = parseWdCmd' relatives "relatives"

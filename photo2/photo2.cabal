@@ -1,7 +1,9 @@
 Name:                photo2
-Version:             0.2.7.4
+Version:             0.2.8.0
 Synopsis:            Photo Album Editor
 Description:         Photo Album Editor: Command line app photo2 and gtk app photoEdit
+                     Changes from 0.2.7.4: Json export of collections added
+                     .
                      Changes from 0.2.7.3: Update to ghc-7.10
                      .
                      Chamges from 0.2.7.2: GPS location extracted from .xmp and added to .html
@@ -14,56 +16,60 @@ Description:         Photo Album Editor: Command line app photo2 and gtk app pho
 License:             BSD3
 Author:              Uwe
 Build-type:          Simple
-Cabal-version:       >=1.8
+Cabal-version:       >=1.10
 
-Executable photoEdit
-  Main-is:          PhotoEdit.hs
-
-  Hs-Source-Dirs:   ./src
-  
-  Build-depends:      base                   >=4    && < 5
-                    , bytestring             >= 0.9
-                    , containers             >= 0.4
-                    , deepseq                >= 1.1
-                    , directory              >= 1
-                    , haskeline              >= 0.6.4
-                    , find-grep-sed          >= 0.1  
-                    , filepath               >= 1.2
-                    , glade                  >= 0.12
-                    , gtk                    >= 0.12
-                    , hxt                    >= 9.1
-                    , hxt-regex-xmlschema    >= 9
-                    , mtl                    >= 2
-                    , old-locale             >= 1
-                    , process                >= 1
-                    , time                   >= 1.4 && < 2
-                    , unix                   >= 2.4
-
-  Other-modules:      Photo2.ArchiveTypes
-                    , Photo2.Arrow
-                    , Photo2.CmdInterpreter
-                    , Photo2.Config
-                    , Photo2.ExifData
-                    , Photo2.FilePath
-                    , Photo2.Html
-                    , Photo2.ImageOperations
-                    , Photo2.ImportDialog
-                    , Photo2.ModelInterface
-                    , Photo2.SearchNewImages
-
-  Extensions:           
-
-  Ghc-Options:        -threaded -Wall -rtsopts
-                      -fwarn-tabs
-                      -fno-warn-unused-do-bind
-                      -fno-warn-missing-signatures
-                      -fno-warn-name-shadowing
+-- Executable photoEdit
+--   Main-is:          PhotoEdit.hs
+-- 
+--   Hs-Source-Dirs:   ./src
+--   
+--   Build-depends:      base                   >=4
+--                     , aeson                  >= 0.8
+--                     , aeson-pretty           >= 0.7
+--                     , bytestring             >= 0.9
+--                     , containers             >= 0.4
+--                     , deepseq                >= 1.1
+--                     , directory              >= 1
+--                     , haskeline              >= 0.6.4
+--                     , find-grep-sed          >= 0.1  
+--                     , filepath               >= 1.2
+--                     , glade                  >= 0.12
+--                     , gtk                    >= 0.12
+--                     , hxt                    >= 9.1
+--                     , hxt-regex-xmlschema    >= 9
+--                     , mtl                    >= 2
+--                     , old-locale             >= 1
+--                     , process                >= 1
+--                     , time                   >= 1.4 && < 2
+--                     , unix                   >= 2.4
+-- 
+--   Other-modules:      Photo2.ArchiveTypes
+--                     , Photo2.Arrow
+--                     , Photo2.CmdInterpreter
+--                     , Photo2.Config
+--                     , Photo2.ExifData
+--                     , Photo2.FilePath
+--                     , Photo2.Html
+--                     , Photo2.ImageOperations
+--                     , Photo2.ImportDialog
+--                     , Photo2.ModelInterface
+--                     , Photo2.SearchNewImages
+-- 
+--   Extensions:           
+-- 
+--   Ghc-Options:        -threaded -Wall -rtsopts
+--                       -fwarn-tabs
+--                       -fno-warn-unused-do-bind
+--                       -fno-warn-missing-signatures
+--                       -fno-warn-name-shadowing
 
 Executable photo2
   Main-is:         Photo2.hs
   Hs-Source-Dirs:  ./src
   
   Build-depends:      base                   >=4    && < 5
+                    , aeson                  >= 0.8
+                    , aeson-pretty           >= 0.7
                     , bytestring             >= 0.9
                     , containers             >= 0.4
                     , deepseq                >= 1.1
@@ -75,6 +81,7 @@ Executable photo2
                     , hxt-regex-xmlschema    >= 9.2
                     , mtl                    >= 2
                     , old-locale             >= 1
+                    , text
                     , time                   >= 1.4 && < 2
                     , process                >= 1
                     , unix                   >= 2.4
@@ -89,8 +96,9 @@ Executable photo2
                     , Photo2.ImageOperations
                     , Photo2.ImportDialog
                     , Photo2.SearchNewImages
-  
+                    , Photo2.ToJson
+
   Extensions:           
 
   Ghc-Options:      -threaded -Wall -rtsopts -fwarn-tabs
-
+  Default-Language: Haskell2010

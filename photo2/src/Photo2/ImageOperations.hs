@@ -1,3 +1,5 @@
+{-# LANGUAGE  FlexibleContexts #-}
+
 module Photo2.ImageOperations
 where
 
@@ -28,7 +30,7 @@ import           System.Directory
 import           System.Exit
 import           System.IO
 import           System.Posix                (createLink, getProcessID)
-import           System.Locale               (defaultTimeLocale)
+-- import           System.Locale               (defaultTimeLocale)
 
 import           Text.Regex.XMLSchema.Generic (match, matchSubex, sed)
 

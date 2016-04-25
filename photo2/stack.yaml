@@ -1,19 +1,20 @@
 # For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-2.22
+resolver: lts-5.9
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
 - '../find-grep-sed'
-- http://hackage.haskell.org/package/gio-0.12.5.3/gio-0.12.5.3.tar.gz
-- http://hackage.haskell.org/package/gtk-0.12.5.7/gtk-0.12.5.7.tar.gz
-- http://hackage.haskell.org/package/glade-0.12.5.0/glade-0.12.5.0.tar.gz
-- http://hackage.haskell.org/package/glib-0.12.5.4/glib-0.12.5.4.tar.gz
-- http://hackage.haskell.org/package/pango-0.12.5.3/pango-0.12.5.3.tar.gz
-- http://hackage.haskell.org/package/utf8-string-0.3.8/utf8-string-0.3.8.tar.gz
-- http://hackage.haskell.org/package/cairo-0.12.5.3/cairo-0.12.5.3.tar.gz
+### temporarily disable photoEdit
+# - http://hackage.haskell.org/package/gio-0.12.5.3/gio-0.12.5.3.tar.gz
+# - http://hackage.haskell.org/package/gtk-0.12.5.7/gtk-0.12.5.7.tar.gz
+# - http://hackage.haskell.org/package/glade-0.12.5.0/glade-0.12.5.0.tar.gz
+# - http://hackage.haskell.org/package/glib-0.12.5.4/glib-0.12.5.4.tar.gz
+# - http://hackage.haskell.org/package/pango-0.12.5.3/pango-0.12.5.3.tar.gz
+# - http://hackage.haskell.org/package/utf8-string-0.3.8/utf8-string-0.3.8.tar.gz
+# - http://hackage.haskell.org/package/cairo-0.12.5.3/cairo-0.12.5.3.tar.gz
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: []

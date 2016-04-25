@@ -409,7 +409,7 @@ xpConfig                = xpElem "config" $
                                  , \ c -> (confAttrs c, confPicAttrs c, confLayouts c, confDict c, confSizes c)
                                  ) $
                           xp5Tuple xpAttrs xpPicAttrs xpLayouts xpDictionaries xpSizes
-               
+
 xpAttrs                 :: PU Attrs
 xpAttrs                 = xpMap "attr" "name" xpAtom xpHtmlText
 
@@ -544,6 +544,7 @@ instance NFData Size where
     rnf (Size sd sg sa) = rnf sd `seq` rnf sg `seq` rnf sa
 
 instance NFData AspectRatio where
+  rnf x = seq x ()
 
 instance NFData Geo where
     rnf (Geo w h)       = rnf w `seq` rnf h
