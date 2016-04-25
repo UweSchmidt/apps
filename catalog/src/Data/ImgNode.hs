@@ -28,6 +28,7 @@ module Data.ImgNode
        , isoDirEntries
        , theParts
        , thePartNames
+       , thePartNamesI
        , theImgName
        , theImgType
        , theImgTimeStamp
@@ -277,10 +278,14 @@ isoImgParts =
   isoMapElems (\ (IP n _ _ _) -> n)
 {-# INLINE isoImgParts #-}
 
-thePartNames :: ImgType -> Traversal' ImgParts Name
-thePartNames ty =
-  isoImgParts . traverse . isA (^. theImgType . to (== ty)) . theImgName
+thePartNames :: (ImgType -> Bool) -> Traversal' ImgParts Name
+thePartNames typTest =
+  isoImgParts . traverse . isA (^. theImgType . to typTest) . theImgName
 {-# INLINE thePartNames #-}
+
+thePartNamesI :: Traversal' ImgParts Name
+thePartNamesI = thePartNames (`elem` [IMGjpg, IMGimg])
+{-# INLINE thePartNamesI #-}
 
 -- ----------------------------------------
 

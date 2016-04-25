@@ -94,7 +94,8 @@ logg enabled level msg
     = do asks enabled `guards`
            do s <- asks stderrOn
               if s
-                 then io $ hPutStr stderr fmt'
+                 then io $ hPutStrLn stderr fmt
+              -- then io $ hPutStr   stderr fmt'
                  else tell . LogMsg $ fmt
     where
       ind  = 10

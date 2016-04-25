@@ -79,20 +79,35 @@ genImage url = do
       doit :: (GeoAR, FilePath) -> Cmd FilePath
       doit (geo, path) = do
         mp <- view envMountPath
-        let src = mp ++ path
+        let src = mp ++ imgSrc path
         let dst = mp </> (geo ^. isoString) ++ path
         sx <- fileExist src
-        unless sx $
-          notThere
-        dx <- fileExist dst
-        dw <- if dx
-              then getModiTime dst
-              else return mempty
-        sw <- getModiTime src
-        unless (dw > sw) $ do
-          createDir $ takeDirectory dst
-          createImageCopy geo dst src
-        return dst
+        if sx
+          then do
+            dx <- fileExist dst
+            dw <- if dx
+                  then getModiTime dst
+                  else return mempty
+            sw <- getModiTime src
+            unless (dw > sw) $ do
+              createDir $ takeDirectory dst
+              createImageCopy geo dst src
+            return dst
+          else
+            notThere
+
+imgSrcExpr :: Regex
+imgSrcExpr =
+  parseRegexExt $
+  "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
+
+imgSrc :: FilePath -> FilePath
+imgSrc p =
+  case matchSubexRE imgSrcExpr p of
+    [("path", path)] ->
+      path
+    _ ->
+      p
 
 imgPathExpr :: Regex
 imgPathExpr =

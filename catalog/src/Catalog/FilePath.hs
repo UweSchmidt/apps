@@ -38,7 +38,8 @@ filePathConfig :: FilePathConfig
 filePathConfig = map (first parseRegexExt) $
   [ (mk1 boringName,               IMGboring)
   , (mk1 baseName  ++ mk2 rawExt,  IMGraw)
-  , (mk1 baseName' ++ mk2 imgExt,  IMGimg)
+  , (mk1 baseName  ++ mk2 jpgExt,  IMGjpg)
+  , (mk1 baseName  ++ mk2 imgExt,  IMGimg)
   , (mk1 baseName  ++ mk2 xmpExt,  IMGmeta)
   , (mk1 baseName  ++ mk2 jsonExt, IMGjson)
   , (mk1 baseName  ++ mk2 ptoExt,  IMGhugin)
@@ -56,10 +57,9 @@ filePathConfig = map (first parseRegexExt) $
     mk1  e = "({1}(" ++ e ++ "))"
     mk2  e = "({2}(" ++ e ++ "))"
 
-    baseName  = "[-._A-Za-z0-9]+"
-    baseName' = "[-._A-Za-z0-9]+"
+    baseName  = "[-+._A-Za-z0-9]+"
     rawExt    = "[.](nef|NEF||rw2|RW2)"
-    imgExt    = "[.](jpp|JPG|gif|tiff|ppm|pgm|pbm)"
+    imgExt    = "[.](gif|tiff?|png|ppm|pgm|pbm)"
     xmpExt    = "[.](xmp|XMP)"
     dxoExt    = "[.]((nef|NEF|rw2|RW2|jpg|JPG)[.]dop)"
     ptoExt    = "[.]pto"
@@ -78,6 +78,7 @@ filePathConfig = map (first parseRegexExt) $
            , "small"
            , "web"
            , "bw"
+           , "jpg"
            ]
          )
       ++ ")"

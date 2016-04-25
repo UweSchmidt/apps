@@ -66,7 +66,7 @@ envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)
 type Cmd = Action Env ImgStore
 
 runCmd :: Cmd a -> IO (Either Msg a, ImgStore, Log)
-runCmd cmd = runAction cmd defaultEnv emptyImgStore
+runCmd = runCmd' defaultEnv
 
 runCmd' :: Env -> Cmd a -> IO (Either Msg a, ImgStore, Log)
 runCmd' env cmd = runAction cmd env emptyImgStore

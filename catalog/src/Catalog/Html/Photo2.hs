@@ -540,7 +540,11 @@ colImgPath (i, Nothing) = do -- col ref
 buildImgPath :: ObjId -> Name -> Cmd FilePath
 buildImgPath i n = do
   p <- objid2path i
-  return $ substPathName n p ^. isoString
+  return $ substPathName n' p ^. isoString
+  where
+    -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
+    n' | ".jpg" `isNameSuffix` n = n
+       | otherwise               = substNameSuffix "" ".jpg" n
 
 -- ----------------------------------------
 

@@ -7,6 +7,7 @@ resolver: lts-5.9
 packages:
 - '.'
 - './catalog-server'
+- './catalog-sync'
 - '../monad-error-rws-io'
 - location:
     git: https://github.com/UweSchmidt/cmdtheline.git

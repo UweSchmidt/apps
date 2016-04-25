@@ -161,7 +161,7 @@ cleanupCollections = do
           let ex = case me of
                 Just e
                   | isIMG (e ^. nodeVal) ->
-                    let ns = e ^.. nodeVal . theParts . thePartNames IMGjpg in
+                    let ns = e ^.. nodeVal . theParts . thePartNamesI in
                     n' `elem` ns
                 _ ->
                   False

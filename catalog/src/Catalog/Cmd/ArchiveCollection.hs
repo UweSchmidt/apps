@@ -87,16 +87,16 @@ processNewImages colSyncTime pc i0 = do
           -- trcObj i $ "processnewimages res: " ++ show res
           return [(ymd, mkColImgRef i n) | n <- ns]
       where
-        ns = pts ^.. thePartNames IMGjpg
+        ns = pts ^.. thePartNamesI
 
     -- add all images for 1 day into the corresponding collection
     addToCol :: [((String, String, String), ColEntry)] -> Cmd ()
     addToCol dcs = do
       let ymd = fst . head $ dcs
           cs  = map snd dcs
-      trc $ "addToCol " ++ show (length dcs) ++ " new images"
       -- check or create y/m/d hierachy
       (yc, mc, dc) <-mkDateCol ymd
+      trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
       adjustColByDate cs dc
       setSyncTime yc >> setSyncTime mc >> setSyncTime dc
       where
@@ -191,7 +191,7 @@ genCollectionsByDir = do
           -- trcObj i $ "genCol img: " ++ show res
           return res
           where
-            ns = pts ^.. thePartNames IMGjpg
+            ns = pts ^.. thePartNamesI
 
         -- generate a coresponding collection with all entries
         -- entries are sorted by name
@@ -201,7 +201,7 @@ genCollectionsByDir = do
         dirA go i es _ts = do
           p  <- objid2path i
           let cp = fp p
-          trcObj i $ "genCol dir " ++ show cp
+          -- trcObj i $ "genCol dir " ++ show cp
 
           -- check or create colection
           -- with action for meta data
@@ -332,10 +332,10 @@ mkColMeta t s c o a = do
 
 mkColByPath :: (ObjId -> ObjId -> Cmd ()) -> (ObjId -> Cmd MetaData) -> Path -> Cmd ObjId
 mkColByPath insertCol setupCol p = do
-  trc $ "mkColByPath " ++ show p
+  -- trc $ "mkColByPath " ++ show p
   -- check for legal path
   when (isempty $ tailPath p) $
-    abort $ "mkColByPath: can't create collection " ++show (show p)
+    abort $ "mkColByPath: can't create collection " ++ show (show p)
 
   mid <- lookupByPath p
   case mid of
@@ -344,7 +344,7 @@ mkColByPath insertCol setupCol p = do
       -- compute parent collection
       let (p1, n) = p ^. viewBase
       ip <- mkColByPath insertCol setupCol p1
-      trcObj ip $ "mkColByPath " ++ show p1 ++ " " ++ show n
+      trc $ "mkColByPath " ++ show p1 ++ "/" ++ show n
 
       -- create collection and set meta data
       ic <- mkImgCol ip n

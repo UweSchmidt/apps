@@ -117,9 +117,9 @@ collectDirCont i = do
   mapM_ (\ n -> sync $ "fs entry ignored " ++ show (fst n)) others
   realsubdirs <- filterM (isSubDir fp) subdirs
 
-  trc $ "collectDirEntries: files ignored " ++ show rest3
-  trc $ "collectDirEntries: subdirs "       ++ show realsubdirs
-  trc $ "collectDirEntries: imgfiles "      ++ show imgfiles
+  trc $ "collectDirCont: files ignored " ++ show rest3
+  trc $ "collectDirCont: subdirs "       ++ show realsubdirs
+  trc $ "collectDirCont: imgfiles "      ++ show imgfiles
 
   return ( realsubdirs ^.. traverse . _1
          , partitionBy (^. _2 . _1) imgfiles
@@ -133,16 +133,16 @@ type ClassifiedNames = [ClassifiedName]
 
 syncImg :: ObjId -> Path -> ClassifiedNames -> Cmd ()
 syncImg ip pp xs = do
-  trcObj ip $ "syncImg: syncing img "
-
   -- new image ?
   notex <- isNothing <$> getTree (entryAt i)
   when notex $
     mkImg ip n >> return ()
 
+  trcObj i $ "syncImg: "
+
   -- is there at least a raw image or a jpg?
   -- then update, else ignore image
-  if or (xs ^.. traverse . _2 . _2 . to (`elem` [IMGraw, IMGjpg]))
+  if or (xs ^.. traverse . _2 . _2 . to (`elem` [IMGraw, IMGimg, IMGjpg]))
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp

@@ -12,7 +12,6 @@ where
 import           Control.Monad.Reader
 import qualified Data.Map.Strict as M
 import           Data.Prim.Prelude
-import           Data.Char
 
 -- ----------------------------------------
 
