@@ -38,7 +38,7 @@ filePathConfig :: FilePathConfig
 filePathConfig = map (first parseRegexExt) $
   [ (mk1 boringName,               IMGboring)
   , (mk1 baseName  ++ mk2 rawExt,  IMGraw)
-  , (mk1 baseName  ++ mk2 jpgExt,  IMGjpg)
+  , (mk1 baseName  ++ mk2 jpgExt,  IMGimg)  -- this jpg is the original image
   , (mk1 baseName  ++ mk2 imgExt,  IMGimg)
   , (mk1 baseName  ++ mk2 xmpExt,  IMGmeta)
   , (mk1 baseName  ++ mk2 jsonExt, IMGjson)
@@ -51,7 +51,7 @@ filePathConfig = map (first parseRegexExt) $
      ++ mk2 (geoExt ++ jpgExt),    IMGcopy)
   , (jpgdirPre
      ++ mk1 baseName
-     ++ mk2 jpgExt,                IMGjpg)
+     ++ mk2 jpgExt,                IMGjpg)  -- these jpgs are developed from a raw image
   ]
   where
     mk1  e = "({1}(" ++ e ++ "))"

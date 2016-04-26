@@ -6,13 +6,12 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
-import           Data.Prim
-import Data.ImageStore
+import qualified Data.Aeson as J
+import qualified Data.Aeson.Encode.Pretty as J
+import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
-
-import qualified Data.Aeson.Encode.Pretty as J
-import qualified Data.Aeson as J
+import           Data.Prim
 
 -- ----------------------------------------
 
