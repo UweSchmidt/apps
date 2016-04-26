@@ -20,6 +20,7 @@ data Env = Env
   { _trc         :: Bool
   , _verbose     :: Bool
   , _dryRun      :: Bool
+  , _forceMDU    :: Bool  -- Meta Data Update
   , _port        :: Int
   , _jsonArchive :: FilePath
   , _mountPath   :: FilePath
@@ -35,12 +36,13 @@ type CopyGeo = ((Int, Int), AspectRatio)
 
 defaultEnv :: Env
 defaultEnv = Env
-  { _trc         = True
-  , _verbose     = True
-  , _dryRun      = False
-  , _port        = 3001
-  , _jsonArchive = "catalog.json" -- rel to mount path
-  , _mountPath   = "./data"
+  { _trc          = True
+  , _verbose      = True
+  , _dryRun       = False
+  , _forceMDU     = False
+  , _port         = 3001
+  , _jsonArchive  = "catalog.json" -- rel to mount path
+  , _mountPath    = "./data"
   }
 
 envTrc :: Lens' Env Bool
@@ -51,6 +53,9 @@ envVerbose k e = (\ new -> e {_verbose = new}) <$> k (_verbose e)
 
 envDryRun :: Lens' Env Bool
 envDryRun k e = (\ new -> e {_dryRun = new}) <$> k (_dryRun e)
+
+envForceMDU :: Lens' Env Bool
+envForceMDU k e = (\ new -> e {_forceMDU = new}) <$> k (_forceMDU e)
 
 envPort :: Lens' Env Int
 envPort k e = (\ new -> e {_port = new}) <$> k (_port e)

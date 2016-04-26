@@ -83,15 +83,16 @@ syncMetaData i = do
         else return mempty
 
   ps <- getImgVals i (theParts . isoImgParts)
+  fu <- view envForceMDU
   -- trcObj i $ "syncMetaData: syncing exif data " ++ show p ++ " " ++ show ps
-  mapM_ (syncMD ip p ts) ps
+  mapM_ (syncMD fu ip p ts) ps
   return ()
 
-syncMD :: Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
-syncMD ip fp ts pt = do
+syncMD :: Bool -> Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
+syncMD fu ip fp ts pt = do
   when ( ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
          &&
-         tw >= ts                             -- part has been changed
+         (fu || tw >= ts)                     -- force update or part has been changed
        ) $ do
     sp <- toFilePath (substPathName tn ip)
     trc $ "syncMD: syncing with " ++ show sp
