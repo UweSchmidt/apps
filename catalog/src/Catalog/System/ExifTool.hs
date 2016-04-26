@@ -21,9 +21,15 @@ getExifTool f = do
   ex <- fileExist f
   if ex
     then
-      execExifTool ["-groupNames", "-json"] f
-      >>= (return . (^. from isoString))
-      >>= buildMetaData
+      ( execExifTool ["-groupNames", "-json"] f
+        >>= (return . (^. from isoString))
+        >>= buildMetaData
+      )
+      `catchError`
+      ( \ e -> do
+          warn $ "exiftool failed for " ++ show f ++ ", error: " ++ show e
+          return mempty
+      )
     else
       return mempty
 

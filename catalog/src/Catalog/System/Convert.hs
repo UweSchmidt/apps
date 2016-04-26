@@ -5,6 +5,7 @@ module Catalog.System.Convert
        , createImageCopy
        , genImage
        , genIcon
+       , genAssetIcon
        )
 where
 
@@ -13,6 +14,14 @@ import Data.Prim
 -- import Debug.Trace
 
 -- ----------------------------------------
+
+genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
+genAssetIcon px s = do
+  -- trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
+  genIcon f s   -- call convert with string s, please no "/"-es in s
+  return $ Just f
+  where
+    f = ps'iconsgen </> px ++ ".jpg"
 
 genIcon :: FilePath -> String -> Cmd ()
 genIcon path t = do
@@ -89,10 +98,24 @@ genImage url = do
                   then getModiTime dst
                   else return mempty
             sw <- getModiTime src
-            unless (dw > sw) $ do
-              createDir $ takeDirectory dst
-              createImageCopy geo dst src
-            return dst
+            if dw <= sw
+              then
+                ( do
+                    createDir $ takeDirectory dst
+                    createImageCopy geo dst src
+                    return dst
+                  )
+                  `catchError`      -- if the org image is broken
+                  ( const $ do      -- a "broken image" icon is generated
+                      warn $ "image couldn't be converted or resized: " ++ show url
+                      broken <-
+                        fromMaybe ps'blank <$>
+                        genAssetIcon "brokenImage" "broken\nimage"
+                      warn $ "generate a substitute: " ++ show broken
+                      doit (geo, broken)
+                  )
+              else
+                return dst
           else
             notThere
 

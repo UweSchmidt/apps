@@ -603,7 +603,7 @@ fileRefRaw = parseTmpl [s|
 fileRefJpg :: Tmpl
 fileRefJpg = parseTmpl [s|
             <tr class="info" id="file:RefJpg">
-              <th>JPG-Datei</th>
+              <th>Bild-Datei</th>
               <td>${fileRefJpgVal}</td>
             </tr>
 |]

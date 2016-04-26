@@ -11,7 +11,7 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.Convert (genIcon)
+import Catalog.System.Convert (genIcon, genAssetIcon)
 import Catalog.System.ExifTool (getMetaData)
 import Text.SimpleTemplate
 
@@ -646,13 +646,5 @@ dirRE =
   "(/[^/]+)*"
   ++
   "(/({name}[^/]+))"
-
-genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
-genAssetIcon px s = do
-  -- trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
-  genIcon f s   -- call convert with string s, please no "/"-es in s
-  return $ Just f
-  where
-    f = ps'iconsgen </> px ++ ".jpg"
 
 -- ----------------------------------------
