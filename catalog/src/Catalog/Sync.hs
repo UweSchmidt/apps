@@ -34,17 +34,17 @@ idSyncFS recursive i = getImgVal i >>= go
           syncImg i p ps
 
       | isDIR e = do
-          -- trcObj i "idSyncFS: syncing image dir"
-          (do syncDirCont recursive i
+          fp <- objid2path i >>= toFilePath
+          ex <- dirExist fp
+          if ex
+            then do
+              syncDirCont recursive i
               setSyncTime i
               checkEmptyDir i
-            )
-            `catchError`
-            (\ _e ->
-              do sync $ "fs dir not found " ++ show e
-                 rmImgNode i
-            )
-          return ()
+            else do
+              verbose $ "sync: fs dir not found: " ++ show fp
+              rmImgNode i
+
       | isROOT e = do
           -- trcObj i "idSyncFS: syncing root"
           idSyncFS recursive (e ^. theRootImgDir)
@@ -84,9 +84,6 @@ syncDirCont recursive i = do
 
     remDirCont p n = do
       trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
-
-      -- will be done in rmImgNode
-      -- adjustDirEntries (S.delete new'i) i
       rmRec new'i
       where
         new'i = mkObjId (p `snocPath` n)
@@ -114,7 +111,7 @@ collectDirCont i = do
                                       , IMGjpg, IMGimg,  IMGcopy
                                       ])) rest2
 
-  mapM_ (\ n -> sync $ "fs entry ignored " ++ show (fst n)) others
+  mapM_ (\ n -> verbose $ "sync: fs entry ignored " ++ show (fst n)) others
   realsubdirs <- filterM (isSubDir fp) subdirs
 
   unless (null rest3) $
@@ -151,7 +148,7 @@ syncImg ip pp xs = do
       syncParts i pp
     else do
       p <- objid2path i
-      sync $ "no raw or jpg found for " ++ show (show p) ++ ", parts: " ++ show xs
+      verbose $ "sync: no raw or jpg found for " ++ show (show p) ++ ", parts: " ++ show xs
       rmImgNode i
   where
     i  = mkObjId (pp `snocPath` n)
@@ -182,7 +179,7 @@ checkEmptyDir i = do
   nv <- getImgVal i
   when (isempty nv) $ do
     p <- objid2path i
-    sync $ "empty image dir ignored " ++ show (show p)
+    verbose $ "sync: empty image dir ignored " ++ show (show p)
     rmImgNode i
 
 
@@ -233,8 +230,5 @@ scanDirCont p0 = do
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
 hasImgType p (_, (_, t)) = p t
-
-sync :: String -> Cmd ()
-sync = logg verboseOn "sync"
 
 -- ----------------------------------------
