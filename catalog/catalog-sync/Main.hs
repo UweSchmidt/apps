@@ -21,30 +21,30 @@ syncCatalog = do
   jsonPath0 <- view envJsonArchive
   mountPath <- view envMountPath
 
-  trc "create archive root"
+  verbose "create archive root"
   initImgStore n'archive n'collections (mountPath </> s'photos)
 
   let jsonPath = mountPath </> jsonPath0
   ex <- fileExist jsonPath
   when ex $ do
-    trc $ "read the current archive data from file " ++ show jsonPath
+    verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 
-  trc "get the archive and the image root"
+  verbose "get the archive and the image root"
   refRoot <- use (theImgTree . rootRef)
   refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
 
-  trc "sync the archive with the file system"
+  verbose "sync the archive with the file system"
   syncFS refImg
 
-  trc "create the collections for the archive dirs"
-  trc "and the collections per date"
+  verbose "create the collections for the archive dirs"
+  verbose "and the collections per date"
   genCollectionRootMeta
   cleanupCollections
   genCollectionsByDir
   genCollectionsByDate
 
-  trc $ "save state to " ++ show jsonPath
+  verbose $ "save state to " ++ show jsonPath
   saveImgStore jsonPath
 
-  trc "sync finished"
+  verbose "sync finished"
