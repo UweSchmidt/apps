@@ -2,10 +2,10 @@
 
 module Main where
 
-import ServerOptions(mainWithArgs)
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
-import           Catalog.System.Convert (genImage)
 import           Catalog.Html.Photo2 (genHtmlPage)
+import           Catalog.Options (mainWithArgs)
+import           Catalog.System.Convert (genImage)
 import           Control.Concurrent.MVar
 import           Control.Exception (SomeException, try, catch, toException)
 import           Control.Monad.Except
@@ -13,8 +13,8 @@ import           Control.Monad.IO.Class
 import qualified Control.Monad.RWSErrorIO as RWS
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))
-import           Data.Prim.Prelude -- (Text, (^.), isoString, isoText, from, to, intercalate)
 import           Data.Prim.Constants
+import           Data.Prim.Prelude
 import qualified Data.Text as T
 import           Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
 import           Network.Wai
@@ -110,7 +110,7 @@ fileWithMime px mt fp = do
 -- ----------------------------------------
 
 main :: IO ()
-main = mainWithArgs $ \ env -> do
+main = mainWithArgs "server" $ \ env -> do
   est  <- initState env
   either die (main' env) est
 

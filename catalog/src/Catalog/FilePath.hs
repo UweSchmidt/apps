@@ -38,7 +38,7 @@ filePathConfig :: FilePathConfig
 filePathConfig = map (first parseRegexExt) $
   [ (mk1 boringName,               IMGboring)
   , (mk1 baseName  ++ mk2 rawExt,  IMGraw)
-  , (mk1 baseName  ++ mk2 jpgExt,  IMGimg)  -- this jpg is the original image
+  , (mk1 baseName  ++ mk2 jpgExt,  IMGjpg)  -- this jpg is the original image
   , (mk1 baseName  ++ mk2 imgExt,  IMGimg)
   , (mk1 baseName  ++ mk2 xmpExt,  IMGmeta)
   , (mk1 baseName  ++ mk2 jsonExt, IMGjson)
@@ -58,7 +58,7 @@ filePathConfig = map (first parseRegexExt) $
     mk2  e = "({2}(" ++ e ++ "))"
 
     baseName  = "[-+._A-Za-z0-9]+"
-    rawExt    = "[.](nef|NEF||rw2|RW2)"
+    rawExt    = "[.](nef|NEF||rw2|RW2|dng|DNG)"
     imgExt    = "[.](gif|tiff?|png|ppm|pgm|pbm)"
     xmpExt    = "[.](xmp|XMP)"
     dxoExt    = "[.]((nef|NEF|rw2|RW2|jpg|JPG)[.]dop)"

@@ -43,6 +43,7 @@ library
                      Catalog.Cmd.Types
                      Catalog.Html.Photo2
                      Catalog.Html.Templates.Photo2.AlbumPage
+                     Catalog.Options
                      Catalog.Sync
                      Catalog.System.Convert
                      Catalog.System.ExifTool
@@ -54,6 +55,7 @@ library
                    , aeson                >= 0.8
                    , aeson-pretty         >= 0.7
                    , bytestring           >= 0.9
+                   , cmdtheline           >= 0.2
                    , containers           >= 0.4
                    , directory            >= 1.1
                    , filepath             >= 1
@@ -63,6 +65,8 @@ library
                    , monad-error-rws-io   >= 0.0.2
                    , mtl                  >= 2.2
                    , murmur-hash          >= 0.1
+                   , pureMD5              >= 2
+                   , pretty               >= 1.1
                    , process
                    , scientific           >= 0.3
                    , string-qq            >= 0.0.2
@@ -74,10 +78,6 @@ library
                    , utf8-string          >= 1
                    , vector               >= 0.10
 
---                   , cmdtheline          >= 0.2
---                   , hxt                 >= 9.3
---                   , pureMD5             >= 2
---                   , pretty              >= 1.1
 --                   , SHA                 >= 1.5
                    
   GHC-Options: -Wall -fwarn-tabs

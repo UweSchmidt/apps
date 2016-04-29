@@ -1,32 +1,26 @@
 module Main where
 
 import           Catalog.Cmd
+import           Catalog.Options
 import           Catalog.Sync
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.Prim
 import           System.Exit
-import           System.IO
-import qualified System.Posix as X
 
 main :: IO ()
-main = syncMain
+main = mainWithArgs "sync" syncMain
 
-syncMain :: IO ()
-syncMain = do
-  mountPath <- (</> "data") <$> X.getWorkingDirectory
-  res <- (^. _1) <$> runCmd (local (envTrc .~ True) $ syncCatalog jsonPath mountPath)
-  either
-    (\ e -> do hPutStrLn stderr $ show e
-               exitFailure
-    )
-    return
-    res
-  where
-    jsonPath = "catalog1.json"
+syncMain :: Env -> IO ()
+syncMain env = do
+  res <- (^. _1) <$> runCmd (local (const env) syncCatalog)
+  either (die . show) return res
 
-syncCatalog :: FilePath -> FilePath -> Cmd ()
-syncCatalog jsonPath0 mountPath = do
+syncCatalog :: Cmd ()
+syncCatalog = do
+  jsonPath0 <- view envJsonArchive
+  mountPath <- view envMountPath
+
   trc "create archive root"
   initImgStore n'archive n'collections (mountPath </> s'photos)
 

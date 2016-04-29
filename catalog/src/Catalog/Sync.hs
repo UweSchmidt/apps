@@ -100,7 +100,7 @@ collectDirCont i = do
   -- trcObj i "collectDirCont: group entries in dir "
   fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
-  -- trc $ "collectDirCont: entries found " ++ show es
+  trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
         partition (hasImgType (== IMGother)) es
@@ -142,7 +142,7 @@ syncImg ip pp xs = do
 
   -- is there at least a raw image or a jpg?
   -- then update, else ignore image
-  if or (xs ^.. traverse . _2 . _2 . to (`elem` [IMGraw, IMGimg, IMGjpg]))
+  if has (traverse . _2 . _2 . isA (`elem` [IMGraw, IMGimg, IMGjpg])) xs
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
@@ -199,9 +199,11 @@ fsFileStat = fsStat "regular file" fileExist
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
   (es, jpgdirs)  <- classifyNames <$> scanDirCont p
+  trc $ "parseDirCont: " ++ show (es, jpgdirs)
   jss <- mapM
          (parseJpgDirCont p)                       -- process jpg subdirs
          (jpgdirs ^.. traverse . _1 . isoString)
+  trc $ "parseDirCont: " ++ show jss
   return $ es ++ concat jss
   where
     classifyNames =
@@ -216,16 +218,18 @@ parseJpgDirCont p d =
   classifyNames <$> scanDirCont (p </> d)
   where
     classifyNames =
-      filter (\ n -> (n ^. _2 . _2) `elem` [IMGjpg, IMGcopy])
+      filter (\ n -> (n ^. _2 . _2) == IMGjpg)
       .
-      map (\ n -> (mkName (d </> n), filePathToImgType n))
+      map (\ n -> let dn = d </> n
+                  in (mkName dn, filePathToImgType dn)
+          )
 
 
 scanDirCont :: FilePath -> Cmd [FilePath]
 scanDirCont p0 = do
   -- trc $ "scanDirCont: reading dir " ++ show p0
   res <- readDir p0
-  -- trc $ "scanDirCont: result is " ++ show res
+  trc $ "scanDirCont: result is " ++ show res
   return res
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool

@@ -155,6 +155,7 @@ compareByName =
 filterMetaData :: ImgType -> MetaData -> MetaData
 filterMetaData IMGraw  m = m ^. selectByRegex reRaw
 filterMetaData IMGmeta m = m ^. selectByRegex reXmp
+filterMetaData IMGjpg  m = m ^. selectByRegex reRaw
 filterMetaData IMGimg  m = m ^. selectByRegex reRaw
 filterMetaData _       _ = mempty
 
@@ -162,10 +163,49 @@ filterMetaData _       _ = mempty
 --
 -- meta data parsers
 
-parseDateTime :: String -> Maybe ( (String, String, String)
-                                 , (String, String, String, String)
-                                 )
-parseDateTime str =
+type YMD = (String, String, String)
+type HMS = (String, String, String, String)
+type YMD'HMS = (YMD, HMS)
+
+parseDateTime :: String -> Maybe YMD'HMS
+parseDateTime str = do
+  (ymd, hms) <- parseDateTime' str
+  ymd'       <- checkYMD ymd
+  hms'       <- checkHMS hms
+  return (ymd', hms')
+  where
+    checkYMD x@(y', m', d')
+      | y >= 1900 && y < 3001
+        &&
+        m >= 1 && m <= 12
+        &&
+        d >= 1 && d <= 31 =
+          Just x
+      | otherwise =
+          Nothing
+      where
+        y, m, d :: Int
+        y = read y'
+        m = read m'
+        d = read d'
+
+    checkHMS x@(h', m', s', _ms')
+      | h >= 0 && h <= 24
+        &&
+        m >= 0 && m < 60
+        &&
+        s >= 0 && s < 60 =
+          Just x
+      | otherwise =
+          Nothing
+      where
+        h, m, s :: Int
+        h = read h'
+        m = if null m' then 0 else read m'
+        s = if null s' then 0 else read s'
+
+parseDateTime' :: String -> Maybe YMD'HMS
+parseDateTime' str =
   case res of
     -- just year, month, day
     [("Y",y), ("M",m), ("D",d)] ->
@@ -186,7 +226,7 @@ parseDateTime str =
 
 reDateTime :: Regex
 reDateTime = parseRegexExt $
-  "({Y}[0-9]{4})[-:]({M}[0-9]{2})[-:]({D}[0-9]{2})"
+  "({Y}[1-9][0-9]{3})[-:]({M}[0-9]{2})[-:]({D}[0-9]{2})"
   ++ "("
   ++ "[ ]+"
   ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2})({ms}[.][0-9]+)?"
