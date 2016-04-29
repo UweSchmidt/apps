@@ -96,7 +96,7 @@ processNewImages colSyncTime pc i0 = do
           cs  = map snd dcs
       -- check or create y/m/d hierachy
       (yc, mc, dc) <-mkDateCol ymd
-      trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
+      -- trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
       adjustColByDate cs dc
       setSyncTime yc >> setSyncTime mc >> setSyncTime dc
       where

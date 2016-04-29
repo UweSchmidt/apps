@@ -9,6 +9,7 @@ module Catalog.Cmd.Basic
 where
 
 import           Catalog.Cmd.Types
+import           Catalog.Journal
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
@@ -160,25 +161,25 @@ fromFilePath f = do
 --
 -- smart constructors
 
-mkImg' :: (ImgNode -> Bool) -> ImgNode -> ObjId -> Name -> Cmd ObjId
-mkImg' isN v i n = dt >>= go
+mkImg' :: (ObjId -> Name -> Journal) -> (ImgNode -> Bool) -> ImgNode -> ObjId -> Name -> Cmd ObjId
+mkImg' mkj isN v i n = dt >>= go
   where
     go t = do
       (d, t') <- liftE $ mkNode isN n i v t
       theImgTree .= t'
-      trcObj d "mkImg': new image node"
+      journalChange $ mkj i n
       return d
 
 mkImgDir :: ObjId -> Name -> Cmd ObjId
-mkImgDir = mkImg' isDIR emptyImgDir
+mkImgDir = mkImg' MkDIR isDIR emptyImgDir
 {-# INLINE mkImgDir #-}
 
 mkImgCol :: ObjId -> Name -> Cmd ObjId
-mkImgCol = mkImg' isCOL emptyImgCol
+mkImgCol = mkImg' MkCOL isCOL emptyImgCol
 {-# INLINE mkImgCol #-}
 
 mkImg :: ObjId -> Name -> Cmd ObjId
-mkImg = mkImg' isDIR emptyImg
+mkImg = mkImg' MkIMG isDIR emptyImg
 {-# INLINE mkImg #-}
 
 rmImgNode :: ObjId -> Cmd ()
@@ -187,6 +188,7 @@ rmImgNode i = dt >>= go
     go t = do
       t' <- liftE $ removeImgNode i t
       theImgTree .= t'
+      journalChange $ RmObj i
 
 -- ----------------------------------------
 --
@@ -219,30 +221,48 @@ mkCollection target'path = do
 -- basic modification commands
 
 adjustImg :: (ImgParts -> ImgParts) -> ObjId -> Cmd ()
-adjustImg = adjustNodeVal theParts
+adjustImg = adjustNodeVal AdjImgParts theParts
 
 adjustDirEntries :: (DirEntries -> DirEntries) -> ObjId -> Cmd ()
-adjustDirEntries = adjustNodeVal theDirEntries
+adjustDirEntries = adjustNodeVal AdjDirEntries theDirEntries
 
 adjustMetaData :: (MetaData -> MetaData) -> ObjId -> Cmd ()
-adjustMetaData f i =
-  theImgTree . theNodeVal i . theColMetaData %= f
+adjustMetaData = adjustNodeVal AdjMetaData theColMetaData
 
 adjustColImg :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
-adjustColImg f i =
-  theImgTree . theNodeVal i . theColImg %= f
+adjustColImg = adjustNodeVal AdjColImg theColImg
 
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
-adjustColEntries = adjustNodeVal theColEntries
-
-adjustNodeVal :: Traversal' ImgNode a -> (a -> a) -> ObjId -> Cmd ()
-adjustNodeVal theComp f i =
-  theImgTree . theNodeVal i . theComp %= f
+adjustColEntries = adjustNodeVal AdjColEntries theColEntries
 
 setSyncTime :: ObjId -> Cmd ()
 setSyncTime i = do
   t <- now
-  theImgTree . theNodeVal i . theSyncTime .= t
+  adjustNodeVal SetSyncTime theSyncTime (const t) i
+
+adjustNodeVal :: Show a =>
+                 (ObjId -> a -> Journal) ->
+                 Traversal' ImgNode a -> (a -> a) -> ObjId -> Cmd ()
+adjustNodeVal mkj theComp f i = do
+  theImgTree . theNodeVal i . theComp %= f
+  -- journal the changed result
+  dt >>= journalAdjust
+  where
+    journalAdjust t =
+      case t ^.. theNodeVal i . theComp of
+        -- the expected case
+        [new'v] ->
+          journalChange $ mkj i new'v
+
+        -- the error cases
+        [] ->
+          warn $ "adjustNodeVal: nothing changed, component to be modified does not exist in " ++ name'i
+
+        -- the critical case
+        vs ->
+          warn $ "adjustNodeVal: mulitple components have been changed in " ++ name'i ++ ": " ++ show vs
+      where
+        name'i = show $ i ^. isoString
 
 -- ----------------------------------------
 --
@@ -285,5 +305,9 @@ trcCmd cmd
   = do res <- cmd
        trc $ "cmd: res = " ++ show res
        return res
+
+journalChange :: Journal -> Cmd ()
+journalChange j
+  = verbose $ show j  -- TODO: write journal
 
 -- ----------------------------------------

@@ -85,7 +85,7 @@ syncMetaData i = do
   ps <- getImgVals i (theParts . isoImgParts)
   fu <- view envForceMDU
 
-  trcObj i $ "syncMetaData: syncing exif data " ++ show p ++ " " ++ show ps
+  verbose $ "syncMetaData: syncing exif data " ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
 
   -- collect meta data from raw and xmp parts
   mapM_ (syncMD isRawMeta fu ip p ts) ps

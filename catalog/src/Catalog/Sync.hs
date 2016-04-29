@@ -73,7 +73,7 @@ syncDirCont recursive i = do
   where
 
     syncSubDir p n = do
-      trc $ "syncSubDir: " ++ show p ++ "/" ++ show n
+      -- trc $ "syncSubDir: " ++ show p ++ "/" ++ show n
 
       notex <- isNothing <$> getTree (entryAt new'i)
       when notex $
@@ -83,7 +83,7 @@ syncDirCont recursive i = do
         new'i = mkObjId (p `snocPath` n)
 
     remDirCont p n = do
-      trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
+      -- trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
       rmRec new'i
       where
         new'i = mkObjId (p `snocPath` n)
@@ -100,7 +100,7 @@ collectDirCont i = do
   -- trcObj i "collectDirCont: group entries in dir "
   fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
-  trc $ "collectDirCont: entries found " ++ show es
+  -- trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
         partition (hasImgType (== IMGother)) es
@@ -115,11 +115,11 @@ collectDirCont i = do
   realsubdirs <- filterM (isSubDir fp) subdirs
 
   unless (null rest3) $
-    trc $ "collectDirCont: files ignored " ++ show rest3
+    verbose $ "collectDirCont: files ignored " ++ show rest3
   unless (null realsubdirs) $
-    trc $ "collectDirCont: subdirs "       ++ show realsubdirs
+    verbose $ "collectDirCont: subdirs "       ++ show realsubdirs
   unless (null imgfiles) $
-    trc $ "collectDirCont: imgfiles "      ++ show imgfiles
+    verbose $ "collectDirCont: imgfiles "      ++ show imgfiles
 
   return ( realsubdirs ^.. traverse . _1
          , partitionBy (^. _2 . _1) imgfiles
@@ -138,7 +138,7 @@ syncImg ip pp xs = do
   when notex $
     mkImg ip n >> return ()
 
-  trcObj i $ "syncImg: "
+  -- trcObj i $ "syncImg: "
 
   -- is there at least a raw image or a jpg?
   -- then update, else ignore image
@@ -199,11 +199,11 @@ fsFileStat = fsStat "regular file" fileExist
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
   (es, jpgdirs)  <- classifyNames <$> scanDirCont p
-  trc $ "parseDirCont: " ++ show (es, jpgdirs)
+  -- trc $ "parseDirCont: " ++ show (es, jpgdirs)
   jss <- mapM
          (parseJpgDirCont p)                       -- process jpg subdirs
          (jpgdirs ^.. traverse . _1 . isoString)
-  trc $ "parseDirCont: " ++ show jss
+  -- trc $ "parseDirCont: " ++ show jss
   return $ es ++ concat jss
   where
     classifyNames =
@@ -229,7 +229,7 @@ scanDirCont :: FilePath -> Cmd [FilePath]
 scanDirCont p0 = do
   -- trc $ "scanDirCont: reading dir " ++ show p0
   res <- readDir p0
-  trc $ "scanDirCont: result is " ++ show res
+  -- trc $ "scanDirCont: result is " ++ show res
   return res
 
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
