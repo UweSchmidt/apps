@@ -307,7 +307,7 @@ trcCmd cmd
        return res
 
 journalChange :: Journal -> Cmd ()
-journalChange j
-  = verbose $ show j  -- TODO: write journal
+journalChange j = do
+  logg (^. envJournal) "journal:" (show j)
 
 -- ----------------------------------------

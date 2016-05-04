@@ -19,6 +19,7 @@ import           Data.Prim
 data Env = Env
   { _trc         :: Bool
   , _verbose     :: Bool
+  , _journal     :: Bool
   , _stdErrOn    :: Bool
   , _dryRun      :: Bool
   , _forceMDU    :: Bool  -- Meta Data Update
@@ -40,6 +41,7 @@ defaultEnv :: Env
 defaultEnv = Env
   { _trc          = False
   , _verbose      = False
+  , _journal      = False
   , _stdErrOn     = True
   , _dryRun       = False
   , _forceMDU     = False
@@ -53,6 +55,9 @@ envTrc k e = (\ new -> e {_trc = new}) <$> k (_trc e)
 
 envVerbose :: Lens' Env Bool
 envVerbose k e = (\ new -> e {_verbose = new}) <$> k (_verbose e)
+
+envJournal :: Lens' Env Bool
+envJournal k e = (\ new -> e {_journal = new}) <$> k (_journal e)
 
 envStdErrOn :: Lens' Env Bool
 envStdErrOn k e = (\ new -> e {_stdErrOn = new}) <$> k (_stdErrOn e)

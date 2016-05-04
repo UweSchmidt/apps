@@ -22,10 +22,11 @@ where
 
 import           Catalog.Cmd.ArchiveCollection
 import           Catalog.Cmd.Basic
+import           Catalog.Cmd.CopyRemove
 import           Catalog.Cmd.CWN
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.List
-import           Catalog.Cmd.CopyRemove
+import           Catalog.Journal
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Control.Lens
@@ -41,10 +42,11 @@ import qualified Data.Aeson.Encode.Pretty as J
 -- ----------------------------------------
 
 initImgStore :: Name -> Name -> FilePath -> Cmd ()
-initImgStore rootName colName mountPath
-  = do r <- liftE $
-            mkEmptyImgRoot rootName dirName colName
-       put $ mkImgStore r mPath (r ^. rootRef)
+initImgStore rootName colName mountPath = do
+  r <- liftE $
+    mkEmptyImgRoot rootName dirName colName
+  put $ mkImgStore r mPath (r ^. rootRef)
+  journalChange $ InitImgStore rootName colName mountPath
   where
     dirName  = mkName $ takeFileName mountPath
     mPath    = takeDirectory mountPath
@@ -52,7 +54,7 @@ initImgStore rootName colName mountPath
 -- ----------------------------------------
 
 invImages :: Cmd ()
-invImages = do
+invImages = do  -- TODO
   _r <- use (theImgTree . rootRef)
   return ()
 
@@ -65,19 +67,21 @@ saveImgStore p = do
     then putStrLnLB    bs
     else do
       p' <- (</> p) <$> view envMountPath
-      trc $ "saveImgStore: save state to " ++ show p'
+      verbose $ "saveImgStore: save state to " ++ show p'
       writeFileLB p' bs
+      journalChange $ SaveImgStore p
 
 loadImgStore :: FilePath -> Cmd ()
 loadImgStore p = do
   p' <- (</> p) <$> view envMountPath
-  trc $ "loadImgStore: load State from " ++ show p'
+  verbose $ "loadImgStore: load State from " ++ show p'
   bs <- readFileLB p'
   case J.decode' bs of
     Nothing ->
       abort $ "loadImgStore: JSON input corrupted: " ++ show p
-    Just st ->
+    Just st -> do
       put st
+      journalChange $ LoadImgStore p
 
 -- ----------------------------------------
 --

@@ -77,7 +77,7 @@ deriving instance (Show ref) => Show (ImgNode' ref)
 deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
-  isempty (IMG pts)            = True
+  isempty (IMG _pts)           = True
   isempty (DIR es _ts)         = isempty es
   isempty (COL _md _im cs _ts) = isempty cs
   isempty (ROOT _d _c)         = False

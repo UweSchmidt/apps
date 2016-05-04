@@ -174,11 +174,15 @@ genCollectionsByDir = do
       -- remove the 2 top level dirs
       -- remove leading "/"
 
-      p <- (drop 1 . show . tailPath . tailPath) <$> objid2path i
-      let t = p ^. from isoString
-          o = to'colandname
+      t <- path2Title <$> objid2path i
+      let o = to'colandname
           a = ta'readonly
       mkColMeta t "" "" o a
+
+    path2Title :: Path -> Text
+    path2Title p = tt p ^. isoText
+      where
+        tt = sed (const " \8594 ") "/" . drop 1 . show . tailPath . tailPath
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
@@ -344,7 +348,7 @@ mkColByPath insertCol setupCol p = do
       -- compute parent collection
       let (p1, n) = p ^. viewBase
       ip <- mkColByPath insertCol setupCol p1
-      trc $ "mkColByPath " ++ show p1 ++ "/" ++ show n
+      -- trc $ "mkColByPath " ++ show p1 ++ "/" ++ show n
 
       -- create collection and set meta data
       ic <- mkImgCol ip n
