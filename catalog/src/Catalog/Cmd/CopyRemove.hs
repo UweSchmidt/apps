@@ -54,11 +54,12 @@ copyColRec src dst = do
         dirA  _go _i _es _ts = return ()  -- NOOP
         rootA _go _i _d  _c  = return ()  -- NOOP
 
-        colA go i _md im cs _ts  = do
+        colA go i _md im be cs _ts  = do
           dst'i  <- (mkObjId . pf) <$> objid2path i
           dst'cs <- mapM copy cs
           adjustColEntries (const dst'cs) dst'i
           adjustColImg     (const im    ) dst'i
+          adjustColBlog    (const be    ) dst'i
 
           -- recurse into subcollections
           mapM_ go (cs ^.. traverse . theColColRef)
@@ -93,7 +94,7 @@ rmRec = foldMT imgA dirA rootA colA
     rootA go _i dir col =
       go dir >> go col                          -- recurse into dir and col hirachy
                                                 -- but don't change root
-    colA go i _md _im cs _ts = do
+    colA go i _md _im _be cs _ts = do
       mapM_ go (cs ^.. traverse . theColColRef)
       pe <- getImgParent i >>= getImgVal        -- remove collection node
       when (not $ isROOT pe) $                  -- if it's not the top collection
@@ -124,8 +125,9 @@ cleanupCollections = do
     cleanup i = do
       n <- getTree (theNode i)
       case n ^. nodeVal of
-        COL _md im es _ts -> do
+        COL _md im be es _ts -> do
           cleanupIm i im
+          cleanupIm i be
           cleanupEs i es
         _ ->
           return ()
@@ -198,7 +200,7 @@ rmGenFiles pp =
     rootA go _i dir _col =                      -- recurse only into dir hierachy
       go dir
 
-    colA _go _i _md _im _es _ts =                   -- noop for collections
+    colA _go _i _md _im _be _es _ts =                   -- noop for collections
       return ()
 
 -- remove all JSON files containing metadata

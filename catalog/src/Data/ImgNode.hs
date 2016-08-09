@@ -43,6 +43,7 @@ module Data.ImgNode
        , theColObjId
        , theColMetaData
        , theColImg
+       , theColBlog
        , theColEntries
        , theColColRef
        , theColImgRef
@@ -67,6 +68,7 @@ data ImgNode' ref = IMG  !ImgParts
                   | ROOT !ref !ref
                   | COL  !MetaData             -- collection meta data
                          !(Maybe (ref, Name))  -- optional image
+                         !(Maybe (ref, Name))  -- optional blog entry
                          ![ColEntry' ref]      -- the list of images and subcollections
                          !TimeStamp            -- last update
 
@@ -77,10 +79,10 @@ deriving instance (Show ref) => Show (ImgNode' ref)
 deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
-  isempty (IMG _pts)           = True
-  isempty (DIR es _ts)         = isempty es
-  isempty (COL _md _im cs _ts) = isempty cs
-  isempty (ROOT _d _c)         = False
+  isempty (IMG _pts)               = True
+  isempty (DIR es _ts)             = isempty es
+  isempty (COL _md _im _be cs _ts) = isempty cs
+  isempty (ROOT _d _c)             = False
 
 instance ToJSON ref => ToJSON (ImgNode' ref) where
   toJSON (IMG pm) = J.object
@@ -97,7 +99,7 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     , t'archive     J..= rd
     , t'collections J..= rc
     ]
-  toJSON (COL md im es ts) = J.object $
+  toJSON (COL md im be es ts) = J.object $
     [ "ImgNode"    J..= ("COL" :: String)
     , "metadata"   J..= md
     , "entries"    J..= es
@@ -106,6 +108,9 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     ++ case im of
          Nothing -> []
          Just p  -> ["image" J..= p]
+    ++ case be of
+         Nothing -> []
+         Just p  -> ["blog"  J..= p]
 
 instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
   parseJSON = J.withObject "ImgNode" $ \ o ->
@@ -122,6 +127,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
          "COL" ->
            COL  <$> o J..: "metadata"
                 <*> (Just <$> o J..:? "image") J..!= Nothing
+                <*> (Just <$> o J..:? "blog" ) J..!= Nothing
                 <*> o J..: "entries"
                 <*> o J..: "sync"
          _ -> mzero
@@ -139,7 +145,7 @@ emptyImgRoot = ROOT mempty mempty
 {-# INLINE emptyImgRoot #-}
 
 emptyImgCol :: ImgNode' ref
-emptyImgCol = COL mempty Nothing [] mempty
+emptyImgCol = COL mempty Nothing Nothing [] mempty
 {-# INLINE emptyImgCol #-}
 
 -- image node optics
@@ -170,9 +176,9 @@ theDirEntries = theDir . _1
 -- traverseWords inj (State wa wb) = State <$> inj wa <*> inj wb
 
 theSyncTime :: Traversal' (ImgNode' ref) TimeStamp
-theSyncTime inj (DIR es ts)       = DIR es <$> inj ts
-theSyncTime inj (COL md im es ts) = COL md im es <$> inj ts
-theSyncTime _   n                 = pure n
+theSyncTime inj (DIR es ts)          = DIR es <$> inj ts
+theSyncTime inj (COL md im be es ts) = COL md im be es <$> inj ts
+theSyncTime _   n                    = pure n
 {-# INLINE theSyncTime #-}
 
 theImgRoot :: Prism' (ImgNode' ref) (ref, ref)
@@ -193,12 +199,12 @@ theRootImgCol = theImgRoot . _2
 {-# INLINE theRootImgCol #-}
 
 theImgCol :: Prism' (ImgNode' ref)
-                    (MetaData, (Maybe (ref, Name)), [ColEntry' ref], TimeStamp)
+                    (MetaData, Maybe (ref, Name), Maybe (ref, Name), [ColEntry' ref], TimeStamp)
 theImgCol =
-  prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
+  prism (\ (x1, x2, x3, x4, x5) -> COL x1 x2 x3 x4 x5)
         (\ x -> case x of
-            COL x1 x2 x3 x4 -> Right (x1, x2, x3, x4)
-            _               -> Left x
+            COL x1 x2 x3 x4 x5 -> Right (x1, x2, x3, x4, x5)
+            _                  -> Left x
         )
 {-# INLINE theImgCol #-}
 
@@ -210,8 +216,12 @@ theColImg :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
 theColImg = theImgCol . _2
 {-# INLINE theColImg #-}
 
+theColBlog :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
+theColBlog = theImgCol . _3
+{-# INLINE theColBlog #-}
+
 theColEntries :: Traversal' (ImgNode' ref) [ColEntry' ref]
-theColEntries = theImgCol . _3
+theColEntries = theImgCol . _4
 {-# INLINE theColEntries #-}
 
 isDIR :: ImgNode' ref -> Bool

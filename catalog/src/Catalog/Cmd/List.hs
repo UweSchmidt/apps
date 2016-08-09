@@ -35,7 +35,7 @@ listNames i0 =
       return $
         ind n (dns ++ cns)
 
-    colA go i _md _im es _ts = do
+    colA go i _md _im _be es _ts = do
       n   <- nm i
       cns <- mapM go' es
       return $
@@ -69,7 +69,7 @@ listPaths' =
       return $
         p : pd ++ pc
 
-    colA go i _md _im es _ts = do
+    colA go i _md _im _be es _ts = do
       p  <- objid2path i
       pp <- mapM go' es
       return $

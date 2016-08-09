@@ -232,6 +232,9 @@ adjustMetaData = adjustNodeVal AdjMetaData theColMetaData
 adjustColImg :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
 adjustColImg = adjustNodeVal AdjColImg theColImg
 
+adjustColBlog :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
+adjustColBlog = adjustNodeVal AdjColBlog theColBlog
+
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
 adjustColEntries = adjustNodeVal AdjColEntries theColEntries
 

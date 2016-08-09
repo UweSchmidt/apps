@@ -22,6 +22,7 @@ data Journal' ref = MkIMG         ref Name
                   | AdjDirEntries ref DirEntries
                   | AdjMetaData   ref MetaData
                   | AdjColImg     ref (Maybe (ObjId, Name))
+                  | AdjColBlog    ref (Maybe (ObjId, Name))
                   | AdjColEntries ref [ColEntry]
                   | SetSyncTime   ref TimeStamp
                   | InitImgStore  Name Name FilePath
@@ -32,3 +33,5 @@ deriving instance (Show ref) => Show (Journal' ref)
 deriving instance Functor Journal'
 
 type Journal = Journal' ObjId
+
+-- ----------------------------------------
