@@ -319,6 +319,12 @@ div.ruler {
   background-color: #bbbbbb;
 }
 
+div.blog-contents {
+  max-width:           64em;
+  margin-left:         15px;
+  margin-right:        15px;
+}
+
 table.nav {
   background-color: transparent;
   border-spacing:           0px;

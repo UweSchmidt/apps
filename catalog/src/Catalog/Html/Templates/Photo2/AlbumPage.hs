@@ -26,6 +26,7 @@ photo2Tmpl =
   & insSubTmpl "prevNav"         prevNav
   & insSubTmpl "nextNav"         nextNav
   & insSubTmpl "child1Nav"       child1Nav
+  & insSubTmpl "colBlog"         colBlog
 
   -- picture page templates
   & insSubTmpl "picPage"         picPage
@@ -103,6 +104,7 @@ ${colNav}
         </td>
       </tr>
     </table>
+${colBlog}
     <div class="ruler"></div>
     <div class="album-content">
 ${colContents}
@@ -121,12 +123,21 @@ ${colNav}
 </html>
 |]
 
+colBlog :: Tmpl
+colBlog = parseTmpl [s|
+    <div class="ruler"></div>
+    <div class="blog-contents">
+${blogContents}
+    </div>
+|]
+
 colJS :: Tmpl
 colJS = parseTmpl [s|
     <script type="text/javascript">
       <!--
       var duration = 7000 * ${theDuration};
       var thisp    = '${thisHref}';
+      var thispos  = '${thisPos}'
       var nextp    = '${theNextHref}';
       var prevp    = '${thePrevHref}';
       var parentp  = '${theParentHref}';
@@ -248,7 +259,7 @@ ${colIcons}
 
 colIcons :: Tmpl
 colIcons = parseTmpl [s|
-          <td class="icon-${theIconGeoDir}" id="${theChildId}">
+          <td class="icon-${theIconGeoDir}" id="${theChildId}" name="${theChildId}">
             <a href="javascript:childPage(&apos;${theChildHref}&apos;);"
                title="${theChildTitle}">
               <img src="/${theIconGeoDir}${theChildImgRef}"

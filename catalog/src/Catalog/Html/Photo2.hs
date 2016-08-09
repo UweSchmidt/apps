@@ -11,7 +11,7 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.Convert (genIcon, genAssetIcon)
+import Catalog.System.Convert (genAssetIcon)
 import Catalog.System.ExifTool (getMetaData)
 import Text.SimpleTemplate
 
@@ -241,6 +241,8 @@ genHtmlPage' p = do
   -- for a col: get the entries, for an img: empty
   this'cs     <- getImgVals this'i theColEntries
   this'meta   <- colImgMeta               this'cr
+  this'ix     <- maybe "" (^. isoPicNo) <$> ixColRef this'cr
+  this'blog   <- return ("" :: String)  -- TODO get the blog contents as .md and convert it to HTML
 
   parent'cr   <- parentColRef             this'cr
   parent'href <- colHref pageConf   `bmb` parent'cr
@@ -315,6 +317,7 @@ genHtmlPage' p = do
 
         -- the href's
         & insAct "thisHref"      (xtxt p)
+        & insAct "thisPos"       (xtxt $ "#" ++ this'ix)
         & insAct "thePrevHref"   (xtxt prev'href)
         & insAct "theNextHref"   (xtxt next'href)
         & insAct "theParentHref" (xtxt parent'href)
@@ -343,6 +346,11 @@ genHtmlPage' p = do
         & insAct "prevNav"       (applyNotNull prev'href)
         & insAct "nextNav"       (applyNotNull next'href)
         & insAct "child1Nav"     (applyNotNull child1'href)
+
+        -- the blog section
+        -- only inserted, when a blog doc is there
+        & insAct "colBlog"       (applyNotNull this'blog)
+        & insAct "blogContents"  (ttxt this'blog)
 
         -- the contents, a nested loop over all children
         -- 4 infos are available per image, the "href"" for the image page,

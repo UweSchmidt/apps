@@ -70,8 +70,8 @@ ps'css          = ps'assets </> "css"
 tt'bydate
   , tt'collections :: Text
 
-tt'bydate =  "Bilder geordnent nach Datum"
-tt'collections = "Bilder von Uwe und Petra"
+tt'bydate      = "Geordnet nach Datum"
+tt'collections = "Uwe alle seine Bilder"
 
 tt'year :: String -> Text
 tt'year y = ("Bilder aus " ++ y) ^. isoText
