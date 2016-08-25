@@ -189,7 +189,7 @@ genCollectionsByDir = do
       where
         tt = sed (const "\8594") "/" . drop 1 . show . tailPath . tailPath
         -- substitute / by ->
-        
+
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
       processImgDirs imgA dirA

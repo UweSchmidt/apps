@@ -145,21 +145,6 @@ mkColRefI i pos = (i, Just pos)
 -- if the result sub index is Nothing, the ref points to a collection
 -- else the ref points to an image
 
-{-
-normColRef' :: ColRef -> Cmd (Maybe ColRef)
-normColRef' cr@(_i, Nothing) =
-  return $ Just cr
-normColRef' cr@(i, Just pos) = do
-  val <- getImgVal i
-  case val ^? theColEntries . ix pos of
-    Just (ImgRef _ _ _) ->  -- ref to an image
-      return $ Just cr
-    Just (ColRef j) ->    -- ref to a sub collection
-      return $ Just (j, Nothing)
-    Nothing ->            -- index out of bounds
-      return Nothing
--- -}
-
 normColRef :: ColRef -> Cmd (Maybe ColRef)
 normColRef = maybeColRef cref iref
   where
@@ -181,65 +166,6 @@ normColRef = maybeColRef cref iref
 --
 -- 1 step up, 1 step down (indexed),
 -- and to the left or right by an offset
-
-parentColRef' :: ColRef -> Cmd (Maybe ColRef)
-parentColRef' (i, Nothing) = do
-  parent'i <- getImgParent i
-  iscol    <- isCOL <$> getImgVal parent'i
-  return $
-    if iscol
-    then Just $ mkColRefC parent'i
-    else Nothing
-
-parentColRef' (i, Just _) =
-  return $ Just (i, Nothing)
-
-
-childColRef' :: Int -> ColRef -> Cmd (Maybe ColRef)
-childColRef' pos (i, Nothing) = do
-  cs <- getImgVals i theColEntries
-  case cs ^? ix pos of
-    Just _ ->
-      normColRef (i, Just pos)
-    Nothing ->  -- index out of bounds
-      return Nothing
-childColRef' _pos _ =
-  return Nothing
-
-ixColRef' :: ColRef -> Cmd (Maybe Int)
-ixColRef' (_, Just pos) =
-  return $ Just pos
-ixColRef' cr@(i, Nothing) = do
-  mp'i <- parentColRef cr
-  case mp'i of
-    Nothing ->
-      return $ Nothing
-    Just (j, _) -> do
-      cs <- getImgVals j theColEntries
-      return $
-        searchPos ((== i) . (^. theColObjId)) cs
-
-neighborColRef' :: Int -> ColRef -> Cmd (Maybe ColRef)
-neighborColRef' offset cr@(_i, Nothing) = do -- col neighbor
-  -- position in parent col
-  mpos <- ixColRef cr
-  case mpos of
-    Nothing ->
-      return Nothing
-    Just pos -> do
-      x <- parentColRef cr       -- 1 level up
-      case x of
-        Just parent'cr ->
-          childColRef (pos + offset) parent'cr -- 1 level down
-        _ ->
-          return Nothing
-
-neighborColRef' offset (i, Just pos) = -- img neighbor
-  normColRef (i, Just $ pos + offset)
-
--- ----------------------------------------
---
--- new version of navigation ops
 
 parentColRef :: ColRef -> Cmd (Maybe ColRef)
 parentColRef = maybeColRef cref iref
@@ -610,41 +536,10 @@ colImgMeta' gm = colImgOp (\ i -> getImgVals i theColMetaData) iop
       | gm        = getMetaData j
       | otherwise = return m
 
-{-
-colImgMeta'' :: Bool -> ColRef -> Cmd MetaData
-colImgMeta'' gm (i, Just pos) = do  -- img meta data
-  cs <- getImgVals i theColEntries
-  case cs ^? ix pos of
-    Just (ImgRef j _n m)
-      | gm ->
-          getMetaData j
-      | otherwise ->
-          return m
-    _ ->
-      return mempty
-
-colImgMeta'' _ (i, Nothing) =     -- col meta data
-  getImgVals i theColMetaData
--- -}
-
 -- ----------------------------------------
 
 colImgName :: ColRef -> Cmd (Maybe Name)
 colImgName = colImgOp (\ _i -> return Nothing) (\ _i n _m -> return $ Just n)
-
-{-
-colImgName :: ColRef -> Cmd (Maybe Name)
-colImgName (i, Just pos) = do
-  cs <- getImgVals i theColEntries
-  return $
-    case cs ^? ix pos of
-      Just (ImgRef _j n _m) ->
-        Just n
-      _ ->
-        mempty
-colImgName _ =
-  return mempty
--- -}
 
 colImgPath :: ColRef -> Cmd (Maybe FilePath)
 colImgPath = colImgOp cop iop
@@ -659,26 +554,6 @@ colImgPath = colImgOp cop iop
           return Nothing
 
     iop j n _m = Just <$> buildImgPath j n
-
-{-
-colImgPath' :: ColRef -> Cmd (Maybe FilePath)
-colImgPath' (i, Just pos) = do  -- image ref
-  cs <- getImgVals i theColEntries
-  case cs ^? ix pos of
-    Just (ImgRef j n _m) ->
-      Just <$> buildImgPath j n
-    _ ->
-      return Nothing
-
-colImgPath' (i, Nothing) = do -- col ref
-  j'img <- getImgVals i theColImg
-  case j'img of
-    -- collection has a front page image
-    Just (k, n) ->
-      Just <$> buildImgPath k n
-    _ ->
-      return Nothing
--- -}
 
 buildImgPath :: ObjId -> Name -> Cmd FilePath
 buildImgPath i n = do
