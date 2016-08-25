@@ -53,6 +53,7 @@ module Data.Prim.Prelude
        , zip3
        , zip4
        , zip5
+       , zip6
          -- Data.Char
        , module Data.Char
          -- Data.Function

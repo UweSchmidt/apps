@@ -179,11 +179,17 @@ genCollectionsByDir = do
           a = ta'readonly
       mkColMeta t "" "" o a
 
+    -- TODO
+    -- search for a IMGtxt entry in DIR entries, take the 1. as blog entry for the collection
+    -- setupDirTxt :: ObjId -> Cmd (Maybe (ObjId, Name))
+    -- setupDirTxt = undefined
+
     path2Title :: Path -> Text
     path2Title p = tt p ^. isoText
       where
-        tt = sed (const " \8594 ") "/" . drop 1 . show . tailPath . tailPath
-
+        tt = sed (const "\8594") "/" . drop 1 . show . tailPath . tailPath
+        -- substitute / by ->
+        
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
       processImgDirs imgA dirA
@@ -366,6 +372,5 @@ mkColByPath insertCol setupCol p = do
         abort $ "mkColByPath: can't create collection, other entry already there " ++
                 show (show p)
       return ip
-
 
 -- ----------------------------------------

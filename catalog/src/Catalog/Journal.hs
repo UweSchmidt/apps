@@ -7,8 +7,6 @@
 
 module Catalog.Journal where
 
--- import           Catalog.Cmd.Types
--- import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim

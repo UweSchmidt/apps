@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-unused-imports -fno-warn-unused-binds #-}
+
 module Control.Monad.RWSErrorIO
     ( module Control.Monad.RWSErrorIO
     , module Control.Monad.Trans.Except

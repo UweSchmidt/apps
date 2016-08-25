@@ -44,6 +44,7 @@ filePathConfig = map (first parseRegexExt) $
   , (mk1 baseName  ++ mk2 jsonExt, IMGjson)
   , (mk1 baseName  ++ mk2 ptoExt,  IMGhugin)
   , (mk1 baseName  ++ mk2 dxoExt,  IMGdxo)
+  , (mk1 baseName  ++ mk2 txtExt,  IMGtxt)
   , (mk1 jpgdirName,               IMGjpgdir)
   , (mk1 imgdirName,               IMGimgdir)
   , (jpgdirPre
@@ -66,6 +67,7 @@ filePathConfig = map (first parseRegexExt) $
     jsonExt   = "[.](json)"
     jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"
+    txtExt    = "[.](md|txt)"
 
     imgdirName = "[-+._A-Za-z0-9]+" -- no do
     jpgdirName =

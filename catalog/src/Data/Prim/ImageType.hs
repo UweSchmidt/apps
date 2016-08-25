@@ -13,7 +13,8 @@ type NameImgType = (Name, ImgType)
 data ImgType =
   IMGraw   | IMGmeta   | IMGjson   | IMGjpg    |
   IMGimg   | IMGcopy   | IMGimgdir | IMGjpgdir |
-  IMGother | IMGboring | IMGhugin  | IMGdxo
+  IMGother | IMGboring | IMGhugin  | IMGdxo    |
+  IMGtxt
 
 deriving instance Eq   ImgType
 deriving instance Ord  ImgType

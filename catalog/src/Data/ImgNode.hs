@@ -25,8 +25,10 @@ module Data.ImgNode
        , isROOT
        , isCOL
        , isoImgParts
+       , isoImgPartsMap
        , isoDirEntries
        , theParts
+       , thePartNames'
        , thePartNames
        , thePartNamesI
        , theImgName
@@ -288,14 +290,21 @@ isoImgParts =
   isoMapElems (\ (IP n _ _ _) -> n)
 {-# INLINE isoImgParts #-}
 
-thePartNames :: (ImgType -> Bool) -> Traversal' ImgParts Name
-thePartNames typTest =
+isoImgPartsMap :: Iso' ImgParts (Map Name ImgPart)
+isoImgPartsMap = iso (\ (ImgParts pm) -> pm) ImgParts
+
+thePartNames' :: (ImgType -> Bool) -> Traversal' ImgParts Name
+thePartNames' typTest =
   isoImgParts . traverse . isA (^. theImgType . to typTest) . theImgName
-{-# INLINE thePartNames #-}
+{-# INLINE thePartNames' #-}
 
 thePartNamesI :: Traversal' ImgParts Name
-thePartNamesI = thePartNames (`elem` [IMGjpg, IMGimg])
+thePartNamesI = thePartNames' (`elem` [IMGjpg, IMGimg])
 {-# INLINE thePartNamesI #-}
+
+thePartNames :: Traversal' ImgParts Name
+thePartNames = thePartNames' (const True)
+{-# INLINE thePartNames #-}
 
 -- ----------------------------------------
 
