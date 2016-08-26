@@ -293,8 +293,7 @@ ${colJS}
   <body onload="initPicture();"
         class="text">
     <div class="text">
-      <h1>The Text Page</h1>
-${blogContent}
+${blogContents}
     </div>
   </body>
 </html>

@@ -11,7 +11,7 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.Convert (genAssetIcon)
+import Catalog.System.Convert (genAssetIcon, genBlogText)
 import Catalog.System.ExifTool (getMetaData)
 import Text.SimpleTemplate
 
@@ -260,8 +260,9 @@ genHtmlPage' p = do
   -- for a col: get the entries, for an img: empty
   this'cs     <- getImgVals this'i theColEntries
   this'meta   <- colImgMeta               this'cr
-  this'ix     <- maybe "" (^. isoPicNo) <$> ixColRef this'cr
-  this'blog   <- return ("" :: String)  -- TODO get the blog contents as .md and convert it to HTML
+  this'ix     <- maybe "" (^. isoPicNo)
+                             <$> ixColRef this'cr
+  this'blog   <- colBlogCont this'type    this'cr
 
   parent'cr   <- parentColRef             this'cr
   parent'href <- colHref pageConf   `bmb` parent'cr
@@ -584,6 +585,18 @@ buildImgPath i n = do
     -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
     n' | ".jpg" `isNameSuffix` n = n
        | otherwise               = substNameSuffix "" ".jpg" n
+
+-- ----------------------------------------
+
+colBlogCont :: ImgType -> ColRef -> Cmd String
+colBlogCont IMGtxt cr = do
+  colImgOp (\ _i -> return mempty) iop cr
+  where
+    iop i n _m = do
+      p <- tailPath <$> objid2path i  -- remove /archive prefix
+      genBlogText (substPathName n p ^. isoString)
+
+colBlogCont _ _ = return mempty
 
 -- ----------------------------------------
 

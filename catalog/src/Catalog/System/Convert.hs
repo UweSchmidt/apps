@@ -8,6 +8,7 @@ module Catalog.System.Convert
        , genImageFromTxt
        , genIcon
        , genAssetIcon
+       , genBlogText
        )
 where
 
@@ -276,4 +277,20 @@ cropGeo (Geo sw sh) (Geo dw dh)
     yoff = (sh - sh') `div` 3           -- cut off 1/3 from top and 2/3 from bottom
                                         -- else important parts like heads are cut off (Ouch!!)
 
+-- ----------------------------------------
+
+genBlogText :: FilePath -> Cmd String
+genBlogText path = do
+  src <- (++ path) <$> view envMountPath
+  dx  <- fileExist src
+  trc $ unwords ["genBlogText", show path, show src, show dx]
+  if dx
+    then formatBlogText src
+    else return $ "no blog text found for " ++ show path
+
+formatBlogText :: FilePath -> Cmd String
+formatBlogText f = do -- pandoc not yet called
+  c <- readFileT f
+  return (c ^. isoString)
+  
 -- ----------------------------------------
