@@ -35,6 +35,9 @@ photo2Tmpl =
   & insSubTmpl "picInfo"         picInfo
   & insSubTmpl "picNav"          picNav
 
+  -- text page template
+  & insSubTmpl "txtPage"         txtPage
+  
   -- exif info
   & insSubTmpl "descrTitle"         descrTitle
   & insSubTmpl "descrSubtitle"      descrSubtitle
@@ -267,6 +270,34 @@ colIcons = parseTmpl [s|
                    alt="${theChildTitle}"/>
             </a>
           </td>
+|]
+
+-- ----------------------------------------
+
+txtPage :: Tmpl
+txtPage = parseTmpl [s|
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <base href="${rootPath}"/>
+    <title>${theHeadTitle}</title>
+    <meta name="description" content="Web Photo Album"/>
+    <meta name="author"      content="Uwe Schmidt"/>
+    <meta name="generator"   content="Photo Collection System"/>
+    <meta name="date"        content="${theDate}"/>
+    <link rel="stylesheet"   type="text/css" href="/assets/css/html-album.css"/>
+${colJS}
+    <script type="text/javascript" src="/assets/javascript/html-album.js" charset="ISO-8859-1"></script>
+  </head>
+  <body onload="initPicture();"
+        class="text">
+    <div class="text">
+      <h1>The Text Page</h1>
+${blogContent}
+    </div>
+  </body>
+</html>
 |]
 
 -- ----------------------------------------

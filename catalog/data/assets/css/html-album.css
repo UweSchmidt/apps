@@ -4,7 +4,7 @@ body {
   font-family:  Verdana, sans-serif;
 }
 
-body.album {
+body.album, body.text {
   color:             white;   /*#ff0000;*/
   background-color : #333333; /*#666666;*/
   overflow:          auto;
@@ -385,6 +385,12 @@ div.album-content > table {
 div.album-content > table tr td {
   background-color: transparent;
   border:       0px solid black;
+}
+
+div.text {
+  text-align: left;
+  margin: 2ex;
+  max-width: 80ex;
 }
 
 /* ------------------------------------------------------------ */

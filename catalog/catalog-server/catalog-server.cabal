@@ -16,6 +16,7 @@ executable catalog-server
   main-is:             Main.hs
   build-depends:       base
                      , catalog
+                     , filepath
                      , http-types            >= 0.9
                      , monad-error-rws-io
                      , mtl

@@ -6,6 +6,7 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
+import           Catalog.FilePath (pathToBreadCrump)
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Data.ImgTree
@@ -187,7 +188,7 @@ genCollectionsByDir = do
     path2Title :: Path -> Text
     path2Title p = tt p ^. isoText
       where
-        tt = sed (const "\8594") "/" . drop 1 . show . tailPath . tailPath
+        tt = pathToBreadCrump . show . tailPath . tailPath
         -- substitute / by ->
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]

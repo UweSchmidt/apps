@@ -96,3 +96,47 @@ filePathConfig = map (first parseRegexExt) $
       ]
 
 -- ----------------------------------------
+--
+-- these regex must match the filePathConfig expressions
+-- if new IMGimg or IMGtxt extensions are added, these regex
+-- must be updated
+
+txtSrcExpr :: Regex
+txtSrcExpr =
+  parseRegexExt $
+  "({path}/.*[.](txt|md)"
+
+imgSrcExpr :: Regex
+imgSrcExpr =
+  parseRegexExt $
+  "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
+
+txtPathExpr :: Regex
+txtPathExpr =
+  parseRegexExt $
+  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.](txt|md))"
+
+imgPathExpr :: Regex
+imgPathExpr =
+  parseRegexExt $
+  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
+
+-- extract the path component from a file path
+
+objSrc :: Regex -> FilePath -> FilePath
+objSrc oex p =
+  case matchSubexRE oex p of
+    [("path", path)] ->
+      path
+    _ ->
+      p
+
+matchSrc :: Regex -> FilePath -> Bool
+matchSrc oex = not . null . matchSubexRE oex
+
+-- ----------------------------------------
+
+pathToBreadCrump :: String -> String
+pathToBreadCrump = sed (const " \8594 ") "/" . drop 1
+
+-- ----------------------------------------

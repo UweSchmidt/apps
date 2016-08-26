@@ -5,7 +5,9 @@ where
 
 import           Catalog.Cmd.Types
 import qualified Data.ByteString.Lazy.Char8 as LB
+import           Data.Prim.Prelude
 import           Data.Prim.TimeStamp
+import qualified Data.Text.IO as T
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Time.Clock as C
 import qualified System.Directory as D
@@ -40,6 +42,9 @@ writeFileLB f = io . LB.writeFile f
 
 readFileLB :: FilePath -> Cmd LB.ByteString
 readFileLB = io . LB.readFile
+
+readFileT :: FilePath -> Cmd Text
+readFileT = io . T.readFile
 
 removeFile :: FilePath -> Cmd ()
 removeFile = io . D.removeFile

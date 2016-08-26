@@ -298,8 +298,9 @@ thePartNames' typTest =
   isoImgParts . traverse . isA (^. theImgType . to typTest) . theImgName
 {-# INLINE thePartNames' #-}
 
+-- images with 1 of the given types can be rendered
 thePartNamesI :: Traversal' ImgParts Name
-thePartNamesI = thePartNames' (`elem` [IMGjpg, IMGimg])
+thePartNamesI = thePartNames' (`elem` [IMGjpg, IMGimg, IMGtxt])
 {-# INLINE thePartNamesI #-}
 
 thePartNames :: Traversal' ImgParts Name

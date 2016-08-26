@@ -4,20 +4,24 @@ module Catalog.System.Convert
        ( getImageSize
        , createImageCopy
        , genImage
+       , createImageFromTxt
+       , genImageFromTxt
        , genIcon
        , genAssetIcon
        )
 where
 
-import Catalog.Cmd
-import Data.Prim
+import           Catalog.Cmd
+import           Catalog.FilePath
+import           Data.Prim
+import qualified Data.Text as T
 -- import Debug.Trace
 
 -- ----------------------------------------
 
 genAssetIcon :: String -> String -> Cmd (Maybe FilePath)
 genAssetIcon px s = do
-  -- trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
+  trc $ "genAssetIcon: " ++ show f ++ " " ++ show s
   genIcon f s   -- call convert with string s, please no "/"-es in s
   return $ Just f
   where
@@ -27,6 +31,7 @@ genIcon :: FilePath -> String -> Cmd ()
 genIcon path t = do
   dst <- (++ path) <$> view envMountPath
   dx  <- fileExist dst
+  trc $ unwords ["genIcon", show path, show t, show dst, show dx]
   unless dx $ do
     createDir $ takeDirectory dst
     execProcess "bash" [] (shellCmd dst) >> return ()
@@ -69,6 +74,11 @@ genIcon path t = do
 
 -- ----------------------------------------
 
+genImageFromTxt :: FilePath -> Cmd FilePath
+genImageFromTxt = genImage' createImageFromTxt (objPath2Geo txtPathExpr) (objSrc txtSrcExpr)
+
+-- ----------------------------------------
+
 -- generate an image of a given geometry from an original image
 -- from the archive or assets
 -- geometry is specified by the the first part of the url2
@@ -79,14 +89,21 @@ genIcon path t = do
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
-genImage url = do
-  maybe notThere doit $ imgPath2Geo url
+genImage = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
+
+genImage' :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
+             (FilePath -> Maybe (GeoAR, FilePath)) ->
+             (FilePath -> FilePath) ->
+             FilePath -> Cmd FilePath
+genImage' createImageC imgPath2Geo imgSrc url = do
+  maybe notThere (doit createImageC) $ imgPath2Geo url
     where
       notThere =
         abort $ "image not found: " ++ show url
 
-      doit :: (GeoAR, FilePath) -> Cmd FilePath
-      doit (geo, path) = do
+      doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
+              (GeoAR, FilePath) -> Cmd FilePath
+      doit createImg (geo, path) = do
         mp <- view envMountPath
         let src = mp ++ imgSrc path
         let dst = mp </> (geo ^. isoString) ++ path
@@ -102,8 +119,7 @@ genImage url = do
               then
                 ( do
                     createDir $ takeDirectory dst
-                    createImageCopy geo dst src
-                    return dst
+                    createImg geo dst src
                   )
                   `catchError`      -- if the org image is broken
                   ( const $ do      -- a "broken image" icon is generated
@@ -112,34 +128,18 @@ genImage url = do
                         fromMaybe ps'blank <$>
                         genAssetIcon "brokenImage" "broken\nimage"
                       warn $ "generate a substitute: " ++ show broken
-                      doit (geo, broken)
+                      doit createImageCopy (geo, broken)
                   )
               else
                 return dst
           else
             notThere
 
-imgSrcExpr :: Regex
-imgSrcExpr =
-  parseRegexExt $
-  "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
+-- ----------------------------------------
 
-imgSrc :: FilePath -> FilePath
-imgSrc p =
-  case matchSubexRE imgSrcExpr p of
-    [("path", path)] ->
-      path
-    _ ->
-      p
-
-imgPathExpr :: Regex
-imgPathExpr =
-  parseRegexExt $
-  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
-
-imgPath2Geo :: FilePath -> Maybe (GeoAR, FilePath)
-imgPath2Geo p =
-  case matchSubexRE imgPathExpr p of
+objPath2Geo :: Regex -> FilePath -> Maybe (GeoAR, FilePath)
+objPath2Geo iex p =
+  case matchSubexRE iex p of
     -- remove the redundant "/archive" part for images from the archive
     [("geoar", geoar), ("topdir", "/archive"), ("path", path)] ->
       Just (geoar ^. from isoString, path)
@@ -169,13 +169,33 @@ parseGeo s =
 
 -- ----------------------------------------
 
-createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd ()
+createImageFromTxt :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
+createImageFromTxt d'geo d s =
+  go
+  where
+    go = do
+      headline <-
+        T.concat . take 1 . filter (not . T.null) . map T.strip . T.lines <$>
+        readFileT s
+      let str1 = headline ^. isoString
+      let str2 = pathToBreadCrump s
+      let str  = concat . take 1 $ [str1, str2]
+      trc $ unwords ["createImageFromTxt:", show d'geo, d, s, str]
+      icon <-
+        fromMaybe ps'blank <$>
+        genAssetIcon (sed (const "_") "/" s) str
+      genImage $ "/" ++ d'geo ^. isoString ++ icon
+
+-- ----------------------------------------
+
+createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
 createImageCopy d'geo d s =
   getImageSize s >>= go
   where
-    go s'geo =
+    go s'geo = do
       runDry ("create image copy: " ++ show shellCmd) $ do
         execProcess "bash" [] shellCmd >> return ()
+      return d
       where
         shellCmd = resizeShellCmd d'geo s'geo d s
 

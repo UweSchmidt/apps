@@ -252,6 +252,7 @@ genHtmlPage' p = do
   -- pnp@(config, this'ref@(this'path, mno)) <- url2confPathNo p
 
   -- this entry
+  this'type   <- colImgType               this'cr
   this'img    <- colImgPath               this'cr
   this'fname  <- ((^. from isoMaybe) . fmap (^. isoString)) <$>
                  colImgName               this'cr
@@ -271,16 +272,24 @@ genHtmlPage' p = do
   prev'href   <- colHref pageConf   `bmb` prev'cr
   prev'img    <- colImgPath         `bmb` prev'cr
   prev'meta   <- colImgMeta0        `bmb` prev'cr
+  prev'type   <- colImgType         `bmb` prev'cr
 
   next'cr     <- nextColRef               this'cr
   next'href   <- colHref pageConf   `bmb` next'cr
   next'img    <- colImgPath         `bmb` next'cr
   next'meta   <- colImgMeta0        `bmb` next'cr
+  next'type   <- colImgType         `bmb` next'cr
 
   child1'cr   <- childColRef 0            this'cr
   child1'href <- colHref pageConf   `bmb` child1'cr
   child1'img  <- colImgPath         `bmb` child1'cr
   child1'meta <- colImgMeta0        `bmb` child1'cr
+
+  let noTxtRef ty ref
+        | ty == IMGtxt = mempty
+        | otherwise    = ref
+  let next'href'    = noTxtRef next'type next'href
+  let prev'href'    = noTxtRef prev'type prev'href
 
   let getMD md n    = md ^. metaDataAt n . isoString
   let getTitle md   = getMD md "descr:Title"
@@ -348,8 +357,8 @@ genHtmlPage' p = do
         & insAct "theNextTitle"   (xtxt $ addColon next'title)
 
         -- the img hrefs
-        & insAct "thePrevImgRef"    (applyNotNull prev'href)
-        & insAct "theNextImgRef"    (applyNotNull next'href)
+        & insAct "thePrevImgRef"    (applyNotNull prev'href')
+        & insAct "theNextImgRef"    (applyNotNull next'href')
         & insAct "theChild1ImgRef"  (applyNotNull child1'href)
         & insAct "thisImgRef"       (blankIcon (Just this'cr) this'img)
         & insAct "parentImgRef"     (blankIcon parent'cr parent'img)
@@ -411,9 +420,10 @@ genHtmlPage' p = do
 
   -- to gen an image page the template name must be exchanged
 
-  let tmpl = if isNothing pos
-             then "colPage"
-             else "picPage"
+  let tmpl
+        | isNothing pos       = "colPage"
+        | this'type == IMGtxt = "txtPage"
+        | otherwise           = "picPage"
 
   res <- runTmplAct applyTmpl tmpl env'
   -- io $ putStrLn (mconcat res ^. isoString) -- readable test output
@@ -538,6 +548,17 @@ colImgMeta' gm = colImgOp (\ i -> getImgVals i theColMetaData) iop
 
 -- ----------------------------------------
 
+colImgType :: ColRef -> Cmd ImgType
+colImgType = colImgOp (\ _i -> return IMGjpg) iop
+  where
+    iop i _n _m = do
+      ity <$> getImgVals i theParts
+      where
+        ity ps
+          | thePartNames' (`elem` [IMGimg, IMGjpg]) `has` ps = IMGjpg
+          | thePartNames' (== IMGtxt)               `has` ps = IMGtxt
+          | otherwise                                        = IMGother
+
 colImgName :: ColRef -> Cmd (Maybe Name)
 colImgName = colImgOp (\ _i -> return Nothing) (\ _i n _m -> return $ Just n)
 
@@ -559,7 +580,7 @@ buildImgPath :: ObjId -> Name -> Cmd FilePath
 buildImgPath i n = do
   p <- objid2path i
   return $ substPathName n' p ^. isoString
-  where
+ where
     -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
     n' | ".jpg" `isNameSuffix` n = n
        | otherwise               = substNameSuffix "" ".jpg" n

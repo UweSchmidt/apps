@@ -194,6 +194,6 @@ execProcess cmd args input
          then do mapM_ warn $ lines stdErr
                  return stdOut
          else do mapM_ err  $ lines stdErr
-                 abort $ unwords ["error in executing external program: ", cmd, show args]
+                 abort $ unwords ["error in executing external program: ", cmd, show args, show input]
 
 -- ----------------------------------------

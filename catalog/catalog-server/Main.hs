@@ -5,7 +5,7 @@ module Main where
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
 import           Catalog.Options (mainWithArgs)
-import           Catalog.System.Convert (genImage)
+import           Catalog.System.Convert (genImage, genImageFromTxt)
 import           Control.Concurrent.MVar
 import           Control.Exception (SomeException, try, catch, toException)
 import           Control.Monad.Except
@@ -21,6 +21,7 @@ import           Network.Wai
 import qualified Network.Wai.Handler.Warp as W
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           System.Exit (die)
+import           System.FilePath (dropExtension)
 import           Web.Scotty --                           (middleware, scotty)
 import           Web.Scotty.Internal.Types
 
@@ -100,6 +101,9 @@ matchHTML = matchPath $ ps'html ^. isoText
 matchJPG :: RoutePattern
 matchJPG = matchPath "/.*[.]jpg"
 
+matchTXT :: RoutePattern
+matchTXT = matchPath "/.*[.](txt|md)[.]jpg"
+
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
@@ -144,6 +148,11 @@ main' env state = do
       p <- param "path"
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
+
+    get matchTXT $ do
+      p <- param "path"
+      f <- runRead $ genImageFromTxt (dropExtension p)
+      fileWithMime "" "image/jpeg" f
 
     get matchJPG $ do
       p <- param "path"

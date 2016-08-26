@@ -6,6 +6,7 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
+import           Catalog.FilePath
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImageStore
@@ -18,7 +19,7 @@ import           Data.Prim
 getExifTool    :: FilePath -> Cmd MetaData
 getExifTool f = do
   ex <- fileExist f
-  if ex
+  if ex && matchSrc imgSrcExpr f
     then
       ( execExifTool ["-groupNames", "-json"] f
         >>= (return . (^. from isoString))
