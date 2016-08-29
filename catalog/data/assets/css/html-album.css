@@ -387,10 +387,19 @@ div.album-content > table tr td {
   border:       0px solid black;
 }
 
-div.text {
+div.text, div.blog-contents {
   text-align: left;
   margin: 2ex;
-  max-width: 80ex;
+  max-width: 40em;
 }
+
+div.blog-contents h1 {
+  font-size: 140%;
+}
+
+div.blog-contents h2 {
+  font-size: 120%;
+}
+
 
 /* ------------------------------------------------------------ */

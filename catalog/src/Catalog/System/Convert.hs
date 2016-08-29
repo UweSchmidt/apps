@@ -281,6 +281,7 @@ cropGeo (Geo sw sh) (Geo dw dh)
 
 genBlogText :: FilePath -> Cmd String
 genBlogText path = do
+  -- add mount path for image root
   src <- (++ path) <$> view envMountPath
   dx  <- fileExist src
   trc $ unwords ["genBlogText", show path, show src, show dx]
@@ -290,7 +291,6 @@ genBlogText path = do
 
 formatBlogText :: FilePath -> Cmd String
 formatBlogText f = do -- pandoc not yet called
-  c <- readFileT f
-  return (c ^. isoString)
+  execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
   
 -- ----------------------------------------

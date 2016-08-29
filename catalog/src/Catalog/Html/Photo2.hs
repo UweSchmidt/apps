@@ -263,6 +263,7 @@ genHtmlPage' p = do
   this'ix     <- maybe "" (^. isoPicNo)
                              <$> ixColRef this'cr
   this'blog   <- colBlogCont this'type    this'cr
+  this'cblog  <- colImgBlog               this'cr
 
   parent'cr   <- parentColRef             this'cr
   parent'href <- colHref pageConf   `bmb` parent'cr
@@ -377,8 +378,9 @@ genHtmlPage' p = do
 
         -- the blog section
         -- only inserted, when a blog doc is there
-        & insAct "colBlog"       (applyNotNull this'blog)
-        & insAct "blogContents"  (ttxt this'blog)
+        & insAct "colBlog"       (applyNotNull this'cblog)  -- a txt in a collection page
+        & insAct "cBlogContents" (ttxt this'cblog)          --    ""
+        & insAct "blogContents"  (ttxt this'blog)           -- a txt "img" page
 
         -- the contents, a nested loop over all children
         -- 4 infos are available per image, the "href"" for the image page,
@@ -547,6 +549,15 @@ colImgMeta' gm = colImgOp (\ i -> getImgVals i theColMetaData) iop
       | gm        = getMetaData j
       | otherwise = return m
 
+colImgBlog :: ColRef -> Cmd String
+colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
+  where
+    cref i = do
+      nd <- getImgVals i theColBlog
+      case nd of
+        Just (j, n) -> getColBlogCont j n
+        Nothing     -> return mempty
+
 -- ----------------------------------------
 
 colImgType :: ColRef -> Cmd ImgType
@@ -592,12 +603,18 @@ colBlogCont :: ImgType -> ColRef -> Cmd String
 colBlogCont IMGtxt cr = do
   colImgOp (\ _i -> return mempty) iop cr
   where
-    iop i n _m = do
-      p <- tailPath <$> objid2path i  -- remove /archive prefix
-      genBlogText (substPathName n p ^. isoString)
+    iop i n _m = getColBlogCont i n
 
 colBlogCont _ _ = return mempty
 
+getColBlogCont :: ObjId -> Name -> Cmd String
+getColBlogCont i n = do
+      p <- objid2path i
+      -- remove "/archive" prefix from path
+      -- and subst the name by the part name
+      genBlogText ((substPathName n $ tailPath p) ^. isoString)
+
+  
 -- ----------------------------------------
 
 -- compute the navigation hrefs for previous, next and parent image/collection

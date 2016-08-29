@@ -233,6 +233,9 @@ genCollectionsByDir = do
               cs  <- concat <$> mapM go (es ^. isoDirEntries)
               adjustColByName cs ic
 
+              -- set the blog entry, if there's a txt entry in cs
+              setColBlogToFstTxtEntry False ic
+              
               -- set time processed
               setSyncTime ic
 
@@ -244,7 +247,7 @@ genCollectionsByDir = do
 
 sortByName :: [ColEntry] -> Cmd [ColEntry]
 sortByName =
-  sortColEntries' getVal compare
+  sortColEntries getVal compare
   where
 
     -- collections come first and are sorted by name
@@ -255,7 +258,7 @@ sortByName =
 
 sortByDate :: [ColEntry] -> Cmd [ColEntry]
 sortByDate =
-  sortColEntries' getVal compare
+  sortColEntries getVal compare
   where
     -- collections come first, should be redundant,
     -- there should be only images in the collection of a day
@@ -269,37 +272,6 @@ sortByDate =
       md  <- getMetaData j
       let t = getCreateMeta parseTime md
       return $ Right (t, n1)
-
-
-sortColEntries' :: (ColEntry -> Cmd a) ->
-                  (a -> a -> Ordering) ->
-                  [ColEntry] -> Cmd [ColEntry]
-sortColEntries' getVal cmpVal es = do
-  map fst . sortBy (cmpVal `on` snd) <$> mapM mkC es
-  where
-    -- mkC :: ColEntry -> Cmd (ColEntry, a)
-    mkC ce = do
-      v <- getVal ce
-      return (ce, v)
-
--- ----------------------------------------
---
--- merge old an new entries
--- old entries are removed from list of new entries
--- the remaining new entries are appended
-
-mergeColEntries :: [ColEntry] -> [ColEntry] -> [ColEntry]
-mergeColEntries es1 es2 =
-  es1 ++ filter (`notIn` map (^. theColObjId) es1) es2
-  where
-    notIn e' es' = (e' ^. theColObjId) `notElem` es'
-
--- a faster version, where the result is unordered
--- duplicates are removed, useful when the list of entries
--- is sorted afterwards
-mergeColEntries' :: [ColEntry] -> [ColEntry] -> [ColEntry]
-mergeColEntries' ns os =
-  (ns ++ os) ^. (from isoDirEntries) . isoDirEntries
 
 -- ----------------------------------------
 --
@@ -325,6 +297,36 @@ adjustColBy sortCol cs parent'i = do
   cs'new <- sortCol $ cs'old `mergeColEntries` cs
   adjustColEntries (const cs'new) parent'i
 
+-- ----------------------------------------
+
+findFstTxtEntry :: ObjId -> Cmd (Maybe (Int, ColEntry))
+findFstTxtEntry = findFstColEntry isTxtEntry
+  where
+    isTxtEntry (ImgRef i n _m) = do
+      nd <- getImgVal i
+      let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
+      return $ maybe False (== IMGtxt) ty
+      
+    isTxtEntry (ColRef _) =
+      return False
+
+-- take the 1. text entry in a collection
+-- and set the collection blog entry to this value
+-- rm indicates, whether the entry is removed from the collection
+
+setColBlogToFstTxtEntry :: Bool -> ObjId -> Cmd ()
+setColBlogToFstTxtEntry rm i = do
+  fte <- findFstTxtEntry i
+  maybe (return ()) setEntry fte
+  where
+    setEntry (pos, ir@(ImgRef j n _m)) = do
+      trc $ unwords ["setColBlogToFstTxtEntry", show i, show pos, show ir]
+      adjustColBlog (const $ Just (j, n)) i
+      when rm $
+        delColEntry pos i
+    setEntry _ =
+      return ()
+    
 -- ----------------------------------------
 
 mkColMeta :: Text -> Text -> Text -> Text -> Text -> Cmd MetaData

@@ -238,6 +238,14 @@ adjustColBlog = adjustNodeVal AdjColBlog theColBlog
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
 adjustColEntries = adjustNodeVal AdjColEntries theColEntries
 
+delColEntry :: Int -> ObjId -> Cmd ()
+delColEntry pos = adjustColEntries delEntry
+  where
+    delEntry cs
+      | pos >= 0 && pos < length cs =
+          let (xs, ys) = splitAt pos cs in xs ++ drop 1 ys
+      | otherwise = cs
+
 setSyncTime :: ObjId -> Cmd ()
 setSyncTime i = do
   t <- now
@@ -266,6 +274,48 @@ adjustNodeVal mkj theComp f i = do
           warn $ "adjustNodeVal: mulitple components have been changed in " ++ name'i ++ ": " ++ show vs
       where
         name'i = show $ i ^. isoString
+
+-- ----------------------------------------
+--
+-- search, sort and merge ops for collections
+
+findAllColEntries :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd [(Int, ColEntry)] 
+findAllColEntries p i = do
+  es <- getImgVals i theColEntries
+  filterM (p . snd) $ zip [0..] es
+
+findFstColEntry  :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd (Maybe (Int, ColEntry))
+findFstColEntry p i = listToMaybe <$> findAllColEntries p i
+
+
+sortColEntries :: (ColEntry -> Cmd a) ->
+                  (a -> a -> Ordering) ->
+                  [ColEntry] -> Cmd [ColEntry]
+sortColEntries getVal cmpVal es = do
+  map fst . sortBy (cmpVal `on` snd) <$> mapM mkC es
+  where
+    -- mkC :: ColEntry -> Cmd (ColEntry, a)
+    mkC ce = do
+      v <- getVal ce
+      return (ce, v)
+
+
+-- merge old an new entries
+-- old entries are removed from list of new entries
+-- the remaining new entries are appended
+
+mergeColEntries :: [ColEntry] -> [ColEntry] -> [ColEntry]
+mergeColEntries es1 es2 =
+  es1 ++ filter (`notIn` map (^. theColObjId) es1) es2
+  where
+    notIn e' es' = (e' ^. theColObjId) `notElem` es'
+
+-- a faster version, where the result is unordered
+-- duplicates are removed, useful when the list of entries
+-- is sorted afterwards
+mergeColEntries' :: [ColEntry] -> [ColEntry] -> [ColEntry]
+mergeColEntries' ns os =
+  (ns ++ os) ^. (from isoDirEntries) . isoDirEntries
 
 -- ----------------------------------------
 --

@@ -130,7 +130,7 @@ colBlog :: Tmpl
 colBlog = parseTmpl [s|
     <div class="ruler"></div>
     <div class="blog-contents">
-${blogContents}
+${cBlogContents}
     </div>
 |]
 
