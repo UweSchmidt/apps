@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -104,6 +105,9 @@ matchJPG = matchPath "/.*[.]jpg"
 matchTXT :: RoutePattern
 matchTXT = matchPath "/.*[.](txt|md)[.]jpg"
 
+matchBootstrap :: Text -> RoutePattern
+matchBootstrap ext = matchPath ("/bootstrap/.*[.]" `T.append` ext)
+
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
@@ -137,7 +141,31 @@ main' env state = do
     -- defined routes
     get "/" $ text "the home page"
     get "/help" $ text "help not yet available"
+    
+    -- bootstrap test
+    get (matchBootstrap "js") $ do
+      param "path" >>= mimeFile "text/javascript"
+    get (matchBootstrap "html") $ do
+      param "path" >>= mimeFile "text/html"
+    get (matchBootstrap "css([.]map)?") $ do
+      param "path" >>= mimeFile "text/css"
+    get (matchBootstrap "svg") $ do
+      param "path" >>= mimeFile "image/svg+xml"
+    get (matchBootstrap "ttf") $ do
+      param "path" >>= mimeFile "application/x-font-ttf"
+    get (matchBootstrap "woff") $ do
+      param "path" >>= mimeFile "application/x-font-woff"
+    get (matchBootstrap "woff2") $ do
+      param "path" >>= mimeFile "application/font-woff2"
+    get (matchBootstrap "woff2") $ do
+      param "path" >>= mimeFile "application/vnd.ms-fontobject"
 
+    -- the route for photo edit
+
+    get "/edit.html" $ do
+      mimeFile "text/html" "/edit.html"
+      
+    -- the routes for the slide show
     get matchJS $ do
       param "path" >>= mimeFile "text/javascript"
 
@@ -151,7 +179,8 @@ main' env state = do
 
     get matchTXT $ do
       p <- param "path"
-      f <- runRead $ genImageFromTxt (dropExtension p)
+      f <- runRead $ genImageFromTxt (dropExtension p
+                                     )
       fileWithMime "" "image/jpeg" f
 
     get matchJPG $ do

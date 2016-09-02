@@ -1,0 +1,67 @@
+body {
+  padding-top: 50px;
+}
+
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+/* for icons with max size 160x160
+   222px = 164px + 2 * 25px + (2px + 2px) * 2
+*/
+div.dia {
+  width: 222px;
+  height: 222px;
+  /* border: 2px solid #c0c0c0; */
+  margin: 2px;
+  padding: 2px;
+}
+
+.unmarked {
+  background-color: #e0e0e0;
+}
+
+.marked {
+  background-color: #ffc0c0;
+}
+
+img.curmarked {
+  border: 2px solid #800000;
+}
+
+.imgmark {
+  border: 2px solid #c0c0c;
+}
+.colmark {
+  border: 2px solid #800000;
+}
+
+div.dia-top {
+  height: 25px;
+  width: 100%;
+  text-align: center;
+}
+
+/* for icons with max size 160x160
+   164px = 160px + 2 * 2px (border)
+*/
+div.dia-img {
+  line-height: 164px;
+  height: 164px;
+  width:164px;
+  margin: auto;
+  text-align: center;
+  /* background-color: #ffffe0; */
+  /* cursor: pointer; /* better set when envent handler is added */
+}
+
+.dia-src {
+  border: 2px solid #c0c0c0;
+}
+
+div.dia-bot {
+  height: 25px;
+  width: 100%;
+  text-align: center;
+}
