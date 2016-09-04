@@ -31,7 +31,7 @@ img.curmarked {
 }
 
 .imgmark {
-  border: 2px solid #c0c0c;
+  border: 2px solid #c0c0c0;
 }
 .colmark {
   border: 2px solid #800000;
@@ -43,6 +43,26 @@ div.dia-top {
   text-align: center;
 }
 
+div.dia-mark {
+  height: 15px;
+  min-width: 15px;
+  line-height: 15px;
+  text-align: right;
+  margin-right: 5px;
+  margin-top: 5px;
+  float: right;
+  border: 1px solid blue;
+}
+
+div.dia-name {
+  height: 15px;
+  line-height: 15px;
+  text-align: left;
+  margin-top: 5px;
+  margin-left: 5px;
+  float: left;
+  border: 1px solid green;
+}
 /* for icons with max size 160x160
    164px = 160px + 2 * 2px (border)
 */

@@ -86,7 +86,7 @@
 
       <!-- Nav tabs -->
       <ul id="collectionTab" class="nav nav-tabs" role="tablist">
-        <li role="presentation" id="/archive/collections/photos/clipboard" class="active">
+        <li role="presentation" class="active">
           <a href="#clipboard" aria-controls="clipboard" role="tab" data-toggle="tab">
             Clipboard
             <!--
@@ -96,7 +96,7 @@
             -->
           </a>
         </li>
-        <li role="presentation" id="/archive/collections/photos">
+        <li role="presentation">
           <a href="#photos" aria-controls="photos" role="tab" data-toggle="tab">Photos</a>
         </li>
         <li role="presentation">
@@ -106,8 +106,10 @@
 
       <!-- Tab panes -->
       <div class="tab-content" id="theCollections">
-        <div role="tabpanel" class="tab-pane active" id="/archive/collections/clipboard">
-
+        <div role="tabpanel"
+             class="tab-pane active"
+             id="clipboard"
+             data-path="/archive/collections/clipboard">
           <div class="pull-left img-thumbnail dia">
             <div class="dia-top">the head</div>
             <div class="dia-img">
@@ -150,10 +152,16 @@
           </div>
 
         </div>
-        <div role="tabpanel" class="tab-pane" id="photos">
+        <div role="tabpanel"
+             class="tab-pane"
+             id="photos"
+             data-path="/archive/collections/photos">
           the root collection
         </div>
-        <div role="tabpanel" class="tab-pane" id="trash">
+        <div role="tabpanel"
+             class="tab-pane"
+             id="trash"
+             data-path="/archive/collections/photos/trash">
           the trash can
         </div>
       </div>
@@ -161,10 +169,13 @@
     </div>
 
     <div class="show" id="prototype-dia">
-      <div class="pull-left img-thumbnail dia marked colmark">
-        <div class="dia-top">prototype dia</div>
+      <div class="pull-left img-thumbnail dia unmarked imgmark">
+        <div class="dia-top">
+          <div class="dia-name">dia name</div>
+          <div class="dia-mark">00</div>
+        </div>
         <div class="dia-img">
-          <img class="dia-src curmarked" src="/pad-160x160/archive/photos/2016.08.09.Uwe/srgb/_uwe3870.jpg">
+          <img class="dia-src" src="/pad-160x160/archive/photos/2016.08.09.Uwe/srgb/_uwe3870.jpg">
         </div>
         <div class="dia-bot">the bottom line</div>
       </div>
