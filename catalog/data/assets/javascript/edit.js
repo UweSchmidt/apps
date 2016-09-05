@@ -43,30 +43,43 @@ function toggleMark(dia) {
     console.log(dia);
 
     if ( dia.hasClass("unmarked") ) {
-        // dia was unmarked, mark it, remove old curmark, and set curmark here
-        dia.removeClass("unmarked").addClass("marked");
+        // dia was unmarked, mark it, and existing curmark
+        dia.removeClass("unmarked");
         clearCurMark(dia);
-        markThisAsCur(dia);
-        var mx = getMarkedNo(getMarked()).length;
-        console.log(mx);
+
+        var mx = getMarkedNo(getMarked()).length + 1;
+        // console.log(mx);
         setMarkCount(dia, '' + mx);
+
+        // set mark and curmark
+        markThisAsCur(dia);
+        dia.addClass("marked");
     } else {
+        // dia was marked, so unmark it
+        // save the mark no
+        var markNo = dia.find("div.dia-mark")
+                .contents()
+                .get(0).textContent;
+        // console.log("unmark dia " + markNo);
+
         // was marked, remove mark, and move curmark to last marked
         dia.removeClass("marked").addClass("unmarked");
         clearCurMark(dia);
         markLastAsCur(dia);
-        // TODO renumber mark counts
-        setMarkCount(dia, '-2');
+
+        // renumber mark counts
+        removeMarkCount(dia);
+        renumberMarkCount(parseInt(markNo));
     }
     return dia;
 }
 
 function clearCurMark(dia) {
     var tabContent = $(dia).parent();
-    console.log('clearCurMark');
-    console.log(tabContent);
+    // console.log('clearCurMark');
+    // console.log(tabContent);
     var img = tabContent.find("img.curmarked");
-    console.log(img);
+    // console.log(img);
     $(img).removeClass("curmarked");
     return dia;
 }
@@ -76,12 +89,30 @@ function removeMarkCount(dia) {
     return dia;
 }
 
+function renumberMarkCount(pos) {
+    // console.log('renumberMarkCount ' + pos);
+    var col = getMarked();
+    var nos = getMarkedNo(col);
+    col.each(function (i, e) {
+        // console.log("renumber");
+        // console.log(i);
+        // console.log(e);
+        var ecol = $(e);
+        var mno = ecol.find("div.dia-mark").contents().get(0).textContent;
+        var no  = parseInt(mno);
+        // console.log(no);
+        if (no > pos) {
+            setMarkCount(ecol, '' + (no - 1));
+        }
+    });
+}
+
 var imgcnt = 0;
 
 function setMarkCount(dia, m) {
-    console.log('setMarkCount');
-    console.log(dia);
-    console.log(m);
+    // console.log('setMarkCount');
+    // console.log(dia);
+    // console.log(m);
     dia.find("div.dia-mark").empty().append(m);
 }
 
@@ -91,14 +122,14 @@ function markThisAsCur(dia) {
 
 function markLastAsCur() {
     var col = getMarked();
-    console.log(col);
+    // console.log(col);
     var nos = getMarkedNo(col);
-    console.log(nos);
+    // console.log(nos);
     var i = maxVal(nos);
-    console.log("marklastascur: " + i);
+    // console.log("marklastascur: " + i);
     if ( i >= 0 ) {
         var sel = "div.dia-mark:contains(" + i + ")";
-        console.log(sel);
+        // console.log(sel);
         col.find(sel).closest("div.dia").find("img.dia-src").addClass("curmarked");
     }
 }
@@ -141,7 +172,7 @@ function newDia(dia) {
         .empty()
         .append(dia.name);
 
-    setMarkCount(p, '-1');
+    removeMarkCount(p);
 
     // set the icon url
     p.find("img.dia-src")

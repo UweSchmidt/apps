@@ -51,7 +51,7 @@ div.dia-mark {
   margin-right: 5px;
   margin-top: 5px;
   float: right;
-  border: 1px solid blue;
+  /* border: 1px solid blue; */
 }
 
 div.dia-name {
