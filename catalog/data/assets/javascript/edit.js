@@ -47,12 +47,16 @@ function toggleMark(dia) {
         dia.removeClass("unmarked").addClass("marked");
         clearCurMark(dia);
         markThisAsCur(dia);
+        var mx = getMarkedNo(getMarked()).length;
+        console.log(mx);
+        setMarkCount(dia, '' + mx);
     } else {
         // was marked, remove mark, and move curmark to last marked
         dia.removeClass("marked").addClass("unmarked");
         clearCurMark(dia);
         markLastAsCur(dia);
-        removeMarkCount(dia);
+        // TODO renumber mark counts
+        setMarkCount(dia, '-2');
     }
     return dia;
 }
@@ -75,6 +79,9 @@ function removeMarkCount(dia) {
 var imgcnt = 0;
 
 function setMarkCount(dia, m) {
+    console.log('setMarkCount');
+    console.log(dia);
+    console.log(m);
     dia.find("div.dia-mark").empty().append(m);
 }
 
@@ -82,9 +89,18 @@ function markThisAsCur(dia) {
     dia.find("img.dia-src").addClass("curmarked");
 }
 
-function markLastAsCur(dia) {
-    var tabContent = $(dia).parent();
-    console.log("marklastascur: TODO");
+function markLastAsCur() {
+    var col = getMarked();
+    console.log(col);
+    var nos = getMarkedNo(col);
+    console.log(nos);
+    var i = maxVal(nos);
+    console.log("marklastascur: " + i);
+    if ( i >= 0 ) {
+        var sel = "div.dia-mark:contains(" + i + ")";
+        console.log(sel);
+        col.find(sel).closest("div.dia").find("img.dia-src").addClass("curmarked");
+    }
 }
 
 function setColMark(dia) {
@@ -101,15 +117,19 @@ function getMarked() {
     return activeCollection().children("div.marked");
 }
 
-function getMarkedNo() {
-    return getMarked()
+function getMarkedNo(col) {
+    return col
         .find("div.dia-mark")
         .contents()
         .toArray()
         .map(function (x) {return parseInt(x.textContent);});
 }
 
-function toInt(s, ix) { return parseInt(s);}
+function maxVal(a) {
+    if ( a.length == 0)
+        return -1;
+    return Math.max(...a);
+}
 
 function newDia(dia) {
     console.log("newDia");
@@ -121,7 +141,7 @@ function newDia(dia) {
         .empty()
         .append(dia.name);
 
-    setMarkCount(p, '-' + ++imgcnt);
+    setMarkCount(p, '-1');
 
     // set the icon url
     p.find("img.dia-src")
