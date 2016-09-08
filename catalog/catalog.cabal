@@ -43,6 +43,7 @@ library
                      Catalog.Cmd.Types
                      Catalog.Html.Photo2
                      Catalog.Html.Templates.Photo2.AlbumPage
+                     Catalog.Json
                      Catalog.Journal
                      Catalog.Options
                      Catalog.Sync

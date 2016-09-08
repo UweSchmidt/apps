@@ -85,3 +85,8 @@ div.dia-bot {
   width: 100%;
   text-align: center;
 }
+
+.prototype {
+  display: block!important;
+  /* display: none!important; /* */
+}

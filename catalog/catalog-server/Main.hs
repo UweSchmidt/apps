@@ -5,6 +5,7 @@ module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
+import           Catalog.Json (jsonQuery, jsonModify)
 import           Catalog.Options (mainWithArgs)
 import           Catalog.System.Convert (genImage, genImageFromTxt)
 import           Control.Concurrent.MVar
@@ -108,6 +109,15 @@ matchTXT = matchPath "/.*[.](txt|md)[.]jpg"
 matchBootstrap :: Text -> RoutePattern
 matchBootstrap ext = matchPath ("/bootstrap/.*[.]" `T.append` ext)
 
+matchJsonGet :: RoutePattern
+matchJsonGet = matchPath $ "/get-[a-zA-Z0-9]+/" <> t'archive <> "/.*[.]json"
+
+matchJsonModify :: RoutePattern
+matchJsonModify = matchPath $ "/modify-[a-zA-Z0-9]+/" <> t'archive <> "/.*[.]json"
+
+matchJsonOther :: RoutePattern
+matchJsonOther = matchPath ".*[.]json"
+
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
@@ -139,10 +149,17 @@ main' env state = do
 --    middleware $ staticPolicy (noDots >-> addBase "static/images") -- for favicon.ico
     middleware logStdoutDev
     -- defined routes
+
+    -- ----------------------------------------  
+
+    -- default route
     get "/" $ text "the home page"
-    get "/help" $ text "help not yet available"
+
+    -- get "/help" $ text "help not yet available"
+
+    -- ----------------------------------------  
+    -- bootstrap routes
     
-    -- bootstrap test
     get (matchBootstrap "js") $ do
       param "path" >>= mimeFile "text/javascript"
     get (matchBootstrap "html") $ do
@@ -160,40 +177,73 @@ main' env state = do
     get (matchBootstrap "woff2") $ do
       param "path" >>= mimeFile "application/vnd.ms-fontobject"
 
+    -- ----------------------------------------  
     -- the route for photo edit
 
+    -- the main page
     get "/edit.html" $ do
       mimeFile "text/html" "/edit.html"
-      
-    -- the routes for the slide show
-    get matchJS $ do
-      param "path" >>= mimeFile "text/javascript"
 
+    -- json query request, done with a get
+    get matchJsonGet $ do
+      p <- param "path"
+      res <- runRead $ uncurry jsonQuery $ splitJsonFct p
+      json res
+
+    get matchJsonModify $ do
+      p <- param "path"
+      res <- runMody $ uncurry jsonModify $ splitJsonFct p
+      json res
+
+    get matchJsonOther $ do
+      p <- param "path"
+      text $ "undefined: " <> p
+      status status404
+
+    -- json modifying request, done with a post
+    -- TODO
+    
+    -- ----------------------------------------  
+    -- the routes for the slide show
+
+    -- css and javascript for slide show
     get matchCSS $ do
       param "path" >>= mimeFile "text/css"
 
+    get matchJS $ do
+      param "path" >>= mimeFile "text/javascript"
+
+    -- HTML page for collections and images
     get matchHTML $ do
       p <- param "path"
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
 
+    -- ----------------------------------------  
+    -- routes for images
+
+    -- icon preview for text files
     get matchTXT $ do
       p <- param "path"
-      f <- runRead $ genImageFromTxt (dropExtension p
-                                     )
+      f <- runRead $ genImageFromTxt (dropExtension p)
       fileWithMime "" "image/jpeg" f
 
+    -- jpg image
     get matchJPG $ do
       p <- param "path"
       f <- runRead $ genImage p
       fileWithMime "" "image/jpeg" f
 
+    -- favicon
     get (matchPath "/.*[.]ico") $ do
       mimeFile "image/x-icon" "/assets/icons/favicon.ico"
 
+    -- ----------------------------------------  
+
+    -- not found route
     get (matchPath ".*") $ do
       p <- param "path"
-      text $ "file " <> p <> "not in archive"
+      text $ "file " <> p <> " not in archive"
       status status404
 
     -- test, test, test
@@ -207,6 +257,18 @@ main' env state = do
         ) $ do
       x <- param "xxx"
       text x
+
+-- ----------------------------------------
+
+splitJsonFct :: Text -> (Text, Text)
+splitJsonFct p
+  | [("fct", fct), ("path", path)] <- matchSubexRE splitJsonRE p =
+      (fct, path)
+  | otherwise =
+      ("", p)
+  
+splitJsonRE :: RegexText
+splitJsonRE = parseRegexExt "/({fct}[^/]+)({path}/.*)[.]json"
 
 -- ----------------------------------------
 

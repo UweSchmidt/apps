@@ -87,7 +87,13 @@
       <!-- Nav tabs -->
       <ul id="collectionTab" class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active">
-          <a href="#clipboard" aria-controls="clipboard" role="tab" data-toggle="tab">
+          <a href="#clipboard"
+             aria-controls="clipboard"
+             role="tab"
+             data-toggle="tab tooltip"
+             data-placement="bottom"
+             title="the clipboard"
+             >
             Clipboard
             <!--
             <button type="button" class="btn btn-default btn-xs" aria-label="Close">
@@ -168,7 +174,11 @@
 
     </div>
 
-    <div class="show" id="prototype-dia">
+    <!-- the protoptype section -->
+
+    <h2 class="prototype">the prototype section</h2>
+
+    <div class="prototype" id="prototype-dia">
       <div class="pull-left img-thumbnail dia unmarked imgmark">
         <div class="dia-top">
           <div class="dia-name">dia name</div>
@@ -181,6 +191,27 @@
       </div>
     </div>
 
+    <div class="prototype" id="prototype-tabpanel">
+      <div role="tabpanel"
+           class="tab-pane"
+           data-path="/archive/collections/prototype">
+        the collection prototype
+      </div>
+    </div>
+
+    <div class="prototype" id="prototype-tab">
+      <ul>
+        <li role="presentation">
+          <a href="#a-collection"
+             aria-controls="a-collection"
+             role="tab"
+             data-toggle="tab"
+             data-placement="bottom"
+             title="The collection path"
+             >A Collection</a>
+        </li>
+      </ul>
+    </div>
     <!--
     <div clas="container-fluid" name="help">
       <div class="starter-template">

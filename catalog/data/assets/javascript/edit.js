@@ -198,6 +198,121 @@ function addDiaToActiveCollection(dia) {
     actCol.append(newSlide);
 }
 
+function showNewCollection(colId, colVal) {
+
+    // compute colId and colName from colId
+    var o = splitPath(colId);
+    console.log(o);
+
+    // collect the tab-pane ids
+    var colIds = [];
+    $("div.tab-pane").each(function (i, e) {
+        var id1 = $(e).attr('id');
+        colIds.push(id1);
+    });
+    console.log(colIds);
+
+    var cid   = o.name;
+    var cname = o.name;
+    var cnt = 1;
+    while (colIds.indexOf(cid) >= 0) {
+        cid = o.name + '-' + ++cnt;
+        cname = o.name + ' (' + cnt + ')';
+    }
+    // for html ids replace all none alphanum chars by "-"
+    o.colId   = "id-" + cid.replace(/[^a-zA-Z0-9]/g,"-");
+    o.colname = cname;
+    console.log(o);
+
+    // add the tab panel
+    var t = $('#prototype-tabpanel').children("div").clone();
+    t.find('div.tab-panel').empty();
+    t.attr('id', o.colId)
+        .attr('data-path', o.path);
+    $('#theCollections').append(t);
+
+    // add the tab
+    var tb = $('#prototype-tab').find("li").clone();
+    var lk = tb.find('a');
+    lk.attr('href', '#' + o.colId)
+        .attr('aria-controls', o.colId)
+        .attr('title', o.path)
+        .empty()
+        .append(o.colname);
+    $('#collectionTab').append(tb);
+
+    // fill the colection
+    fillCollection(o);
+}
+
+function fillCollection(col) {
+    console.log('fillCollection: TODO');
+}
+// ----------------------------------------
+//
+// string helper functions
+// ----------------------------------------
+//
+// computes an object with path, name and cpath, and bname and ext
+
+function splitPath(p) {
+    if (typeof p === 'string') {
+        return splitPath({'path' : p});
+    }
+
+    var a = p.path.split("/");
+    p.name  = a.pop();
+    p.cpath = a.join("/");
+
+    var e = p.name.split(".");
+    if (e.length < 2) {
+        p.ext   = "";
+        p.bname = p.name;
+    } else {
+        p.ext   = e.pop();
+        p.bname = e.join(".");
+    }
+    return p;
+}
+
+// ----------------------------------------
+
+// just for debug
+var lres;
+
+function getObj(fct, path, ok) {
+    $.getJSON("/" + fct + path + ".json",
+              function (res) {
+                  lres = res;
+                  if (res.err) {
+                      alert(res.err);
+                  } else {
+                      ok(res);
+                  }
+              })
+        .fail(function (err){
+            alert(err.resposeText);
+            return {};
+        });
+}
+
+function getColFromServer(path, showCol) {
+    getObj("get-obj", path,
+           function (col) {
+               if (col.ImgNode !== "COL") {
+                   alert("got something, but not a collection");
+                   return;
+               }
+               showCol(path, col);
+    });
+}
+
+function openCollection(path) {
+    getColFromServer(path, showNewCollection);
+}
+
+// ----------------------------------------
+
 var td = {"name" : "_uwe1234",
           "path" : "/archive/photos/_uwe1234",
           "src" : "/pad-160x160/assets/icons/generated/photos.jpg"
