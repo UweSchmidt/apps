@@ -51,6 +51,7 @@ div.dia-mark {
   margin-right: 5px;
   margin-top: 5px;
   float: right;
+  color: #800000;
   /* border: 1px solid blue; */
 }
 
@@ -61,7 +62,7 @@ div.dia-name {
   margin-top: 5px;
   margin-left: 5px;
   float: left;
-  border: 1px solid green;
+  /* border: 1px solid green; */
 }
 /* for icons with max size 160x160
    164px = 160px + 2 * 2px (border)

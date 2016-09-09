@@ -43,23 +43,29 @@ mkER :: Text -> Cmd J.Value
 mkER t = return $ J.toJSON $ (ER t :: JsonRes ())
 
 jsonQuery :: Text -> Text -> Cmd J.Value
-jsonQuery fct path =
-  case fct of
-    "get-obj" -> do
-      v <- lookupByPath path'
-      case v of
-        Nothing ->
-          mkER $ "get-obj: entry not found: " <> path
-        Just (_oid, n) ->
+jsonQuery fct path = do
+  v <- lookupByPath path'
+  case v of
+    Nothing ->
+      mkER $ fct <> ": entry not found: " <> path
+    Just (_oid, n) ->
+      case fct of
+        "get-obj" -> do
           mkOK n
-
-    _ ->
-      mkER ("query operation not defined: " <> fct)
+        "get-iconref" -> do
+          ref <- iconRef n
+          mkOK ref
+        __ ->
+          mkER ("query operation not defined: " <> fct)
   where
     path' = path ^. isoString . from isoString
-    
+
+    -- TODO
+    iconRef :: ImgNode -> Cmd Text
+    iconRef _n = return "/assets/icons/generated/brokenImage.jpg"
+
 jsonModify :: Text -> Text -> Cmd J.Value
-jsonModify fct path =
+jsonModify fct _path =
   mkER ("modifying operation " <> fct <> " not defined")
 
 -- ----------------------------------------
