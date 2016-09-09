@@ -203,7 +203,7 @@ function showNewCollection(colId, colVal) {
     // compute colId and colName from colId
     var o = splitPath(colId);
     console.log(o);
-
+    console.log(colVal);
     // collect the tab-pane ids
     var colIds = [];
     $("div.tab-pane").each(function (i, e) {
@@ -224,30 +224,43 @@ function showNewCollection(colId, colVal) {
     o.colname = cname;
     console.log(o);
 
+    // readonly collection ?
+    var ro = colVal.metadata[0]["descr:Access"] === "readonly";
+
     // add the tab panel
     var t = $('#prototype-tabpanel').children("div").clone();
     t.find('div.tab-panel').empty();
     t.attr('id', o.colId)
         .attr('data-path', o.path);
+    if (ro) {
+        t.addClass("readonly");
+    }
     $('#theCollections').append(t);
 
     // add the tab
     var tb = $('#prototype-tab').find("li").clone();
     var lk = tb.find('a');
+    var tt = o.path;
+    var tn = o.colname;
+    if (ro) {
+        tt = tt + " (readonly)";
+        tn = tn + " *";
+    };
     lk.attr('href', '#' + o.colId)
         .attr('aria-controls', o.colId)
-        .attr('title', o.path)
+        .attr('title', tt)
         .empty()
-        .append(o.colname);
+        .append(tn);
     $('#collectionTab').append(tb);
 
     // fill the colection
-    fillCollection(o);
+    fillCollection(o.colId, colVal.entries);
 }
 
-function fillCollection(col) {
+function fillCollection(colId, entries) {
     console.log('fillCollection: TODO');
 }
+
 // ----------------------------------------
 //
 // string helper functions
@@ -277,8 +290,7 @@ function splitPath(p) {
 
 // ----------------------------------------
 
-// just for debug
-var lres;
+// ajax calls
 
 function getObj(fct, path, ok) {
     $.getJSON("/" + fct + path + ".json",
@@ -296,7 +308,7 @@ function getObj(fct, path, ok) {
         });
 }
 
-function getColFromServer(path, showCol) {
+function getCollection(path, showCol) {
     getObj("get-obj", path,
            function (col) {
                if (col.ImgNode !== "COL") {
@@ -307,8 +319,12 @@ function getColFromServer(path, showCol) {
     });
 }
 
+// ----------------------------------------
+
+// commands with ajax calls
+
 function openCollection(path) {
-    getColFromServer(path, showNewCollection);
+    getCollection(path, showNewCollection);
 }
 
 // ----------------------------------------
