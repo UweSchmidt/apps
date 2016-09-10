@@ -597,6 +597,15 @@ buildImgPath i n = do
     n' | ".jpg" `isNameSuffix` n = n
        | otherwise               = substNameSuffix "" ".jpg" n
 
+-- compute the image ref of a collection
+-- if collection has an front page image, take that
+-- otherwise take the ref to a generated image
+
+colImgRef :: ObjId -> Cmd FilePath
+colImgRef i = do
+  p <- colImgPath (i, Nothing)
+  maybe (iconRef i) return p
+
 -- ----------------------------------------
 
 colBlogCont :: ImgType -> ColRef -> Cmd String
@@ -614,13 +623,21 @@ getColBlogCont i n = do
       -- and subst the name by the part name
       genBlogText ((substPathName n $ tailPath p) ^. isoString)
 
-  
 -- ----------------------------------------
 
 -- compute the navigation hrefs for previous, next and parent image/collection
 
 path2href :: String -> FilePath -> FilePath
 path2href c p = "/" ++ c ++ p ++ ".html"
+
+-- compute the icon ref of a collection
+
+iconRef :: ObjId -> Cmd FilePath
+iconRef i = do
+  p  <- (^. isoString) <$> objid2path i
+  fp <- path2img p
+  return $
+    fromMaybe (ps'blank ^. isoString) fp
 
 -- ----------------------------------------
 
@@ -645,13 +662,7 @@ blankIcon _ (Just f) =
 
 blankIcon (Just (i, Nothing)) _ = do
   -- ref to a collection, try to generate a collection icon
-  p <- liftTA imgpath
-  xtxt $ maybe ps'blank id p
-  where
-    imgpath = do
-      -- trcObj i $ "blankicon: "
-      p <- (^. isoString) <$> objid2path i
-      path2img p
+  liftTA (iconRef i) >>= xtxt
 
 blankIcon _ _ =
   -- image not there

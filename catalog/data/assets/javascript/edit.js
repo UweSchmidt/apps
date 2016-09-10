@@ -13,8 +13,10 @@ function navClicked(e) {
      */
 }
 
-$("#opn-button").on('click', navClicked);
+// $("#opn-button").on('click', navClicked);
 $("#new-button").on('click', navClicked);
+$("#mark-button").on('click', navClicked);
+$("#unmark-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
 $("#mfc-button").on('click', navClicked);
 $("#mtc-button").on('click', navClicked);
@@ -519,6 +521,34 @@ function closeCollection(cid) {
     }
 }
 
+function markAll(cid) {
+    console.log('mark all images in ' + cid);
+
+    $('#' + cid + ' > div.unmarked')
+        .each(function (i, e) {
+            toggleMark($(e));
+    });
+}
+
+function unmarkAll(cid) {
+    console.log('unmark all images in ' + cid);
+
+    var col = $('#' + cid);
+
+    // remove all marked classes
+    var ens = col.find('div.marked')
+            .removeClass('marked')
+            .addClass('unmarked');
+
+    // remove all mark counts
+    ens.find('div.dia-mark')
+        .empty();
+
+    // remove mark as current
+    ens.find('img.curmarked')
+        .removeClass('curmarked');
+}
+
 // ----------------------------------------
 
 // navbar button handlers
@@ -536,6 +566,16 @@ $(document).ready(function () {
     // event handler for navbar buttons
     $("#rem-button")
         .on('click', function (e) { closeActiveCollection(); });
+
+    $("#mark-button")
+        .on('click', function (e) {
+            markAll(activeCollectionId());
+        });
+
+    $("#unmark-button")
+        .on('click', function (e) {
+            unmarkAll(activeCollectionId());
+        });
 
 });
 

@@ -33,17 +33,31 @@
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
+            <!--
             <li><a href="#" id="opn-button"
                    data-toggle="tooltip" data-placement="bottom"
                    title="open last marked collection">open</a>
             </li>
+            -->
             <li>
-              <a href="#" id="new-button">new</a>
+              <a href="#" id="new-button"
+                 data-toggle="tooltip" data-placement="bottom"
+                 title="add a new empty collection to current collection">new</a>
             </li>
             <li>
               <a href="#" id="rem-button"
                  data-toggle="tooltip" data-placement="bottom"
                  title="close current collection">close</a>
+            </li>
+            <li>
+              <a href="#" id="mark-button"
+                 data-toggle="tooltip" data-placement="bottom"
+                 title="mark all images in current collection">markAll</a>
+            </li>
+            <li>
+              <a href="#" id="unmark-button"
+                 data-toggle="tooltip" data-placement="bottom"
+                 title="unmark all images in current collection">unmarkAll</a>
             </li>
             <li>
               <a href="#" id="mfc-button"

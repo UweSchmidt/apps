@@ -12,18 +12,19 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Journal
-import           Catalog.Cmd.Types
+import           Catalog.Html.Photo2 (colImgRef)
+-- import           Catalog.Journal
+-- import           Catalog.Cmd.Types
 import           Control.Lens
-import           Control.Monad.Except
-import           Control.Monad.RWSErrorIO
+-- import           Control.Monad.Except
+-- import           Control.Monad.RWSErrorIO
 -- import           Data.Prim
 import           Data.ImageStore
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.Prim
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
+-- import qualified Data.Aeson.Encode.Pretty as J
 
 -- ----------------------------------------
 
@@ -48,21 +49,22 @@ jsonQuery fct path = do
   case v of
     Nothing ->
       mkER $ fct <> ": entry not found: " <> path
-    Just (_oid, n) ->
+    Just (i, n) ->
       case fct of
+        -- get the object value
         "get-obj" -> do
           mkOK n
+
+        -- get the iconref of a collection
         "get-iconref" -> do
-          ref <- iconRef n
-          mkOK ref
-        __ ->
+          ref <- colImgRef i
+          mkOK (ref ^. isoText)
+
+        -- undefined get op
+        _ ->
           mkER ("query operation not defined: " <> fct)
   where
     path' = path ^. isoString . from isoString
-
-    -- TODO
-    iconRef :: ImgNode -> Cmd Text
-    iconRef _n = return "/assets/icons/generated/brokenImage.jpg"
 
 jsonModify :: Text -> Text -> Cmd J.Value
 jsonModify fct _path =
