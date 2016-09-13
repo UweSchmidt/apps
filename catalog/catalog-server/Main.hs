@@ -5,7 +5,7 @@ module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
-import           Catalog.Json (jsonQuery, jsonModify)
+import           Catalog.Json (jsonRPC)
 import           Catalog.Options (mainWithArgs)
 import           Catalog.System.Convert (genImage, genImageFromTxt)
 import           Control.Concurrent.MVar
@@ -150,16 +150,16 @@ main' env state = do
     middleware logStdoutDev
     -- defined routes
 
-    -- ----------------------------------------  
+    -- ----------------------------------------
 
     -- default route
     get "/" $ text "the home page"
 
     -- get "/help" $ text "help not yet available"
 
-    -- ----------------------------------------  
+    -- ----------------------------------------
     -- bootstrap routes
-    
+
     get (matchBootstrap "js") $ do
       param "path" >>= mimeFile "text/javascript"
     get (matchBootstrap "html") $ do
@@ -177,33 +177,24 @@ main' env state = do
     get (matchBootstrap "woff2") $ do
       param "path" >>= mimeFile "application/vnd.ms-fontobject"
 
-    -- ----------------------------------------  
-    -- the route for photo edit
+    -- ----------------------------------------
+    -- the routes for photo edit and AJAX calls
 
     -- the main page
     get "/edit.html" $ do
       mimeFile "text/html" "/edit.html"
 
-    -- json query request, done with a get
-    get matchJsonGet $ do
-      p <- param "path"
-      res <- runRead $ uncurry jsonQuery $ splitJsonFct p
+    post "/get.json" $ do
+      d   <- jsonData
+      res <- runRead $ jsonRPC d
       json res
 
-    get matchJsonModify $ do
-      p <- param "path"
-      res <- runMody $ uncurry jsonModify $ splitJsonFct p
+    post "/modify.json" $ do
+      d   <- jsonData
+      res <- runMody $ jsonRPC d
       json res
 
-    get matchJsonOther $ do
-      p <- param "path"
-      text $ "undefined: " <> p
-      status status404
-
-    -- json modifying request, done with a post
-    -- TODO
-    
-    -- ----------------------------------------  
+    -- ----------------------------------------
     -- the routes for the slide show
 
     -- css and javascript for slide show
@@ -219,7 +210,7 @@ main' env state = do
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
 
-    -- ----------------------------------------  
+    -- ----------------------------------------
     -- routes for images
 
     -- icon preview for text files
@@ -238,7 +229,7 @@ main' env state = do
     get (matchPath "/.*[.]ico") $ do
       mimeFile "image/x-icon" "/assets/icons/favicon.ico"
 
-    -- ----------------------------------------  
+    -- ----------------------------------------
 
     -- not found route
     get (matchPath ".*") $ do
@@ -266,7 +257,7 @@ splitJsonFct p
       (fct, path)
   | otherwise =
       ("", p)
-  
+
 splitJsonRE :: RegexText
 splitJsonRE = parseRegexExt "/({fct}[^/]+)({path}/.*)[.]json"
 

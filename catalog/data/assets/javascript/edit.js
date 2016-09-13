@@ -15,8 +15,8 @@ function navClicked(e) {
 
 // $("#opn-button").on('click', navClicked);
 $("#new-button").on('click', navClicked);
-$("#mark-button").on('click', navClicked);
-$("#unmark-button").on('click', navClicked);
+// $("#mark-button").on('click', navClicked);
+// $("#unmark-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
 $("#mfc-button").on('click', navClicked);
 $("#mtc-button").on('click', navClicked);
@@ -211,6 +211,17 @@ function allCollectionIds() {
     });
     console.log(colIds);
     return colIds;
+}
+
+function allCollectionPaths() {
+    // collect all collection paths (ObjId's on server)
+    var colPaths = [];
+    $("#theCollections div.tab-pane").each(function (i, e) {
+        var path1 = $(e).attr('data-path');
+        colPaths.push(path1);
+    });
+    console.log(colPaths);
+    return colPaths;
 }
 
 // ----------------------------------------
@@ -455,41 +466,6 @@ function iconSize(p) {
 
 // ----------------------------------------
 
-// ajax calls
-
-function getObj(fct, path, ok) {
-    $.getJSON("/" + fct + path + ".json",
-              function (res) {
-                  lres = res;
-                  if (res.err) {
-                      alert(res.err);
-                  } else {
-                      ok(res);
-                  }
-              })
-        .fail(function (err){
-            alert(err.resposeText);
-            return {};
-        });
-}
-
-function getCollection(path, showCol) {
-    getObj("get-obj", path,
-           function (col) {
-               if (col.ImgNode !== "COL") {
-                   alert("got something, but not a collection");
-                   return;
-               }
-               showCol(path, col);
-    });
-}
-
-function getIconRef(path, insertSrcRef) {
-    getObj("get-iconref", path, insertSrcRef);
-}
-
-// ----------------------------------------
-
 // top level commands, most with ajax calls
 
 function openCollection(path) {
@@ -560,12 +536,69 @@ function closeActiveCollection() {
 
 // ----------------------------------------
 
+// ajax calls
+
+function getCollection(path, showCol) {
+    readServer("collection", path,
+           function (col) {
+               if (col.ImgNode !== "COL") {
+                   alert("got something, but not a collection");
+                   return;
+               }
+               showCol(path, col);
+           });
+}
+
+function getIconRef(path, insertSrcRef) {
+    readServer('iconref', path, insertSrcRef);
+}
+
+// ----------------------------------------
+
+// http communication
+
+function callServer(getOrModify, fct, args, processRes) {
+    var rpc = [fct, args];
+    $.ajax({
+        type: "POST",
+        url: "/" + getOrModify + '.json',
+        data: JSON.stringify(rpc),
+        dataType: 'json'
+    }).done(function (res) {
+        if (res.err) {
+            alert(res.err);
+        } else {
+            processRes(res);
+        }
+    }).fail(function (err){
+        alert(err.resposeText);
+    });
+}
+
+// make a query call to server
+
+function readServer(fct, path, processRes) {
+    callServer("get", fct, [path, []], processRes);
+}
+
+// make a modifying call to server
+
+function modyServer(fct, path, args, processRes) {
+    callServer("modify", [fct, args], processRes);
+}
+
+// ----------------------------------------
+
+// the "main" program
+
 $(document).ready(function () {
     openCollection("/archive/collections/photos");
 
     // event handler for navbar buttons
     $("#rem-button")
-        .on('click', function (e) { closeActiveCollection(); });
+        .on('click', function (e) {
+            closeActiveCollection();
+        });
 
     $("#mark-button")
         .on('click', function (e) {
@@ -580,6 +613,8 @@ $(document).ready(function () {
 });
 
 // ----------------------------------------
+
+// test test test
 
 var td = {"name" : "_uwe1234",
           "path" : "/archive/photos/_uwe1234",

@@ -6,8 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Catalog.Json
-       ( jsonQuery
-       , jsonModify
+       ( jsonRPC
        )
 where
 
@@ -43,31 +42,63 @@ mkOK x = return $ J.toJSON x
 mkER :: Text -> Cmd J.Value
 mkER t = return $ J.toJSON $ (ER t :: JsonRes ())
 
-jsonQuery :: Text -> Text -> Cmd J.Value
-jsonQuery fct path = do
-  v <- lookupByPath path'
-  case v of
-    Nothing ->
-      mkER $ fct <> ": entry not found: " <> path
-    Just (i, n) ->
-      case fct of
-        -- get the object value
-        "get-obj" -> do
-          mkOK n
+-- ----------------------------------------
+-- AJAX JSON interface
+--
+-- all requests consists of a JSON array with 2 elements,
+-- 1. the name of an RPC function
+-- 2. an array of 2 arguments
+--  2.1. an object id, represented as a path (string)
+--  2.2. an arbitrary JSON value for extra data,
+--       mostly needed in modifying function, e.g. an array of indexes for sorting
 
-        -- get the iconref of a collection
-        "get-iconref" -> do
-          ref <- colImgRef i
-          mkOK (ref ^. isoText)
+-- 1. step: parse the json function name
 
-        -- undefined get op
-        _ ->
-          mkER ("query operation not defined: " <> fct)
+jsonRPC :: J.Value -> Cmd J.Value
+jsonRPC jv = do
+  case  J.fromJSON jv :: J.Result (Text, (Text, J.Value)) of
+    J.Error e ->
+      mkER $ "illegal JSON RPC call: " <> e ^. isoText
+    J.Success (fct, (path, args)) -> do
+      let path' = path ^. isoString . from isoString
+      v <- lookupByPath path'
+      case v of
+        Nothing ->
+          mkER $ fct <> ": entry not found: " <> path
+        Just (i, n) ->
+          jsonCall fct i n args
+
+-- 3. step: dispatch over the function name
+-- make a JSON call of cmd fct with an ObjId i,
+-- an associated ImgNode n
+-- and an extra JSON argument args
+
+jsonCall :: Text -> ObjId -> ImgNode -> J.Value -> Cmd J.Value
+jsonCall fct i n args =
+  case fct of
+    "collection" ->
+      jl $ \ () -> do
+      return n
+
+    "iconref" ->
+      jl $ \ () -> do
+      (^. isoText) <$> colImgRef i
+
+    _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
-    path' = path ^. isoString . from isoString
+    jl :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> Cmd J.Value
+    jl = flip jsonLift args
 
-jsonModify :: Text -> Text -> Cmd J.Value
-jsonModify fct _path =
-  mkER ("modifying operation " <> fct <> " not defined")
+-- 3., 4. and 5. step: parse the extra JSON argument
+-- make the call of the internal operation and
+-- convert the result back to JSON
+
+jsonLift :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> (J.Value -> Cmd J.Value)
+jsonLift cmd jv =
+  case J.fromJSON jv of
+    J.Error e ->
+      mkER $ "illegal JSON post arg: " <> e ^. isoText
+    J.Success v ->
+      cmd v >>= mkOK
 
 -- ----------------------------------------
