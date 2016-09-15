@@ -1,7 +1,6 @@
 module Main
 where
 
-import Control.Applicative
 import Control.Monad.RWSErrorIO
 
 import Data.Char                ( isDigit )
@@ -32,6 +31,8 @@ findGrepSed setOpts
     where
       env = initFindPred . initCwd . setOpts $ initEnv
 
+main1 :: IO ()
+main1 = main
 
 fgsInfo :: TermInfo
 fgsInfo
@@ -680,5 +681,3 @@ addDirExpr fe e
     =  e { theDirFindExpr = andExpr (theDirFindExpr e) fe }
 
 -- ----------------------------------------
-
-

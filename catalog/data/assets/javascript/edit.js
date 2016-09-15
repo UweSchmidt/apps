@@ -23,7 +23,7 @@ $("#mtc-button").on('click', navClicked);
 $("#ctc-button").on('click', navClicked);
 $("#mtt-button").on('click', navClicked);
 $("#emp-button").on('click', navClicked);
-$("#srt-button").on('click', navClicked);
+// $("#srt-button").on('click', navClicked);
 
 $('#collectionTab a').click(function (e) {
     e.preventDefault();
@@ -199,7 +199,9 @@ function activeCollectionId() {
 }
 
 function isSystemCollectionId(cid) {
-    return cid == "col-photos" || cid === "col-clipboard" || cid === "col-trash";
+    return cid === "col-collections"
+        || cid === "col-clipboard"
+        || cid === "col-trash";
 }
 
 function allCollectionIds() {
@@ -213,6 +215,10 @@ function allCollectionIds() {
     return colIds;
 }
 
+function collectionPath(cid) {
+    return $('#' + cid).attr('data-path');
+}
+
 function allCollectionPaths() {
     // collect all collection paths (ObjId's on server)
     var colPaths = [];
@@ -222,6 +228,21 @@ function allCollectionPaths() {
     });
     console.log(colPaths);
     return colPaths;
+}
+
+function isReadOnlyCollection(colVal) {
+    var acc = colVal.metadata[0]["descr:Access"];
+    return acc.search('no-write') >= 0;
+}
+
+function isSystemCollection(colVal) {
+    var acc = colVal.metadata[0]["descr:Access"];
+    return acc.search('no-delete') >= 0;
+}
+
+function isNotSortableCollection(colVal) {
+    var acc = colVal.metadata[0]["descr:Access"];
+    return acc.search('no-sort') >= 0;
 }
 
 // ----------------------------------------
@@ -234,14 +255,14 @@ function addDiaToActiveCollection(dia) {
     actCol.append(newSlide);
 }
 
-function showNewCollection(colId, colVal) {
+function showNewCollection(path, colVal) {
 
-    // compute colId and colName from colId
-    var o = splitPath(colId);
+    // compute colId and colName from path
+    var o = splitPath(path);
     console.log(o);
     console.log(colVal);
 
-    var io = isAlreadyOpen(colId);
+    var io = isAlreadyOpen(path);
 
     if ( io[0] ) {
         // nothing to do, collections is already there
@@ -277,7 +298,9 @@ function showNewCollection(colId, colVal) {
         console.log(o);
 
         // readonly collection ?
-        var ro = colVal.metadata[0]["descr:Access"] === "readonly";
+        var ro = isReadOnlyCollection(colVal);
+        var sr = isNotSortableCollection(colVal);
+        var sy = isSystemCollection(colVal);
         var ct = colVal.metadata[0]["descr:Title"];
 
         // add the tab panel
@@ -285,8 +308,14 @@ function showNewCollection(colId, colVal) {
         t.find('div.tab-panel').empty();
         t.attr('id', o.colId)
             .attr('data-path', o.path);
-        if (ro) {
+        if ( ro ) {
             t.addClass("readonly");
+        }
+        if ( sr ) {
+            t.addClass("nosort");
+        }
+        if ( sy ) {
+            t.addClass("nodelete");
         }
         $('#theCollections').append(t);
 
@@ -408,11 +437,11 @@ function newEntry(entry, i) {
             });
         // set the icon url
         // url is computed on server and added in callback
-        getIconRef(ref.path,
-                   function (src) {
-                       p.find("img.dia-src")
-                           .attr('src', iconSize(src));
-                   });
+        getIconRefFromServer(ref.path,
+                             function (src) {
+                                 p.find("img.dia-src")
+                                     .attr('src', iconSize(src));
+                             });
     }
 
     if ( entry.ColEntry === "IMG" ) {
@@ -433,6 +462,22 @@ function newEntry(entry, i) {
         .css('cursor','pointer');
 
     return p;
+}
+
+// ----------------------------------------
+
+function refreshCollection(path, colVal) {
+    var o = splitPath(path);
+    console.log('refreshCollection');
+    console.log(o);
+    console.log(colVal);
+
+    var io = isAlreadyOpen(path);
+    // check whether collection is already there
+    if ( io[0]) {
+        o.colId = io[1];
+        insertEntries(o.colId, colVal.entries);
+    }
 }
 
 // ----------------------------------------
@@ -469,7 +514,7 @@ function iconSize(p) {
 // top level commands, most with ajax calls
 
 function openCollection(path) {
-    getCollection(path, showNewCollection);
+    getColFromServer(path, showNewCollection);
 }
 
 function closeCollection(cid) {
@@ -525,6 +570,36 @@ function unmarkAll(cid) {
         .removeClass('curmarked');
 }
 
+function sortCollection(cid) {
+    console.log('sort collection: ' + cid);
+    var sr = $('#' + cid).hasClass('nosort');
+    console.log(sr);
+    if ( sr ) {
+        alert('collection not sortable: ' + cid);
+        return;
+    }
+    var ixs = [];
+    $('#' + cid + ' > div.dia > div.dia-top > div.dia-mark')
+        .each(function(i, e) {
+            // get the mark cnt
+            var v = $(e).contents().get(0);
+            var c = -1;
+            if ( v ) {
+                c = parseInt(v.textContent);
+            }
+            console.log(v);
+            console.log(c);
+            ixs.push(c);
+
+        });
+    console.log(ixs);
+
+    var path = collectionPath(cid);
+    console.log(path);
+
+    sortColOnServer(path, ixs, refreshCollection);
+}
+
 // ----------------------------------------
 
 // navbar button handlers
@@ -534,11 +609,27 @@ function closeActiveCollection() {
     closeCollection(cid);
 }
 
+function sortActiveCollection() {
+    var cid = activeCollectionId();
+    sortCollection(cid);
+}
+
 // ----------------------------------------
 
 // ajax calls
 
-function getCollection(path, showCol) {
+function sortColOnServer(path, args, showCol) {
+    modyServer("sort", path, args,
+               function(col) {
+                   if (col.ImgNode !== "COL") {
+                       alert("got something, but not a collection");
+                       return;
+                   }
+                   showCol(path, col);
+               });
+}
+
+function getColFromServer(path, showCol) {
     readServer("collection", path,
            function (col) {
                if (col.ImgNode !== "COL") {
@@ -549,7 +640,7 @@ function getCollection(path, showCol) {
            });
 }
 
-function getIconRef(path, insertSrcRef) {
+function getIconRefFromServer(path, insertSrcRef) {
     readServer('iconref', path, insertSrcRef);
 }
 
@@ -559,6 +650,9 @@ function getIconRef(path, insertSrcRef) {
 
 function callServer(getOrModify, fct, args, processRes) {
     var rpc = [fct, args];
+    console.log('callServer: ' + getOrModify);
+    console.log(rpc);
+
     $.ajax({
         type: "POST",
         url: "/" + getOrModify + '.json',
@@ -584,7 +678,7 @@ function readServer(fct, path, processRes) {
 // make a modifying call to server
 
 function modyServer(fct, path, args, processRes) {
-    callServer("modify", [fct, args], processRes);
+    callServer("modify", fct, [path, args], processRes);
 }
 
 // ----------------------------------------
@@ -592,7 +686,7 @@ function modyServer(fct, path, args, processRes) {
 // the "main" program
 
 $(document).ready(function () {
-    openCollection("/archive/collections/photos");
+    openCollection("/archive/collections");
 
     // event handler for navbar buttons
     $("#rem-button")
@@ -609,6 +703,10 @@ $(document).ready(function () {
         .on('click', function (e) {
             unmarkAll(activeCollectionId());
         });
+
+    $("#srt-button").on('click', function (e) {
+        sortCollection(activeCollectionId());
+    });
 
 });
 

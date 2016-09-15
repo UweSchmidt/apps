@@ -35,6 +35,7 @@ genIcon path t = do
   trc $ unwords ["genIcon", show path, show t, show dst, show dx]
   unless dx $ do
     createDir $ takeDirectory dst
+    trc $ shellCmd dst
     execProcess "bash" [] (shellCmd dst) >> return ()
   where
     shellCmd dst =
@@ -219,15 +220,24 @@ resizeShellCmd d'g s'geo d s =
 
     unsharp     = [] -- ["-unsharp", "0.7x0.7+1.0+0.05"] -- sharpen option removed
     resize      = ["-thumbnail", geo ++ "!"]
-    resize1     = ["-geometry", geo, "-thumbnail", geo]
-    quality     = ["-quality", "85"]
+    -- resize1     = ["-geometry", geo, "-thumbnail", geo]
+    resize1     = ( if isThumbnail
+                    then "-thumbnail"
+                    else "-geometry"
+                  ) : [d'geo ^. isoString]
+    quality     = "-quality" : [ if isThumbnail
+                                 then "75"
+                                 else "95"
+                               ]
     interlace   = [ "-interlace", "Plane" ]
     isPad       = (xoff == (-1) && yoff == (-1))
     isCrop      = (xoff > 0     || yoff > 0)
+    isThumbnail = let Geo dw dh = d'geo
+                  in dw <= 300 && dh <= 300
     geo         = r ^. isoString
 
     cmdName
-        | isPad         = [ "montage" ]
+        | isPad         = [ "convert" ] -- ["montage" ]
         | otherwise     = [ "convert" ]
 
     cmdArgs

@@ -84,6 +84,11 @@ jsonCall fct i n args =
       jl $ \ () -> do
       (^. isoText) <$> colImgRef i
 
+    "sort" -> do
+      jl $ \ ixs -> do
+        sortColByIxList ixs i
+        getImgVal i
+
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
     jl :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> Cmd J.Value
@@ -100,5 +105,48 @@ jsonLift cmd jv =
       mkER $ "illegal JSON post arg: " <> e ^. isoText
     J.Success v ->
       cmd v >>= mkOK
+
+-- ----------------------------------------
+
+-- sort a collection by a list of positions
+--
+-- 1. all entries with "-1" mark and pos less than last marked entry
+-- 2. last marked entry
+-- 3. all other marked entries ordered by mark count
+-- 4. all entries with "-1" mark and pos greater than largest mark index
+
+sortColByIxList :: [Int] -> ObjId -> Cmd ()
+sortColByIxList ixs oid
+  | null ixs =
+      return ()
+  | otherwise =
+    adjustColEntries (reorderCol ixs) oid
+
+reorderCol :: [Int] -> [a] -> [a]
+reorderCol ixs cs =
+  map snd . sortBy (cmp mx `on` fst) $ zip ixs' cs
+  where
+    ixs' :: [(Int, Int)]
+    ixs' = zip ixs [0..]
+
+    mx :: (Int, Int)
+    mx = maximum ixs'
+
+cmp :: (Int, Int) -> (Int, Int) -> (Int, Int) -> Ordering
+cmp (mi, mx) (i, x) (j, y)
+      | i == -1 && j == -1 =
+        compare x y
+      | i == -1 && j >= 0 =
+        compare x mx
+      | i >= 0  && j == -1 =
+        compare mx y
+      | i == mi && j >= 0 =
+        LT
+      | i >= 0  && j == mi =
+        GT
+      | i >= 0  && j >= 0 =
+        compare i j
+      | otherwise =
+        EQ
 
 -- ----------------------------------------

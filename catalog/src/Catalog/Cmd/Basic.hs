@@ -279,7 +279,7 @@ adjustNodeVal mkj theComp f i = do
 --
 -- search, sort and merge ops for collections
 
-findAllColEntries :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd [(Int, ColEntry)] 
+findAllColEntries :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd [(Int, ColEntry)]
 findAllColEntries p i = do
   es <- getImgVals i theColEntries
   filterM (p . snd) $ zip [0..] es
@@ -361,6 +361,6 @@ trcCmd cmd
 
 journalChange :: Journal -> Cmd ()
 journalChange j = do
-  logg (^. envJournal) "journal:" (show j)
+  logg (^. envJournal) "journal" (show j)
 
 -- ----------------------------------------

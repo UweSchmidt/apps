@@ -91,3 +91,15 @@ div.dia-bot {
   display: block!important;
   /* display: none!important; /* */
 }
+
+.readonly {
+  /* marker class for read only collections */
+}
+
+.nosort {
+  /* marker class for unsortable collections */
+}
+
+.nodelete {
+  /* marker class for generated collections */
+}

@@ -25,7 +25,7 @@ genCollectionRootMeta = do
     s = ""
     c = ""
     o = ""
-    a = ta'readonly
+    a = no'change
 
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
@@ -57,7 +57,7 @@ genCollectionsByDate = do
         s = ""
         c = ""
         o = to'colandname
-        a = ta'readonly
+        a = no'change
 
 processNewImages :: TimeStamp -> Path -> ObjId -> Cmd ()
 processNewImages colSyncTime pc i0 = do
@@ -119,21 +119,21 @@ processNewImages colSyncTime pc i0 = do
           where
             t = tt'year y'
             o = to'name
-            a = ta'readonly
+            a = no'change
 
         setupMonthCol y' m' _i = do
           mkColMeta t "" "" o a
           where
             t = tt'month y' m'
             o = to'name
-            a = ta'readonly
+            a = no'change
 
         setupDayCol y' m' d' _i = do
           mkColMeta t "" "" o a
           where
             t = tt'day y' m' d'
             o = to'dateandtime
-            a = ta'readonly
+            a = no'change
 
 -- ----------------------------------------
 
@@ -177,7 +177,7 @@ genCollectionsByDir = do
 
       t <- path2Title <$> objid2path i
       let o = to'colandname
-          a = ta'readonly
+          a = no'wrtdel
       mkColMeta t "" "" o a
 
     -- TODO

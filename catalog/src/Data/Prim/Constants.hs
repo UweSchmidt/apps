@@ -5,6 +5,7 @@ module Data.Prim.Constants where
 import Data.Prim.Name
 import Data.Prim.Path
 import Data.Prim.Prelude
+import qualified Data.Text as T
 
 n'archive
   , n'bycreatedate
@@ -93,11 +94,17 @@ tt'day y m d =
           ]
   ^. isoText
 
+-- access restrictions
 
-ta'readonly :: Text
-ta'readonly = "readonly"
+no'change,
+  no'delete, no'sort, no'write :: Text
 
-
+no'write  = "no-write"
+no'sort   = "no-sort"
+no'delete = "no-delete"
+no'change = T.unwords [no'delete, no'sort, no'write]
+no'wrtdel = T.unwords [no'delete, no'write]
+  
 to'colandname
   , to'dateandtime
   , to'name :: Text
