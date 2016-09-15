@@ -88,8 +88,8 @@ div.dia-bot {
 }
 
 .prototype {
-  display: block!important;
-  /* display: none!important; /* */
+  /* display: block!important; /* */
+  /* */ display: none!important; /* */
 }
 
 .readonly {

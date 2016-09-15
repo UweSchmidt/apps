@@ -41,6 +41,8 @@ syncCatalog = do
   verbose "and the collections per date"
   genCollectionRootMeta
   cleanupCollections
+  genClipboardCollection
+  genTrashCollection
   genCollectionsByDir
   genCollectionsByDate
 

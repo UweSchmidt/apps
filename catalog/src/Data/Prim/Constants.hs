@@ -9,13 +9,17 @@ import qualified Data.Text as T
 
 n'archive
   , n'bycreatedate
+  , n'clipboard
   , n'collections
-  , n'photos :: Name
+  , n'photos
+  , n'trash :: Name
 
 n'archive      = "archive"
-n'bycreatedate = "bycreatedate"
+n'bycreatedate = "timeline"
+n'clipboard    = "clipboard"
 n'collections  = "collections"
 n'photos       = "photos"
+n'trash        = "trash"
 
 t'archive
   , t'collections
@@ -26,26 +30,35 @@ t'collections = n'collections ^. isoText
 t'photos      = n'photos      ^. isoText
 
 s'bycreatedate
+  , s'clipboard
   , s'collections
-  , s'photos :: String
+  , s'photos
+  , s'trash :: String
 
 s'bycreatedate = n'bycreatedate ^. isoString
 s'collections  = n'collections  ^. isoString
 s'photos       = n'photos       ^. isoString
-
+s'clipboard    = n'clipboard    ^. isoString
+s'trash        = n'trash        ^. isoString
 
 p'archive
+  , p'clipboard
   , p'collections
   , p'bycreatedate
-  , p'photos :: Path
+  , p'photos
+  , p'trash :: Path
 
 p'archive      = mkPath n'archive
 p'collections  = p'archive     `snocPath` n'collections
 p'bycreatedate = p'collections `snocPath` n'bycreatedate
 p'photos       = p'collections `snocPath` n'photos
+p'clipboard    = p'collections `snocPath` n'clipboard
+p'trash        = p'collections `snocPath` n'trash
 
 ps'collections
   , ps'bycreatedate
+  , ps'clipboard
+  , ps'trash
   , ps'photos
   , ps'assets
   , ps'icons
@@ -54,6 +67,8 @@ ps'collections
   , ps'css
   , ps'blank :: FilePath
 
+ps'clipboard    = p'clipboard    ^. isoString
+ps'trash        = p'trash        ^. isoString
 ps'collections  = p'collections  ^. isoString
 ps'bycreatedate = p'bycreatedate ^. isoString
 ps'photos       = p'photos       ^. isoString
@@ -69,10 +84,16 @@ ps'css          = ps'assets </> "css"
 -- constants for generated collections
 
 tt'bydate
-  , tt'collections :: Text
+  , tt'clipboard
+  , tt'trash
+  , tt'collections
+  , tt'photos :: Text
 
 tt'bydate      = "Geordnet nach Datum"
+tt'clipboard   = "Clipboard"
+tt'trash       = "Papierkorb"
 tt'collections = "Uwe alle seine Bilder"
+tt'photos      = "Alle Ordner"
 
 tt'year :: String -> Text
 tt'year y = ("Bilder aus " ++ y) ^. isoText

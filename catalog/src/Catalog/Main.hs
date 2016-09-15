@@ -150,6 +150,7 @@ syncCatalog jsonPath0 mountPath = do
   trc "create the collections for the archive dirs"
   trc "and the collections per date"
   genCollectionRootMeta
+  genClipboardCollection
   genCollectionsByDir
   genCollectionsByDate
 

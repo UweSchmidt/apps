@@ -687,13 +687,19 @@ path2img f
       genAssetIcon n n
 
   | f == ps'bycreatedate =           -- "/archive/collections/byCreateDate"
-      genAssetIcon s'bycreatedate "nach\nAufnahme-\nDatum"
+      genAssetIcon s'bycreatedate (tt'bydate ^. isoString)
+
+  | f == ps'clipboard =              -- "/archive/collections/photos/clipboard"
+      genAssetIcon s'clipboard (tt'clipboard ^. isoString)
+
+  | f == ps'trash =              -- "/archive/collections/photos/trash"
+      genAssetIcon s'trash (tt'trash ^. isoString)
 
   | f == ps'photos =                 -- "/archive/collections/photos"
-      genAssetIcon s'photos "alle\nOrdner"
+      genAssetIcon s'photos (tt'photos ^. isoString)
 
   | f == ps'collections =            -- "/archive/collections"
-      genAssetIcon s'collections "alle\nBilder"
+      genAssetIcon s'collections (tt'collections ^. isoString)
 
   | otherwise =
       return Nothing
