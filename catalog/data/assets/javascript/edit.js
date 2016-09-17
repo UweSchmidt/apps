@@ -100,7 +100,9 @@ function renumberMarkCount(pos) {
         // console.log(i);
         // console.log(e);
         var ecol = $(e);
-        var mno = ecol.find("div.dia-mark").contents().get(0).textContent;
+        var mno = ecol.find("div.dia-mark")
+                .contents()
+                .get(0).textContent;
         var no  = parseInt(mno);
         // console.log(no);
         if (no > pos) {
@@ -136,14 +138,13 @@ function markLastAsCur() {
     }
 }
 
-function setColMark(dia) {
-    if ( dia.hasClass('imgmark') )
-        dia.removeClass('imgmark').addClass('colmark');
-}
-
-function setImgMark(dia) {
-    if ( dia.hasClass('colmark') )
-        dia.removeClass('colmark').addClass('imgmark');
+function setMark(dia, mark) {
+    var mark2 = 'colmark';
+    if ( mark === mark2 ) {
+        mark2 = 'imgmark';
+    }
+    dia.removeClass(mark2)
+        .addClass(mark);
 }
 
 function getMarked() {
@@ -279,9 +280,10 @@ function showNewCollection(path, colVal) {
 
         // collect the tab-pane ids
         var colIds = [];
-        $("div.tab-pane").each(function (i, e) {
-            var id1 = $(e).attr('id');
-            colIds.push(id1);
+        $("div.tab-pane")
+            .each(function (i, e) {
+                var id1 = $(e).attr('id');
+                colIds.push(id1);
         });
         console.log(colIds);
 
@@ -305,7 +307,8 @@ function showNewCollection(path, colVal) {
 
         // add the tab panel
         var t = $('#prototype-tabpanel').children("div").clone();
-        t.find('div.tab-panel').empty();
+        t.find('div.tab-panel')
+            .empty();
         t.attr('id', o.colId)
             .attr('data-path', o.path);
         if ( ro ) {
@@ -394,14 +397,14 @@ function newEntry(entry, i) {
     console.log(entry);
     var p = $("#prototype-dia").children("div").clone();
 
-    var en = (i + 1) + ': ';
+    var en = '<span class="img-no">' + (i + 1) + '</span>: ';
     var sc = iconSize('');
     var mk = '';
     var tt = '';
     var ref = splitPath(entry.ref);
 
     if (entry.ColEntry === "IMG") {
-        en = en + entry.part;
+        en = en + '<span class="img-part">' + entry.part + '</span>';
         sc = sc + ref.cpath + "/" + entry.part;
         mk = "imgmark";
         tt = "image: " + entry.ref;
@@ -421,7 +424,7 @@ function newEntry(entry, i) {
         sc = sc + ".jpg";
     }
     // set img/col mark
-    p.addClass(mk);
+    setMark(p, mk);
 
     // set the head line
     p.find("div.dia-name")
@@ -600,6 +603,64 @@ function sortCollection(cid) {
     sortColOnServer(path, ixs, refreshCollection);
 }
 
+function setCollectionImg(cid) {
+    console.log("setCollectionImg: " + cid);
+    var col  = $('#' + cid);
+    var path = col.attr('data-path');
+    var o    = splitPath(path);
+    var img  = col.find(" img.curmarked")
+            .closest('div.dia')
+            .get(0);
+
+    if ( col.hasClass('readonly')) {
+        alert('warning: collection is readonly: ' + cid);
+        // return; // TODO: testing: remove this to make it an error
+    }
+
+    if ( img ) {
+        console.log(img);
+        if ( $(img).hasClass('imgmark') ) {
+            var part = $(img)
+                    .find('span.img-part')
+                    .contents()
+                    .get(0).textContent;
+            if ( part.search(/[.]jpg$/) >= 0 ) {
+                // it's a jpg image
+                // so take this image as collection image
+                var pos = $(img)
+                        .find('span.img-no')
+                        .contents()
+                        .get(0)
+                        .textContent;
+                pos = parseInt(pos) -1;
+                console.log('setCollectionImg:');
+                console.log(pos);
+                console.log(path);
+                console.log(o);
+                modifyServer('colimg', path, pos,
+                             function (res) {
+                                 var ppath = o.cpath;
+                                 var pcol = isAlreadyOpen(ppath);
+                                 if ( pcol[0] ) {
+                                     // parent collection open
+                                     // refresh the parent collection
+                                     // to show the new collection image
+                                     getColFromServer(ppath, refreshCollection);
+                                 }
+                             });
+            } else {
+                alert('not a .jpg image');
+            }
+        } else {
+            alert('marked entry is a collection, not an image');
+        }
+        // unmark last marked entry
+        toggleMark($(img));
+    } else {
+        alert('no marked entry found');
+    }
+}
+
 // ----------------------------------------
 
 // navbar button handlers
@@ -619,14 +680,14 @@ function sortActiveCollection() {
 // ajax calls
 
 function sortColOnServer(path, args, showCol) {
-    modyServer("sort", path, args,
-               function(col) {
-                   if (col.ImgNode !== "COL") {
-                       alert("got something, but not a collection");
-                       return;
-                   }
-                   showCol(path, col);
-               });
+    modifyServer("sort", path, args,
+                 function(col) {
+                     if (col.ImgNode !== "COL") {
+                         alert("got something, but not a collection");
+                         return;
+                     }
+                     showCol(path, col);
+                 });
 }
 
 function getColFromServer(path, showCol) {
@@ -677,7 +738,7 @@ function readServer(fct, path, processRes) {
 
 // make a modifying call to server
 
-function modyServer(fct, path, args, processRes) {
+function modifyServer(fct, path, args, processRes) {
     callServer("modify", fct, [path, args], processRes);
 }
 
@@ -691,7 +752,7 @@ $(document).ready(function () {
     // event handler for navbar buttons
     $("#rem-button")
         .on('click', function (e) {
-            closeActiveCollection();
+            closeCollection(activeCollectionId());
         });
 
     $("#mark-button")
@@ -704,8 +765,14 @@ $(document).ready(function () {
             unmarkAll(activeCollectionId());
         });
 
-    $("#srt-button").on('click', function (e) {
-        sortCollection(activeCollectionId());
+    $("#srt-button")
+        .on('click', function (e) {
+            sortCollection(activeCollectionId());
+    });
+
+    $("#colimg-button")
+        .on('click', function (e) {
+            setCollectionImg(activeCollectionId());
     });
 
 });

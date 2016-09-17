@@ -76,19 +76,33 @@ jsonRPC jv = do
 jsonCall :: Text -> ObjId -> ImgNode -> J.Value -> Cmd J.Value
 jsonCall fct i n args =
   case fct of
+
+    -- read a whole collection
     "collection" ->
       jl $ \ () -> do
       return n
 
+    -- read the src path for a collection icon
+    -- result is an url pointing to the icon src
     "iconref" ->
       jl $ \ () -> do
       (^. isoText) <$> colImgRef i
 
+    -- sort a collection by sequence of positions
+    -- result is the new collection
     "sort" -> do
       jl $ \ ixs -> do
         sortColByIxList ixs i
         getImgVal i
 
+    -- set or unset the collection image
+    -- i must reference a collection, not an image
+    -- nothing is returned
+    "colimg" -> do
+      jl $ \ ix' -> do
+        setColImg ix' i n
+
+    -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
     jl :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> Cmd J.Value
@@ -148,5 +162,19 @@ cmp (mi, mx) (i, x) (j, y)
         compare i j
       | otherwise =
         EQ
+
+-- ----------------------------------------
+--
+-- set or unset the "front page" image of a collection
+-- to one of the images in the collection
+-- The pos param specifies the position or, if -1, the unset op
+
+setColImg :: Int -> ObjId -> ImgNode -> Cmd ()
+setColImg pos oid n
+  | Just (iid, inm, _im) <- n ^? theColEntries . ix pos . theColImgRef =
+      adjustColImg (const $ Just (iid, inm)) oid
+
+  | otherwise =
+      adjustColImg (const Nothing) oid
 
 -- ----------------------------------------
