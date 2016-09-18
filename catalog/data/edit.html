@@ -99,115 +99,74 @@
                  data-toggle="tooltip" data-placement="bottom"
                  title="set last marked as collection image">colImg</a>
             </li>
+            <li>
+              <a href="#"
+                 type="button"
+                 data-toggle="modal"
+                 data-target="#newCollectionModal"
+                 title="create new collection">
+                newCol
+              </a>
+            </li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
     </nav>
-<!--
-    <button type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Tooltip on bottom">Tooltip on bottom</button>
--->
-    <div class="container-fluid" id="collectionsContainer">
 
-      <!-- Nav tabs -->
-      <ul id="collectionTab" class="nav nav-tabs" role="tablist">
-        <!--
-        <li role="presentation" class="active">
-          <a href="#clipboard"
-             aria-controls="clipboard"
-             role="tab"
-             data-toggle="tab tooltip"
-             data-placement="bottom"
-             title="the clipboard"
-             >
-            Clipboard
-            --
-            <button type="button" class="btn btn-default btn-xs" aria-label="Close">
-              <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+    <!-- Modal box for new collection -->
+    <div class="modal fade"
+         id="newCollectionModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="newCollectionModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+              <span aria-hidden="true">&times;</span>
             </button>
-            --
-          </a>
-        </li>
-        -->
-        <!--
-        <li role="presentation">
-          <a href="#photos" aria-controls="photos" role="tab" data-toggle="tab">Photos</a>
-        </li>
-        -->
-        <!--
-        <li role="presentation">
-          <a href="#trash" aria-controls="trash" role="tab" data-toggle="tab">Trash</a>
-        </li>
-        -->
-      </ul>
+            <h4 class="modal-title"
+                id="newCollectionModalLabel"
+                >Create new collection</h4>
+          </div>
+          <div class="modal-body">
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="newCol-addon1"
+                    >Collection name</span>
+              <input type="text"
+                     id="newCollectionName"
+                     class="form-control"
+                     placeholder="a-z, A-Z, 0-9, -, _, ."
+                     aria-describedby="newCol-addon1">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-default"
+                    data-dismiss="modal"
+                    >Cancel</button>
+            <button type="button"
+                    class="btn btn-primary"
+                    id="newCollectionOK"
+                    >O.K.</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- the collections container -->
+
+    <div class="container-fluid" id="collectionsContainer">
+      <!-- Nav tabs, dynamically filled -->
+      <ul id="collectionTab" class="nav nav-tabs" role="tablist">
+      </ul>
       <!-- Tab panes -->
       <div class="tab-content" id="theCollections">
-        <!--
-        <div role="tabpanel"
-             class="tab-pane active"
-             id="clipboard"
-             data-path="/archive/collections/clipboard">
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">
-              <img class="dia-src" src="/pad-160x160/archive/photos/2016.08.09.Uwe/srgb/_uwe3870.jpg">
-            </div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">
-              <img class="dia-src" src="/pad-160x160/archive/photos/2016.08.09.Uwe/srgb/_uwe3896.jpg">
-            </div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">the 3. image</div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">the 4. image</div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">the 5. image</div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">the 6. image</div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-          <div class="pull-left img-thumbnail dia">
-            <div class="dia-top">the head</div>
-            <div class="dia-img">the 7. image</div>
-            <div class="dia-bot">the bottom</div>
-          </div>
-
-        </div>
-        -->
-        <!--
-        <div role="tabpanel"
-             class="tab-pane"
-             id="photos"
-             data-path="/archive/collections/photos">
-          the root collection
-        </div>
-        -->
-        <!--
-        <div role="tabpanel"
-             class="tab-pane"
-             id="trash"
-             data-path="/archive/collections/photos/trash">
-          the trash can
-        </div>
-        -->
       </div>
-
     </div>
 
     <!-- the protoptype section -->

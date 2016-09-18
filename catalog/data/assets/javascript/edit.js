@@ -233,17 +233,17 @@ function allCollectionPaths() {
 
 function isReadOnlyCollection(colVal) {
     var acc = colVal.metadata[0]["descr:Access"];
-    return acc.search('no-write') >= 0;
+    return acc && acc.search('no-write') >= 0;
 }
 
 function isSystemCollection(colVal) {
     var acc = colVal.metadata[0]["descr:Access"];
-    return acc.search('no-delete') >= 0;
+    return acc && acc.search('no-delete') >= 0;
 }
 
 function isNotSortableCollection(colVal) {
     var acc = colVal.metadata[0]["descr:Access"];
-    return acc.search('no-sort') >= 0;
+    return acc && acc.search('no-sort') >= 0;
 }
 
 // ----------------------------------------
@@ -661,6 +661,30 @@ function setCollectionImg(cid) {
     }
 }
 
+function createCollection() {
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+    var name  = $('#newCollectionName').val();
+    name = name.replace(/[^-_.a-zA-Z0-9]/g,"");
+    var cnames = $('#' + cid + ' div.dia.colmark div.dia-name a')
+            .contents()
+            .get()
+            .map(function (x) {return x.textContent;});
+    var ix = cnames.indexOf(name);
+
+    console.log('createCollection');
+    console.log(cpath);
+    console.log(name);
+    console.log(cnames);
+
+    if ( name  && name.length > 0) {
+        if ( ix >= 0 ) {
+            alert("collection name already exists: " + name);
+            return;
+        }
+        createColOnServer(cpath, name, refreshCollection);
+    }
+}
 // ----------------------------------------
 
 // navbar button handlers
@@ -705,6 +729,16 @@ function getIconRefFromServer(path, insertSrcRef) {
     readServer('iconref', path, insertSrcRef);
 }
 
+function createColOnServer(path, name, showCol) {
+    modifyServer("newcol", path, name,
+                 function(col) {
+                     if (col.ImgNode !== "COL") {
+                         alert("got something, but not a collection");
+                         return;
+                     }
+                     showCol(path, col);
+                 });
+}
 // ----------------------------------------
 
 // http communication
@@ -773,8 +807,14 @@ $(document).ready(function () {
     $("#colimg-button")
         .on('click', function (e) {
             setCollectionImg(activeCollectionId());
-    });
+        });
 
+    $('#newCollectionOK')
+        .on('click', function (e) {
+            console.log("newCollectionOK clicked");
+            $('#newCollectionModal').modal('hide');
+            createCollection();
+        });
 });
 
 // ----------------------------------------

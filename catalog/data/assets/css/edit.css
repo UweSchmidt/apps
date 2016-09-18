@@ -103,3 +103,7 @@ div.dia-bot {
 .nodelete {
   /* marker class for generated collections */
 }
+
+.modal-box {
+    background: #ffffff;
+}

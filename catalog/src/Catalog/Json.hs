@@ -102,6 +102,15 @@ jsonCall fct i n args =
       jl $ \ ix' -> do
         setColImg ix' i n
 
+    -- create a new collection with name nm in
+    -- collection i
+    "newcol" ->
+      ( jl $ \ nm -> do
+        createCol nm i
+      )
+      `catchE`
+      ( \ e -> mkER $ (show e) ^. isoText )
+      
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
@@ -177,4 +186,12 @@ setColImg pos oid n
   | otherwise =
       adjustColImg (const Nothing) oid
 
+-- ----------------------------------------
+
+createCol :: Name -> ObjId -> Cmd ImgNode
+createCol nm i =
+  do path  <- objid2path i
+     _newi <- mkCollection (path `snocPath` nm)
+     getImgVal i
+  
 -- ----------------------------------------
