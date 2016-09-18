@@ -484,6 +484,28 @@ function refreshCollection(path, colVal) {
 }
 
 // ----------------------------------------
+
+function statusMsg(msg) {
+    $('#status-message')
+        .removeClass('error-msg')
+        .addClass('status-msg')
+        .empty()
+        .append(msg);
+}
+
+function statusError(msg) {
+    $('#status-message')
+        .removeClass('status-msg')
+        .addClass('error-msg')
+        .empty()
+        .append(msg);
+}
+
+function statusClear() {
+    statusMsg('');
+}
+
+// ----------------------------------------
 // string helper functions
 
 // compute an object with path, name and cpath, and bname and ext
@@ -522,7 +544,7 @@ function openCollection(path) {
 
 function closeCollection(cid) {
     if ( isSystemCollectionId(cid) ) {
-        alert("system collection can't be closed: " + cid);
+        statusError("system collection can't be closed: " + cid);
     } else {
         var cids = allCollectionIds();
         var ix   = cids.indexOf(cid);
@@ -578,7 +600,7 @@ function sortCollection(cid) {
     var sr = $('#' + cid).hasClass('nosort');
     console.log(sr);
     if ( sr ) {
-        alert('collection not sortable: ' + cid);
+        statusError('collection not sortable: ' + cid);
         return;
     }
     var ixs = [];
@@ -613,7 +635,7 @@ function setCollectionImg(cid) {
             .get(0);
 
     if ( col.hasClass('readonly')) {
-        alert('warning: collection is readonly: ' + cid);
+        statusError('warning: collection is readonly: ' + cid);
         // return; // TODO: testing: remove this to make it an error
     }
 
@@ -649,15 +671,15 @@ function setCollectionImg(cid) {
                                  }
                              });
             } else {
-                alert('not a .jpg image');
+                statusError('not a .jpg image');
             }
         } else {
-            alert('marked entry is a collection, not an image');
+            statusError('marked entry is a collection, not an image');
         }
         // unmark last marked entry
         toggleMark($(img));
     } else {
-        alert('no marked entry found');
+        statusError('no marked entry found');
     }
 }
 
@@ -679,7 +701,7 @@ function createCollection() {
 
     if ( name  && name.length > 0) {
         if ( ix >= 0 ) {
-            alert("collection name already exists: " + name);
+            statusError("collection name already exists: " + name);
             return;
         }
         createColOnServer(cpath, name, refreshCollection);
@@ -707,7 +729,7 @@ function sortColOnServer(path, args, showCol) {
     modifyServer("sort", path, args,
                  function(col) {
                      if (col.ImgNode !== "COL") {
-                         alert("got something, but not a collection");
+                         statusError("got something, but not a collection");
                          return;
                      }
                      showCol(path, col);
@@ -718,7 +740,7 @@ function getColFromServer(path, showCol) {
     readServer("collection", path,
            function (col) {
                if (col.ImgNode !== "COL") {
-                   alert("got something, but not a collection");
+                   statusError("got something, but not a collection");
                    return;
                }
                showCol(path, col);
@@ -733,7 +755,7 @@ function createColOnServer(path, name, showCol) {
     modifyServer("newcol", path, name,
                  function(col) {
                      if (col.ImgNode !== "COL") {
-                         alert("got something, but not a collection");
+                         statusError("got something, but not a collection");
                          return;
                      }
                      showCol(path, col);
@@ -755,12 +777,12 @@ function callServer(getOrModify, fct, args, processRes) {
         dataType: 'json'
     }).done(function (res) {
         if (res.err) {
-            alert(res.err);
+            statusError(res.err);
         } else {
             processRes(res);
         }
     }).fail(function (err){
-        alert(err.resposeText);
+        statusError(err.resposeText);
     });
 }
 

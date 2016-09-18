@@ -1,10 +1,26 @@
 body {
-  padding-top: 50px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.status-bar {
+    height: 50px;
+    min-height: 50px;
+
+}
+
+.status-msg {
+    font-weight: bold;
+}
+
+.error-msg {
+    font-weight: bold;
+    color: red;
 }
 
 .starter-template {
-  padding: 40px 15px;
-  text-align: center;
+    padding: 40px 15px;
+    text-align: center;
 }
 
 /* for icons with max size 160x160
@@ -33,6 +49,7 @@ img.curmarked {
 .imgmark {
   border: 2px solid #c0c0c0;
 }
+
 .colmark {
   border: 2px solid #800000;
 }
@@ -102,8 +119,4 @@ div.dia-bot {
 
 .nodelete {
   /* marker class for generated collections */
-}
-
-.modal-box {
-    background: #ffffff;
 }
