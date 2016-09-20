@@ -20,19 +20,24 @@ $("#new-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
 $("#mfc-button").on('click', navClicked);
 $("#mtc-button").on('click', navClicked);
-$("#ctc-button").on('click', navClicked);
+// $("#ctc-button").on('click', navClicked);
 $("#mtt-button").on('click', navClicked);
 $("#emp-button").on('click', navClicked);
 // $("#srt-button").on('click', navClicked);
 
 $('#collectionTab a').click(function (e) {
     e.preventDefault();
-    // alert("switch tab to " + e.currentTarget);
     $(this).tab('show');
 });
 
+// ----------------------------------------
+//
+// mark/unmark entries
+// toggleSlideMark is the event handler
+
 function toggleSlideMark(e) {
     e.preventDefault();
+    statusClear();
     console.log("mark image was clicked");
     console.log(e);
     console.log(e.target);
@@ -159,50 +164,32 @@ function getMarkedNo(col) {
         .map(function (x) {return parseInt(x.textContent);});
 }
 
+// end marking functions
+//
+// ----------------------------------------
+
 function maxVal(a) {
     if ( a.length == 0)
         return -1;
     return Math.max(...a);
 }
 
-function newDia(dia) {
-    console.log("newDia");
-    console.log(dia);
-    var p = $("#prototype-dia").children("div").clone();
-
-    // set the head line
-    p.find("div.dia-name")
-        .empty()
-        .append(dia.name);
-
-    removeMarkCount(p);
-
-    // set the icon url
-    p.find("img.dia-src")
-        .attr('src', dia.src);
-
-    // add event handler for marking
-    p.children("div.dia-img")
-        .on('click', toggleSlideMark)
-        .css('cursor','pointer');
-
-    return p;
-}
+// ----------------------------------------
+//
+// collection ids and paths
 
 function activeCollection() {
     return $("#theCollections").children("div.active");
 }
-
-// ----------------------------------------
 
 function activeCollectionId() {
     return activeCollection().attr('id');
 }
 
 function isSystemCollectionId(cid) {
-    return cid === "col-collections"
-        || cid === "col-clipboard"
-        || cid === "col-trash";
+    return cid === idCollections()
+        || cid === idClipboard()
+        || cid === idTrash();
 }
 
 function allCollectionIds() {
@@ -247,6 +234,8 @@ function isNotSortableCollection(colVal) {
 }
 
 // ----------------------------------------
+//
+// fill a collection tab
 
 function addDiaToActiveCollection(dia) {
     var actCol = activeCollection();
@@ -254,6 +243,30 @@ function addDiaToActiveCollection(dia) {
     console.log("addDiatoactivecollection");
     console.log("actColId");
     actCol.append(newSlide);
+}
+
+function newDia(dia) {
+    console.log("newDia");
+    console.log(dia);
+    var p = $("#prototype-dia").children("div").clone();
+
+    // set the head line
+    p.find("div.dia-name")
+        .empty()
+        .append(dia.name);
+
+    removeMarkCount(p);
+
+    // set the icon url
+    p.find("img.dia-src")
+        .attr('src', dia.src);
+
+    // add event handler for marking
+    p.children("div.dia-img")
+        .on('click', toggleSlideMark)
+        .css('cursor','pointer');
+
+    return p;
 }
 
 function showNewCollection(path, colVal) {
@@ -483,6 +496,11 @@ function refreshCollection(path, colVal) {
     }
 }
 
+function refreshCollectionAndClipboard(path, colVal) {
+    refreshCollection(path, colVal);
+    getColFromServer(pathClipboard(), refreshCollection);
+}
+
 // ----------------------------------------
 
 function statusMsg(msg) {
@@ -539,6 +557,7 @@ function iconSize(p) {
 // top level commands, most with ajax calls
 
 function openCollection(path) {
+    statusClear();
     getColFromServer(path, showNewCollection);
 }
 
@@ -568,6 +587,7 @@ function closeCollection(cid) {
 }
 
 function markAll(cid) {
+    statusClear();
     console.log('mark all images in ' + cid);
 
     $('#' + cid + ' > div.unmarked')
@@ -577,6 +597,7 @@ function markAll(cid) {
 }
 
 function unmarkAll(cid) {
+    statusClear();
     console.log('unmark all images in ' + cid);
 
     var col = $('#' + cid);
@@ -595,14 +616,8 @@ function unmarkAll(cid) {
         .removeClass('curmarked');
 }
 
-function sortCollection(cid) {
-    console.log('sort collection: ' + cid);
-    var sr = $('#' + cid).hasClass('nosort');
-    console.log(sr);
-    if ( sr ) {
-        statusError('collection not sortable: ' + cid);
-        return;
-    }
+function getMarkedEntries(cid) {
+    console.log('getMarkedEntries');
     var ixs = [];
     $('#' + cid + ' > div.dia > div.dia-top > div.dia-mark')
         .each(function(i, e) {
@@ -612,13 +627,39 @@ function sortCollection(cid) {
             if ( v ) {
                 c = parseInt(v.textContent);
             }
-            console.log(v);
-            console.log(c);
+            // console.log(v);
+            // console.log(c);
             ixs.push(c);
 
         });
     console.log(ixs);
+    return ixs;
+}
 
+function copyMarkedToClipboard(cid) {
+    statusClear();
+    var ixs = getMarkedEntries(cid);
+    var cpath = collectionPath(cid);
+    var dpath = pathClipboard();
+    console.log('copyMarkedToClipboard');
+    console.log(ixs);
+    console.log(cpath);
+    console.log(dpath);
+
+    // do the work on server and refresh both collections
+    copyToColOnServer(cpath, [ixs, dpath], refreshCollectionAndClipboard);
+}
+
+function sortCollection(cid) {
+    statusClear();
+    console.log('sort collection: ' + cid);
+    var sr = $('#' + cid).hasClass('nosort');
+    console.log(sr);
+    if ( sr ) {
+        statusError('collection not sortable: ' + cid);
+        return;
+    }
+    var ixs  = getMarkedEntries(cid);
     var path = collectionPath(cid);
     console.log(path);
 
@@ -626,6 +667,7 @@ function sortCollection(cid) {
 }
 
 function setCollectionImg(cid) {
+    statusClear();
     console.log("setCollectionImg: " + cid);
     var col  = $('#' + cid);
     var path = col.attr('data-path');
@@ -684,6 +726,7 @@ function setCollectionImg(cid) {
 }
 
 function createCollection() {
+    statusClear();
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
     var name  = $('#newCollectionName').val();
@@ -707,23 +750,21 @@ function createCollection() {
         createColOnServer(cpath, name, refreshCollection);
     }
 }
-// ----------------------------------------
-
-// navbar button handlers
-
-function closeActiveCollection() {
-    var cid = activeCollectionId();
-    closeCollection(cid);
-}
-
-function sortActiveCollection() {
-    var cid = activeCollectionId();
-    sortCollection(cid);
-}
 
 // ----------------------------------------
 
 // ajax calls
+
+function copyToColOnServer(path, args, showCol) {
+    modifyServer("copyToCollection", path, args,
+                 function(col) {
+                     if (col.ImgNode !== "COL") {
+                         statusError("got something, but not a collection");
+                         return;
+                     }
+                     showCol(path, col);
+                 });
+}
 
 function sortColOnServer(path, args, showCol) {
     modifyServer("sort", path, args,
@@ -799,8 +840,9 @@ function modifyServer(fct, path, args, processRes) {
 }
 
 // ----------------------------------------
-
+//
 // the "main" program
+// set the event handlers
 
 $(document).ready(function () {
     openCollection("/archive/collections");
@@ -826,6 +868,11 @@ $(document).ready(function () {
             sortCollection(activeCollectionId());
     });
 
+    $("#ctc-button")
+        .on('click', function (e) {
+            copyMarkedToClipboard(activeCollectionId());
+        });
+
     $("#colimg-button")
         .on('click', function (e) {
             setCollectionImg(activeCollectionId());
@@ -838,6 +885,19 @@ $(document).ready(function () {
             createCollection();
         });
 });
+
+// ----------------------------------------
+//
+// "constants"
+
+function pathCollections() { return "/archive/collections"; }
+function pathClipboard()   { return "/archive/collections/clipboard"; }
+function pathTrash()       { return "/archive/collections/trash"; }
+
+function idCollections() { return 'col-collections'; }
+function idClipboard()   { return 'col-clipboard'; }
+function idTrash()       { return 'col-trash'; }
+
 
 // ----------------------------------------
 
