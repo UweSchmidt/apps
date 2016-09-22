@@ -14,7 +14,6 @@ function navClicked(e) {
 }
 
 // $("#opn-button").on('click', navClicked);
-$("#new-button").on('click', navClicked);
 // $("#mark-button").on('click', navClicked);
 // $("#unmark-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
@@ -397,17 +396,17 @@ function insertEntries(colId, entries) {
 }
 
 function insertEntry(colId, entry, i) {
-    console.log('insertEntry');
-    console.log(colId);
-    console.log(entry);
+    // console.log('insertEntry');
+    // console.log(colId);
+    // console.log(entry);
 
     var e = newEntry(entry, i);
     $('#' + colId).append(e);
 }
 
 function newEntry(entry, i) {
-    console.log("newEntry");
-    console.log(entry);
+    // console.log("newEntry");
+    // console.log(entry);
     var p = $("#prototype-dia").children("div").clone();
 
     var en = '<span class="img-no">' + (i + 1) + '</span>: ';
@@ -494,11 +493,6 @@ function refreshCollection(path, colVal) {
         o.colId = io[1];
         insertEntries(o.colId, colVal.entries);
     }
-}
-
-function refreshCollectionAndClipboard(path, colVal) {
-    refreshCollection(path, colVal);
-    getColFromServer(pathClipboard(), refreshCollection);
 }
 
 // ----------------------------------------
@@ -651,7 +645,7 @@ function copyMarkedToClipboard(cid) {
     console.log(dpath);
 
     // do the work on server and refresh both collections
-    copyToColOnServer(cpath, [ixs, dpath], refreshCollectionAndClipboard);
+    copyToColOnServer(cpath, dpath, ixs);
 }
 
 function sortCollection(cid) {
@@ -660,7 +654,8 @@ function sortCollection(cid) {
     var sr = $('#' + cid).hasClass('nosort');
     console.log(sr);
     if ( sr ) {
-        statusError('collection not sortable: ' + cid);
+        var path = collectionPath(cid);
+        statusError('collection not sortable: ' + path);
         return;
     }
     var ixs  = getMarkedEntries(cid);
@@ -759,10 +754,11 @@ function createCollection() {
 
 // ajax calls
 
-function copyToColOnServer(path, args, showCol) {
-    modifyServer("copyToCollection", path, args,
+function copyToColOnServer(spath, dpath, args, showCol) {
+    modifyServer("copyToCollection", spath, [args, dpath],
                  function () {
-                     getColFromServer(path, refreshCollection);
+                     getColFromServer(spath, refreshCollection);
+                     getColFromServer(dpath, refreshCollection);
                  });
 }
 
