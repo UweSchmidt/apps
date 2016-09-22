@@ -16,6 +16,8 @@ module Data.Prim.Path
        , headPath
        , substPathName
        , substPathPrefix
+       , isPathPrefix
+       , nullPath
        , showPath
        , viewTop
        , viewBase
@@ -56,6 +58,11 @@ mkPath = BN
 emptyPath :: Monoid n => Path' n
 emptyPath = mkPath mempty
 {-# INLINE emptyPath #-}
+
+nullPath :: (Monoid n, Eq n) => Path' n -> Bool
+nullPath (BN n)
+  | n == mempty = True
+nullPath _      = False
 
 infixr 5 `consPath`
 infixr 5 `snocPath`
@@ -103,6 +110,16 @@ tailPath = (^. viewTop . _2)
 substPathName :: (Monoid n, Eq n) => n -> Path' n -> Path' n
 substPathName n p = p & viewBase . _2 .~ n
 {-# INLINE substPathName #-}
+
+isPathPrefix :: (Eq n, Monoid n) => Path' n -> Path' n -> Bool
+isPathPrefix p1 p2
+  | n1 /= n2         = False
+  | nullPath p1'     = True
+  | nullPath p2'     = False
+  | otherwise        = isPathPrefix p1' p2'
+  where
+    (n1, p1') = p1 ^. viewTop
+    (n2, p2') = p2 ^. viewTop
 
 substPathPrefix :: (Monoid n, Eq n, Show n) =>
                    Path' n -> Path' n -> (Path' n -> Path' n)

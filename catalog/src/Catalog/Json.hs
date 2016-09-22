@@ -79,21 +79,30 @@ jsonCall fct i n args =
 
     -- read a whole collection
     "collection" ->
-      jl $ \ () -> do
+      jl $ \ () ->
       return n
 
     -- read the src path for a collection icon
     -- result is an url pointing to the icon src
     "iconref" ->
-      jl $ \ () -> do
+      jl $ \ () ->
       (^. isoText) <$> colImgRef i
 
     -- sort a collection by sequence of positions
     -- result is the new collection
-    "sort" -> do
-      jl $ \ ixs -> do
+    "sort" ->
+      jl $ \ ixs ->
         sortColByIxList ixs i
-        getImgVal i
+
+    "copyToCollection" ->
+      ( jl $ \ (ixs, dPath) -> do
+          (di, dn) <- getIdNode' dPath
+          unless (isCOL dn) $
+            abort ("not a collection: " ++ show dPath)
+          copyToCol ixs di i n
+      )
+      `catchE`
+      ( \ e -> mkER $ (show e) ^. isoText )
 
     -- set or unset the collection image
     -- i must reference a collection, not an image
@@ -101,16 +110,17 @@ jsonCall fct i n args =
     "colimg" -> do
       jl $ \ ix' -> do
         setColImg ix' i n
+        return ()
 
     -- create a new collection with name nm in
     -- collection i
     "newcol" ->
       ( jl $ \ nm -> do
-        createCol nm i
+          createCol nm i
       )
       `catchE`
       ( \ e -> mkER $ (show e) ^. isoText )
-      
+
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
@@ -128,6 +138,32 @@ jsonLift cmd jv =
       mkER $ "illegal JSON post arg: " <> e ^. isoText
     J.Success v ->
       cmd v >>= mkOK
+
+-- ----------------------------------------
+--
+-- copy entries to a collection
+
+copyToCol :: [Int] -> ObjId -> ObjId -> ImgNode -> Cmd ()
+copyToCol ixs di i n = do
+  return ()
+  where
+    pos'ixs :: [(Int, Int)]
+    pos'ixs = zip [0..] ixs
+
+    toBeCopied :: [((Int, Int), ColEntry)]
+    toBeCopied =
+      sortBy (compare `on` (fst . fst))
+      . filter ((>= 0) . fst . fst)
+      . zip pos'ixs
+      $ n ^. theColEntries
+
+copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
+copyEntryToCol di e@(ImgRef{}) = do
+  adjustColEntries (++ [e]) di
+copyEntryToCol di (ColRef si) = do
+  dp <- objid2path di
+  sp <- objid2path si
+  copyCollection sp dp
 
 -- ----------------------------------------
 
@@ -188,10 +224,10 @@ setColImg pos oid n
 
 -- ----------------------------------------
 
-createCol :: Name -> ObjId -> Cmd ImgNode
+createCol :: Name -> ObjId -> Cmd ()
 createCol nm i =
   do path  <- objid2path i
      _newi <- mkCollection (path `snocPath` nm)
-     getImgVal i
-  
+     return ()
+
 -- ----------------------------------------

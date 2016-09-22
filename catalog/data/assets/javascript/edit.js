@@ -561,6 +561,10 @@ function openCollection(path) {
     getColFromServer(path, showNewCollection);
 }
 
+function updateCollection(path) {
+    getColFromServer(path, refreshCollection);
+}
+
 function closeCollection(cid) {
     if ( isSystemCollectionId(cid) ) {
         statusError("system collection can't be closed: " + cid);
@@ -663,7 +667,7 @@ function sortCollection(cid) {
     var path = collectionPath(cid);
     console.log(path);
 
-    sortColOnServer(path, ixs, refreshCollection);
+    sortColOnServer(path, ixs);
 }
 
 function setCollectionImg(cid) {
@@ -702,7 +706,7 @@ function setCollectionImg(cid) {
                 console.log(path);
                 console.log(o);
                 modifyServer('colimg', path, pos,
-                             function (res) {
+                             function () {
                                  var ppath = o.cpath;
                                  var pcol = isAlreadyOpen(ppath);
                                  if ( pcol[0] ) {
@@ -757,33 +761,21 @@ function createCollection() {
 
 function copyToColOnServer(path, args, showCol) {
     modifyServer("copyToCollection", path, args,
-                 function(col) {
-                     if (col.ImgNode !== "COL") {
-                         statusError("got something, but not a collection");
-                         return;
-                     }
-                     showCol(path, col);
+                 function () {
+                     getColFromServer(path, refreshCollection);
                  });
 }
 
-function sortColOnServer(path, args, showCol) {
+function sortColOnServer(path, args) {
     modifyServer("sort", path, args,
-                 function(col) {
-                     if (col.ImgNode !== "COL") {
-                         statusError("got something, but not a collection");
-                         return;
-                     }
-                     showCol(path, col);
+                 function () {
+                     getColFromServer(path, refreshCollection);
                  });
 }
 
 function getColFromServer(path, showCol) {
     readServer("collection", path,
            function (col) {
-               if (col.ImgNode !== "COL") {
-                   statusError("got something, but not a collection");
-                   return;
-               }
                showCol(path, col);
            });
 }
@@ -794,19 +786,16 @@ function getIconRefFromServer(path, insertSrcRef) {
 
 function createColOnServer(path, name, showCol) {
     modifyServer("newcol", path, name,
-                 function(col) {
-                     if (col.ImgNode !== "COL") {
-                         statusError("got something, but not a collection");
-                         return;
-                     }
-                     showCol(path, col);
+                 function () {
+                     getColFromServer(path, refreshCollection);
                  });
 }
+
 // ----------------------------------------
 
 // http communication
 
-function callServer(getOrModify, fct, args, processRes) {
+function callServer(getOrModify, fct, args, processRes, processNext) {
     var rpc = [fct, args];
     console.log('callServer: ' + getOrModify);
     console.log(rpc);
@@ -824,20 +813,28 @@ function callServer(getOrModify, fct, args, processRes) {
         }
     }).fail(function (err){
         statusError(err.resposeText);
-    });
+    }).always(processNext);
 }
 
 // make a query call to server
 
 function readServer(fct, path, processRes) {
-    callServer("get", fct, [path, []], processRes);
+    callServer("get", fct, [path, []], processRes, noop);
 }
 
 // make a modifying call to server
+// modifying calls never get an interesting result back
+// in success case (), else the error message
+// all modifying ops are procedures, not functions
 
-function modifyServer(fct, path, args, processRes) {
-    callServer("modify", fct, [path, args], processRes);
+function modifyServer(fct, path, args, processNext) {
+    callServer("modify", fct, [path, args], ignoreRes, processNext);
 }
+
+function ignoreRes(res) {}
+
+function noop() {}
+
 
 // ----------------------------------------
 //

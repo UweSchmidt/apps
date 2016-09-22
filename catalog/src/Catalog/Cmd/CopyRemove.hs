@@ -11,8 +11,17 @@ import           Data.Prim
 
 copyCollection :: Path -> Path -> Cmd ()
 copyCollection path'src path'dst = do
+  
+  -- find source and dst id
+  -- abort when one of these is not there
   id'src <- fst <$> getIdNode "copyCollection: source not found"      path'src
   id'dst <- fst <$> getIdNode "copyCollection: destination not found" path'dst
+
+  -- check whether an infinite tree would be build
+  -- when copying a collection into one of its subcollections
+  when (path'src `isPathPrefix` path'dst) $
+    abort ("can't copy a parent collection into a subcollection")
+
   copyColRec id'src id'dst
 
 copyColRec :: ObjId -> ObjId -> Cmd ()
@@ -28,7 +37,7 @@ copyColRec src dst = do
   dst'path    <- objid2path dst
   let editPath = substPathPrefix parent'path dst'path
 
-  -- create empty subcollection in destination dir
+  -- create empty subcollection in destination collection
   let target'path = editPath (snocPath parent'path name'src)
   void $ createCopy target'path src
 
