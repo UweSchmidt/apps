@@ -22,6 +22,7 @@ import           Data.ImageStore
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.Prim
+-- import           Data.Foldable
 import qualified Data.Aeson as J
 -- import qualified Data.Aeson.Encode.Pretty as J
 
@@ -143,18 +144,18 @@ jsonLift cmd jv =
 --
 -- copy entries to a collection
 
+-- TODO when collection is copied, remove access rights in dest coll
+
 copyToCol :: [Int] -> ObjId -> ObjId -> ImgNode -> Cmd ()
 copyToCol ixs di i n = do
-  return ()
+  traverse_ (\ e -> copyEntryToCol di e) toBeCopied
   where
-    pos'ixs :: [(Int, Int)]
-    pos'ixs = zip [0..] ixs
-
-    toBeCopied :: [((Int, Int), ColEntry)]
+    toBeCopied :: [ColEntry]
     toBeCopied =
-      sortBy (compare `on` (fst . fst))
-      . filter ((>= 0) . fst . fst)
-      . zip pos'ixs
+      map snd
+      . sortBy (compare `on` fst)
+      . filter ((>= 0) . fst)
+      . zip ixs
       $ n ^. theColEntries
 
 copyEntryToCol :: ObjId -> ColEntry -> Cmd ()

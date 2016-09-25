@@ -56,6 +56,7 @@ module Data.Prim.Prelude
        , zip6
          -- Data.Char
        , module Data.Char
+       , module Data.Foldable
          -- Data.Function
        , on
          -- System.FilePath
@@ -102,6 +103,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BU
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Lazy.UTF8 as LBU
+import           Data.Foldable
 import           Data.Function
 import           Data.List
 import           Data.Map.Strict (Map)
