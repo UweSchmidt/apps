@@ -9,6 +9,10 @@ body {
 
 }
 
+ul.pointer a {
+  cursor: pointer;
+}
+
 .status-msg {
     font-weight: bold;
 }
