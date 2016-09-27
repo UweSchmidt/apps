@@ -113,6 +113,33 @@ lookupByNames ns md =
          map (\ n -> md ^. metaDataAt n) ns
 
 -- ----------------------------------------
+--
+-- manipulate the access attributes in MetaData
+
+modifyAccess :: (Text -> Text) -> (MetaData -> MetaData)
+modifyAccess f md =
+  md & metaDataAt "descr:Access" %~ f
+
+setAccess :: [Text] -> MetaData -> MetaData
+setAccess ts = modifyAccess (const $ T.unwords ts)
+
+restrAccess :: [Text] -> MetaData -> MetaData
+restrAccess ts = modifyAccess f
+  where
+    f x = T.unwords . nub . (ts ++) . T.words $ x
+
+clearAccess
+  , addNoWriteAccess
+  , addNoSortAccess
+  , addNoDeleteAccess :: MetaData -> MetaData
+
+clearAccess       = setAccess []
+addNoWriteAccess  = restrAccess [no'write]
+addNoSortAccess   = restrAccess [no'sort]
+addNoDeleteAccess = restrAccess [no'delete]
+
+
+-- ----------------------------------------
 
 getCreateMeta :: (String -> res) -> MetaData -> res
 getCreateMeta parse md =

@@ -24,6 +24,8 @@ module Data.ImgNode
        , isIMG
        , isROOT
        , isCOL
+       , isColColRef
+       , isColImgRef
        , isoImgParts
        , isoImgPartsMap
        , isoDirEntries
@@ -417,6 +419,14 @@ theColColRef =
             _        -> Left  x
         )
 {-# INLINE theColColRef #-}
+
+isColColRef
+  , isColImgRef :: ColEntry' ref -> Bool
+
+isColColRef (ColRef{}) = True
+isColColRef _          = False
+
+isColImgRef = not . isColColRef
 
 -- ----------------------------------------
 

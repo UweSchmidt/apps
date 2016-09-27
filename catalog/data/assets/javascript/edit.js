@@ -634,6 +634,28 @@ function getMarkedEntries(cid) {
     return ixs;
 }
 
+function removeMarkedFromClipboard() {
+    var cid = idClipboard();
+    setActiveTab(cid);
+    removeMarkedFromCollection(cid);
+}
+
+function removeMarkedFromCollection(cid) {
+    var cpath = collectionPath(cid);
+    if ( cpath ) {
+        statusClear();
+        var ixs   = getMarkedEntries(cid);
+        console.log('removeMarkedFromCollection');
+        console.log(ixs);
+        console.log(cpath);
+
+        // remove on server and refresh collection
+        removeFromColOnServer(cpath, ixs);
+    } else {
+        statusError('collection not found: ' + cid);
+    }
+}
+
 function copyMarkedToClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(cid);
@@ -754,7 +776,14 @@ function createCollection() {
 
 // ajax calls
 
-function copyToColOnServer(spath, dpath, args, showCol) {
+function removeFromColOnServer(path, args) {
+    modifyServer("removeFromCollection", path, args,
+                 function () {
+                     getColFromServer(path, refreshCollection);
+                 });
+}
+
+function copyToColOnServer(spath, dpath, args) {
     modifyServer("copyToCollection", spath, [args, dpath],
                  function () {
                      getColFromServer(spath, refreshCollection);
@@ -864,6 +893,11 @@ $(document).ready(function () {
     $("#ctc-button")
         .on('click', function (e) {
             copyMarkedToClipboard(activeCollectionId());
+        });
+
+    $("#emp-button")
+        .on('click', function (e) {
+            removeMarkedFromClipboard();
         });
 
     $("#colimg-button")

@@ -11,7 +11,7 @@ import           Data.Prim
 
 copyCollection :: Path -> Path -> Cmd ()
 copyCollection path'src path'dst = do
-  
+
   -- find source and dst id
   -- abort when one of these is not there
   id'src <- fst <$> getIdNode "copyCollection: source not found"      path'src
@@ -104,7 +104,11 @@ rmRec = foldMT imgA dirA rootA colA
       go dir >> go col                          -- recurse into dir and col hirachy
                                                 -- but don't change root
     colA go i _md _im _be cs _ts = do
-      mapM_ go (cs ^.. traverse . theColColRef)
+      trc $ "colA: " ++ show cs
+      let cs' = filter isColColRef cs           -- remove all images
+      adjustColEntries (const cs') i            -- store remaining collections
+      trc $ "colA: " ++ show cs'
+      mapM_ go (cs' ^.. traverse . theColColRef)  -- remove the remaining collections
       pe <- getImgParent i >>= getImgVal        -- remove collection node
       when (not $ isROOT pe) $                  -- if it's not the top collection
         rmImgNode i

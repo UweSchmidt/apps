@@ -67,6 +67,7 @@ addChildRef r n = n & theDirEntries %~ addDirEntry r
 -- | remove a child from an image dir node
 removeChildRef :: ObjId -> ImgNode -> ImgNode
 removeChildRef r n = n & theDirEntries %~ delDirEntry r
+             -- TODO   & theColEntries %~ delColEntry r
 {-# INLINE removeChildRef #-}
 
 -- ----------------------------------------

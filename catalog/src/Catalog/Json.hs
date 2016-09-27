@@ -21,6 +21,7 @@ import           Control.Lens
 import           Data.ImageStore
 import           Data.ImgNode
 import           Data.ImgTree
+import           Data.MetaData
 import           Data.Prim
 -- import           Data.Foldable
 import qualified Data.Aeson as J
@@ -95,6 +96,13 @@ jsonCall fct i n args =
       jl $ \ ixs ->
         sortColByIxList ixs i
 
+    "removeFromCollection" ->
+      ( jl $ \ ixs -> do
+          removeFrCol ixs i n
+      )
+      `catchE`
+      ( \ e -> mkER $ (show e) ^. isoText )
+      
     "copyToCollection" ->
       ( jl $ \ (ixs, dPath) -> do
           (di, dn) <- getIdNode' dPath
@@ -141,10 +149,42 @@ jsonLift cmd jv =
       cmd v >>= mkOK
 
 -- ----------------------------------------
+
+removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
+removeFrCol ixs i n = do
+  traverse_ (uncurry (removeEntryFrCol i)) toBeRemoved
+  where
+    -- elements are removed from the end to the front
+    -- else the positions had to be adjusted after each remove
+    toBeRemoved :: [(Int, ColEntry)]
+    toBeRemoved =
+      reverse
+      . map snd
+      . filter ((>= 0) . fst)
+      . zip ixs
+      . zip [0..]
+      $ n ^. theColEntries
+
+removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
+removeEntryFrCol i pos (ImgRef{}) =
+  adjustColEntries (rmi pos) i
+removeEntryFrCol i pos (ColRef ci) =
+  rmRec ci
+
+-- ----------------------------------------
+
+-- helper: remove elem at an index i
+
+rmi :: Int -> [a] -> [a] 
+rmi 0 xs = drop 1 xs
+rmi i xs
+  | i < 0 = xs
+rmi i [] = []
+rmi i (x : xs) = x : rmi (i - 1) xs
+
+-- ----------------------------------------
 --
 -- copy entries to a collection
-
--- TODO when collection is copied, remove access rights in dest coll
 
 copyToCol :: [Int] -> ObjId -> ObjId -> ImgNode -> Cmd ()
 copyToCol ixs di i n = do
@@ -165,6 +205,18 @@ copyEntryToCol di (ColRef si) = do
   dp <- objid2path di
   sp <- objid2path si
   copyCollection sp dp
+
+  -- remove the access restrictions in copied collection
+  -- in a copied collection there aren't any access restrictions
+  --
+  -- the path of the copied collection
+  let tp = dp `snocPath` (sp ^. viewBase . _2)
+  modifyAccessRestr clearAccess tp
+
+modifyAccessRestr :: (MetaData -> MetaData) -> Path -> Cmd ()
+modifyAccessRestr mf path = do
+  i <- fst <$> getIdNode "clearAccessRestr: entry not found" path
+  adjustMetaData mf i
 
 -- ----------------------------------------
 
