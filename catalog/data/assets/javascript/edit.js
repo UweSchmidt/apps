@@ -206,6 +206,18 @@ function collectionPath(cid) {
     return $('#' + cid).attr('data-path');
 }
 
+function collectionId(path) {
+    var res = undefined;
+    $("#theCollections div.tab-pane").each(function (i, e) {
+        var id1 = $(e).attr('id');
+        var dpath = $(e).attr('data-path');
+        if ( path === dpath ) {
+            res = id1;
+        }
+    });
+    return res;
+}
+
 function allCollectionPaths() {
     // collect all collection paths (ObjId's on server)
     var colPaths = [];
@@ -577,12 +589,15 @@ function closeCollection(cid) {
             next = cids[ix - 1];
         }
         setActiveTab(next);
-
-        // remove the tab content
-        $('#' + cid).remove();
-        // remove the tab
-        $('li > a[aria-controls=' + cid + ']').remove();
+        removeCollectionFromDom(cid);
     }
+}
+
+function removeCollectionFromDom(cid) {
+    // remove the tab content
+    $('#' + cid).remove();
+    // remove the tab
+    $('li > a[aria-controls=' + cid + ']').remove();
 }
 
 function markAll(cid) {
@@ -635,6 +650,43 @@ function getMarkedEntries(cid) {
     return ixs;
 }
 
+function getMarkedCollections(cid) {
+    console.log('getMarkedCollections: ' + cid);
+    var paths =[];
+    $('#' + cid + ' div.dia.colmark.marked div.dia-img img')
+        .each(function(i,e) {
+            var t = $(e).attr('title');
+            t = t.replace(/collection: /, '');
+            console.log(t);
+            paths.push(t);
+        });
+    console.log(paths);
+    return paths;
+}
+
+function getOpenMarkedCollections(cid) {
+    console.log("getOpenmarkedCollections: " + cid);
+    var mcs = getMarkedCollections(cid);
+    var ocs = allCollectionPaths();
+    var res = [];
+    mcs.forEach(function(e, i) {
+        if ( ocs.indexOf(e) >= 0 ) {
+            res.push(e);
+        }
+    });
+    return res;
+}
+
+function closeSubCollections(cid) {
+    getOpenMarkedCollections(cid)
+        .forEach(function(e, i) {
+            var id = collectionId(e);
+            removeCollectionFromDom(id);
+            statusMsg('collection closed: ' + id);
+        });
+    setActiveTab(cid);
+}
+
 function removeMarkedFromClipboard() {
     var cid = idClipboard();
     setActiveTab(cid);
@@ -642,12 +694,13 @@ function removeMarkedFromClipboard() {
 }
 
 function removeMarkedFromCollection(cid) {
-    // TODO: if open collections are to be removed
-    // they must be closed
+    // TODO: if open collections are to be removed (or moved)
+    // they must be closed first
     // get marked collections (not images)
     // get all paths of open collections
     // the intersection is the set of collections to be closed
     statusClear();
+    closeSubCollections(cid);
     var cpath = collectionPath(cid);
     if ( cpath ) {
         var ixs   = getMarkedEntries(cid);
