@@ -64,10 +64,10 @@ addChildRef :: ObjId -> ImgNode -> ImgNode
 addChildRef r n = n & theDirEntries %~ addDirEntry r
 {-# INLINE addChildRef #-}
 
--- | remove a child from an image dir node
+-- | remove a child from an image dir or collection node
 removeChildRef :: ObjId -> ImgNode -> ImgNode
 removeChildRef r n = n & theDirEntries %~ delDirEntry r
-             -- TODO   & theColEntries %~ delColEntry r
+                       & theColEntries %~ delColEntry r
 {-# INLINE removeChildRef #-}
 
 -- ----------------------------------------

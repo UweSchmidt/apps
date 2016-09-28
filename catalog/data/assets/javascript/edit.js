@@ -560,6 +560,7 @@ function updateCollection(path) {
 }
 
 function closeCollection(cid) {
+    statusClear();
     if ( isSystemCollectionId(cid) ) {
         statusError("system collection can't be closed: " + cid);
     } else {
@@ -641,9 +642,14 @@ function removeMarkedFromClipboard() {
 }
 
 function removeMarkedFromCollection(cid) {
+    // TODO: if open collections are to be removed
+    // they must be closed
+    // get marked collections (not images)
+    // get all paths of open collections
+    // the intersection is the set of collections to be closed
+    statusClear();
     var cpath = collectionPath(cid);
     if ( cpath ) {
-        statusClear();
         var ixs   = getMarkedEntries(cid);
         console.log('removeMarkedFromCollection');
         console.log(ixs);
@@ -867,7 +873,8 @@ function noop() {}
 // set the event handlers
 
 $(document).ready(function () {
-    openCollection("/archive/collections");
+    openCollection(pathClipboard());
+    openCollection(pathCollections());
 
     // event handler for navbar buttons
     $("#rem-button")

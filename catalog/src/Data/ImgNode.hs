@@ -53,6 +53,7 @@ module Data.ImgNode
        , theColImgRef
        , addDirEntry
        , delDirEntry
+       , delColEntry
        )
 where
 
@@ -472,6 +473,10 @@ addDirEntry r (DE rs) = DE $ r : rs
 delDirEntry :: (Eq ref) => ref -> DirEntries' ref -> DirEntries' ref
 delDirEntry r (DE rs) = DE $ filter (/= r) rs
 {-# INLINE delDirEntry #-}
+
+delColEntry :: (Eq ref) => ref -> [ColEntry' ref] -> [ColEntry' ref]
+delColEntry r cs = filter (\ ce -> ce ^. theColObjId /= r) cs
+{-# INLINE delColEntry #-}
 
 
 -- ----------------------------------------

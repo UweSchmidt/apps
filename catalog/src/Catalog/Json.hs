@@ -44,6 +44,11 @@ mkOK x = return $ J.toJSON x
 mkER :: Text -> Cmd J.Value
 mkER t = return $ J.toJSON $ (ER t :: JsonRes ())
 
+mkErrMsg :: Msg -> Cmd J.Value
+mkErrMsg e = mkER $ e' ^. isoText
+  where
+    e' = unwords . drop 1 . words $ unMsg e
+
 -- ----------------------------------------
 -- AJAX JSON interface
 --
@@ -100,9 +105,8 @@ jsonCall fct i n args =
       ( jl $ \ ixs -> do
           removeFrCol ixs i n
       )
-      `catchE`
-      ( \ e -> mkER $ (show e) ^. isoText )
-      
+      `catchE` mkErrMsg
+
     "copyToCollection" ->
       ( jl $ \ (ixs, dPath) -> do
           (di, dn) <- getIdNode' dPath
@@ -110,8 +114,7 @@ jsonCall fct i n args =
             abort ("not a collection: " ++ show dPath)
           copyToCol ixs di i n
       )
-      `catchE`
-      ( \ e -> mkER $ (show e) ^. isoText )
+      `catchE` mkErrMsg
 
     -- set or unset the collection image
     -- i must reference a collection, not an image
@@ -127,8 +130,7 @@ jsonCall fct i n args =
       ( jl $ \ nm -> do
           createCol nm i
       )
-      `catchE`
-      ( \ e -> mkER $ (show e) ^. isoText )
+      `catchE` mkErrMsg
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
@@ -167,20 +169,9 @@ removeFrCol ixs i n = do
 
 removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFrCol i pos (ImgRef{}) =
-  adjustColEntries (rmi pos) i
+  adjustColEntries (removeAt pos) i
 removeEntryFrCol i pos (ColRef ci) =
   rmRec ci
-
--- ----------------------------------------
-
--- helper: remove elem at an index i
-
-rmi :: Int -> [a] -> [a] 
-rmi 0 xs = drop 1 xs
-rmi i xs
-  | i < 0 = xs
-rmi i [] = []
-rmi i (x : xs) = x : rmi (i - 1) xs
 
 -- ----------------------------------------
 --

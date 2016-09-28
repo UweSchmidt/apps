@@ -266,7 +266,7 @@ genCollectionsByDir = do
 
               -- set the blog entry, if there's a txt entry in cs
               setColBlogToFstTxtEntry False ic
-              
+
               -- set time processed
               setSyncTime ic
 
@@ -337,7 +337,7 @@ findFstTxtEntry = findFstColEntry isTxtEntry
       nd <- getImgVal i
       let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
       return $ maybe False (== IMGtxt) ty
-      
+
     isTxtEntry (ColRef _) =
       return False
 
@@ -354,10 +354,10 @@ setColBlogToFstTxtEntry rm i = do
       trc $ unwords ["setColBlogToFstTxtEntry", show i, show pos, show ir]
       adjustColBlog (const $ Just (j, n)) i
       when rm $
-        delColEntry pos i
+        remColEntry pos i
     setEntry _ =
       return ()
-    
+
 -- ----------------------------------------
 
 mkColMeta :: Text -> Text -> Text -> Text -> Text -> Cmd MetaData

@@ -87,6 +87,7 @@ module Data.Prim.Prelude
        , partitionBy
        , divideAt
        , searchPos
+       , removeAt
        )
 where
 
@@ -304,6 +305,8 @@ partitionBy f =
   . foldr (\ x m -> M.insertWith (++) (f x) [x]
                     m) M.empty
 
+-- | divide a list into equal length parts
+
 divideAt :: Int -> [a] -> [[a]]
 divideAt n
   | n <= 1    = map (:[])
@@ -319,6 +322,17 @@ divideAt n
 searchPos :: (a -> Bool) -> [a] -> Maybe Int
 searchPos p =
   listToMaybe . map fst . filter (p . snd) . zip [0..]
+
+
+-- remove an element at a given index
+
+removeAt :: Int -> [a] -> [a] 
+removeAt 0 xs = drop 1 xs
+removeAt i xs
+  | i < 0 = xs
+removeAt i [] = []
+removeAt i (x : xs) = x : removeAt (i - 1) xs
+
 
 -- ----------------------------------------
 

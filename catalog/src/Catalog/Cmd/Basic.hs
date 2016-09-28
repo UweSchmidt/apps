@@ -238,13 +238,8 @@ adjustColBlog = adjustNodeVal AdjColBlog theColBlog
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
 adjustColEntries = adjustNodeVal AdjColEntries theColEntries
 
-delColEntry :: Int -> ObjId -> Cmd ()
-delColEntry pos = adjustColEntries delEntry
-  where
-    delEntry cs
-      | pos >= 0 && pos < length cs =
-          let (xs, ys) = splitAt pos cs in xs ++ drop 1 ys
-      | otherwise = cs
+remColEntry :: Int -> ObjId -> Cmd ()
+remColEntry pos = adjustColEntries (removeAt pos)
 
 setSyncTime :: ObjId -> Cmd ()
 setSyncTime i = do
