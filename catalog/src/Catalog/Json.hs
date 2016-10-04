@@ -204,6 +204,7 @@ copyEntryToCol di (ColRef si) = do
   let tp = dp `snocPath` (sp ^. viewBase . _2)
   modifyAccessRestr clearAccess tp
 
+-- TODO: this must be done recursively
 modifyAccessRestr :: (MetaData -> MetaData) -> Path -> Cmd ()
 modifyAccessRestr mf path = do
   i <- fst <$> getIdNode "clearAccessRestr: entry not found" path

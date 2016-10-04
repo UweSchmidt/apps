@@ -383,12 +383,11 @@ function isAlreadyOpen(path) {
     $('#theCollections > div[role=tabpanel]')
         .each(function (i, e) {
             var dp = $(e).attr('data-path');
-            if (dp === path) {
+            if ( dp === path ) {
                 b = true;
                 pid = $(e).attr('id');
             };
         });
-
     return [b, pid];
 }
 
@@ -558,6 +557,21 @@ function iconSize(p) {
     return "/pad-160x160" + p;
 }
 
+// check whether p1 is a path prefix of p2
+
+function isPathPrefix(p1, p2) {
+    var l1  = p1.length;
+    var l2  = p2.length;
+    var px2 = p2.substr(0, l1);
+    if (p1 === p2) {
+        return true;
+    }
+    if ( (l2 > l1) && (p1 === px2) && (p2.charAt(l1) === "/") ) {
+        return true;
+    }
+    return false;
+}
+
 // ----------------------------------------
 
 // top level commands, most with ajax calls
@@ -670,10 +684,19 @@ function getOpenMarkedCollections(cid) {
     var ocs = allCollectionPaths();
     var res = [];
     mcs.forEach(function(e, i) {
-        if ( ocs.indexOf(e) >= 0 ) {
-            res.push(e);
-        }
+        ocs.forEach(function(e2, i2) {
+            if ( isPathPrefix(e, e2) ) {
+                res.push(e2);
+            }
+        });
+        // TODO: a bit wierd and incomplete:
+        // a prefix test must be added for closing sub-sub-collections
+        // if ( ocs.indexOf(e) >= 0 ) {
+        //    res.push(e);
+        // }
     });
+    console.log('getOpenMarkedCollections');
+    console.log(res);
     return res;
 }
 
