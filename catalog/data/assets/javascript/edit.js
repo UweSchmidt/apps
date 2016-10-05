@@ -18,7 +18,7 @@ function navClicked(e) {
 // $("#unmark-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
 $("#mfc-button").on('click', navClicked);
-$("#mtc-button").on('click', navClicked);
+// $("#mtc-button").on('click', navClicked);
 // $("#ctc-button").on('click', navClicked);
 $("#mtt-button").on('click', navClicked);
 $("#emp-button").on('click', navClicked);
@@ -738,6 +738,20 @@ function removeMarkedFromCollection(cid) {
     }
 }
 
+function moveMarkedToClipboard(cid) {
+    statusClear();
+    var ixs = getMarkedEntries(cid);
+    var cpath = collectionPath(cid);
+    var dpath = pathClipboard();
+    console.log('moveMarkedToClipboard');
+    console.log(ixs);
+    console.log(cpath);
+    console.log(dpath);
+
+    // do the work on server and refresh both collections
+    moveToColOnServer(cpath, dpath, ixs);
+}
+
 function copyMarkedToClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(cid);
@@ -866,7 +880,15 @@ function removeFromColOnServer(path, args) {
 }
 
 function copyToColOnServer(spath, dpath, args) {
-    modifyServer("copyToCollection", spath, [args, dpath],
+    copyMoveToColOnServer("copyToCollection", spath, dpath, args);
+}
+
+function moveToColOnServer(spath, dpath, args) {
+    copyMoveToColOnServer("moveToCollection", spath, dpath, args);
+}
+
+function copyMoveToColOnServer(cpmv, spath, dpath, args) {
+    modifyServer(cpmv, spath, [args, dpath],
                  function () {
                      getColFromServer(spath, refreshCollection);
                      getColFromServer(dpath, refreshCollection);
@@ -972,6 +994,11 @@ $(document).ready(function () {
         .on('click', function (e) {
             sortCollection(activeCollectionId());
     });
+
+    $("#mtc-button")
+        .on('click', function (e) {
+            moveMarkedToClipboard(activeCollectionId());
+        });
 
     $("#ctc-button")
         .on('click', function (e) {
