@@ -202,13 +202,24 @@ copyEntryToCol di (ColRef si) = do
   --
   -- the path of the copied collection
   let tp = dp `snocPath` (sp ^. viewBase . _2)
-  modifyAccessRestr clearAccess tp
+  modifyMetaDataRec clearAccess tp
 
--- TODO: this must be done recursively
-modifyAccessRestr :: (MetaData -> MetaData) -> Path -> Cmd ()
-modifyAccessRestr mf path = do
-  i <- fst <$> getIdNode "clearAccessRestr: entry not found" path
+
+modifyMetaData :: (MetaData -> MetaData) -> Path -> Cmd ()
+modifyMetaData mf path = do
+  i <- fst <$> getIdNode "modifyMetaData: entry not found" path
   adjustMetaData mf i
+
+
+modifyMetaDataRec :: (MetaData -> MetaData) -> Path -> Cmd ()
+modifyMetaDataRec mf path = do
+  i <- fst <$> getIdNode "modifyMetaDataRec: entry not found" path
+  processCollections
+    ( \ go i' _md _im _be cs _ts -> do
+        adjustMetaData mf i'
+        let cs' = filter isColColRef cs
+        mapM_ go (cs' ^.. traverse . theColColRef)
+    ) i
 
 -- ----------------------------------------
 

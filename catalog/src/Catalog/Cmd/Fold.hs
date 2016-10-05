@@ -52,11 +52,27 @@ processImgDirs imgA dirA =
 
 -- ----------------------------------------
 
+processCollections ::
+  Monoid r =>
+  (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
+                              -> (Maybe (ObjId, Name))
+                  -> [ColEntry] -> TimeStamp -> Cmd r) ->
+  Act r
+
+processCollections colA =
+  foldMT imgA dirA rootA colA
+  where
+    rootA go _i dir _col  = go dir
+    dirA  _  _  _es _ts   = return mempty
+    imgA  _  _pts         = return mempty
+
+-- ----------------------------------------
+
 processImages :: Monoid r =>
                  (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
 processImages imgA =
   processImgDirs imgA dirA
   where
-    dirA  go _i      es _ts = mconcat <$> traverse go (es ^. isoDirEntries)
+    dirA  go _i es _ts = mconcat <$> traverse go (es ^. isoDirEntries)
 
 -- ----------------------------------------
