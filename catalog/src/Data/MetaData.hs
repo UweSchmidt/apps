@@ -138,6 +138,15 @@ addNoWriteAccess  = restrAccess [no'write]
 addNoSortAccess   = restrAccess [no'sort]
 addNoDeleteAccess = restrAccess [no'delete]
 
+getAccess :: ([Text] -> Bool) -> MetaData -> Bool
+getAccess f md =
+  md ^. metaDataAt "descr:Access" . to (f . T.words)
+
+isWriteable
+  , isSortable, isRemovable :: MetaData -> Bool
+isWriteable = getAccess (no'write  `notElem`)
+isSortable  = getAccess (no'sort   `notElem`)
+isRemovable = getAccess (no'delete `notElem`)
 
 -- ----------------------------------------
 

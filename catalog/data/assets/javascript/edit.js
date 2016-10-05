@@ -206,6 +206,13 @@ function collectionPath(cid) {
     return $('#' + cid).attr('data-path');
 }
 
+function collectionIsReadOnly(cid) {
+    var res = $('#' + cid).hasClass('readonly');
+    console.log('collectionisreadonly');
+    console.log(res);
+    return res;
+}
+
 function collectionId(path) {
     var res = undefined;
     $("#theCollections div.tab-pane").each(function (i, e) {
@@ -221,10 +228,11 @@ function collectionId(path) {
 function allCollectionPaths() {
     // collect all collection paths (ObjId's on server)
     var colPaths = [];
-    $("#theCollections div.tab-pane").each(function (i, e) {
-        var path1 = $(e).attr('data-path');
-        colPaths.push(path1);
-    });
+    $("#theCollections div.tab-pane")
+        .each(function (i, e) {
+            var path1 = $(e).attr('data-path');
+            colPaths.push(path1);
+        });
     console.log(colPaths);
     return colPaths;
 }
@@ -587,8 +595,9 @@ function updateCollection(path) {
 
 function closeCollection(cid) {
     statusClear();
+    var cp   = collectionPath(cid);
     if ( isSystemCollectionId(cid) ) {
-        statusError("system collection can't be closed: " + cid);
+        statusError("system collection can't be closed: " + cp);
     } else {
         var cids = allCollectionIds();
         var ix   = cids.indexOf(cid);
@@ -604,6 +613,7 @@ function closeCollection(cid) {
         }
         setActiveTab(next);
         removeCollectionFromDom(cid);
+        statusMsg('collection closed: ' + cp);
     }
 }
 
@@ -664,6 +674,26 @@ function getMarkedEntries(cid) {
     return ixs;
 }
 
+function getLastMarkedEntry(cid) {
+    var res = $('#' + cid)
+            .find("img.curmarked")
+            .closest('div.dia')
+            .get(0);
+    console.log('getLastmarkedEntry');
+    console.log(res);
+    return res;
+}
+
+function getColNames(cid) {
+    var cnames = $('#' + cid + ' div.dia.colmark div.dia-name a')
+            .contents()
+            .get()
+            .map(function (x) {return x.textContent;});
+    console.log('getColNames');
+    console.log(cnames);
+    return cnames;
+}
+
 function getMarkedCollections(cid) {
     console.log('getMarkedCollections: ' + cid);
     var paths =[];
@@ -704,8 +734,9 @@ function closeSubCollections(cid) {
     getOpenMarkedCollections(cid)
         .forEach(function(e, i) {
             var id = collectionId(e);
+            var cp = collectionPath(id);
             removeCollectionFromDom(id);
-            statusMsg('collection closed: ' + id);
+            statusMsg('collection closed: ' + cp);
         });
     setActiveTab(cid);
 }
@@ -786,20 +817,16 @@ function sortCollection(cid) {
 function setCollectionImg(cid) {
     statusClear();
     console.log("setCollectionImg: " + cid);
-    var col  = $('#' + cid);
-    var path = col.attr('data-path');
+    var path = collectionPath(cid);
     var o    = splitPath(path);
-    var img  = col.find(" img.curmarked")
-            .closest('div.dia')
-            .get(0);
+    var img  = getLastMarkedEntry(cid);
 
-    if ( col.hasClass('readonly')) {
-        statusError('warning: collection is readonly: ' + cid);
-        // return; // TODO: testing: remove this to make it an error
+    if (collectionIsReadOnly(cid)) {
+        statusError('collection is readonly: ' + cid);
+        return;
     }
 
-    if ( img ) {
-        console.log(img);
+    if (img) {
         if ( $(img).hasClass('imgmark') ) {
             var part = $(img)
                     .find('span.img-part')
@@ -848,10 +875,7 @@ function createCollection() {
     var cpath = collectionPath(cid);
     var name  = $('#newCollectionName').val();
     name = name.replace(/[^-_.a-zA-Z0-9]/g,"");
-    var cnames = $('#' + cid + ' div.dia.colmark div.dia-name a')
-            .contents()
-            .get()
-            .map(function (x) {return x.textContent;});
+    var cnames = getColNames(cid);
     var ix = cnames.indexOf(name);
 
     console.log('createCollection');
@@ -859,13 +883,66 @@ function createCollection() {
     console.log(name);
     console.log(cnames);
 
-    if ( name  && name.length > 0) {
-        if ( ix >= 0 ) {
-            statusError("collection name already exists: " + name);
-            return;
-        }
-        createColOnServer(cpath, name, refreshCollection);
+    if (name.length === 0) {
+        statusError("no collection name given");
+        return;
     }
+    if ( ix >= 0 ) {
+        statusError("collection name already exists: " + name);
+        return;
+    }
+    createColOnServer(cpath, name, refreshCollection);
+}
+
+function renameCollection() {
+    statusClear();
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+
+    if (collectionIsReadOnly(cid)) {
+        statusError('collection is readonly: ' + cpath);
+        return;
+    }
+    var img   = getLastMarkedEntry(cid);
+    if (! img) {
+        return;
+    }
+    if ($(img).hasClass('imgmark')) {
+        statusError("last marked isn't a collection");
+        return;
+    }
+    var iname = $(img)
+            .find('div.dia-name a')
+            .contents()
+            .get(0)
+            .textContent;
+
+    console.log('renameCollection');
+    console.log(cpath);
+    console.log(iname);
+
+    var name  = $('#renameCollectionName').val();
+    name = name.replace(/[^-_.a-zA-Z0-9]/g,"");
+
+    console.log(name);
+
+    if (name.length === 0) {
+        statusError("no collection name given");
+        return;
+    }
+
+    var cnames = getColNames(cid);
+    var ix = cnames.indexOf(name);
+
+    console.log(cnames);
+    console.log(ix);
+
+    if ( ix >= 0 ) {
+        statusError("collection name already exists: " + name);
+        return;
+    }
+
+    renameColOnServer(cpath, iname, name, refreshCollection);
 }
 
 // ----------------------------------------
@@ -915,6 +992,13 @@ function getIconRefFromServer(path, insertSrcRef) {
 
 function createColOnServer(path, name, showCol) {
     modifyServer("newcol", path, name,
+                 function () {
+                     getColFromServer(path, refreshCollection);
+                 });
+}
+
+function renameColOnServer(path, oldname, newname, showCol) {
+    modifyServer("renamecol", path, [oldname, newname],
                  function () {
                      getColFromServer(path, refreshCollection);
                  });
@@ -1020,6 +1104,13 @@ $(document).ready(function () {
             console.log("newCollectionOK clicked");
             $('#newCollectionModal').modal('hide');
             createCollection();
+        });
+
+    $('#renameCollectionOK')
+        .on('click', function (e) {
+            console.log("renameCollectionOK clicked");
+            $('#renameCollectionModal').modal('hide');
+            renameCollection();
         });
 });
 

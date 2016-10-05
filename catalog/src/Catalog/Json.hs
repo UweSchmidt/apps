@@ -116,6 +116,16 @@ jsonCall fct i n args =
       )
       `catchE` mkErrMsg
 
+    "moveToCollection" ->
+      ( jl $ \ (ixs, dPath) -> do
+          (di, dn) <- getIdNode' dPath
+          unless (isCOL dn) $
+            abort ("not a collection: " ++ show dPath)
+          copyToCol   ixs di i n
+          removeFrCol ixs    i n
+      )
+      `catchE` mkErrMsg
+
     -- set or unset the collection image
     -- i must reference a collection, not an image
     -- nothing is returned
@@ -154,6 +164,12 @@ jsonLift cmd jv =
 
 removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
 removeFrCol ixs i n = do
+
+  -- check whether collection is readonly
+  unless (isWriteable $ n ^. theColMetaData) $ do
+    path <- objid2path i
+    abort ("collection is readonly: " ++ show path)
+
   traverse_ (uncurry (removeEntryFrCol i)) toBeRemoved
   where
     -- elements are removed from the end to the front
@@ -172,6 +188,9 @@ removeEntryFrCol i pos (ImgRef{}) =
   adjustColEntries (removeAt pos) i
 removeEntryFrCol i pos (ColRef ci) =
   rmRec ci
+
+isReadOnlyCol :: ObjId -> Cmd Bool
+isReadOnlyCol i = return False
 
 -- ----------------------------------------
 --

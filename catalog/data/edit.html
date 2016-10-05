@@ -105,6 +105,15 @@
                 newCol
               </a>
             </li>
+            <li>
+              <a href="#"
+                 type="button"
+                 data-toggle="modal"
+                 data-target="#renameCollectionModal"
+                 title="rename marked collection">
+                renameCol
+              </a>
+            </li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -149,6 +158,51 @@
             <button type="button"
                     class="btn btn-primary"
                     id="newCollectionOK"
+                    >O.K.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal box for new collection -->
+    <div class="modal fade"
+         id="renameCollectionModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="renameCollectionModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"
+                id="renameCollectionModalLabel"
+                >Rename collection last marked</h4>
+          </div>
+          <div class="modal-body">
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="renameCol-addon1"
+                    >New collection name</span>
+              <input type="text"
+                     id="renameCollectionName"
+                     class="form-control"
+                     placeholder="a-z, A-Z, 0-9, -, _, ."
+                     aria-describedby="renameCol-addon1">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-default"
+                    data-dismiss="modal"
+                    >Cancel</button>
+            <button type="button"
+                    class="btn btn-primary"
+                    id="renameCollectionOK"
                     >O.K.</button>
           </div>
         </div>
