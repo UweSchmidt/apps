@@ -101,12 +101,14 @@ jsonCall fct i n args =
       jl $ \ ixs ->
         sortColByIxList ixs i
 
+    -- remove all marked images and sub-collection from a collection
     "removeFromCollection" ->
       ( jl $ \ ixs -> do
           removeFrCol ixs i n
       )
       `catchE` mkErrMsg
 
+    -- copy marked images and collections to another collection
     "copyToCollection" ->
       ( jl $ \ (ixs, dPath) -> do
           (di, dn) <- getIdNode' dPath
@@ -116,6 +118,9 @@ jsonCall fct i n args =
       )
       `catchE` mkErrMsg
 
+    -- move marked images and collections in a source col
+    -- to a dest col
+    -- this is implemented as a sequence of copy and remove
     "moveToCollection" ->
       ( jl $ \ (ixs, dPath) -> do
           (di, dn) <- getIdNode' dPath
@@ -141,6 +146,14 @@ jsonCall fct i n args =
           createCol nm i
       )
       `catchE` mkErrMsg
+
+    -- rename a sub-collection in a given collection
+    "renamecol" ->
+      ( jl $ \ (old, new) -> do
+          renameCol old new i n
+      )
+      `catchE` mkErrMsg
+
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
@@ -300,9 +313,23 @@ setColImg pos oid n
 -- ----------------------------------------
 
 createCol :: Name -> ObjId -> Cmd ()
-createCol nm i =
-  do path  <- objid2path i
-     _newi <- mkCollection (path `snocPath` nm)
-     return ()
+createCol nm i = do
+  path  <- objid2path i
+  _newi <- mkCollection (path `snocPath` nm)
+  return ()
+
+-- ----------------------------------------
+
+renameCol :: Name -> Name -> ObjId -> ImgNode -> Cmd ()
+renameCol old new i n = do
+  path <- objid2path i
+  let opath = path `snocPath` old
+  let npath = path `snocPath` new
+
+  -- check whether collection is readonly
+  unless (isWriteable $ n ^. theColMetaData) $ do
+     abort ("collection is readonly: " ++ show path)
+
+  abort $ unwords ["renameCol", show path, show old, show new]
 
 -- ----------------------------------------
