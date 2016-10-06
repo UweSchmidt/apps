@@ -916,10 +916,9 @@ function renameCollection() {
             .contents()
             .get(0)
             .textContent;
-
+    var path = cpath + "/" + iname;
     console.log('renameCollection');
-    console.log(cpath);
-    console.log(iname);
+    console.log(path);
 
     var name  = $('#renameCollectionName').val();
     name = name.replace(/[^-_.a-zA-Z0-9]/g,"");
@@ -942,7 +941,7 @@ function renameCollection() {
         return;
     }
 
-    renameColOnServer(cpath, iname, name, refreshCollection);
+    renameColOnServer(cpath, path, name, refreshCollection);
 }
 
 // ----------------------------------------
@@ -997,10 +996,10 @@ function createColOnServer(path, name, showCol) {
                  });
 }
 
-function renameColOnServer(path, oldname, newname, showCol) {
-    modifyServer("renamecol", path, [oldname, newname],
+function renameColOnServer(cpath, path, newname, showCol) {
+    modifyServer("renamecol", path, newname,
                  function () {
-                     getColFromServer(path, refreshCollection);
+                     getColFromServer(cpath, refreshCollection);
                  });
 }
 

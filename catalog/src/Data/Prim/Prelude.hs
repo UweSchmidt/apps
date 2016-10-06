@@ -88,6 +88,7 @@ module Data.Prim.Prelude
        , divideAt
        , searchPos
        , removeAt
+       , insertAt
        )
 where
 
@@ -326,12 +327,20 @@ searchPos p =
 
 -- remove an element at a given index
 
-removeAt :: Int -> [a] -> [a] 
+removeAt :: Int -> [a] -> [a]
 removeAt 0 xs = drop 1 xs
 removeAt i xs
   | i < 0 = xs
-removeAt i [] = []
+removeAt _ [] = []
 removeAt i (x : xs) = x : removeAt (i - 1) xs
+
+insertAt :: Int -> a -> [a] -> [a]
+insertAt i x xs
+  | i <= 0
+    ||
+    null xs = x : xs
+insertAt i x (x1 : xs) =
+  x1 : insertAt (i - 1) x xs
 
 
 -- ----------------------------------------

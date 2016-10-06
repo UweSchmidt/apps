@@ -149,8 +149,8 @@ jsonCall fct i n args =
 
     -- rename a sub-collection in a given collection
     "renamecol" ->
-      ( jl $ \ (old, new) -> do
-          renameCol old new i n
+      ( jl $ \ new -> do
+          renameCol new i
       )
       `catchE` mkErrMsg
 
@@ -199,11 +199,8 @@ removeFrCol ixs i n = do
 removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFrCol i pos (ImgRef{}) =
   adjustColEntries (removeAt pos) i
-removeEntryFrCol i pos (ColRef ci) =
+removeEntryFrCol _i _pos (ColRef ci) =
   rmRec ci
-
-isReadOnlyCol :: ObjId -> Cmd Bool
-isReadOnlyCol i = return False
 
 -- ----------------------------------------
 --
@@ -320,16 +317,56 @@ createCol nm i = do
 
 -- ----------------------------------------
 
-renameCol :: Name -> Name -> ObjId -> ImgNode -> Cmd ()
-renameCol old new i n = do
+dupCol :: Name -> ObjId -> ImgNode -> Cmd ()
+dupCol new i n = do
+
+  -- check whether src is a collection
   path <- objid2path i
-  let opath = path `snocPath` old
-  let npath = path `snocPath` new
+  unless (isCOL n) $
+    abort ("not a collection: " ++ show path)
+
+  i'parent <- getImgParent i
+  m'parent <- getImgVals i'parent theColMetaData
+  p'parent <- objid2path i'parent
 
   -- check whether collection is readonly
-  unless (isWriteable $ n ^. theColMetaData) $ do
-     abort ("collection is readonly: " ++ show path)
+  unless (isWriteable m'parent) $ do
+     abort ("collection is readonly: " ++ show p'parent)
 
-  abort $ unwords ["renameCol", show path, show old, show new]
+  -- create new collection
+  let p'new = path `snocPath` new
+  i'new    <- mkCollection p'new
+
+  -- copy collection attributes to new col
+  adjustMetaData (const $ n ^. theColMetaData) i'new
+  adjustColImg   (const $ n ^. theColImg)      i'new
+  adjustColBlog  (const $ n ^. theColBlog)     i'new
+
+  -- copy all entries to new col
+  mapM_ (copyEntryToCol i'new) (n ^. theColEntries)
+
+
+renameCol :: Name -> ObjId -> Cmd ()
+renameCol newName i = do
+  iParent <- getImgParent i
+
+  -- duplicate collection in parent collection
+  dupColRec i iParent newName
+
+  -- find position of objid i in parent collection
+  ps <- flip findFstColEntry iParent $
+        \ ce -> do
+          return (i == ce ^. theColObjId)
+  let pos = fromMaybe (-1) . fmap fst $ ps
+
+  -- remove i in parent collection
+  rmRec i
+
+  -- move duplicated col from the end of the col entry list to the pos of i
+  adjustColEntries
+    (\ cs -> let i' = last cs
+             in
+               insertAt pos i' $ init cs
+    ) iParent
 
 -- ----------------------------------------

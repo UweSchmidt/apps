@@ -24,6 +24,9 @@ copyCollection path'src path'dst = do
 
   copyColRec id'src id'dst
 
+-- copy a collection recursively into a destination collection
+-- TODO: do it with dupColRec
+
 copyColRec :: ObjId -> ObjId -> Cmd ()
 copyColRec src dst = do
   srcVal <- getImgVal src
@@ -39,24 +42,52 @@ copyColRec src dst = do
 
   -- create empty subcollection in destination collection
   let target'path = editPath (snocPath parent'path name'src)
-  void $ createCopy target'path src
+  void $ createColCopy target'path src
 
   -- copy image and subcollections recursively into new dest collection
-  copyEntries editPath src
-  where
+  copyColEntries editPath src
 
-    createCopy :: Path -> ObjId -> Cmd ObjId
-    createCopy target'path src'id = do
-      col'id <- mkCollection target'path
-      -- copy meta data
-      md  <- getImgVals src'id theColMetaData
-      adjustMetaData (const md) col'id
-      return col'id
+-- ----------------------------------------
+--
+-- copy a collection src into a collection dstParent
+-- with new collection name dstName
 
-    -- copy entries copies the s collection into
-    -- a destination computed by the source path and
-    -- the pf path edit function
-    copyEntries pf =
+dupColRec :: ObjId -> ObjId -> Name -> Cmd ()
+dupColRec src dstParent dstName = do
+  srcVal  <- getImgVal src
+  srcPath <- objid2path src
+  unless (isCOL srcVal) $ do
+    abort $ "dupColRec: source isn't a collection " ++ show (show srcPath)
+
+  dstParentVal  <- getImgVal  dstParent
+  dstParentPath <- objid2path dstParent
+  unless (isCOL dstParentVal) $ do
+    abort $ "dupColRec: target isn't a collection " ++ show (show dstParentPath)
+
+  let dstPath  = dstParentPath `snocPath` dstName
+  let editPath = substPathPrefix srcPath dstPath
+  void $ createColCopy dstPath src
+  copyColEntries editPath src
+
+-- ----------------------------------------
+--
+-- create a copy of a collection src'id at target'path
+createColCopy :: Path -> ObjId -> Cmd ObjId
+createColCopy target'path src'id = do
+  col'id <- mkCollection target'path
+
+  -- copy collection attributes
+  n <- getImgVal src'id
+  adjustMetaData (const $ n ^. theColMetaData) col'id
+  adjustColImg   (const $ n ^. theColImg)      col'id
+  adjustColBlog  (const $ n ^. theColBlog)     col'id
+  return col'id
+
+
+-- create a copy of all collection entries at path
+-- computed by path edit function pf and source path
+copyColEntries :: (Path -> Path) -> ObjId -> Cmd ()
+copyColEntries pf =
       foldMT imgA dirA rootA colA
       where
         imgA      _i _p      = return ()  -- NOOP
@@ -79,7 +110,7 @@ copyColRec src dst = do
               return r
             copy (ColRef i') = do
               copy'path <- pf <$> objid2path i'
-              mkColColRef <$> createCopy copy'path i'
+              mkColColRef <$> createColCopy copy'path i'
 
 -- ----------------------------------------
 
