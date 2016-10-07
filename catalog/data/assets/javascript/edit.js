@@ -17,7 +17,7 @@ function navClicked(e) {
 // $("#mark-button").on('click', navClicked);
 // $("#unmark-button").on('click', navClicked);
 // $("#rem-button").on('click', navClicked);
-$("#mfc-button").on('click', navClicked);
+// $("#mfc-button").on('click', navClicked);
 // $("#mtc-button").on('click', navClicked);
 // $("#ctc-button").on('click', navClicked);
 $("#mtt-button").on('click', navClicked);
@@ -310,25 +310,7 @@ function showNewCollection(path, colVal) {
     } else {
         // create the tab
 
-        // collect the tab-pane ids
-        var colIds = [];
-        $("div.tab-pane")
-            .each(function (i, e) {
-                var id1 = $(e).attr('id');
-                colIds.push(id1);
-        });
-        console.log(colIds);
-
-        var cid   = o.name;
-        var cname = o.name;
-        var cnt = 1;
-        while (colIds.indexOf(cid) >= 0) {
-            cid = o.name + '-' + ++cnt;
-            cname = o.name + ' (' + cnt + ')';
-        }
-        // for html ids replace all none alphanum chars by "-"
-        o.colId   = "col-" + cid.replace(/[^a-zA-Z0-9]/g,"-");
-        o.colname = cname;
+        o.colId   = path2id(o.path);
         console.log(o);
 
         // readonly collection ?
@@ -358,7 +340,7 @@ function showNewCollection(path, colVal) {
         var tb = $('#prototype-tab').find("li").clone();
         var lk = tb.find('a');
         var tt = "path: " + o.path;
-        var tn = o.colname;
+        var tn = o.name;
         if (ct) {
             tt = "title: " + ct + "\n" + tt;
         }
@@ -538,6 +520,18 @@ function statusClear() {
 
 // ----------------------------------------
 // string helper functions
+
+function path2id(path) {
+    // for html ids replace all none alphanum chars by "_"
+    // else it isn't a valid id value
+
+    var res = 'col-' + path.replace(/[^-_a-zA-Z0-9]/g,"_");
+    console.log('path2id');
+    console.log(path);
+    console.log(res);
+
+    return res;
+}
 
 // compute an object with path, name and cpath, and bname and ext
 function splitPath(p) {
@@ -769,6 +763,20 @@ function removeMarkedFromCollection(cid) {
     }
 }
 
+function moveMarkedFromClipboard(cid) {
+    statusClear();
+    var ixs = getMarkedEntries(idClipboard());
+    var dpath = collectionPath(cid);
+    var cpath = pathClipboard();
+    console.log('moveMarkedFromClipboard');
+    console.log(ixs);
+    console.log(cpath);
+    console.log(dpath);
+
+    // do the work on server and refresh both collections
+    moveToColOnServer(cpath, dpath, ixs);
+}
+
 function moveMarkedToClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(cid);
@@ -822,7 +830,7 @@ function setCollectionImg(cid) {
     var img  = getLastMarkedEntry(cid);
 
     if (collectionIsReadOnly(cid)) {
-        statusError('collection is readonly: ' + cid);
+        statusError('collection is readonly: ' + path);
         return;
     }
 
@@ -849,6 +857,7 @@ function setCollectionImg(cid) {
                              function () {
                                  var ppath = o.cpath;
                                  var pcol = isAlreadyOpen(ppath);
+                                 statusMsg('collection image set in ' + path);
                                  if ( pcol[0] ) {
                                      // parent collection open
                                      // refresh the parent collection
@@ -905,10 +914,11 @@ function renameCollection() {
     }
     var img   = getLastMarkedEntry(cid);
     if (! img) {
+        statusError("no collection marked in collection: " + cpath);
         return;
     }
     if ($(img).hasClass('imgmark')) {
-        statusError("last marked isn't a collection");
+        statusError("last marked isn't a collection in: " + cpath);
         return;
     }
     var iname = $(img)
@@ -1078,6 +1088,11 @@ $(document).ready(function () {
             sortCollection(activeCollectionId());
     });
 
+    $("#mfc-button")
+        .on('click', function (e) {
+            moveMarkedFromClipboard(activeCollectionId());
+        });
+
     $("#mtc-button")
         .on('click', function (e) {
             moveMarkedToClipboard(activeCollectionId());
@@ -1121,21 +1136,9 @@ function pathCollections() { return "/archive/collections"; }
 function pathClipboard()   { return "/archive/collections/clipboard"; }
 function pathTrash()       { return "/archive/collections/trash"; }
 
-function idCollections() { return 'col-collections'; }
-function idClipboard()   { return 'col-clipboard'; }
-function idTrash()       { return 'col-trash'; }
+function idCollections() { return path2id(pathCollections()); }
+function idClipboard()   { return path2id(pathClipboard()); }
+function idTrash()       { return path2id(pathTrash()); }
 
 
 // ----------------------------------------
-
-// test test test
-
-var td = {"name" : "_uwe1234",
-          "path" : "/archive/photos/_uwe1234",
-          "src" : iconSize("/assets/icons/generated/photos.jpg")
-         };
-
-var td2 = {"name" : "trash",
-           "path" : "/archive/collections/photos/trash",
-           "src" : iconSize("/assets/icons/generated/brokenImage.jpg")
-         };

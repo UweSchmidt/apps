@@ -29,6 +29,9 @@ copyCollection path'src path'dst = do
 
 copyColRec :: ObjId -> ObjId -> Cmd ()
 copyColRec src dst = do
+  srcName   <- getImgName src
+  dupColRec src dst srcName
+{-
   srcVal <- getImgVal src
   unless (isCOL srcVal) $ do
     p <- objid2path src
@@ -46,6 +49,7 @@ copyColRec src dst = do
 
   -- copy image and subcollections recursively into new dest collection
   copyColEntries editPath src
+-- -}
 
 -- ----------------------------------------
 --

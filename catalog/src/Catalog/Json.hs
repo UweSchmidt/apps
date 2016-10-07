@@ -317,35 +317,6 @@ createCol nm i = do
 
 -- ----------------------------------------
 
-dupCol :: Name -> ObjId -> ImgNode -> Cmd ()
-dupCol new i n = do
-
-  -- check whether src is a collection
-  path <- objid2path i
-  unless (isCOL n) $
-    abort ("not a collection: " ++ show path)
-
-  i'parent <- getImgParent i
-  m'parent <- getImgVals i'parent theColMetaData
-  p'parent <- objid2path i'parent
-
-  -- check whether collection is readonly
-  unless (isWriteable m'parent) $ do
-     abort ("collection is readonly: " ++ show p'parent)
-
-  -- create new collection
-  let p'new = path `snocPath` new
-  i'new    <- mkCollection p'new
-
-  -- copy collection attributes to new col
-  adjustMetaData (const $ n ^. theColMetaData) i'new
-  adjustColImg   (const $ n ^. theColImg)      i'new
-  adjustColBlog  (const $ n ^. theColBlog)     i'new
-
-  -- copy all entries to new col
-  mapM_ (copyEntryToCol i'new) (n ^. theColEntries)
-
-
 renameCol :: Name -> ObjId -> Cmd ()
 renameCol newName i = do
   iParent <- getImgParent i
