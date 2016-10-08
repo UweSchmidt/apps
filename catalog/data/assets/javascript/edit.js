@@ -909,7 +909,7 @@ function renameCollection() {
     var cpath = collectionPath(cid);
 
     if (collectionIsReadOnly(cid)) {
-        statusError('collection is readonly: ' + cpath);
+        statusError('can\'t rename, collection is readonly: ' + cpath);
         return;
     }
     var img   = getLastMarkedEntry(cid);
@@ -952,6 +952,31 @@ function renameCollection() {
     }
 
     renameColOnServer(cpath, path, name, refreshCollection);
+}
+
+function setMetaData() {
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+
+    if (collectionIsReadOnly(cid)) {
+        statusError('can\'t set meta data, active collection is readonly: ' + cpath);
+        return;
+    }
+
+    var metadata = {};
+    var keys = ["Title", "Subtitle", "Comment",
+                "Web", "Wikipedia",
+                "TitleEnglish", "TitleLatin" // <-- not yet implemented in edit.html
+               ];
+    keys.forEach(function (e, i) {
+        var k =    'descr:' + e;
+        var v = $('#descr-' + e).val();
+        if (v && v.length > 0) {
+            metadata[k] = v;
+        }
+    });
+    console.log('setMetaData');
+    console.log(metadata);
 }
 
 // ----------------------------------------
@@ -1113,6 +1138,11 @@ $(document).ready(function () {
             setCollectionImg(activeCollectionId());
         });
 
+    $('#newCollectionModal')
+        .on('show.bs.modal', function () {
+            statusClear();
+        });
+
     $('#newCollectionOK')
         .on('click', function (e) {
             console.log("newCollectionOK clicked");
@@ -1120,11 +1150,28 @@ $(document).ready(function () {
             createCollection();
         });
 
+    $('#renameCollectionModal')
+        .on('show.bs.modal', function () {
+            statusClear();
+        });
+
     $('#renameCollectionOK')
         .on('click', function (e) {
             console.log("renameCollectionOK clicked");
             $('#renameCollectionModal').modal('hide');
             renameCollection();
+        });
+
+    $('#MetaDataModal')
+        .on('show.bs.modal', function () {
+            statusClear();
+        });
+
+    $('#MetaDataOK')
+        .on('click', function (e) {
+            console.log("MetaDataOK clicked");
+            $('#MetaDataModal').modal('hide');
+            setMetaData();
         });
 });
 

@@ -97,7 +97,7 @@
                  title="set last marked image as collection image">colImg</a>
             </li>
             <li>
-              <a href="#"
+              <a id="newCollectionButton"
                  type="button"
                  data-toggle="modal"
                  data-target="#newCollectionModal"
@@ -106,12 +106,21 @@
               </a>
             </li>
             <li>
-              <a href="#"
+              <a id="renameCollectionButton"
                  type="button"
                  data-toggle="modal"
                  data-target="#renameCollectionModal"
                  title="rename marked collection">
                 renameCol
+              </a>
+            </li>
+            <li>
+              <a id="MetaDataButton"
+                 type="button"
+                 data-toggle="modal"
+                 data-target="#MetaDataModal"
+                 title="set meta data for marked images/collections">
+                metaData
               </a>
             </li>
           </ul>
@@ -164,7 +173,7 @@
       </div>
     </div>
 
-    <!-- Modal box for new collection -->
+    <!-- Modal box for rename collection -->
     <div class="modal fade"
          id="renameCollectionModal"
          tabindex="-1"
@@ -203,6 +212,100 @@
             <button type="button"
                     class="btn btn-primary"
                     id="renameCollectionOK"
+                    >O.K.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal box for meta data input fields -->
+    <div class="modal fade"
+         id="MetaDataModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="MetaDataModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"
+                id="MetaDataModalLabel"
+                >Metadata for marked entries</h4>
+          </div>
+          <div class="modal-body">
+            <!-- Title -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Title-addon1"
+                    >Title</span>
+              <input type="text"
+                     id="descr-Title"
+                     class="form-control"
+                     placeholder="title"
+                     aria-describedby="descr-Title-addon1">
+            </div>
+            <!-- Subtitle -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Subtitle-addon1"
+                    >Subtitle</span>
+              <input type="text"
+                     id="descr-Subtitle"
+                     class="form-control"
+                     placeholder="new subtitle"
+                     value=""
+                     aria-describedby="descr-Subtitle-addon1">
+            </div>
+            <!-- Comment -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Comment-addon1"
+                    >Comment</span>
+              <input type="text"
+                     id="descr-Comment"
+                     class="form-control"
+                     placeholder="new comment"
+                     value=""
+                     aria-describedby="descr-Comment-addon1">
+            </div>
+            <!-- Web -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Web-addon1"
+                    >Web Ref</span>
+              <input type="text"
+                     id="descr-Web"
+                     class="form-control"
+                     placeholder="URL"
+                     value=""
+                     aria-describedby="descr-Web-addon1">
+            </div>
+            <!-- Wikipedia -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Wikipedia-addon1"
+                    >Wikipedia</span>
+              <input type="text"
+                     id="descr-Wikipedia"
+                     class="form-control"
+                     placeholder="URL"
+                     value=""
+                     aria-describedby="descr-Wikipedia-addon1">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-default"
+                    data-dismiss="modal"
+                    >Cancel</button>
+            <button type="button"
+                    class="btn btn-primary"
+                    id="MetaDataOK"
                     >O.K.</button>
           </div>
         </div>
