@@ -756,18 +756,20 @@ function removeMarkedFromCollection(cid) {
     // the intersection is the set of collections to be closed
     statusClear();
     closeSubCollections(cid);
-    var cpath = collectionPath(cid);
-    if ( cpath ) {
-        var ixs   = getMarkedEntries(cid);
-        console.log('removeMarkedFromCollection');
-        console.log(ixs);
-        console.log(cpath);
 
-        // remove on server and refresh collection
-        removeFromColOnServer(cpath, ixs);
-    } else {
+    var cpath = collectionPath(cid);
+    if (! cpath ) {
         statusError('collection not found: ' + cid);
+        return;
     }
+
+    var ixs   = getMarkedEntries(cid);
+    console.log('removeMarkedFromCollection');
+    console.log(ixs);
+    console.log(cpath);
+
+    // remove on server and refresh collection
+    removeFromColOnServer(cpath, ixs);
 }
 
 // ----------------------------------------
