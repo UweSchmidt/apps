@@ -713,7 +713,7 @@ function getMarkedCollections(cid) {
 }
 
 function getOpenMarkedCollections(cid) {
-    console.log("getOpenmarkedCollections: " + cid);
+    console.log("getOpenMarkedCollections: " + cid);
     var mcs = getMarkedCollections(cid);
     var ocs = allCollectionPaths();
     var res = [];
@@ -739,6 +739,8 @@ function closeSubCollections(cid) {
         });
     setActiveTab(cid);
 }
+
+// ----------------------------------------
 
 function removeMarkedFromClipboard() {
     var cid = idClipboard();
@@ -768,6 +770,8 @@ function removeMarkedFromCollection(cid) {
     }
 }
 
+// ----------------------------------------
+
 function moveMarkedFromClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(idClipboard());
@@ -781,6 +785,8 @@ function moveMarkedFromClipboard(cid) {
     // do the work on server and refresh both collections
     moveToColOnServer(cpath, dpath, ixs);
 }
+
+// ----------------------------------------
 
 function moveMarkedToClipboard(cid) {
     statusClear();
@@ -810,6 +816,8 @@ function copyMarkedToClipboard(cid) {
     copyToColOnServer(cpath, dpath, ixs);
 }
 
+// ----------------------------------------
+
 function sortCollection(cid) {
     statusClear();
     console.log('sort collection: ' + cid);
@@ -825,6 +833,20 @@ function sortCollection(cid) {
     console.log(path);
 
     sortColOnServer(path, ixs);
+}
+
+// ----------------------------------------
+
+function getEntryPos(img) {
+    var pos = $(img)
+            .find('span.img-no')
+            .contents()
+            .get(0)
+            .textContent;
+    pos = parseInt(pos) -1;
+    console.log('getEntryPos');
+    console.log(pos);
+    return pos;
 }
 
 function setCollectionImg(cid) {
@@ -879,9 +901,11 @@ function setCollectionImg(cid) {
         // unmark last marked entry
         toggleMark($(img));
     } else {
-        statusError('no marked entry found');
+        statusError('no marked image/collection found');
     }
 }
+
+// ----------------------------------------
 
 function createCollection() {
     statusClear();
@@ -907,6 +931,8 @@ function createCollection() {
     }
     createColOnServer(cpath, name, refreshCollection);
 }
+
+// ----------------------------------------
 
 function renameCollection() {
     statusClear();
@@ -959,6 +985,8 @@ function renameCollection() {
     renameColOnServer(cpath, path, name, refreshCollection);
 }
 
+// ----------------------------------------
+
 function setMetaData() {
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
@@ -970,7 +998,7 @@ function setMetaData() {
 
     var metadata = {};
     var keys = ["Title", "Subtitle", "Comment",
-                "Web", "Wikipedia",
+                "Keywords", "Web", "Wikipedia",
                 "TitleEnglish", "TitleLatin" // <-- not yet implemented in edit.html
                ];
     keys.forEach(function (e, i) {
@@ -995,6 +1023,51 @@ function setMetaData() {
     console.log(ixs);
 
     setMetaOnServer(cpath,ixs,metadata);
+}
+
+// ----------------------------------------
+
+function getMetaData() {
+    var cid  = activeCollectionId();
+    var path = collectionPath(cid);
+    var dia  = getLastMarkedEntry(cid);
+
+    if (! dia) {
+        statusError('no marked image/collection found');
+        return ;
+    }
+    var pos = getEntryPos(dia);
+    getMetaFromServer(path, pos);
+}
+
+function showMetaData(md0) {
+    // meta data is wrapped into a single element list (why?)
+    var md = md0[0];
+    console.log('showMetaData');
+    console.log(md);
+
+    var kvs = [];
+    $.each(md, function (k, v) {
+        kvs.push([k, v]);
+    });
+    kvs.sort(function (p1, p2) {
+        var x = p1[0];
+        var y = p2[0];
+        if ( x > y ) { return +1; }
+        if ( x < y ) { return -1; }
+        return 0;
+    });
+    console.log(kvs);
+
+    var mdt = $('#ShowMetaDataTable').empty();
+
+    kvs.forEach(function (e, i) {
+        mdt.append('<tr><th>' + e[0] + '</th><td>' + e[1] + '</td></tr>');
+    });
+}
+
+function hideMetaData() {
+    console.log('hideMetaData: Hello');
 }
 
 // ----------------------------------------
@@ -1063,6 +1136,10 @@ function renameColOnServer(cpath, path, newname, showCol) {
                  });
 }
 
+function getMetaFromServer(path, pos) {
+    readServer1('metadata', path, pos, showMetaData);
+}
+
 // ----------------------------------------
 
 // http communication
@@ -1091,7 +1168,12 @@ function callServer(getOrModify, fct, args, processRes, processNext) {
 // make a query call to server
 
 function readServer(fct, path, processRes) {
-    callServer("get", fct, [path, []], processRes, noop);
+    readServer1(fct, path, [], processRes);
+    // callServer("get", fct, [path, []], processRes, noop);
+}
+
+function readServer1(fct, path, args, processRes) {
+    callServer("get", fct, [path, args], processRes, noop);
 }
 
 // make a modifying call to server
@@ -1197,6 +1279,17 @@ $(document).ready(function () {
             console.log("MetaDataOK clicked");
             $('#MetaDataModal').modal('hide');
             setMetaData();
+        });
+
+    $('#ShowMetaDataModal')
+        .on('show.bs.modal', function () {
+            statusClear();
+            getMetaData();
+        });
+
+    $('#ShowMetaDataModal')
+        .on('hide.bs.modal', function () {
+            hideMetaData();
         });
 });
 

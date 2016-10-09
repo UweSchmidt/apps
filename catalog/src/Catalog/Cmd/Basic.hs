@@ -272,6 +272,16 @@ adjustNodeVal mkj theComp f i = do
 
 -- ----------------------------------------
 --
+-- process collection entries
+
+processColEntry :: (ObjId -> Name -> MetaData -> Cmd a) ->
+                   (ObjId -> Cmd a) ->
+                   (ColEntry -> Cmd a)
+processColEntry  imgRef _colRef (ImgRef i n md) = imgRef i n md
+processColEntry _imgRef  colRef (ColRef i     ) = colRef i
+
+-- ----------------------------------------
+--
 -- search, sort and merge ops for collections
 
 findAllColEntries :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd [(Int, ColEntry)]

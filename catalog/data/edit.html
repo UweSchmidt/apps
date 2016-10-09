@@ -120,7 +120,16 @@
                  data-toggle="modal"
                  data-target="#MetaDataModal"
                  title="set meta data for marked images/collections">
-                metaData
+                setMD
+              </a>
+            </li>
+            <li>
+              <a id="ShowMetaDataButton"
+                 type="button"
+                 data-toggle="modal"
+                 data-target="#ShowMetaDataModal"
+                 title="show meta data for last marked image/collection">
+                showMD
               </a>
             </li>
           </ul>
@@ -235,7 +244,7 @@
             </button>
             <h4 class="modal-title"
                 id="MetaDataModalLabel"
-                >Metadata for marked entries</h4>
+                >Set metadata for marked collections</h4>
           </div>
           <div class="modal-body">
             <!-- Title -->
@@ -279,6 +288,19 @@
                      value=""
                      aria-describedby="descr-Comment-addon1">
             </div>
+            <!-- Keywords -->
+            <div class="input-group">
+              <span class="input-group-addon"
+                    id="descr-Keywords-addon1"
+                    >
+                <span class="metadata-key">Keywords</span>
+              </span>
+              <input type="text"
+                     id="descr-Keywords"
+                     class="form-control"
+                     placeholder=",-separated list of words"
+                     aria-describedby="descr-Keywords-addon1">
+            </div>
             <!-- Web -->
             <div class="input-group">
               <span class="input-group-addon"
@@ -317,6 +339,50 @@
                     class="btn btn-primary"
                     id="MetaDataOK"
                     >O.K.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal box for viewing meta data -->
+    <div class="modal fade"
+         id="ShowMetaDataModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="ShowMetaDataModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"
+                id="ShowMetaDataModalLabel"
+                >Metadata for last marked image/collection</h4>
+          </div>
+          <div class="modal-body">
+            <!-- the table for the meta data -->
+            <table id="ShowMetaDataTable" class="metadata-table">
+              <tr id="ShowMetaDataRow">
+                <th>key</th>
+                <td>value</td>
+              <tr>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <!--
+            <button type="button"
+                    class="btn btn-default"
+                    data-dismiss="modal"
+                    >Cancel</button>
+            <button type="button"
+                    class="btn btn-primary"
+                    id="MetaDataOK"
+                    >O.K.</button>
+            -->
           </div>
         </div>
       </div>

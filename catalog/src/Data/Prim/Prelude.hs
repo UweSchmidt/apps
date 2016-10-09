@@ -342,7 +342,6 @@ insertAt i x xs
 insertAt i x (x1 : xs) =
   x1 : insertAt (i - 1) x xs
 
-
 -- ----------------------------------------
 
 -- put all elemnts of a, which have equal e values

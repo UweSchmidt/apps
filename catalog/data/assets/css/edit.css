@@ -130,3 +130,11 @@ div.dia-bot {
   float: left;
   width: 9ex;
 }
+
+table.metadata-table {
+  /* modal for viewing meta data */
+}
+
+table.metadata-table th {
+  padding-right: 2ex;
+}

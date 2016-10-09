@@ -12,6 +12,7 @@ where
 
 import           Catalog.Cmd
 import           Catalog.Html.Photo2 (colImgRef)
+import           Catalog.System.ExifTool (getMetaData)
 -- import           Catalog.Journal
 -- import           Catalog.Cmd.Types
 import           Control.Lens
@@ -95,6 +96,10 @@ jsonCall fct i n args =
       jl $ \ () ->
       (^. isoText) <$> colImgRef i
 
+    "metadata" ->
+      jl $ \ pos ->
+      getMeta pos n
+
     -- sort a collection by sequence of positions
     -- result is the new collection
     "sort" ->
@@ -156,7 +161,7 @@ jsonCall fct i n args =
 
     "setMetaData" ->
       ( jl $ \ (ixs, md) -> do
-          setMetaData md ixs n
+          setMeta md ixs i n
       )
       `catchE` mkErrMsg
 
@@ -202,10 +207,17 @@ removeFrCol ixs i n = do
       $ n ^. theColEntries
 
 removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
+removeEntryFrCol i pos =
+  processColEntry
+  (\ _ _ _ -> adjustColEntries (removeAt pos) i)
+  (\ ci    -> rmRec ci)
+
+{- -- avoid case over constructors
 removeEntryFrCol i pos (ImgRef{}) =
   adjustColEntries (removeAt pos) i
 removeEntryFrCol _i _pos (ColRef ci) =
   rmRec ci
+-- -}
 
 -- ----------------------------------------
 --
@@ -224,6 +236,25 @@ copyToCol ixs di n = do
       $ n ^. theColEntries
 
 copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
+copyEntryToCol di ce =
+  processColEntry
+  (\ _ _ _ -> adjustColEntries (++ [ce]) di)
+  copyColToCol
+  ce
+  where
+    copyColToCol si = do
+      dp <- objid2path di
+      sp <- objid2path si
+      copyCollection sp dp
+
+      -- remove the access restrictions in copied collection
+      -- in a copied collection there aren't any access restrictions
+      --
+      -- the path of the copied collection
+      let tp = dp `snocPath` (sp ^. viewBase . _2)
+      modifyMetaDataRec clearAccess tp
+
+{-
 copyEntryToCol di e@(ImgRef{}) = do
   adjustColEntries (++ [e]) di
 copyEntryToCol di (ColRef si) = do
@@ -237,6 +268,7 @@ copyEntryToCol di (ColRef si) = do
   -- the path of the copied collection
   let tp = dp `snocPath` (sp ^. viewBase . _2)
   modifyMetaDataRec clearAccess tp
+-- -}
 
 {- not yet in use
 modifyMetaData :: (MetaData -> MetaData) -> Path -> Cmd ()
@@ -347,15 +379,32 @@ renameCol newName i = do
 
 -- ----------------------------------------
 
-setMetaData :: MetaData -> [Int] -> ImgNode -> Cmd ()
-setMetaData md ixs n = do
-  sequence_ $ zipWith setMetaData1 ixs (n ^. theColEntries)
+setMeta :: MetaData -> [Int] -> ObjId -> ImgNode -> Cmd ()
+setMeta md ixs i n = do
+  sequence_ $ zipWith3 setMeta1 [(0::Int)..] ixs (n ^. theColEntries)
   where
-    setMetaData1 mark (ColRef ci)
-      | mark >= 0 = do
-          adjustMetaData (md <>) ci
+    setMeta1 pos mark ce
+      | mark < 0 =
+        return ()
+      | otherwise =
+          processColEntry
+          (\ _ _ _ ->
+             adjustColEntries (ix pos . theColImgRef . _3 %~ (md <>)) i
+          )
+          (\ ci      -> adjustMetaData (md <>) ci)
+          ce
 
-    -- set meta data for unmarked entries and image refs is ignored
-    setMetaData1 _mark _ce = return ()
+-- ----------------------------------------
+
+getMeta :: Int -> ImgNode -> Cmd MetaData
+getMeta pos n = do
+  ce <- maybe
+    (abort $ "illegal index in collection: " ++ show pos)
+    return
+    (n ^? theColEntries . ix pos)
+  processColEntry
+    (\ ii _ md -> (md <>) <$> getMetaData ii)
+    (\ ci    -> getImgVals ci theColMetaData)
+    ce
 
 -- ----------------------------------------

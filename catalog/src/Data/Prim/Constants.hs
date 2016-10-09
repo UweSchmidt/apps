@@ -118,14 +118,14 @@ tt'day y m d =
 -- access restrictions
 
 no'change,
-  no'delete, no'sort, no'write :: Text
+  no'delete, no'sort, no'write, no'wrtdel :: Text
 
 no'write  = "no-write"
 no'sort   = "no-sort"
 no'delete = "no-delete"
 no'change = T.unwords [no'delete, no'sort, no'write]
 no'wrtdel = T.unwords [no'delete, no'write]
-  
+
 to'colandname
   , to'dateandtime
   , to'name :: Text

@@ -513,6 +513,7 @@ attrCol =
     , "Subtitle"
     , "TitleEnglish"
     , "TitleLatin"
+    , "Keywords"
     , "Web"
     , "Wikipedia"
     , "GoogleMaps"
