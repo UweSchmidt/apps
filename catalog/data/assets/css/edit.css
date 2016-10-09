@@ -1,3 +1,18 @@
+/* Bootstrap color scheme
+@gray-darker:  lighten(#000, 13.5%); // #222
+@gray-dark:    lighten(#000, 20%);   // #333
+@gray:         lighten(#000, 33.5%); // #555
+@gray-light:   lighten(#000, 46.7%); // #777
+@gray-lighter: lighten(#000, 93.5%); // #eee
+
+@brand-primary: darken(#428bca, 6.5%); // #337ab7
+@brand-success: #5cb85c;
+@brand-info:    #5bc0de;
+@brand-warning: #f0ad4e;
+@brand-danger:  #d9534f;
+*/
+
+
 body {
     padding-top: 50px;
     padding-bottom: 50px;
@@ -19,7 +34,7 @@ ul.pointer a {
 
 .error-msg {
     font-weight: bold;
-    color: red;
+    color: #d9534f;
 }
 
 .starter-template {
@@ -33,29 +48,28 @@ ul.pointer a {
 div.dia {
   width: 222px;
   height: 222px;
-  /* border: 2px solid #c0c0c0; */
   margin: 2px;
   padding: 2px;
 }
 
 .unmarked {
-  background-color: #e0e0e0;
+  background-color:  #e0e0e0;
 }
 
 .marked {
-  background-color: #ffc0c0;
+  background-color: #ffc0a0;
 }
 
 img.curmarked {
-  border: 2px solid #800000;
+  border: 3px solid #d9534f; /* #f0f000; */
 }
 
 .imgmark {
-  border: 2px solid #c0c0c0;
+  border: 2px solid #a0a0a0;
 }
 
 .colmark {
-  border: 2px solid #800000;
+  border: 2px solid #d9534f; /* #800000; */
 }
 
 div.dia-top {
@@ -72,7 +86,7 @@ div.dia-mark {
   margin-right: 5px;
   margin-top: 5px;
   float: right;
-  color: #800000;
+  color: #d9534f; /* #800000; */
   /* border: 1px solid blue; /* test */
 }
 

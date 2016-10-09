@@ -749,7 +749,7 @@ function removeMarkedFromClipboard() {
 }
 
 function removeMarkedFromCollection(cid) {
-    // TODO: if open collections are to be removed (or moved)
+    // if open collections are to be removed (or moved)
     // they must be closed first
     // get marked collections (not images)
     // get all paths of open collections
@@ -772,6 +772,7 @@ function removeMarkedFromCollection(cid) {
 
 // ----------------------------------------
 
+// TODO: readonly check for destination collection
 function moveMarkedFromClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(idClipboard());
