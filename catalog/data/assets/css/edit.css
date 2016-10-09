@@ -73,7 +73,7 @@ div.dia-mark {
   margin-top: 5px;
   float: right;
   color: #800000;
-  /* border: 1px solid blue; */
+  /* border: 1px solid blue; /* test */
 }
 
 div.dia-name {
@@ -83,7 +83,7 @@ div.dia-name {
   margin-top: 5px;
   margin-left: 5px;
   float: left;
-  /* border: 1px solid green; */
+  /* border: 1px solid green; /* test */
 }
 /* for icons with max size 160x160
    164px = 160px + 2 * 2px (border)
@@ -123,4 +123,10 @@ div.dia-bot {
 
 .nodelete {
   /* marker class for generated collections */
+}
+
+/* adjust the width if longer names for keys are added to meta data modal*/
+.metadata-key {
+  float: left;
+  width: 9ex;
 }

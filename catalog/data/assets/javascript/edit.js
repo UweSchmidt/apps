@@ -668,6 +668,16 @@ function getMarkedEntries(cid) {
     return ixs;
 }
 
+function anyMarked(ixs) {
+    var res = false;
+    ixs.forEach(function (e, i) {
+        if ( e >= 0 ) {
+            res = true;
+        }
+    });
+    return res;
+}
+
 function getLastMarkedEntry(cid) {
     var res = $('#' + cid)
             .find("img.curmarked")
@@ -713,11 +723,6 @@ function getOpenMarkedCollections(cid) {
                 res.push(e2);
             }
         });
-        // TODO: a bit wierd and incomplete:
-        // a prefix test must be added for closing sub-sub-collections
-        // if ( ocs.indexOf(e) >= 0 ) {
-        //    res.push(e);
-        // }
     });
     console.log('getOpenMarkedCollections');
     console.log(res);
@@ -975,8 +980,21 @@ function setMetaData() {
             metadata[k] = v;
         }
     });
+    if (jQuery.isEmptyObject(metadata)) {
+        statusMsg('no meta data given');
+        return;
+    }
+
+    var ixs = getMarkedEntries(cid);
+    if (! anyMarked(ixs)) {
+        statusMsg('no marked images/collections found');
+        return;
+    }
     console.log('setMetaData');
     console.log(metadata);
+    console.log(ixs);
+
+    setMetaOnServer(cpath,ixs,metadata);
 }
 
 // ----------------------------------------
@@ -1006,8 +1024,15 @@ function copyMoveToColOnServer(cpmv, spath, dpath, args) {
                  });
 }
 
-function sortColOnServer(path, args) {
-    modifyServer("sort", path, args,
+function sortColOnServer(path, ixs) {
+    modifyServer("sort", path, ixs,
+                 function () {
+                     getColFromServer(path, refreshCollection);
+                 });
+}
+
+function setMetaOnServer(path, ixs, metadata) {
+    modifyServer("setMetaData", path, [ixs, [metadata]],
                  function () {
                      getColFromServer(path, refreshCollection);
                  });

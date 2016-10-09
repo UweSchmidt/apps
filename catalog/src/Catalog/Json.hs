@@ -114,7 +114,7 @@ jsonCall fct i n args =
           (di, dn) <- getIdNode' dPath
           unless (isCOL dn) $
             abort ("not a collection: " ++ show dPath)
-          copyToCol ixs di i n
+          copyToCol ixs di n
       )
       `catchE` mkErrMsg
 
@@ -126,7 +126,7 @@ jsonCall fct i n args =
           (di, dn) <- getIdNode' dPath
           unless (isCOL dn) $
             abort ("not a collection: " ++ show dPath)
-          copyToCol   ixs di i n
+          copyToCol   ixs di   n
           removeFrCol ixs    i n
       )
       `catchE` mkErrMsg
@@ -154,6 +154,11 @@ jsonCall fct i n args =
       )
       `catchE` mkErrMsg
 
+    "setMetaData" ->
+      ( jl $ \ (ixs, md) -> do
+          setMetaData md ixs n
+      )
+      `catchE` mkErrMsg
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
@@ -206,8 +211,8 @@ removeEntryFrCol _i _pos (ColRef ci) =
 --
 -- copy entries to a collection
 
-copyToCol :: [Int] -> ObjId -> ObjId -> ImgNode -> Cmd ()
-copyToCol ixs di i n = do
+copyToCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
+copyToCol ixs di n = do
   traverse_ (\ e -> copyEntryToCol di e) toBeCopied
   where
     toBeCopied :: [ColEntry]
@@ -233,12 +238,12 @@ copyEntryToCol di (ColRef si) = do
   let tp = dp `snocPath` (sp ^. viewBase . _2)
   modifyMetaDataRec clearAccess tp
 
-
+{- not yet in use
 modifyMetaData :: (MetaData -> MetaData) -> Path -> Cmd ()
 modifyMetaData mf path = do
   i <- fst <$> getIdNode "modifyMetaData: entry not found" path
   adjustMetaData mf i
-
+-- -}
 
 modifyMetaDataRec :: (MetaData -> MetaData) -> Path -> Cmd ()
 modifyMetaDataRec mf path = do
@@ -339,5 +344,18 @@ renameCol newName i = do
              in
                insertAt pos i' $ init cs
     ) iParent
+
+-- ----------------------------------------
+
+setMetaData :: MetaData -> [Int] -> ImgNode -> Cmd ()
+setMetaData md ixs n = do
+  sequence_ $ zipWith setMetaData1 ixs (n ^. theColEntries)
+  where
+    setMetaData1 mark (ColRef ci)
+      | mark >= 0 = do
+          adjustMetaData (md <>) ci
+
+    -- set meta data for unmarked entries and image refs is ignored
+    setMetaData1 _mark _ce = return ()
 
 -- ----------------------------------------
