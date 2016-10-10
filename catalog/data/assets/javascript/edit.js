@@ -824,6 +824,7 @@ function copyMarkedToClipboard(cid) {
 function sortCollection(cid) {
     statusClear();
     console.log('sort collection: ' + cid);
+
     var sr = $('#' + cid).hasClass('nosort');
     console.log(sr);
     if ( sr ) {
@@ -831,7 +832,13 @@ function sortCollection(cid) {
         statusError('collection not sortable: ' + path);
         return;
     }
+
     var ixs  = getMarkedEntries(cid);
+    if (! anyMarked(ixs)) {
+        statusMsg('no marked images/collections found');
+        return;
+    }
+
     var path = collectionPath(cid);
     console.log(path);
 

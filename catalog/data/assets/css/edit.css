@@ -53,11 +53,11 @@ div.dia {
 }
 
 .unmarked {
-  background-color:  #e0e0e0;
+  background-color: #e0e0e0;
 }
 
 .marked {
-  background-color: #ffc0a0;
+  background-color: #f2dede; /* #fcf8e3; /* #ffc0a0;*/
 }
 
 img.curmarked {
@@ -119,7 +119,8 @@ div.dia-img {
 div.dia-bot {
   height: 25px;
   width: 100%;
-  text-align: center;
+  text-align: right;
+  padding-right: 5px;
 }
 
 .prototype {
