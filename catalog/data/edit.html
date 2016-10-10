@@ -135,7 +135,7 @@
                  data-toggle="modal"
                  data-target="#ShowMetaDataModal"
                  title="show meta data for last marked image/collection"
-                 >showMD</a>
+                 >viewMD</a>
             </li>
           </ul>
         </div><!--/.nav-collapse -->
@@ -424,17 +424,25 @@
           <!-- the bottom line -->
           <div class="btn-group btn-group-xs" role="group" aria-label="...">
             <button type="button"
-                    class="btn btn-default"
-                    title="Preview image"
-                    >view</button>
+                    class="btn btn-default btn-view"
+                    title="Preview image">
+              <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+            </button>
             <button type="button"
-                    class="btn btn-default"
-                    title="View meta data"
-                    >meta</button>
+                    class="btn btn-default btn-meta"
+                    title="View meta data">
+              <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+            </button>
             <button type="button"
-                    class="btn btn-default"
-                    title="Set title and/or other meta data"
-                    >title</button>
+                    class="btn btn-default btn-title"
+                    title="Set title and/or other meta data">
+              <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+            </button>
+            <button type="button"
+                    class="btn btn-default btn-colimg"
+                    title="Set image as collection image">
+              <span class="glyphicon glyphicon-level-up" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
       </div>

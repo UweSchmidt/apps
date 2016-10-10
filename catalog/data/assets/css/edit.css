@@ -154,3 +154,9 @@ table.metadata-table th {
   vertical-align: text-top;
   padding-right: 2ex;
 }
+
+/* marker classes for dia buttons */
+.btn-view {}
+.btn-meta {}
+.btn-title {}
+.btn-colimg {}
