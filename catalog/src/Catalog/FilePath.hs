@@ -103,22 +103,20 @@ filePathConfig = map (first parseRegexExt) $
 
 txtSrcExpr :: Regex
 txtSrcExpr =
-  parseRegexExt $
-  "({path}/.*[.](txt|md)"
+  parseRegexExt "({path}/.*[.](txt|md)"
 
 imgSrcExpr :: Regex
 imgSrcExpr =
-  parseRegexExt $
-  "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
+  parseRegexExt "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
 
 txtPathExpr :: Regex
 txtPathExpr =
-  parseRegexExt $
+  parseRegexExt
   "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.](txt|md))"
 
 imgPathExpr :: Regex
 imgPathExpr =
-  parseRegexExt $
+  parseRegexExt
   "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
 
 -- extract the path component from a file path
@@ -131,8 +129,9 @@ objSrc oex p =
     _ ->
       p
 
-matchSrc :: Regex -> FilePath -> Bool
-matchSrc oex = not . null . matchSubexRE oex
+imgExtExpr :: Regex
+imgExtExpr =
+  parseRegex ".*[.](nef|NEF||rw2|RW2|dng|DNG|jpg|JPG)"
 
 -- ----------------------------------------
 

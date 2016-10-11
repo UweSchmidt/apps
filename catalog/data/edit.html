@@ -114,19 +114,34 @@
                  type="button"
                  data-toggle="modal"
                  data-target="#renameCollectionModal"
-                 title="rename marked collection"
+                 title="rename last marked collection"
                  >renameCol</a>
             </li>
             <li>
-              <a id="ShowMetaDataButton"
+              <a id="ShowMetaDataButton0"
                  class="btn-lg"
+                 type="button"
+                 title="view meta data for last marked image/collection">
+                <span class="glyphicon glyphicon-info-sign"
+                      aria-hidden="true"></span>
+              </a>
+            </li>
+            <li>
+              <!--
+                  this button is never triggered directly
+                  but from jquery .click() method in
+                  ShowMetaDataButton0 handler
+                  or from button groups ShowMeta button
+                -->
+              <a id="ShowMetaDataButton"
+                 class="btn-lg hidden"
                  type="button"
                  data-toggle="modal"
                  data-target="#ShowMetaDataModal"
                  title="view meta data for last marked image/collection">
                 <span class="glyphicon glyphicon-info-sign"
                       aria-hidden="true"></span>
-</a>
+              </a>
             </li>
             <li>
               <a id="MetaDataButton"
@@ -137,7 +152,7 @@
                  title="set meta data for marked images/collections">
                 <span class="glyphicon glyphicon-edit"
                       aria-hidden="true"></span>
- </a>
+              </a>
             </li>
             <li>
               <a id="colimg-button"

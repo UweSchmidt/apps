@@ -19,11 +19,8 @@ import           Data.Prim
 getExifTool    :: FilePath -> Cmd MetaData
 getExifTool f = do
   ex <- fileExist f
-  verbose $ show f
-  verbose $ show ex
-  verbose $ show $ matchSrc imgSrcExpr f
 
-  if ex && matchSrc imgSrcExpr f
+  if ex && matchRE imgExtExpr f
     then
       ( execExifTool ["-groupNames", "-json"] f
         >>= (return . (^. from isoString))

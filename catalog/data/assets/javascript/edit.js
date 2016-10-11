@@ -91,6 +91,10 @@ function toggleMark(dia) {
 }
 
 function setEntryMark(dia) {
+    // the clear guaranties, this entry will be
+    // the last marked entry
+    // this becomes important when sorting is added to button groups
+    toggleOrSetMark(dia, 'clear');
     toggleOrSetMark(dia, 'set');
 }
 
@@ -1122,6 +1126,21 @@ function setMetaData() {
 
 // ----------------------------------------
 
+// check whether there is a marked entry
+// if not, it's a noop
+// else the real getMeta is performed
+
+function getMetaData0() {
+    var cid  = activeCollectionId();
+    var dia  = getLastMarkedEntry(cid);
+
+    if (! dia) {
+        statusError('no marked image/collection found');
+        return ;
+    }
+    $('#ShowMetaDataButton').click();
+}
+
 function getMetaData() {
     var o = {};
     o.cid  = activeCollectionId();
@@ -1391,8 +1410,14 @@ $(document).ready(function () {
             setMetaData();
         });
 
+    $('#ShowMetaDataButton0')
+        .on('click', function () {
+            statusClear();
+            getMetaData0();
+        });
+
     $('#ShowMetaDataModal')
-        .on('shown.bs.modal', function () {
+        .on('show.bs.modal', function () {
             statusClear();
             getMetaData();
         });
