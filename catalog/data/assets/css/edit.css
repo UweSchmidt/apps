@@ -21,7 +21,10 @@ body {
 .status-bar {
     height: 50px;
     min-height: 50px;
+}
 
+.status-err-bg {
+  background-color: #f2dede;
 }
 
 ul.pointer a {
@@ -156,7 +159,8 @@ table.metadata-table th {
 }
 
 /* marker classes for dia buttons */
-.btn-view {}
-.btn-meta {}
-.btn-title {}
-.btn-colimg {}
+.dia-btn-view   {}
+.dia-btn-meta   {}
+.dia-btn-title  {}
+.dia-btn-colimg {}
+.dia-btn-group  {}

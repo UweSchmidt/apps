@@ -21,8 +21,10 @@
   <body>
 
     <!-- footer with status line -->
-    <nav class="navbar navbar-default navbar-left navbar-fixed-bottom status-bar">
-      <div class="container" style="margin-left: 0px;">
+    <nav id="status-container"
+         class="navbar navbar-default navbar-left navbar-fixed-bottom status-bar">
+      <div class="container"
+           style="margin-left: 0px;">
         <span class="navbar-text">
           <span id="status-message"
                 class="status-msg">
@@ -100,12 +102,6 @@
                  >&darr;cb</a>
             </li>
             <li>
-              <a id="colimg-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="set last marked image as collection image"
-                 >colImg</a>
-            </li>
-            <li>
               <a id="newCollectionButton"
                  type="button"
                  data-toggle="modal"
@@ -122,20 +118,36 @@
                  >renameCol</a>
             </li>
             <li>
-              <a id="MetaDataButton"
-                 type="button"
-                 data-toggle="modal"
-                 data-target="#MetaDataModal"
-                 title="set meta data for marked images/collections"
-                 >setMD</a>
-            </li>
-            <li>
               <a id="ShowMetaDataButton"
+                 class="btn-lg"
                  type="button"
                  data-toggle="modal"
                  data-target="#ShowMetaDataModal"
-                 title="show meta data for last marked image/collection"
-                 >viewMD</a>
+                 title="view meta data for last marked image/collection">
+                <span class="glyphicon glyphicon-info-sign"
+                      aria-hidden="true"></span>
+</a>
+            </li>
+            <li>
+              <a id="MetaDataButton"
+                 class="btn-lg"
+                 type="button"
+                 data-toggle="modal"
+                 data-target="#MetaDataModal"
+                 title="set meta data for marked images/collections">
+                <span class="glyphicon glyphicon-edit"
+                      aria-hidden="true"></span>
+ </a>
+            </li>
+            <li>
+              <a id="colimg-button"
+                 class="btn-lg"
+                 data-toggle="tooltip"
+                 data-placement="bottom"
+                 title="set last marked image as collection image">
+                <span class="glyphicon glyphicon-level-up"
+                      aria-hidden="true"></span>
+              </a>
             </li>
           </ul>
         </div><!--/.nav-collapse -->
@@ -422,24 +434,26 @@
         </div>
         <div class="dia-bot">
           <!-- the bottom line -->
-          <div class="btn-group btn-group-xs" role="group" aria-label="...">
+          <div class="btn-group btn-group-xs dia-btn-group hidden"
+               role="group"
+               aria-label="...">
             <button type="button"
-                    class="btn btn-default btn-view"
+                    class="btn btn-default dia-btn-view"
                     title="Preview image">
               <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
             </button>
             <button type="button"
-                    class="btn btn-default btn-meta"
+                    class="btn btn-default dia-btn-meta"
                     title="View meta data">
               <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
             </button>
             <button type="button"
-                    class="btn btn-default btn-title"
+                    class="btn btn-default dia-btn-title"
                     title="Set title and/or other meta data">
               <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
             </button>
             <button type="button"
-                    class="btn btn-default btn-colimg"
+                    class="btn btn-default dia-btn-colimg"
                     title="Set image as collection image">
               <span class="glyphicon glyphicon-level-up" aria-hidden="true"></span>
             </button>

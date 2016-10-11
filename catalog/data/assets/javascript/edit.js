@@ -31,6 +31,48 @@ $('#collectionTab a').click(function (e) {
 
 // ----------------------------------------
 //
+// dia button group handler
+
+function diaButton(e) {
+    e.preventDefault();
+    statusClear();
+
+    var res  = {};
+    res.dia  = $(e.target).closest('div.dia');
+    res.pos  = getEntryPos(res.dia);
+    res.cid  = activeCollectionId();
+    res.path = collectionPath(res.cid);
+
+    return res;
+}
+
+function diaBtnView(e) {
+    var o  = diaButton(e);
+    console.log("diaBtnView");
+    console.log(o.dia);
+    console.log(o.pos);
+}
+
+function diaBtnMeta(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#ShowMetaDataButton').click();
+}
+
+function diaBtnTitle(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#MetaDataButton').click();
+}
+
+function diaBtnColimg(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#colimg-button').click();
+}
+
+// ----------------------------------------
+//
 // mark/unmark entries
 // toggleSlideMark is the event handler
 
@@ -45,37 +87,53 @@ function toggleSlideMark(e) {
 }
 
 function toggleMark(dia) {
+    toggleOrSetMark(dia, 'toggle');
+}
+
+function setEntryMark(dia) {
+    toggleOrSetMark(dia, 'set');
+}
+
+function clearEntryMark(dia) {
+    toggleOrSetMark(dia, 'clear');
+}
+
+function toggleOrSetMark(dia, fct) {
     console.log("toggleDiaMark: dia");
     console.log(dia);
 
     if ( dia.hasClass("unmarked") ) {
-        // dia was unmarked, mark it, and existing curmark
-        dia.removeClass("unmarked");
-        clearCurMark(dia);
+        if (fct === 'toggle' || fct === 'set') {
+            // dia was unmarked, mark it, and existing curmark
+            dia.removeClass("unmarked");
+            clearCurMark(dia);
 
-        var mx = getMarkedNo(getMarked()).length + 1;
-        // console.log(mx);
-        setMarkCount(dia, '' + mx);
+            var mx = getMarkedNo(getMarked()).length + 1;
+            // console.log(mx);
+            setMarkCount(dia, '' + mx);
 
-        // set mark and curmark
-        markThisAsCur(dia);
-        dia.addClass("marked");
+            // set mark and curmark
+            markThisAsCur(dia);
+            dia.addClass("marked");
+        }
     } else {
-        // dia was marked, so unmark it
-        // save the mark no
-        var markNo = dia.find("div.dia-mark")
-                .contents()
-                .get(0).textContent;
-        // console.log("unmark dia " + markNo);
+        if (fct === 'toggle' || fct === 'clear') {
+            // dia was marked, so unmark it
+            // save the mark no
+            var markNo = dia.find("div.dia-mark")
+                    .contents()
+                    .get(0).textContent;
+            // console.log("unmark dia " + markNo);
 
-        // was marked, remove mark, and move curmark to last marked
-        dia.removeClass("marked").addClass("unmarked");
-        clearCurMark(dia);
-        markLastAsCur(dia);
+            // was marked, remove mark, and move curmark to last marked
+            dia.removeClass("marked").addClass("unmarked");
+            clearCurMark(dia);
+            markLastAsCur(dia);
 
-        // renumber mark counts
-        removeMarkCount(dia);
-        renumberMarkCount(parseInt(markNo));
+            // renumber mark counts
+            removeMarkCount(dia);
+            renumberMarkCount(parseInt(markNo));
+        }
     }
     return dia;
 }
@@ -390,10 +448,33 @@ function insertEntries(colId, entries) {
     console.log(colId);
     console.log(entries);
 
-    $('#' + colId).empty();
+    var col = $('#' + colId);
+    col.empty();
     entries.forEach(function (e, i) {
         insertEntry(colId, e, i);
     });
+
+    // set handler for showing edit buttons
+    col.find('div.dia')
+        .hover(function () {
+            $(this)
+                .find('.dia-btn-group')
+                .removeClass('hidden');
+        }, function () {
+            $(this)
+                .find('.dia-btn-group')
+                .addClass('hidden');
+        });
+
+    // set handler for button groups
+    col.find('div.dia button.dia-btn-view')
+        .on('click', diaBtnView);
+    col.find('div.dia button.dia-btn-meta')
+        .on('click', diaBtnMeta);
+    col.find('div.dia button.dia-btn-title')
+        .on('click', diaBtnTitle);
+    col.find('div.dia button.dia-btn-colimg')
+        .on('click', diaBtnColimg);
 }
 
 function insertEntry(colId, entry, i) {
@@ -499,6 +580,8 @@ function refreshCollection(path, colVal) {
 // ----------------------------------------
 
 function statusMsg(msg) {
+    $('#status-container')
+        .removeClass('status-err-bg');
     $('#status-message')
         .removeClass('error-msg')
         .addClass('status-msg')
@@ -507,6 +590,8 @@ function statusMsg(msg) {
 }
 
 function statusError(msg) {
+    $('#status-container')
+        .addClass('status-err-bg');
     $('#status-message')
         .removeClass('status-msg')
         .addClass('error-msg')
@@ -1038,23 +1123,30 @@ function setMetaData() {
 // ----------------------------------------
 
 function getMetaData() {
-    var cid  = activeCollectionId();
-    var path = collectionPath(cid);
-    var dia  = getLastMarkedEntry(cid);
+    var o = {};
+    o.cid  = activeCollectionId();
+    o.path = collectionPath(o.cid);
+    o.dia  = getLastMarkedEntry(o.cid);
 
-    if (! dia) {
+    if (! o.dia) {
+        $('#ShowMetaDataModal').modal('hide');
         statusError('no marked image/collection found');
         return ;
     }
-    var pos = getEntryPos(dia);
-    getMetaFromServer(path, pos);
+    o.pos = getEntryPos(o.dia);
+    getMetaFromServer(o);
 }
 
-function showMetaData(md0) {
+function showMetaData(md0, args) {
     // meta data is wrapped into a single element list (why?)
     var md = md0[0];
     console.log('showMetaData');
     console.log(md);
+    console.log(args);
+
+    $('#ShowMetaDataModalLabel')
+        .empty()
+        .append('Metadata for ' + (args.pos + 1) + '. entry in '+ args.path);
 
     var kvs = [];
     $.each(md, function (k, v) {
@@ -1074,6 +1166,9 @@ function showMetaData(md0) {
     kvs.forEach(function (e, i) {
         mdt.append('<tr><th>' + e[0] + '</th><td>' + e[1] + '</td></tr>');
     });
+
+    // clear mark for entry invoked
+    clearEntryMark($(args.dia));
 }
 
 function hideMetaData() {
@@ -1146,8 +1241,13 @@ function renameColOnServer(cpath, path, newname, showCol) {
                  });
 }
 
-function getMetaFromServer(path, pos) {
-    readServer1('metadata', path, pos, showMetaData);
+function getMetaFromServer(args) {
+    // thread the args object into the callback function
+    readServer1('metadata',
+                args.path,
+                args.pos,
+                function (res) { showMetaData(res, args); }
+               );
 }
 
 // ----------------------------------------
@@ -1292,7 +1392,7 @@ $(document).ready(function () {
         });
 
     $('#ShowMetaDataModal')
-        .on('show.bs.modal', function () {
+        .on('shown.bs.modal', function () {
             statusClear();
             getMetaData();
         });
