@@ -9,6 +9,7 @@ module Catalog.System.Convert
        , genIcon
        , genAssetIcon
        , genBlogText
+       , selectFont
        )
 where
 
@@ -30,21 +31,29 @@ genAssetIcon px s = do
 
 genIcon :: FilePath -> String -> Cmd ()
 genIcon path t = do
-  dst <- (++ path) <$> view envMountPath
-  dx  <- fileExist dst
+  dst  <- (++ path) <$> view envMountPath
+  dx   <- fileExist dst
+  fopt <- (\ fn ->
+            if null fn
+            then ""
+            else "-font " ++ fn
+           ) <$> asks (^. envFontName . isoString)
   trc $ unwords ["genIcon", show path, show t, show dst, show dx]
   unless dx $ do
     createDir $ takeDirectory dst
-    trc $ shellCmd dst
-    execProcess "bash" [] (shellCmd dst) >> return ()
+    trc  $ shellCmd dst fopt
+    void $ execProcess "bash" [] (shellCmd dst fopt)
   where
-    shellCmd dst =
+    shellCmd dst fopt =
       unwords $
       [ "convert"
       , "-background 'rgb(255,255,255)'"
       , "-fill 'rgb(192,64,64)'"
-      , "-font ComicSans"
-      , "-size 600x400"
+      ]
+      ++
+      [ fopt ]
+      ++
+      [ "-size 600x400"
       , "-pointsize " ++ ps'
       , "-gravity center"
       , "label:'" ++ t' ++ "'"
@@ -77,7 +86,8 @@ genIcon path t = do
 -- ----------------------------------------
 
 genImageFromTxt :: FilePath -> Cmd FilePath
-genImageFromTxt = genImage' createImageFromTxt (objPath2Geo txtPathExpr) (objSrc txtSrcExpr)
+genImageFromTxt =
+  genImage' createImageFromTxt (objPath2Geo txtPathExpr) (objSrc txtSrcExpr)
 
 -- ----------------------------------------
 
@@ -289,6 +299,26 @@ cropGeo (Geo sw sh) (Geo dw dh)
 
 -- ----------------------------------------
 
+selectFont :: Cmd Text
+selectFont =
+  (sel <$> fontList)
+  `catchError`
+  (const $ return mempty)
+  where
+    sel flist = head $ filter (`elem` flist) fs ++ mempty
+    fs = ["ComicSans", "Helvetica"]
+
+fontList :: Cmd [Text]
+fontList = toFL <$> execProcess "bash" [] shellCmd
+  where
+    shellCmd =
+      "convert -list font| grep Font: | sed 's|^.*Font: ||'"
+
+    toFL :: String -> [Text]
+    toFL = map (^. isoText) . lines
+
+-- ----------------------------------------
+
 genBlogText :: FilePath -> Cmd String
 genBlogText path = do
   -- add mount path for image root
@@ -302,5 +332,5 @@ genBlogText path = do
 formatBlogText :: FilePath -> Cmd String
 formatBlogText f = do -- pandoc not yet called
   execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
-  
+
 -- ----------------------------------------

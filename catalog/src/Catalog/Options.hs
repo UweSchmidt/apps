@@ -2,6 +2,7 @@ module Catalog.Options
 where
 
 import Catalog.Cmd.Types
+import Catalog.System.Convert(selectFont)
 import Data.Maybe (fromJust)
 import Data.Prim.Prelude
 import System.Console.CmdTheLine
@@ -12,7 +13,12 @@ mainWithArgs theAppName theAppMain = run (theApp <$> oAll, appInfo theAppName)
   where
     theApp :: (Env -> Env) -> IO ()
     theApp setOpts = do
-      theAppMain (setOpts env0)
+      -- compute default font for convert prog
+      fn <- (\ (res, _, _) ->
+              either (const mempty) id res
+            ) <$> runCmd selectFont
+      putStrLn (fn ^. isoString)
+      theAppMain (setOpts . (& envFontName .~ fn) $ env0)
         where
           env0 = -- the server defaults
             defaultEnv

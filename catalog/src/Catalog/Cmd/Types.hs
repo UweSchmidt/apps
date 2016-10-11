@@ -26,6 +26,7 @@ data Env = Env
   , _port        :: Int
   , _jsonArchive :: FilePath
   , _mountPath   :: FilePath
+  , _fontName    :: Text
   }
 
 deriving instance Show Env
@@ -48,6 +49,7 @@ defaultEnv = Env
   , _port         = 3001
   , _jsonArchive  = "catalog.json" -- rel to mount path
   , _mountPath    = "."
+  , _fontName     = mempty
   }
 
 envTrc :: Lens' Env Bool
@@ -76,6 +78,9 @@ envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
 
 envMountPath :: Lens' Env FilePath
 envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)
+
+envFontName :: Lens' Env Text
+envFontName k e = (\ new -> e {_fontName = new}) <$> k (_fontName e)
 
 -- ----------------------------------------
 
