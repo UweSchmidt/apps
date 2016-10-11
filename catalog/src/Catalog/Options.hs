@@ -14,16 +14,19 @@ mainWithArgs theAppName theAppMain = run (theApp <$> oAll, appInfo theAppName)
     theApp :: (Env -> Env) -> IO ()
     theApp setOpts = do
       -- compute default font for convert prog
-      fn <- (\ (res, _, _) ->
-              either (const mempty) id res
-            ) <$> runCmd selectFont
-      putStrLn (fn ^. isoString)
-      theAppMain (setOpts . (& envFontName .~ fn) $ env0)
+      setFontName <- fontForConvert
+      theAppMain (setOpts . setFontName $ env0)
         where
           env0 = -- the server defaults
             defaultEnv
             & envTrc     .~ False
             & envVerbose .~ True
+
+fontForConvert :: IO (Env -> Env)
+fontForConvert = do
+  (res, _, _) <- runCmd selectFont
+  let fn = either (const mempty) id res
+  return (& envFontName .~ fn)
 
 appInfo :: String -> TermInfo
 appInfo app =

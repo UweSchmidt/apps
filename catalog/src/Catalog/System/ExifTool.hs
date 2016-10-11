@@ -19,6 +19,10 @@ import           Data.Prim
 getExifTool    :: FilePath -> Cmd MetaData
 getExifTool f = do
   ex <- fileExist f
+  verbose $ show f
+  verbose $ show ex
+  verbose $ show $ matchSrc imgSrcExpr f
+
   if ex && matchSrc imgSrcExpr f
     then
       ( execExifTool ["-groupNames", "-json"] f
@@ -34,8 +38,9 @@ getExifTool f = do
       return mempty
 
 execExifTool :: [String] -> FilePath -> Cmd String
-execExifTool args f
-  = execProcess "exiftool" (args ++ [f]) ""
+execExifTool args f = do
+  verbose $ unwords ["exiftool", show $ (args ++ [f]), ""]
+  execProcess "exiftool" (args ++ [f]) ""
 
 buildMetaData :: ByteString -> Cmd MetaData
 buildMetaData =
