@@ -1033,16 +1033,40 @@ function createCollection() {
 
 // ----------------------------------------
 
-function renameCollection() {
+function renameCollectionCheck() {
     statusClear();
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
 
     if (collectionIsReadOnly(cid)) {
-        statusError('can\'t rename, collection is readonly: ' + cpath);
+        statusError('rename not allowed, collection is readonly: ' + cpath);
         return;
     }
     var img   = getLastMarkedEntry(cid);
+    if (! img) {
+        statusError("no collection marked in: " + cpath);
+        return;
+    }
+    if ($(img).hasClass('imgmark')) {
+        statusError("last marked isn't a collection in: " + cpath);
+        // clearEntryMark($(img));
+        return;
+    }
+    $('#renameCollectionButton').click();
+}
+
+function renameCollection() {
+    statusClear();
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+    /* error checks already done in renameCollection0
+    if (collectionIsReadOnly(cid)) {
+        statusError('can\'t rename, collection is readonly: ' + cpath);
+        return;
+    }
+     */
+    var img   = getLastMarkedEntry(cid);
+    /*
     if (! img) {
         statusError("no collection marked in collection: " + cpath);
         return;
@@ -1051,6 +1075,7 @@ function renameCollection() {
         statusError("last marked isn't a collection in: " + cpath);
         return;
     }
+     */
     var iname = $(img)
             .find('div.dia-name a')
             .contents()
@@ -1386,10 +1411,18 @@ $(document).ready(function () {
             createCollection();
         });
 
+    $('#renameCollectionButton0')
+        .on('click', function () {
+            statusClear();
+            renameCollectionCheck();
+        });
+
+    /* already done in renameCollectionButton0
     $('#renameCollectionModal')
         .on('show.bs.modal', function () {
             statusClear();
         });
+     */
 
     $('#renameCollectionOK')
         .on('click', function (e) {
