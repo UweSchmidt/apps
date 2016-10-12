@@ -129,6 +129,15 @@
                  >renameCol</a>
             </li>
             <li>
+              <a id="PreviewButton"
+                 class="btn-lg"
+                 type="button"
+                 title="preview last marked image/collection">
+                <span class="glyphicon glyphicon-eye-open"
+                      aria-hidden="true"></span>
+              </a>
+            </li>
+            <li>
               <a id="ShowMetaDataButton0"
                  class="btn-lg"
                  type="button"
@@ -426,6 +435,37 @@
                     id="MetaDataOK"
                     >O.K.</button>
             -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal box for image preview -->
+    <div class="modal fade"
+         id="PreviewModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="PreviewModalLabel">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title"
+                id="PreviewModalLabel"
+                >Preview last marked image</h4>
+          </div>
+          <div class="modal-body">
+            <!-- the preview image -->
+            <div class="thumbnail">
+              <img id="PreviewModalImgRef"
+                   src=""
+                   alt="">
+            </div>
           </div>
         </div>
       </div>

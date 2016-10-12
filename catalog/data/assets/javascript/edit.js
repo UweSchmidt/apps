@@ -48,9 +48,8 @@ function diaButton(e) {
 
 function diaBtnView(e) {
     var o  = diaButton(e);
-    console.log("diaBtnView");
-    console.log(o.dia);
-    console.log(o.pos);
+    setEntryMark(o.dia);
+    $('#PreviewButton').click();
 }
 
 function diaBtnMeta(e) {
@@ -539,9 +538,10 @@ function newEntry(entry, i) {
         // set the icon url
         // url is computed on server and added in callback
         getIconRefFromServer(ref.path,
-                             function (src) {
+                             iconSize(),
+                             function (ref) {
                                  p.find("img.dia-src")
-                                     .attr('src', iconSize(src));
+                                     .attr('src', ref);
                              });
     }
 
@@ -641,11 +641,6 @@ function splitPath(p) {
         p.bname = e.join(".");
     }
     return p;
-}
-
-// add the icon size to an image href
-function iconSize(p) {
-    return "/pad-160x160" + p;
 }
 
 // check whether p1 is a path prefix of p2
@@ -1219,6 +1214,35 @@ function hideMetaData() {
     console.log('hideMetaData: Hello');
 }
 
+function previewImage() {
+    var args = {};
+    args.cid  = activeCollectionId();
+    args.path = collectionPath(args.cid);
+    args.dia  = getLastMarkedEntry(args.cid);
+    if (! args.dia) {
+        statusError('no marked image/collection found');
+        return ;
+    }
+    args.pos = getEntryPos(args.dia);
+    args.fmt  = previewSize();
+    clearEntryMark($(args.dia));
+    getPreviewRef(args);
+}
+
+function insertPreviewRef(ref, args) {
+    console.log('insertPreviewRef');
+    console.log(ref);
+    console.log(args);
+
+    $('#PreviewModalImgRef')
+        .attr('src', ref)
+        .attr('alt', args.path);
+    $('#PreviewModalLabel')
+        .empty()
+        .append('Preview of ' + (args.pos + 1) + '. entry of ' + args.path);
+    $('#PreviewModal').modal('show');
+}
+
 // ----------------------------------------
 
 // ajax calls
@@ -1267,8 +1291,8 @@ function getColFromServer(path, showCol) {
            });
 }
 
-function getIconRefFromServer(path, insertSrcRef) {
-    readServer('iconref', path, insertSrcRef);
+function getIconRefFromServer(path, fmt, insertSrcRef) {
+    readServer1('iconref', path, fmt, insertSrcRef);
 }
 
 function createColOnServer(path, name, showCol) {
@@ -1291,6 +1315,14 @@ function getMetaFromServer(args) {
                 args.path,
                 args.pos,
                 function (res) { showMetaData(res, args); }
+               );
+}
+
+function getPreviewRef(args) {
+    readServer1('previewref',
+                args.path,
+                [args.pos, args.fmt],
+                function (res) { insertPreviewRef(res, args); }
                );
 }
 
@@ -1443,6 +1475,12 @@ $(document).ready(function () {
             setMetaData();
         });
 
+    $('#PreviewButton')
+        .on('click', function () {
+            statusClear();
+            previewImage();
+        });
+
     $('#ShowMetaDataButton0')
         .on('click', function () {
             statusClear();
@@ -1473,5 +1511,7 @@ function idCollections() { return path2id(pathCollections()); }
 function idClipboard()   { return path2id(pathClipboard()); }
 function idTrash()       { return path2id(pathTrash()); }
 
+function iconSize()    { return "pad-160x160"; }
+function previewSize() { return "pad-900x600"; }
 
 // ----------------------------------------

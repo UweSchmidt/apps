@@ -47,20 +47,32 @@ readGeo' s =
 -- by arbitrary other stuff (used in parsing exit data)
 
 geoRegex :: Regex
-geoRegex =
-  parseRegexExt "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*"
-  --parseRegexExt "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
+geoRegex = parseRegexExt geoRegex'
+
+geoRegex'
+  , geoRegex'' :: String
+
+geoRegex'  = "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*"
+geoRegex'' =        "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
 
 -- ----------------------------------------
 
 data AspectRatio = Fix | Pad | Crop
-                 deriving (Eq, Show, Read)
+                 deriving (Eq, Ord, Enum, Bounded, Show, Read)
 
 instance IsoString AspectRatio where
   isoString = iso toS frS
     where
       toS = (\ (x : xs) -> toLower x : xs) . show
       frS = read . (\ (x : xs) -> toUpper x : xs)
+
+arRegex :: Regex
+arRegex = parseRegexExt arRegex'
+
+arRegex' :: String
+arRegex' =
+  intercalate "|" $
+  map (^. isoString) [minBound .. maxBound :: AspectRatio]
 
 -- ----------------------------------------
 
@@ -89,5 +101,22 @@ instance IsoString GeoAR where
                ) ^. from geoar2pair
         where
           (ar, '-' : g) = break (== '-') s
+
+geoarRegex :: Regex
+geoarRegex = parseRegexExt geoarRegex'
+
+geoarRegex' :: String
+geoarRegex' = "({ar}" ++ arRegex' ++ ")-" ++ geoRegex''
+
+readGeoAR :: String -> Maybe GeoAR
+readGeoAR = build . matchSubexRE geoarRegex
+  where
+    build [("ar", ar), ("w", w), ("h", h)] =
+      Just $ GeoAR (read w) (read h) (ar ^. from isoString)
+    build _ =
+      Nothing
+
+isoGeoAR :: Iso' String (Maybe GeoAR)
+isoGeoAR = iso readGeoAR (maybe "" (^. isoString))
 
 -- ----------------------------------------

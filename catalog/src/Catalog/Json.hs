@@ -11,7 +11,7 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Html.Photo2 (colImgRef)
+import           Catalog.Html.Photo2 (buildImgPath, colImgRef)
 import           Catalog.System.ExifTool (getMetaData)
 -- import           Catalog.Journal
 -- import           Catalog.Cmd.Types
@@ -93,8 +93,12 @@ jsonCall fct i n args =
     -- read the src path for a collection icon
     -- result is an url pointing to the icon src
     "iconref" ->
-      jl $ \ () ->
-      (^. isoText) <$> colImgRef i
+      jl $ \ fmt ->
+      (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
+
+    "previewref" ->
+      jl $ \ (pos, fmt) ->
+      (^. isoText) <$> previewImgRef pos (fmt ^. isoGeoAR) n
 
     "metadata" ->
       jl $ \ pos ->
@@ -404,7 +408,34 @@ getMeta pos n = do
     (n ^? theColEntries . ix pos)
   processColEntry
     (\ ii _ md -> (md <>) <$> getMetaData ii)
-    (\ ci    -> getImgVals ci theColMetaData)
+    (\ ci      -> getImgVals ci theColMetaData)
     ce
+
+-- ----------------------------------------
+
+addGeoToPath :: Maybe GeoAR -> Cmd FilePath -> Cmd FilePath
+addGeoToPath Nothing _ =
+  abort $ "wrong image geometry value"
+addGeoToPath (Just g) cmd =
+  (ppx ++) <$> cmd
+  where
+    ppx = "/" ++ g ^. isoString
+
+
+iconImgRef :: Maybe GeoAR -> ObjId -> Cmd FilePath
+iconImgRef g i =
+  addGeoToPath g $ colImgRef i
+
+previewImgRef :: Int -> Maybe GeoAR -> ImgNode -> Cmd FilePath
+previewImgRef pos g n =
+  addGeoToPath g $
+  do ce <- maybe
+           (abort $ "illegal index in collection: " ++ show pos)
+           return
+           (n ^? theColEntries . ix pos)
+     processColEntry
+       (\ ii nm _md -> buildImgPath ii nm)
+       colImgRef
+       ce
 
 -- ----------------------------------------
