@@ -72,79 +72,97 @@
                  >clearAll</a>
             </li>
             <li>
-              <a id="srt-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="reorder marked images/collections"
-                 >sort</a>
+              <button id="MoveFromClipboardButton"
+                      class="btn btn-link btn-lg"
+                      title="move marked images/collections from clipboard to current collection">
+                <span class="glyphicon glyphicon-triangle-right"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="mfc-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="move marked images/collections from clipboard to current collection"
-                 >cb&rarr;cc</a>
+              <button id="CopyFromClipboardButton"
+                      class="btn btn-link btn-lg"
+                      title="copy marked images/collections from clipboard to current collection">
+                <span class="glyphicon glyphicon-forward"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="mtc-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="move marked images/collections from current collection to clipboard"
-                 >cc&rarr;cb</a>
+              <button id="MoveToClipboardButton"
+                      class="btn btn-link btn-lg"
+                      title="move marked images/collections from current collection to clipboard">
+                <span class="glyphicon glyphicon-triangle-left"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="ctc-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="copy marked images/collections from current collection to clipboard"
-                 >cc&rArr;cb</a>
+              <button id="CopyToClipboardButton"
+                      class="btn btn-link btn-lg"
+                      title="copy marked images/collections from current collection to clipboard">
+                <span class="glyphicon glyphicon-backward"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="emp-button"
-                 data-toggle="tooltip" data-placement="bottom"
-                 title="remove marked images/collections from clipboard"
-                 >&darr;cb</a>
+              <button id="RemoveButton"
+                      class="btn btn-link btn-lg"
+                      title="remove marked images/collections from clipboard">
+                <span class="glyphicon glyphicon-remove"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="newCollectionButton"
-                 type="button"
-                 data-toggle="modal"
-                 data-target="#newCollectionModal"
-                 title="create new collection"
-                 >newCol</a>
+              <button id="newCollectionButton"
+                      class="btn btn-link btn-lg"
+                      data-toggle="modal"
+                      data-target="#newCollectionModal"
+                      title="create new collection">
+                <span class="glyphicon glyphicon-folder-open"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="renameCollectionButton0"
-                 class="btn-lg"
-                 type="button"
-                 title="rename last marked collection">
+              <button id="RenameCollectionButton0"
+                      class="btn btn-link btn-lg"
+                      title="rename last marked collection">
                 <span class="glyphicon glyphicon-registration-mark"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
             <li>
               <!-- a dummy button like ShowMetaDataButton: class hidden -->
-              <a id="renameCollectionButton"
-                 class="btn-lg hidden"
-                 type="button"
-                 data-toggle="modal"
-                 data-target="#renameCollectionModal"
-                 title="rename last marked collection"
-                 >renameCol</a>
+              <button id="RenameCollectionButton"
+                      class="btn btn-link btn-lg hidden"
+                      data-toggle="modal"
+                      data-target="#RenameCollectionModal"
+                      title="rename last marked collection">
+                <span class="glyphicon getlyphicon-registration-mark"
+                      aria-hidden="true"></span>
+              </button>
             </li>
             <li>
-              <a id="PreviewButton"
-                 class="btn-lg"
-                 type="button"
-                 title="preview last marked image/collection">
+              <button id="SortButton"
+                      class="btn btn-link btn-lg"
+                      title="reorder marked images/collections">
+                <span class="glyphicon glyphicon-sort"
+                      aria-hidden="true"></span>
+              </button>
+            </li>
+            <li>
+              <button id="PreviewButton"
+                      class="btn btn-link btn-lg"
+                      title="preview last marked image/collection">
                 <span class="glyphicon glyphicon-eye-open"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
             <li>
-              <a id="ShowMetaDataButton0"
-                 class="btn-lg"
-                 type="button"
-                 title="view meta data for last marked image/collection">
+              <button id="ShowMetaDataButton0"
+                      class="btn btn-link btn-lg"
+                      title="view meta data for last marked image/collection">
                 <span class="glyphicon glyphicon-info-sign"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
             <li>
               <!--
@@ -153,36 +171,34 @@
                   ShowMetaDataButton0 handler
                   or from button groups ShowMeta button
                 -->
-              <a id="ShowMetaDataButton"
-                 class="btn-lg hidden"
-                 type="button"
-                 data-toggle="modal"
-                 data-target="#ShowMetaDataModal"
-                 title="view meta data for last marked image/collection">
+              <button id="ShowMetaDataButton"
+                      class="btn btn-link btn-lg hidden"
+                      data-toggle="modal"
+                      data-target="#ShowMetaDataModal"
+                      title="view meta data for last marked image/collection">
                 <span class="glyphicon glyphicon-info-sign"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
             <li>
-              <a id="MetaDataButton"
-                 class="btn-lg"
-                 type="button"
-                 data-toggle="modal"
-                 data-target="#MetaDataModal"
-                 title="set meta data for marked images/collections">
-                <span class="glyphicon glyphicon-edit"
+              <button id="MetaDataButton"
+                      class="btn btn-link btn-lg"
+                      data-toggle="modal"
+                      data-target="#MetaDataModal"
+                      title="set meta data for marked images/collections">
+                <span class="glyphicon glyphicon-pencil"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
             <li>
-              <a id="colimg-button"
-                 class="btn-lg"
-                 data-toggle="tooltip"
-                 data-placement="bottom"
-                 title="set last marked image as collection image">
+              <button id="CollectionImgButton"
+                      class="btn btn-link btn-lg"
+                      data-toggle="tooltip"
+                      data-placement="bottom"
+                      title="set last marked image as collection image">
                 <span class="glyphicon glyphicon-level-up"
                       aria-hidden="true"></span>
-              </a>
+              </button>
             </li>
           </ul>
         </div><!--/.nav-collapse -->
@@ -236,10 +252,10 @@
 
     <!-- Modal box for rename collection -->
     <div class="modal fade"
-         id="renameCollectionModal"
+         id="RenameCollectionModal"
          tabindex="-1"
          role="dialog"
-         aria-labelledby="renameCollectionModalLabel">
+         aria-labelledby="RenameCollectionModalLabel">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -250,19 +266,19 @@
               <span aria-hidden="true">&times;</span>
             </button>
             <h4 class="modal-title"
-                id="renameCollectionModalLabel"
+                id="RenameCollectionModalLabel"
                 >Rename collection last marked</h4>
           </div>
           <div class="modal-body">
             <div class="input-group">
               <span class="input-group-addon"
-                    id="renameCol-addon1"
+                    id="RenameCol-addon1"
                     >New collection name</span>
               <input type="text"
-                     id="renameCollectionName"
+                     id="RenameCollectionName"
                      class="form-control"
                      placeholder="a-z, A-Z, 0-9, -, _, ."
-                     aria-describedby="renameCol-addon1">
+                     aria-describedby="RenameCol-addon1">
             </div>
           </div>
           <div class="modal-footer">
@@ -272,7 +288,7 @@
                     >Cancel</button>
             <button type="button"
                     class="btn btn-primary"
-                    id="renameCollectionOK"
+                    id="RenameCollectionOK"
                     >O.K.</button>
           </div>
         </div>
@@ -504,6 +520,47 @@
                role="group"
                aria-label="...">
             <button type="button"
+                    class="btn btn-default dia-btn-remove"
+                    title="Remove image/collection from clipboard">
+              <span class="glyphicon glyphicon-remove"
+                    aria-hidden="true"></span>
+            </button>
+            <!--
+            <button type="button"
+                    class="btn btn-default dia-btn-movefromclipboard"
+                    title="Move image/collection from clipboard to current collection">
+              <span class="glyphicon glyphicon-triangle-right"
+                    aria-hidden="true"></span>
+            </button>
+            <button type="button"
+                    class="btn btn-default dia-btn-copyfromclipboard"
+                    title="Copy image/collection from clipboard to current collection">
+              <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+            </button>
+            -->
+            <button type="button"
+                    class="btn btn-default dia-btn-movetoclipboard"
+                    title="Move image/collection to clipboard">
+              <span class="glyphicon glyphicon-triangle-left"
+                    aria-hidden="true"></span>
+            </button>
+            <button type="button"
+                    class="btn btn-default dia-btn-copytoclipboard"
+                    title="Copy image/collection to clipboard">
+              <span class="glyphicon glyphicon-backward" aria-hidden="true"></span>
+            </button>
+            <button type="button"
+                    class="btn btn-default dia-btn-sort"
+                    title="Sort images">
+              <span class="glyphicon glyphicon-sort" aria-hidden="true"></span>
+            </button>
+            <button type="button"
+                    class="btn btn-default dia-btn-rename"
+                    title="Rename collection">
+              <span class="glyphicon glyphicon-registration-mark"
+                    aria-hidden="true"></span>
+            </button>
+            <button type="button"
                     class="btn btn-default dia-btn-view"
                     title="Preview image">
               <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
@@ -516,7 +573,7 @@
             <button type="button"
                     class="btn btn-default dia-btn-title"
                     title="Set title and/or other meta data">
-              <span class="glyphicon glyphicon-edit" aria-hidden="true"></span>
+              <span class="glyphicon glyphicon-pencil" aria-hidden="true"></span>
             </button>
             <button type="button"
                     class="btn btn-default dia-btn-colimg"

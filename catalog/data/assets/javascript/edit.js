@@ -19,10 +19,8 @@ function navClicked(e) {
 // $("#rem-button").on('click', navClicked);
 // $("#mfc-button").on('click', navClicked);
 // $("#mtc-button").on('click', navClicked);
-// $("#ctc-button").on('click', navClicked);
 $("#mtt-button").on('click', navClicked);
-$("#emp-button").on('click', navClicked);
-// $("#srt-button").on('click', navClicked);
+// $("#SortButton").on('click', navClicked);
 
 $('#collectionTab a').click(function (e) {
     e.preventDefault();
@@ -42,13 +40,15 @@ function diaButton(e) {
     res.pos  = getEntryPos(res.dia);
     res.cid  = activeCollectionId();
     res.path = collectionPath(res.cid);
-    res.name = getDiaName(res.dia);
+    // res.name = getDiaName(res.dia);
     console.log(res);
     return res;
 }
 
 function getDiaName(dia) {
     var res;
+
+    // img
     res = $(dia)
         .find('span.img-part')
         .contents()
@@ -57,6 +57,7 @@ function getDiaName(dia) {
         return res.textContent;
     }
 
+    // col
     res = $(dia)
         .find('div.dia-name a')
         .contents()
@@ -66,6 +67,51 @@ function getDiaName(dia) {
     }
 
     return '';
+}
+
+
+function diaBtnRemove(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#RemoveButton').click();
+}
+
+/*
+function diaBtnMoveFromClipboard(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#MoveFromClipboardButton').click();
+}
+
+function diaBtnCopyFromClipboard(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#CopyFromClipboardButton').click();
+}
+*/
+
+function diaBtnMoveToClipboard(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#MoveToClipboardButton').click();
+}
+
+function diaBtnCopyToClipboard(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#CopyToClipboardButton').click();
+}
+
+function diaBtnRename(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#RenameCollectionButton0').click();
+}
+
+function diaBtnSort(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#SortButton').click();
 }
 
 function diaBtnView(e) {
@@ -89,7 +135,7 @@ function diaBtnTitle(e) {
 function diaBtnColimg(e) {
     var o  = diaButton(e);
     setEntryMark(o.dia);
-    $('#colimg-button').click();
+    $('#CollectionImgButton').click();
 }
 
 // ----------------------------------------
@@ -492,6 +538,22 @@ function insertEntries(colId, entries) {
         });
 
     // set handler for button groups
+    col.find('div.dia button.dia-btn-remove')
+        .on('click', diaBtnRemove);
+    /*
+    col.find('div.dia button.dia-btn-movefromclipboard')
+        .on('click', diaBtnMoveFromClipboard);
+    col.find('div.dia button.dia-btn-copyfromclipboard')
+        .on('click', diaBtnCopyFromClipboard);
+     */
+    col.find('div.dia button.dia-btn-movetoclipboard')
+        .on('click', diaBtnMoveToClipboard);
+    col.find('div.dia button.dia-btn-copytoclipboard')
+        .on('click', diaBtnCopyToClipboard);
+    col.find('div.dia button.dia-btn-rename')
+        .on('click', diaBtnRename);
+    col.find('div.dia button.dia-btn-sort')
+        .on('click', diaBtnSort);
     col.find('div.dia button.dia-btn-view')
         .on('click', diaBtnView);
     col.find('div.dia button.dia-btn-meta')
@@ -500,6 +562,30 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnTitle);
     col.find('div.dia button.dia-btn-colimg')
         .on('click', diaBtnColimg);
+
+    //collections don't have all buttons
+    col.find('div.dia.colmark button.dia-btn-colimg')
+        .addClass('hidden');
+
+    // images don't have all buttons
+    col.find('div.dia.imgmark button.dia-btn-rename')
+        .addClass('hidden');
+
+    // clipboard has a special set of image buttons
+    if (colId === idClipboard()) {
+        col.find('div.dia button.dia-btn-movefromclipboard')
+            .addClass('hidden');
+        col.find('div.dia button.dia-btn-copyfromclipboard')
+            .addClass('hidden');
+        col.find('div.dia button.dia-btn-movetoclipboard')
+            .addClass('hidden');
+        col.find('div.dia button.dia-btn-copytoclipboard')
+            .addClass('hidden');
+    }
+    else {
+        col.find('div.dia button.dia-btn-remove')
+            .addClass('hidden');
+    }
 }
 
 function insertEntry(colId, entry, i) {
@@ -895,6 +981,20 @@ function moveMarkedFromClipboard(cid) {
     moveToColOnServer(cpath, dpath, ixs);
 }
 
+function copyMarkedFromClipboard(cid) {
+    statusClear();
+    var ixs = getMarkedEntries(idClipboard());
+    var dpath = collectionPath(cid);
+    var cpath = pathClipboard();
+    console.log('copyMarkedFromClipboard');
+    console.log(ixs);
+    console.log(cpath);
+    console.log(dpath);
+
+    // do the work on server and refresh both collections
+    copyToColOnServer(cpath, dpath, ixs);
+}
+
 // ----------------------------------------
 
 function moveMarkedToClipboard(cid) {
@@ -1050,6 +1150,11 @@ function createCollection() {
 
 // ----------------------------------------
 
+// renameCollectionCheck does all the error checks
+// if this is o.k. the #RenameCollectionButton is invoked
+// and this one triggers the modal mox
+// so error check and reporting can be done before the modal is shown
+
 function renameCollectionCheck() {
     statusClear();
     var cid   = activeCollectionId();
@@ -1069,61 +1174,45 @@ function renameCollectionCheck() {
         // clearEntryMark($(img));
         return;
     }
-    $('#renameCollectionButton').click();
+    var iname = getDiaName(img);
+    $('#RenameCollectionModalLabel')
+        .empty()
+        .append('Rename collection: ' + iname);
+    $('#RenameCollectionButton').click();
 }
 
 function renameCollection() {
     statusClear();
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
-    /* error checks already done in renameCollection0
-    if (collectionIsReadOnly(cid)) {
-        statusError('can\'t rename, collection is readonly: ' + cpath);
-        return;
-    }
-     */
     var img   = getLastMarkedEntry(cid);
-    /*
-    if (! img) {
-        statusError("no collection marked in collection: " + cpath);
-        return;
-    }
-    if ($(img).hasClass('imgmark')) {
-        statusError("last marked isn't a collection in: " + cpath);
-        return;
-    }
-     */
-    var iname = $(img)
-            .find('div.dia-name a')
-            .contents()
-            .get(0)
-            .textContent;
-    var path = cpath + "/" + iname;
+    var iname = getDiaName(img);
+    var path  = cpath + "/" + iname;
     console.log('renameCollection');
     console.log(path);
 
-    var name  = $('#renameCollectionName').val();
-    name = name.replace(/[^-_.a-zA-Z0-9]/g,"");
+    var newname  = $('#RenameCollectionName').val();
+    newname = newname.replace(/[^-_.a-zA-Z0-9]/g,"");
 
-    console.log(name);
+    console.log(newname);
 
-    if (name.length === 0) {
+    if (newname.length === 0) {
         statusError("no collection name given");
         return;
     }
 
     var cnames = getColNames(cid);
-    var ix = cnames.indexOf(name);
+    var ix = cnames.indexOf(newname);
 
     console.log(cnames);
     console.log(ix);
 
     if ( ix >= 0 ) {
-        statusError("collection name already exists: " + name);
+        statusError("collection name already exists: " + newname);
         return;
     }
 
-    renameColOnServer(cpath, path, name, refreshCollection);
+    renameColOnServer(cpath, path, newname, refreshCollection);
 }
 
 // ----------------------------------------
@@ -1421,39 +1510,49 @@ $(document).ready(function () {
             unmarkAll(activeCollectionId());
         });
 
-    $("#srt-button")
-        .on('click', function (e) {
-            sortCollection(activeCollectionId());
-    });
-
-    $("#mfc-button")
+    $("#MoveFromClipboardButton")
         .on('click', function (e) {
             moveMarkedFromClipboard(activeCollectionId());
         });
 
-    $("#mtc-button")
+    $("#CopyFromClipboardButton")
+        .on('click', function (e) {
+            copyMarkedFromClipboard(activeCollectionId());
+        });
+
+    $("#MoveToClipboardButton")
         .on('click', function (e) {
             moveMarkedToClipboard(activeCollectionId());
         });
 
-    $("#ctc-button")
+    $("#CopyToClipboardButton")
         .on('click', function (e) {
             copyMarkedToClipboard(activeCollectionId());
         });
 
-    $("#emp-button")
+    $("#RemoveButton")
         .on('click', function (e) {
             removeMarkedFromClipboard();
         });
 
-    $("#colimg-button")
+    $("#CollectionImgButton")
         .on('click', function (e) {
             setCollectionImg(activeCollectionId());
+        });
+
+    $('#newCollectionButton')
+        .on('click', function () {
+            statusClear();
         });
 
     $('#newCollectionModal')
         .on('show.bs.modal', function () {
             statusClear();
+        });
+
+    $('#newCollectionModal')
+        .on('hidden.bs.modal', function () {
+            $('#newCollectionButton').blur();
         });
 
     $('#newCollectionOK')
@@ -1463,24 +1562,35 @@ $(document).ready(function () {
             createCollection();
         });
 
-    $('#renameCollectionButton0')
+    $('#RenameCollectionButton0')
         .on('click', function () {
             statusClear();
             renameCollectionCheck();
         });
 
     /* already done in renameCollectionButton0
-    $('#renameCollectionModal')
+    $('#RenameCollectionModal')
         .on('show.bs.modal', function () {
             statusClear();
         });
      */
 
-    $('#renameCollectionOK')
+    $('#RenameCollectionOK')
         .on('click', function (e) {
             console.log("renameCollectionOK clicked");
-            $('#renameCollectionModal').modal('hide');
+            $('#RenameCollectionModal').modal('hide');
             renameCollection();
+        });
+
+    $("#SortButton")
+        .on('click', function (e) {
+            statusClear();
+            sortCollection(activeCollectionId());
+        });
+
+    $('#MetaDataButton')
+        .on('click', function () {
+            statusClear();
         });
 
     $('#MetaDataModal')
