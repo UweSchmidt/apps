@@ -42,8 +42,30 @@ function diaButton(e) {
     res.pos  = getEntryPos(res.dia);
     res.cid  = activeCollectionId();
     res.path = collectionPath(res.cid);
-
+    res.name = getDiaName(res.dia);
+    console.log(res);
     return res;
+}
+
+function getDiaName(dia) {
+    var res;
+    res = $(dia)
+        .find('span.img-part')
+        .contents()
+        .get(0);
+    if (res) {
+        return res.textContent;
+    }
+
+    res = $(dia)
+        .find('div.dia-name a')
+        .contents()
+        .get(0);
+    if (res) {
+        return res.textContent;
+    }
+
+    return '';
 }
 
 function diaBtnView(e) {
@@ -1172,7 +1194,8 @@ function getMetaData() {
         statusError('no marked image/collection found');
         return ;
     }
-    o.pos = getEntryPos(o.dia);
+    o.pos  = getEntryPos(o.dia);
+    o.name = getDiaName(o.dia);
     getMetaFromServer(o);
 }
 
@@ -1185,7 +1208,7 @@ function showMetaData(md0, args) {
 
     $('#ShowMetaDataModalLabel')
         .empty()
-        .append('Metadata for ' + (args.pos + 1) + '. entry in '+ args.path);
+        .append('Metadata of ' + args.name + ' in collection '+ args.path);
 
     var kvs = [];
     $.each(md, function (k, v) {
@@ -1210,10 +1233,6 @@ function showMetaData(md0, args) {
     clearEntryMark($(args.dia));
 }
 
-function hideMetaData() {
-    console.log('hideMetaData: Hello');
-}
-
 function previewImage() {
     var args = {};
     args.cid  = activeCollectionId();
@@ -1224,6 +1243,7 @@ function previewImage() {
         return ;
     }
     args.pos = getEntryPos(args.dia);
+    args.name = getDiaName(args.dia);
     args.fmt  = previewSize();
     clearEntryMark($(args.dia));
     getPreviewRef(args);
@@ -1239,7 +1259,7 @@ function insertPreviewRef(ref, args) {
         .attr('alt', args.path);
     $('#PreviewModalLabel')
         .empty()
-        .append('Preview of ' + (args.pos + 1) + '. entry of ' + args.path);
+        .append('Preview of ' + args.name + ' in collection ' + args.path);
     $('#PreviewModal').modal('show');
 }
 
@@ -1493,10 +1513,6 @@ $(document).ready(function () {
             getMetaData();
         });
 
-    $('#ShowMetaDataModal')
-        .on('hide.bs.modal', function () {
-            hideMetaData();
-        });
 });
 
 // ----------------------------------------
