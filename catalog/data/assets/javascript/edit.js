@@ -770,6 +770,20 @@ function isPathPrefix(p1, p2) {
 
 // top level commands, most with ajax calls
 
+// initialize the collections in a fixed sequence,
+// first the clipboard, so it's always the leftmost collection in the tab
+// the root collection is not shown until the clipboard is there
+
+function openSystemCollections() {
+    statusClear();
+    getColFromServer(pathClipboard(),
+                     function (path, colVal) {
+                         showNewCollection(path, colVal);
+                         getColFromServer(pathCollections(),
+                                          showNewCollection);
+                     });
+}
+
 function openCollection(path) {
     statusClear();
     getColFromServer(path, showNewCollection);
@@ -1491,21 +1505,20 @@ function noop() {}
 // set the event handlers
 
 $(document).ready(function () {
-    openCollection(pathClipboard());
-    openCollection(pathCollections());
+    openSystemCollections();
 
     // event handler for navbar buttons
-    $("#rem-button")
+    $("#CloseButton")
         .on('click', function (e) {
             closeCollection(activeCollectionId());
         });
 
-    $("#mark-button")
+    $("#MarkButton")
         .on('click', function (e) {
             markAll(activeCollectionId());
         });
 
-    $("#unmark-button")
+    $("#UnmarkButton")
         .on('click', function (e) {
             unmarkAll(activeCollectionId());
         });
