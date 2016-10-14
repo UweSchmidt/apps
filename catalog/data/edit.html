@@ -128,6 +128,14 @@
               </button>
             </li>
             <li>
+              <button id="ReadOnlyButton"
+                      class="btn btn-link btn-lg"
+                      title="write protect all marked collections">
+                <span class="glyphicon glyphicon-lock"
+                      aria-hidden="true"></span>
+              </button>
+            </li>
+            <li>
               <button id="RenameCollectionButton0"
                       class="btn btn-link btn-lg"
                       title="rename last marked collection">
@@ -143,14 +151,6 @@
                       data-target="#RenameCollectionModal"
                       title="rename last marked collection">
                 <span class="glyphicon getlyphicon-registration-mark"
-                      aria-hidden="true"></span>
-              </button>
-            </li>
-            <li>
-              <button id="SortButton"
-                      class="btn btn-link btn-lg"
-                      title="sort all images and place them behind the last marked image">
-                <span class="glyphicon glyphicon-sort"
                       aria-hidden="true"></span>
               </button>
             </li>
@@ -554,6 +554,12 @@
                     aria-hidden="true"></span>
             </button>
             <button type="button"
+                    class="btn btn-default dia-btn-readonly"
+                    title="Write protect this collection">
+              <span class="glyphicon glyphicon-lock"
+                    aria-hidden="true"></span>
+            </button>
+            <button type="button"
                     class="btn btn-default dia-btn-view"
                     title="Preview this image">
               <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
@@ -594,8 +600,10 @@
              role="tab"
              data-toggle="tab"
              data-placement="bottom"
-             title="The collection path"
-             >A Collection</a>
+             title="The collection path">
+            <span class="coltab-name">A Collection</span>
+            <span class="coltab-readonly">???</span>
+          </a>
         </li>
       </ul>
     </div>

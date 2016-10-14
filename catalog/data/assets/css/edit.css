@@ -166,3 +166,7 @@ table.metadata-table th {
 .dia-btn-group  {}
 
 #navbar button:focus { outline: none; }
+
+.coltab-readonly {
+  color: #d9534f;
+}

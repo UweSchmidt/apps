@@ -13,15 +13,6 @@ function navClicked(e) {
      */
 }
 
-// $("#opn-button").on('click', navClicked);
-// $("#mark-button").on('click', navClicked);
-// $("#unmark-button").on('click', navClicked);
-// $("#rem-button").on('click', navClicked);
-// $("#mfc-button").on('click', navClicked);
-// $("#mtc-button").on('click', navClicked);
-$("#mtt-button").on('click', navClicked);
-// $("#SortButton").on('click', navClicked);
-
 $('#collectionTab a').click(function (e) {
     e.preventDefault();
     $(this).tab('show');
@@ -76,20 +67,6 @@ function diaBtnRemove(e) {
     $('#RemoveButton').click();
 }
 
-/*
-function diaBtnMoveFromClipboard(e) {
-    var o  = diaButton(e);
-    setEntryMark(o.dia);
-    $('#MoveFromClipboardButton').click();
-}
-
-function diaBtnCopyFromClipboard(e) {
-    var o  = diaButton(e);
-    setEntryMark(o.dia);
-    $('#CopyFromClipboardButton').click();
-}
-*/
-
 function diaBtnMoveToClipboard(e) {
     var o  = diaButton(e);
     setEntryMark(o.dia);
@@ -106,6 +83,12 @@ function diaBtnRename(e) {
     var o  = diaButton(e);
     setEntryMark(o.dia);
     $('#RenameCollectionButton0').click();
+}
+
+function diaBtnReadOnly(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#ReadOnlyButton').click();
 }
 
 function diaBtnSort(e) {
@@ -465,24 +448,28 @@ function showNewCollection(path, colVal) {
         }
         $('#theCollections').append(t);
 
-        // add the tab
+        // create a new tab from prototype
         var tb = $('#prototype-tab').find("li").clone();
-        var lk = tb.find('a');
         var tt = "path: " + o.path;
-        var tn = o.name;
         if (ct) {
-            tt = "title: " + ct + "\n" + tt;
+            tt = "title: " + ct + "\n"
+                + tt;
         }
         if (ro) {
-            tt = tt + "\naccess: readonly";
-            tn = tn + " *";
+            tt = tt + "\n"
+                + "access: readonly";
         };
-        lk.attr('href', '#' + o.colId)
+
+        tb.find('a')
+            .attr('href', '#' + o.colId)
             .attr('aria-controls', o.colId)
-            .attr('title', tt)
+            .attr('title', tt);
+        tb.find('.coltab-name')
             .empty()
-            .append(tn);
+            .append(o.name);
+
         $('#collectionTab').append(tb);
+        markAccess(o.colId, ro);
 
         // make the collection visible
         setActiveTab(o.colId);
@@ -552,6 +539,8 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnCopyToClipboard);
     col.find('div.dia button.dia-btn-rename')
         .on('click', diaBtnRename);
+    col.find('div.dia button.dia-btn-readonly')
+        .on('click', diaBtnReadOnly);
     col.find('div.dia button.dia-btn-sort')
         .on('click', diaBtnSort);
     col.find('div.dia button.dia-btn-view')
@@ -569,6 +558,8 @@ function insertEntries(colId, entries) {
 
     // images don't have all buttons
     col.find('div.dia.imgmark button.dia-btn-rename')
+        .addClass('hidden');
+    col.find('div.dia.imgmark button.dia-btn-readonly')
         .addClass('hidden');
 
     // clipboard has a special set of image buttons
@@ -1164,6 +1155,41 @@ function createCollection() {
 
 // ----------------------------------------
 
+function readOnlyCollection() {
+    statusClear();
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+    var ixs   = getMarkedEntries(cid);
+    var opcs  = getOpenMarkedCollections(cid);
+
+    console.log('readOnlyCollection');
+    console.log(cid);
+    console.log(ixs);
+    console.log(opcs);
+
+    setReadOnlyOnServer(cpath,ixs,opcs);
+}
+
+function markReadOnly(opcs, ro) {
+    console.log('markReadOnly');
+    console.log(opcs);
+
+    opcs.forEach(function (e, i) {
+        var cid = collectionId(e);
+        markAccess(cid, ro);
+    });
+}
+
+function markAccess(cid, ro) {
+    $('#collectionTab')
+        .find('[href="#' + cid + '"]')
+        .find('.coltab-readonly')
+        .empty()
+        .append(ro ? '*' : '');
+}
+
+// ----------------------------------------
+
 // renameCollectionCheck does all the error checks
 // if this is o.k. the #RenameCollectionButton is invoked
 // and this one triggers the modal mox
@@ -1400,6 +1426,14 @@ function sortColOnServer(path, ixs) {
                  });
 }
 
+function setReadOnlyOnServer(path, ixs, opcs) {
+    modifyServer("setReadOnly", path, ixs,
+                 function () {
+                     getColFromServer(path, refreshCollection);
+                     markReadOnly(opcs, true);
+                 });
+}
+
 function setMetaOnServer(path, ixs, metadata) {
     modifyServer("setMetaData", path, [ixs, [metadata]],
                  function () {
@@ -1575,18 +1609,17 @@ $(document).ready(function () {
             createCollection();
         });
 
+    $('#ReadOnlyButton')
+        .on('click', function () {
+            statusClear();
+            readOnlyCollection();
+        });
+
     $('#RenameCollectionButton0')
         .on('click', function () {
             statusClear();
             renameCollectionCheck();
         });
-
-    /* already done in renameCollectionButton0
-    $('#RenameCollectionModal')
-        .on('show.bs.modal', function () {
-            statusClear();
-        });
-     */
 
     $('#RenameCollectionOK')
         .on('click', function (e) {
