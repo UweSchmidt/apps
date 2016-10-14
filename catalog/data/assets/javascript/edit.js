@@ -1,3 +1,8 @@
+// TODO readonly (access rights) when copying collection is not yet o.k.
+// read only is removed during copy from clipboard to collection not o.k.
+//   "   "    "    "      "      "   to   "        , o.k.
+// copy into write protected collection is possible, not o.k.
+
 function navClicked(e) {
     e.preventDefault();
     console.log("nav button was clicked");
@@ -1167,7 +1172,7 @@ function readOnlyCollection() {
     console.log(ixs);
     console.log(opcs);
 
-    setReadOnlyOnServer(cpath,ixs,opcs);
+    changeReadOnlyOnServer(cpath,ixs, true, opcs);
 }
 
 function markReadOnly(opcs, ro) {
@@ -1426,11 +1431,11 @@ function sortColOnServer(path, ixs) {
                  });
 }
 
-function setReadOnlyOnServer(path, ixs, opcs) {
-    modifyServer("setReadOnly", path, ixs,
+function changeReadOnlyOnServer(path, ixs, ro, opcs) {
+    modifyServer("changeReadOnly", path, [ixs, ro],
                  function () {
                      getColFromServer(path, refreshCollection);
-                     markReadOnly(opcs, true);
+                     markReadOnly(opcs, ro);
                  });
 }
 

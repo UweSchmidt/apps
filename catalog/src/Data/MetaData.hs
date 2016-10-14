@@ -123,20 +123,31 @@ modifyAccess f md =
 setAccess :: [Text] -> MetaData -> MetaData
 setAccess ts = modifyAccess (const $ T.unwords ts)
 
+allowAccess :: [Text] -> MetaData -> MetaData
+allowAccess ts = modifyAccess f
+  where
+    f= T.unwords . (filter (`notElem` ts)) . T.words
+
 restrAccess :: [Text] -> MetaData -> MetaData
 restrAccess ts = modifyAccess f
   where
-    f x = T.unwords . nub . (ts ++) . T.words $ x
+    f = T.unwords . nub . (ts ++) . T.words
 
 clearAccess
   , addNoWriteAccess
   , addNoSortAccess
-  , addNoDeleteAccess :: MetaData -> MetaData
+  , addNoDeleteAccess
+  , subNoWriteAccess
+  , subNoSortAccess
+  , subNoDeleteAccess :: MetaData -> MetaData
 
 clearAccess       = setAccess []
 addNoWriteAccess  = restrAccess [no'write]
 addNoSortAccess   = restrAccess [no'sort]
 addNoDeleteAccess = restrAccess [no'delete]
+subNoWriteAccess  = allowAccess [no'write]
+subNoSortAccess   = allowAccess [no'sort]
+subNoDeleteAccess = allowAccess [no'delete]
 
 getAccess :: ([Text] -> Bool) -> MetaData -> Bool
 getAccess f md =

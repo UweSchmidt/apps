@@ -104,6 +104,10 @@ jsonCall fct i n args =
       jl $ \ pos ->
       getMeta pos n
 
+    "changeReadOnly" ->
+      jl $ \ (ixs, ro) ->
+      changeColReadOnlyByIxList ixs ro n
+
     -- sort a collection by sequence of positions
     -- result is the new collection
     "sort" ->
@@ -389,13 +393,11 @@ setMeta md ixs i n = do
   where
     setMeta1 pos mark ce
       | mark < 0 =
-        return ()
+          return ()
       | otherwise =
           processColEntry
-          (\ _ _ _ ->
-             adjustColEntries (ix pos . theColImgRef . _3 %~ (md <>)) i
-          )
-          (\ ci      -> adjustMetaData (md <>) ci)
+          (\ _ _ _ -> adjustColEntries (ix pos . theColImgRef . _3 %~ (md <>)) i)
+          (adjustMetaData (md <>))
           ce
 
 -- ----------------------------------------
@@ -437,5 +439,22 @@ previewImgRef pos g n =
        (\ ii nm _md -> buildImgPath ii nm)
        colImgRef
        ce
+
+-- ----------------------------------------
+
+changeColReadOnlyByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
+changeColReadOnlyByIxList ixs ro n = do
+  sequence_ $ zipWith3 markRO [(0::Int)..] ixs (n ^. theColEntries)
+  where
+    cf | ro        = addNoWriteAccess
+       | otherwise = subNoWriteAccess
+    markRO pos mark ce
+      | mark < 0 =
+          return ()
+      | otherwise =
+          processColEntry
+          (\ _ _ _ -> return ())            -- ignore ImgRef's
+          (adjustMetaData addNoWriteAccess)
+          ce
 
 -- ----------------------------------------
