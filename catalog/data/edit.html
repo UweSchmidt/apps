@@ -130,7 +130,7 @@
             </li>
             <li>
               <button id="ReadOnlyButton"
-                      class="btn btn-link btn-lg hidden"
+                      class="btn btn-link btn-lg"
                       title="write protect all marked collections">
                 <span class="glyphicon glyphicon-lock"
                       aria-hidden="true"></span>
@@ -512,7 +512,19 @@
     <div class="prototype" id="prototype-dia">
       <div class="pull-left img-thumbnail dia unmarked imgmark">
         <div class="dia-top">
-          <div class="dia-name">dia name</div>
+          <div class="dia-name">
+            <span>
+              <span class="img-no">007</span>
+              :
+              <span class="img-part"></span>
+              <span class="col-part">
+                <a href="???"></a>
+                <span class="img-col-writeprotected btn-xs hidden">
+                  <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+                </span>
+              </span>
+            </span>
+          </div>
           <div class="dia-mark">00</div>
         </div>
         <div class="dia-img">
@@ -555,7 +567,7 @@
                     aria-hidden="true"></span>
             </button>
             <button type="button"
-                    class="btn btn-default dia-btn-readonly hidden"
+                    class="btn btn-default dia-btn-writeprotected"
                     title="Write protect this collection">
               <span class="glyphicon glyphicon-lock"
                     aria-hidden="true"></span>
@@ -603,7 +615,9 @@
              data-placement="bottom"
              title="The collection path">
             <span class="coltab-name">A Collection</span>
-            <span class="coltab-readonly">???</span>
+            <span class="coltab-writeprotected btn-xs hidden">
+              <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+            </span>
           </a>
         </li>
       </ul>

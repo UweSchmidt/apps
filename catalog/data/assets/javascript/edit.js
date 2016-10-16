@@ -41,6 +41,53 @@ function diaButton(e) {
     return res;
 }
 
+function setDiaNo(dia, i) {
+    $(dia).find('span.img-no').empty().append("" + (i + 1));
+}
+
+function setDiaImgName(dia, name) {
+    $(dia)
+        .find('span.img-part')
+        .empty()
+        .append(name);
+}
+
+function setDiaColName(dia, name) {
+    $(dia)
+        .find('span.col-part a')
+        .empty()
+        .append(name);
+}
+
+function setDiaColRef(dia, path) {
+    $(dia)
+        .find('span.col-part a')
+        .attr('href', path);
+}
+
+function setDiaColAccess(dia, wr) {
+    console.log('setDiacolaccess', wr);
+    if (wr) {
+        $(dia)
+            .find('span.img-col-writeprotected')
+            .addClass('hidden');
+    } else {
+        $(dia)
+            .find('span.img-col-writeprotected')
+            .removeClass('hidden');
+    }
+}
+
+function getDiaNo(dia) {
+    var pos = $(dia)
+            .find('span.img-no')
+            .contents()
+            .get(0)
+            .textContent;
+    pos = parseInt(pos) - 1;
+    return pos;
+}
+
 function getDiaName(dia) {
     var res;
 
@@ -49,7 +96,7 @@ function getDiaName(dia) {
         .find('span.img-part')
         .contents()
         .get(0);
-    if (res) {
+    if (res && res.length > 0) {
         return res.textContent;
     }
 
@@ -58,11 +105,11 @@ function getDiaName(dia) {
         .find('div.dia-name a')
         .contents()
         .get(0);
-    if (res) {
+    if (res && res.length > 0) {
         return res.textContent;
     }
 
-    return '';
+    return '???';
 }
 
 function diaBtnRemove(e) {
@@ -380,7 +427,7 @@ function isNotSortableCollection(colVal) {
 // ----------------------------------------
 //
 // fill a collection tab
-
+/*
 function addDiaToActiveCollection(dia) {
     var actCol = activeCollection();
     var newSlide = newDia(dia);
@@ -412,6 +459,7 @@ function newDia(dia) {
 
     return p;
 }
+ */
 
 function showNewCollection(path, colVal) {
 
@@ -473,7 +521,7 @@ function showNewCollection(path, colVal) {
             .append(o.name);
 
         $('#collectionTab').append(tb);
-        markAccess(o.colId, ro || nd || gn);
+        markAccess(o.colId, ro);
 
         // make the collection visible
         setActiveTab(o.colId);
@@ -543,7 +591,7 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnCopyToClipboard);
     col.find('div.dia button.dia-btn-rename')
         .on('click', diaBtnRename);
-    col.find('div.dia button.dia-btn-readonly')
+    col.find('div.dia button.dia-btn-writeprotected')
         .on('click', diaBtnReadOnly);
     col.find('div.dia button.dia-btn-sort')
         .on('click', diaBtnSort);
@@ -563,7 +611,7 @@ function insertEntries(colId, entries) {
     // images don't have all buttons
     col.find('div.dia.imgmark button.dia-btn-rename')
         .addClass('hidden');
-    col.find('div.dia.imgmark button.dia-btn-readonly')
+    col.find('div.dia.imgmark button.dia-btn-writeprotected')
         .addClass('hidden');
 
     // clipboard has a special set of image buttons
@@ -597,20 +645,21 @@ function newEntry(entry, i) {
     // console.log(entry);
     var p = $("#prototype-dia").children("div").clone();
 
-    var en = '<span class="img-no">' + (i + 1) + '</span>: ';
+    setDiaNo(p, i);
+
     var sc = iconSize('');
     var mk = '';
     var tt = '';
     var ref = splitPath(entry.ref);
 
     if (entry.ColEntry === "IMG") {
-        en = en + '<span class="img-part">' + entry.part + '</span>';
+        setDiaImgName(p, entry.part);
         sc = sc + ref.cpath + "/" + entry.part;
         mk = "imgmark";
         tt = "image: " + entry.ref;
     }
     if (entry.ColEntry === "COL") {
-        en = en + '<a href="">' + ref.name + '</a>';
+        setDiaColName(p, ref.name);
         // TODO: extend server to deliver an icon for this ref
         // sc = sc + ref.path + ".jpg";
         sc = sc + "/assets/icons/generated/brokenImage.jpg";
@@ -626,11 +675,6 @@ function newEntry(entry, i) {
     // set img/col mark
     setMark(p, mk);
 
-    // set the head line
-    p.find("div.dia-name")
-        .empty()
-        .append(en);
-
     if ( entry.ColEntry === "COL") {
         // if entry is a collection add open collection event handler
         p.find("div.dia-name a")
@@ -638,6 +682,11 @@ function newEntry(entry, i) {
                 e.preventDefault();
                 openCollection(ref.path);
             });
+
+        getIsWriteableFromServer(ref.path,
+                                 function (ro) {
+                                     setDiaColAccess(p, ro);
+                                 });
         // set the icon url
         // url is computed on server and added in callback
         getIconRefFromServer(ref.path,
@@ -920,7 +969,7 @@ function getOpenMarkedCollections(cid) {
     var res = [];
     mcs.forEach(function(e, i) {
         ocs.forEach(function(e2, i2) {
-            if ( isPathPrefix(e, e2) ) {
+            if ( e === e2) {
                 res.push(e2);
             }
         });
@@ -930,8 +979,25 @@ function getOpenMarkedCollections(cid) {
     return res;
 }
 
+function getOpenMarkedSubCollections(cid) {
+    console.log("getOpenMarkedSubCollections: " + cid);
+    var mcs = getMarkedCollections(cid);
+    var ocs = allCollectionPaths();
+    var res = [];
+    mcs.forEach(function(e, i) {
+        ocs.forEach(function(e2, i2) {
+            if ( isPathPrefix(e, e2) ) {
+                res.push(e2);
+            }
+        });
+    });
+    console.log('getOpenMarkedSubCollections');
+    console.log(res);
+    return res;
+}
+
 function closeSubCollections(cid) {
-    getOpenMarkedCollections(cid)
+    getOpenMarkedSubCollections(cid)
         .forEach(function(e, i) {
             var id = collectionId(e);
             var cp = collectionPath(id);
@@ -1087,19 +1153,11 @@ function setCollectionImg(cid) {
 
     if (img) {
         if ( $(img).hasClass('imgmark') ) {
-            var part = $(img)
-                    .find('span.img-part')
-                    .contents()
-                    .get(0).textContent;
+            var part = getDiaName(img);
             if ( part.search(/[.]jpg$/) >= 0 ) {
                 // it's a jpg image
                 // so take this image as collection image
-                var pos = $(img)
-                        .find('span.img-no')
-                        .contents()
-                        .get(0)
-                        .textContent;
-                pos = parseInt(pos) -1;
+                var pos = getDiaNo(img);
                 console.log('setCollectionImg:');
                 console.log(pos);
                 console.log(path);
@@ -1184,11 +1242,14 @@ function markReadOnly(opcs, ro) {
 }
 
 function markAccess(cid, ro) {
-    $('#collectionTab')
-        .find('[href="#' + cid + '"]')
-        .find('.coltab-readonly')
-        .empty()
-        .append(ro ? '*' : '');
+    var c = $('#collectionTab')
+            .find('[href="#' + cid + '"]')
+            .find('.coltab-writeprotected');
+    if (ro) {
+        c.removeClass('hidden');
+    } else {
+        c.addClass('hidden');
+    }
 }
 
 // ----------------------------------------
@@ -1451,6 +1512,10 @@ function getColFromServer(path, showCol) {
            function (col) {
                showCol(path, col);
            });
+}
+
+function getIsWriteableFromServer(path, markWriteable) {
+    readServer('isWriteable', path, markWriteable);
 }
 
 function getIconRefFromServer(path, fmt, insertSrcRef) {
