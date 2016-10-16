@@ -19,6 +19,7 @@
   </head>
 
   <body>
+    <!-- -log buttons hidden, semantics not yet clear -->
 
     <!-- footer with status line -->
     <nav id="status-container"
@@ -129,7 +130,7 @@
             </li>
             <li>
               <button id="ReadOnlyButton"
-                      class="btn btn-link btn-lg"
+                      class="btn btn-link btn-lg hidden"
                       title="write protect all marked collections">
                 <span class="glyphicon glyphicon-lock"
                       aria-hidden="true"></span>
@@ -554,7 +555,7 @@
                     aria-hidden="true"></span>
             </button>
             <button type="button"
-                    class="btn btn-default dia-btn-readonly"
+                    class="btn btn-default dia-btn-readonly hidden"
                     title="Write protect this collection">
               <span class="glyphicon glyphicon-lock"
                     aria-hidden="true"></span>

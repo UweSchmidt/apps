@@ -398,10 +398,8 @@ theColObjId k (ImgRef i n m) = (\ new -> ImgRef new n m) <$> k i
 theColObjId k (ColRef i)     = (\ new -> ColRef new)     <$> k i
 {-# INLINE theColObjId #-}
 
-
 -- theImgName :: Lens' ImgPart Name
 -- theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
-
 
 theColImgRef :: Prism' (ColEntry' ref) (ref, Name, MetaData)
 theColImgRef =

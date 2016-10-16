@@ -1,4 +1,4 @@
-// TODO readonly (access rights) when copying collection is not yet o.k.
+// TODO no-write (access rights) when copying collection is not yet o.k.
 // read only is removed during copy from clipboard to collection not o.k.
 //   "   "    "    "      "      "   to   "        , o.k.
 // copy into write protected collection is possible, not o.k.
@@ -64,7 +64,6 @@ function getDiaName(dia) {
 
     return '';
 }
-
 
 function diaBtnRemove(e) {
     var o  = diaButton(e);
@@ -232,8 +231,6 @@ function renumberMarkCount(pos) {
     });
 }
 
-var imgcnt = 0;
-
 function setMarkCount(dia, m) {
     // console.log('setMarkCount');
     // console.log(dia);
@@ -255,7 +252,10 @@ function markLastAsCur() {
     if ( i >= 0 ) {
         var sel = "div.dia-mark:contains(" + i + ")";
         // console.log(sel);
-        col.find(sel).closest("div.dia").find("img.dia-src").addClass("curmarked");
+        col.find(sel)
+            .closest("div.dia")
+            .find("img.dia-src")
+            .addClass("curmarked");
     }
 }
 
@@ -302,10 +302,9 @@ function activeCollectionId() {
     return activeCollection().attr('id');
 }
 
-function isSystemCollectionId(cid) {
+function alwaysOpenCollectionId(cid) {
     return cid === idCollections()
-        || cid === idClipboard()
-        || cid === idTrash();
+        || cid === idClipboard();
 }
 
 function allCollectionIds() {
@@ -324,10 +323,19 @@ function collectionPath(cid) {
 }
 
 function collectionIsReadOnly(cid) {
-    var res = $('#' + cid).hasClass('readonly');
+    var res = $('#' + cid).hasClass('no-write');
     console.log('collectionisreadonly');
     console.log(res);
     return res;
+}
+
+function collectionIsGenerated(path) {
+    console.log('collectionisgenerated');
+    console.log(path);
+    return path === pathClipboard()
+        || path === pathCollections()
+        || isPathPrefix(pathPhotos(), path)
+        || isPathPrefix(pathTimeline(), path);
 }
 
 function collectionId(path) {
@@ -359,7 +367,7 @@ function isReadOnlyCollection(colVal) {
     return acc && acc.search('no-write') >= 0;
 }
 
-function isSystemCollection(colVal) {
+function isNoDeleteCollection(colVal) {
     var acc = colVal.metadata[0]["descr:Access"];
     return acc && acc.search('no-delete') >= 0;
 }
@@ -430,40 +438,31 @@ function showNewCollection(path, colVal) {
         o.colId   = path2id(o.path);
         console.log(o);
 
-        // readonly collection ?
+        // no-write collection ?
         var ro = isReadOnlyCollection(colVal);
         var sr = isNotSortableCollection(colVal);
-        var sy = isSystemCollection(colVal);
+        var nd = isNoDeleteCollection(colVal);
+        var gn = collectionIsGenerated(o.path);
         var ct = colVal.metadata[0]["descr:Title"];
 
         // add the tab panel
         var t = $('#prototype-tabpanel').children("div").clone();
-        t.find('div.tab-panel')
-            .empty();
-        t.attr('id', o.colId)
-            .attr('data-path', o.path);
-        if ( ro ) {
-            t.addClass("readonly");
-        }
-        if ( sr ) {
-            t.addClass("nosort");
-        }
-        if ( sy ) {
-            t.addClass("nodelete");
-        }
+
+        t.find('div.tab-panel').empty();
+        t.attr('id', o.colId).attr('data-path', o.path);
+
+        if ( ro ) { t.addClass("no-write");  }
+        if ( sr ) { t.addClass("no-sort");   }
+        if ( nd ) { t.addClass("no-delete"); }
+        if ( gn ) { t.addClass("generated"); }
         $('#theCollections').append(t);
 
         // create a new tab from prototype
         var tb = $('#prototype-tab').find("li").clone();
+
         var tt = "path: " + o.path;
-        if (ct) {
-            tt = "title: " + ct + "\n"
-                + tt;
-        }
-        if (ro) {
-            tt = tt + "\n"
-                + "access: readonly";
-        };
+        if (ct) { tt = "title: " + ct + "\n" + tt; }
+        if (ro) { tt = tt + "\naccess: no-write"; };
 
         tb.find('a')
             .attr('href', '#' + o.colId)
@@ -474,7 +473,7 @@ function showNewCollection(path, colVal) {
             .append(o.name);
 
         $('#collectionTab').append(tb);
-        markAccess(o.colId, ro);
+        markAccess(o.colId, ro || nd || gn);
 
         // make the collection visible
         setActiveTab(o.colId);
@@ -792,8 +791,8 @@ function updateCollection(path) {
 function closeCollection(cid) {
     statusClear();
     var cp   = collectionPath(cid);
-    if ( isSystemCollectionId(cid) ) {
-        statusError("system collection can't be closed: " + cp);
+    if ( alwaysOpenCollectionId(cid) ) {
+        statusError("this collection must stay open: " + cp);
     } else {
         var cids = allCollectionIds();
         var ix   = cids.indexOf(cid);
@@ -976,7 +975,6 @@ function removeMarkedFromCollection(cid) {
 
 // ----------------------------------------
 
-// TODO: readonly check for destination collection
 function moveMarkedFromClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(idClipboard());
@@ -1009,7 +1007,7 @@ function copyMarkedFromClipboard(cid) {
 
 function moveMarkedToClipboard(cid) {
     statusClear();
-    var ixs = getMarkedEntries(cid);
+    var ixs   = getMarkedEntries(cid);
     var cpath = collectionPath(cid);
     var dpath = pathClipboard();
     console.log('moveMarkedToClipboard');
@@ -1023,7 +1021,7 @@ function moveMarkedToClipboard(cid) {
 
 function copyMarkedToClipboard(cid) {
     statusClear();
-    var ixs = getMarkedEntries(cid);
+    var ixs   = getMarkedEntries(cid);
     var cpath = collectionPath(cid);
     var dpath = pathClipboard();
     console.log('copyMarkedToClipboard');
@@ -1041,7 +1039,7 @@ function sortCollection(cid) {
     statusClear();
     console.log('sort collection: ' + cid);
 
-    var sr = $('#' + cid).hasClass('nosort');
+    var sr = $('#' + cid).hasClass('no-sort');
     console.log(sr);
     if ( sr ) {
         var path = collectionPath(cid);
@@ -1083,7 +1081,7 @@ function setCollectionImg(cid) {
     var img  = getLastMarkedEntry(cid);
 
     if (collectionIsReadOnly(cid)) {
-        statusError('collection is readonly: ' + path);
+        statusError('collection is write protected: ' + path);
         return;
     }
 
@@ -1267,7 +1265,9 @@ function setMetaData() {
     var cpath = collectionPath(cid);
 
     if (collectionIsReadOnly(cid)) {
-        statusError('can\'t set meta data, active collection is readonly: ' + cpath);
+        statusError('can\'t set meta data, active collection is write protected: '
+                    + cpath
+                   );
         return;
     }
 
@@ -1682,6 +1682,8 @@ $(document).ready(function () {
 
 function pathCollections() { return "/archive/collections"; }
 function pathClipboard()   { return "/archive/collections/clipboard"; }
+function pathPhotos()      { return "/archive/collections/photos"; }
+function pathTimeline()    { return "/archive/collections/timeline"; }
 function pathTrash()       { return "/archive/collections/trash"; }
 
 function idCollections() { return path2id(pathCollections()); }

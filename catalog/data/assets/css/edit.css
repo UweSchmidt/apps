@@ -131,17 +131,9 @@ div.dia-bot {
   /* */ display: none!important; /* */
 }
 
-.readonly {
-  /* marker class for read only collections */
-}
-
-.nosort {
-  /* marker class for unsortable collections */
-}
-
-.nodelete {
-  /* marker class for generated collections */
-}
+.no-write  {}
+.no-sort   {}
+.no-delete {}
 
 /* adjust the width if longer names for keys are added to meta data modal*/
 .metadata-key {

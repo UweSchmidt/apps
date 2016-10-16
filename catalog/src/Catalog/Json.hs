@@ -87,97 +87,106 @@ jsonCall fct i n args =
 
     -- read a whole collection
     "collection" ->
-      jl $ \ () ->
-      return n
+      jl $ \ () -> return n
+
+    -- access restrictions on a collection
+    "isWriteable" ->
+      jl $ \ () -> return (isWriteable $ n ^. theColMetaData)
+
+    "isRemovable" ->
+      jl $ \ () -> return (isRemovable $ n ^. theColMetaData)
+
+    "isSortable" ->
+      jl $ \ () -> return (isSortable $ n ^. theColMetaData)
 
     -- read the src path for a collection icon
     -- result is an url pointing to the icon src
     "iconref" ->
       jl $ \ fmt ->
-      (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
+             (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
 
+    -- compute the image ref of a collection entry
+    -- for previewing the image
     "previewref" ->
       jl $ \ (pos, fmt) ->
-      (^. isoText) <$> previewImgRef pos (fmt ^. isoGeoAR) n
+             (^. isoText) <$> previewImgRef pos (fmt ^. isoGeoAR) n
 
+    -- get the meta data of a collection entry
     "metadata" ->
       jl $ \ pos ->
-      getMeta pos n
+             getMeta pos n
 
+    -- change the write protection for a list of collection entries
     "changeReadOnly" ->
       jl $ \ (ixs, ro) ->
-      changeColReadOnlyByIxList ixs ro n
+             changeColReadOnlyByIxList ixs ro n
 
     -- sort a collection by sequence of positions
     -- result is the new collection
     "sort" ->
       jl $ \ ixs ->
-        sortColByIxList ixs i
+             sortColByIxList ixs i
 
     -- remove all marked images and sub-collection from a collection
     "removeFromCollection" ->
-      ( jl $ \ ixs -> do
-          removeFrCol ixs i n
-      )
-      `catchE` mkErrMsg
+      jl $ \ ixs ->
+             removeFrCol ixs i n
 
     -- copy marked images and collections to another collection
     "copyToCollection" ->
-      ( jl $ \ (ixs, dPath) -> do
-          (di, dn) <- getIdNode' dPath
-          unless (isCOL dn) $
-            abort ("not a collection: " ++ show dPath)
-          copyToCol ixs di n
-      )
-      `catchE` mkErrMsg
+      jl $ \ (ixs, dPath) ->
+             do
+               (di, dn) <- getIdNode' dPath
+               unless (isCOL dn) $
+                 abort ("jsonCall: not a collection: " ++ show dPath)
+               unless (isWriteable $ dn ^. theColMetaData) $
+                 abort ("jsonCall: collection is write protected: " ++ show dPath)
+               copyToCol ixs di n
 
     -- move marked images and collections in a source col
     -- to a dest col
     -- this is implemented as a sequence of copy and remove
     "moveToCollection" ->
-      ( jl $ \ (ixs, dPath) -> do
-          (di, dn) <- getIdNode' dPath
-          unless (isCOL dn) $
-            abort ("not a collection: " ++ show dPath)
-          copyToCol   ixs di   n
-          removeFrCol ixs    i n
-      )
-      `catchE` mkErrMsg
+      jl $ \ (ixs, dPath) ->
+             do
+               (di, dn) <- getIdNode' dPath
+               unless (isCOL dn) $
+                 abort ("jsonCall: not a collection: " ++ show dPath)
+               unless (isWriteable $ dn ^. theColMetaData) $
+                 abort ("jsonCall: collection is write protected: " ++ show dPath)
+               copyToCol   ixs di   n
+               removeFrCol ixs    i n
 
     -- set or unset the collection image
     -- i must reference a collection, not an image
     -- nothing is returned
     "colimg" -> do
-      jl $ \ ix' -> do
-        setColImg ix' i n
-        return ()
+      jl $ \ ix' ->
+             void $ setColImg ix' i n
 
     -- create a new collection with name nm in
     -- collection i
     "newcol" ->
-      ( jl $ \ nm -> do
-          createCol nm i
-      )
-      `catchE` mkErrMsg
+      jl $ \ nm ->
+             createCol nm i
 
     -- rename a sub-collection in a given collection
     "renamecol" ->
-      ( jl $ \ new -> do
-          renameCol new i
-      )
-      `catchE` mkErrMsg
+      jl $ \ new ->
+             renameCol new i
 
     "setMetaData" ->
-      ( jl $ \ (ixs, md) -> do
-          setMeta md ixs i n
-      )
-      `catchE` mkErrMsg
+      jl $ \ (ixs, md) ->
+             setMeta md ixs i n
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
     jl :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> Cmd J.Value
-    jl = flip jsonLift args
+    jl cmd =
+      jsonLift cmd args
+      `catchE`
+      mkErrMsg
 
 -- 3., 4. and 5. step: parse the extra JSON argument
 -- make the call of the internal operation and
@@ -199,7 +208,7 @@ removeFrCol ixs i n = do
   -- check whether collection is readonly
   unless (isWriteable $ n ^. theColMetaData) $ do
     path <- objid2path i
-    abort ("collection is readonly: " ++ show path)
+    abort ("removeFrCol: collection is write protected: " ++ show path)
 
   traverse_ (uncurry (removeEntryFrCol i)) toBeRemoved
   where
@@ -405,7 +414,7 @@ setMeta md ixs i n = do
 getMeta :: Int -> ImgNode -> Cmd MetaData
 getMeta pos n = do
   ce <- maybe
-    (abort $ "illegal index in collection: " ++ show pos)
+    (abort $ "getMeta: illegal index in collection: " ++ show pos)
     return
     (n ^? theColEntries . ix pos)
   processColEntry
@@ -417,7 +426,7 @@ getMeta pos n = do
 
 addGeoToPath :: Maybe GeoAR -> Cmd FilePath -> Cmd FilePath
 addGeoToPath Nothing _ =
-  abort $ "wrong image geometry value"
+  abort $ "addGeoToPath: wrong image geometry value"
 addGeoToPath (Just g) cmd =
   (ppx ++) <$> cmd
   where
@@ -432,7 +441,7 @@ previewImgRef :: Int -> Maybe GeoAR -> ImgNode -> Cmd FilePath
 previewImgRef pos g n =
   addGeoToPath g $
   do ce <- maybe
-           (abort $ "illegal index in collection: " ++ show pos)
+           (abort $ "previewImgRef: illegal index in collection: " ++ show pos)
            return
            (n ^? theColEntries . ix pos)
      processColEntry
