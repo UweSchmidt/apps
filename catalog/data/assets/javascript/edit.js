@@ -152,10 +152,10 @@ function diaBtnRename(e) {
     $('#RenameCollectionButton0').click();
 }
 
-function diaBtnReadOnly(e) {
+function diaBtnWriteProtected(e) {
     var o  = diaButton(e);
     setEntryMark(o.dia);
-    $('#ReadOnlyButton').click();
+    $('#WriteProtectedButton').click();
 }
 
 function diaBtnSort(e) {
@@ -385,9 +385,9 @@ function collectionPath(cid) {
     return $('#' + cid).attr('data-path');
 }
 
-function collectionIsReadOnly(cid) {
+function collectionIsWriteProtected(cid) {
     var res = $('#' + cid).hasClass('no-write');
-    console.log('collectionisreadonly');
+    console.log('collectionIsWriteProtected');
     console.log(res);
     return res;
 }
@@ -425,7 +425,7 @@ function allCollectionPaths() {
     return colPaths;
 }
 
-function isReadOnlyCollection(colVal) {
+function isWriteProtectedCollection(colVal) {
     var acc = colVal.metadata[0]["descr:Access"];
     return acc && acc.search('no-write') >= 0;
 }
@@ -503,7 +503,7 @@ function showNewCollection(path, colVal) {
         console.log(o);
 
         // no-write collection ?
-        var ro = isReadOnlyCollection(colVal);
+        var ro = isWriteProtectedCollection(colVal);
         var sr = isNotSortableCollection(colVal);
         var nd = isNoDeleteCollection(colVal);
         var gn = collectionIsGenerated(o.path);
@@ -609,7 +609,7 @@ function insertEntries(colId, entries) {
     col.find('div.dia button.dia-btn-rename')
         .on('click', diaBtnRename);
     col.find('div.dia button.dia-btn-writeprotected')
-        .on('click', diaBtnReadOnly);
+        .on('click', diaBtnWriteProtected);
     col.find('div.dia button.dia-btn-sort')
         .on('click', diaBtnSort);
     col.find('div.dia button.dia-btn-view')
@@ -1248,7 +1248,7 @@ function createCollection() {
 
 // ----------------------------------------
 
-function readOnlyCollection() {
+function writeProtectedCollection() {
     statusClear();
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
@@ -1256,17 +1256,17 @@ function readOnlyCollection() {
     var opcs  = getOpenMarkedCollections(cid);
     var dia   = getLastMarkedEntry(cid);
     var ro    = getDiaColWriteProtected(dia);
-    console.log('readOnlyCollection');
+    console.log('writeProtectedCollection');
     console.log(cid);
     console.log(ixs);
     console.log(opcs);
     console.log(ro);
 
-    changeReadOnlyOnServer(cpath,ixs, ro, opcs);
+    changeWriteProtectedOnServer(cpath,ixs, ro, opcs);
 }
 
-function markReadOnly(opcs, ro) {
-    console.log('markReadOnly', ro);
+function markWriteProtected(opcs, ro) {
+    console.log('markWriteProtected', ro);
     console.log(opcs);
 
     opcs.forEach(function (e, i) {
@@ -1298,8 +1298,8 @@ function renameCollectionCheck() {
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
 
-    if (collectionIsReadOnly(cid)) {
-        statusError('rename not allowed, collection is readonly: ' + cpath);
+    if (collectionIsWriteProtected(cid)) {
+        statusError('rename not allowed, collection is write protected: ' + cpath);
         return;
     }
     var img   = getLastMarkedEntry(cid);
@@ -1359,7 +1359,7 @@ function setMetaData() {
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
 
-    if (collectionIsReadOnly(cid)) {
+    if (collectionIsWriteProtected(cid)) {
         statusError('can\'t set meta data, active collection is write protected: '
                     + cpath
                    );
@@ -1526,11 +1526,11 @@ function sortColOnServer(path, ixs) {
                  });
 }
 
-function changeReadOnlyOnServer(path, ixs, ro, opcs) {
-    modifyServer("changeReadOnly", path, [ixs, ro],
+function changeWriteProtectedOnServer(path, ixs, ro, opcs) {
+    modifyServer("changeWriteProtected", path, [ixs, ro],
                  function () {
                      getColFromServer(path, refreshCollection);
-                     markReadOnly(opcs, ro);
+                     markWriteProtected(opcs, ro);
                  });
 }
 
@@ -1713,10 +1713,10 @@ $(document).ready(function () {
             createCollection();
         });
 
-    $('#ReadOnlyButton')
+    $('#WriteProtectedButton')
         .on('click', function () {
             statusClear();
-            readOnlyCollection();
+            writeProtectedCollection();
         });
 
     $('#RenameCollectionButton0')

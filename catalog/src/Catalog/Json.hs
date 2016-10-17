@@ -117,9 +117,9 @@ jsonCall fct i n args =
              getMeta pos n
 
     -- change the write protection for a list of collection entries
-    "changeReadOnly" ->
+    "changeWriteProtected" ->
       jl $ \ (ixs, ro) ->
-             changeColReadOnlyByIxList ixs ro n
+             changeColWriteProtectedByIxList ixs ro n
 
     -- sort a collection by sequence of positions
     -- result is the new collection
@@ -451,8 +451,8 @@ previewImgRef pos g n =
 
 -- ----------------------------------------
 
-changeColReadOnlyByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
-changeColReadOnlyByIxList ixs ro n = do
+changeColWriteProtectedByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
+changeColWriteProtectedByIxList ixs ro n = do
   sequence_ $ zipWith3 markRO [(0::Int)..] ixs (n ^. theColEntries)
   where
     cf | ro        = addNoWriteAccess
