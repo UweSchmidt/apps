@@ -88,6 +88,14 @@ function getDiaNo(dia) {
     return pos;
 }
 
+function getDiaColRef(dia) {
+    var res = $(dia)
+            .find('span.col-part a')
+            .attr('href');
+    console.log('getDiaColRef: ', res);
+    return res;
+}
+
 function getDiaName(dia) {
     var res;
 
@@ -557,6 +565,7 @@ function insertEntries(colId, entries) {
     console.log('insertEntries');
     console.log(colId);
     console.log(entries);
+    var path = collectionPath(colId);
 
     var col = $('#' + colId);
     col.empty();
@@ -607,6 +616,18 @@ function insertEntries(colId, entries) {
     //collections don't have all buttons
     col.find('div.dia.colmark button.dia-btn-colimg')
         .addClass('hidden');
+
+    // hide write protect button for generated collections
+    col.find('div.dia.colmark')
+        .each(function (i, e) {
+            var cname = getDiaName(e);
+            var cpath = path + "/" + cname;
+            console.log('hide lock button ', cpath);
+            if (collectionIsGenerated(cpath)) {
+                $(e).find('button.dia-btn-writeprotected')
+                .addClass('hidden');
+            }
+        });
 
     // images don't have all buttons
     col.find('div.dia.imgmark button.dia-btn-rename')
