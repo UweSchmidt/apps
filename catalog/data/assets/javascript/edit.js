@@ -1145,11 +1145,14 @@ function setCollectionImg(cid) {
     var path = collectionPath(cid);
     var o    = splitPath(path);
     var img  = getLastMarkedEntry(cid);
+    var gn   = collectionIsGenerated(path);
 
-    if (collectionIsReadOnly(cid)) {
-        statusError('collection is write protected: ' + path);
+    /*
+    if (collectionIsGenerated(path)) {
+        statusError('generated collection can\'t be modified: ' + path);
         return;
     }
+    */
 
     if (img) {
         if ( $(img).hasClass('imgmark') ) {
