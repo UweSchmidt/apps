@@ -1134,17 +1134,18 @@ function sortCollection(cid) {
     statusClear();
     console.log('sort collection: ' + cid);
 
-    var sr = $('#' + cid).hasClass('no-sort');
+    // var sr = $('#' + cid).hasClass('no-sort');
+    var sr = collectionIsWriteProtected(cid);
     console.log(sr);
     if ( sr ) {
         var path = collectionPath(cid);
-        statusError('collection not sortable: ' + path);
+        statusError('not sortable, the collection is write protected: ' + path);
         return;
     }
 
     var ixs  = getMarkedEntries(cid);
     if (! anyMarked(ixs)) {
-        statusMsg('no marked images/collections found');
+        statusMsg('no marked images/collections found for sorting');
         return;
     }
 
@@ -1281,8 +1282,10 @@ function markAccess(cid, ro) {
             .find('.coltab-writeprotected');
     if (ro) {
         c.removeClass('hidden');
+        $('#' + cid).addClass('no-write');
     } else {
         c.addClass('hidden');
+        $('#' + cid).removeClass('no-write');
     }
 }
 
