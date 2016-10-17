@@ -441,41 +441,6 @@ function isNotSortableCollection(colVal) {
 }
 
 // ----------------------------------------
-//
-// fill a collection tab
-/*
-function addDiaToActiveCollection(dia) {
-    var actCol = activeCollection();
-    var newSlide = newDia(dia);
-    console.log("addDiatoactivecollection");
-    console.log("actColId");
-    actCol.append(newSlide);
-}
-
-function newDia(dia) {
-    console.log("newDia");
-    console.log(dia);
-    var p = $("#prototype-dia").children("div").clone();
-
-    // set the head line
-    p.find("div.dia-name")
-        .empty()
-        .append(dia.name);
-
-    removeMarkCount(p);
-
-    // set the icon url
-    p.find("img.dia-src")
-        .attr('src', dia.src);
-
-    // add event handler for marking
-    p.children("div.dia-img")
-        .on('click', toggleSlideMark)
-        .css('cursor','pointer');
-
-    return p;
-}
- */
 
 function showNewCollection(path, colVal) {
 
@@ -670,8 +635,8 @@ function insertEntry(colId, entry, i) {
 }
 
 function newEntry(entry, i) {
-    // console.log("newEntry");
-    // console.log(entry);
+    console.log("newEntry");
+    console.log(entry);
     var p = $("#prototype-dia").children("div").clone();
 
     setDiaNo(p, i);
@@ -683,14 +648,23 @@ function newEntry(entry, i) {
 
     if (entry.ColEntry === "IMG") {
         setDiaImgName(p, entry.part);
+        // add the part extension as class to the entry
+        // "jpg" for images,
+        // "md" or "txt" for blog entries (markdown text)
+        // in preview modal box this info becomes important
+        p.addClass('data-' + entry.ext);
+
         sc = sc + ref.cpath + "/" + entry.part;
         mk = "imgmark";
         tt = "image: " + entry.ref;
     }
     if (entry.ColEntry === "COL") {
         setDiaColName(p, ref.name);
-        // TODO: extend server to deliver an icon for this ref
-        // sc = sc + ref.path + ".jpg";
+        // this ref is a dummy
+        // the real ref of a collection is inserted later
+        // by a server call
+        // but we need a legal src ref
+
         sc = sc + "/assets/icons/generated/brokenImage.jpg";
         mk = "colmark";
         tt = "collection: " + entry.ref;
@@ -1276,6 +1250,8 @@ function markWriteProtected(opcs, ro) {
     });
 }
 
+// the lock icon in tab list of open collections is set/removed
+// the marker class no-write is added/removed in tab panel
 function markAccess(cid, ro) {
     var c = $('#collectionTab')
             .find('[href="#' + cid + '"]')
