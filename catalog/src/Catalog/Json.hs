@@ -463,7 +463,7 @@ changeColReadOnlyByIxList ixs ro n = do
       | otherwise =
           processColEntry
           (\ _ _ _ -> return ())            -- ignore ImgRef's
-          (adjustMetaData addNoWriteAccess)
+          (adjustMetaData cf)
           ce
 
 -- ----------------------------------------

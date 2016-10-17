@@ -78,6 +78,14 @@ function setDiaColAccess(dia, wr) {
     }
 }
 
+function getDiaColWriteProtected(dia) {
+    var res = $(dia)
+            .find('span.img-col-writeprotected')
+            .hasClass('hidden');
+    console.log('getdiaColWriteAccess', res);
+    return res;
+}
+
 function getDiaNo(dia) {
     var pos = $(dia)
             .find('span.img-no')
@@ -1246,17 +1254,19 @@ function readOnlyCollection() {
     var cpath = collectionPath(cid);
     var ixs   = getMarkedEntries(cid);
     var opcs  = getOpenMarkedCollections(cid);
-
+    var dia   = getLastMarkedEntry(cid);
+    var ro    = getDiaColWriteProtected(dia);
     console.log('readOnlyCollection');
     console.log(cid);
     console.log(ixs);
     console.log(opcs);
+    console.log(ro);
 
-    changeReadOnlyOnServer(cpath,ixs, true, opcs);
+    changeReadOnlyOnServer(cpath,ixs, ro, opcs);
 }
 
 function markReadOnly(opcs, ro) {
-    console.log('markReadOnly');
+    console.log('markReadOnly', ro);
     console.log(opcs);
 
     opcs.forEach(function (e, i) {
