@@ -585,6 +585,8 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnTitle);
     col.find('div.dia button.dia-btn-colimg')
         .on('click', diaBtnColimg);
+    col.find('div.dia.data-md button.dia-btn-colblog')
+        .on('click', diaBtnColimg);
 
     //collections don't have all buttons
     col.find('div.dia.colmark button.dia-btn-colimg')
@@ -613,8 +615,9 @@ function insertEntries(colId, entries) {
         .addClass('hidden');
     col.find('div.dia.imgmark.data-md button.dia-btn-title')
         .addClass('hidden');
+    // redefine colimg button to set colblog entry
     col.find('div.dia.imgmark.data-md button.dia-btn-colimg')
-        .addClass('hidden');
+        .attr('title',"Take this text as blog text for the current collection");
 
     // clipboard has a special set of image buttons
     if (colId === idClipboard()) {
@@ -1172,20 +1175,21 @@ function setCollectionImg(cid) {
 
     if (img) {
         if ( $(img).hasClass('imgmark') ) {
-            var part = getDiaName(img);
-            if ( part.search(/[.]jpg$/) >= 0 ) {
-                // it's a jpg image
+            var pos = getDiaNo(img);
+            console.log('setCollectionImg:');
+            console.log(pos);
+            console.log(path);
+            console.log(o);
+
+            if ( $(img).hasClass('data-jpg') ) {
+                // it's a .jpg image
                 // so take this image as collection image
-                var pos = getDiaNo(img);
-                console.log('setCollectionImg:');
-                console.log(pos);
-                console.log(path);
-                console.log(o);
                 modifyServer('colimg', path, pos,
                              function () {
                                  var ppath = o.cpath;
                                  var pcol = isAlreadyOpen(ppath);
-                                 statusMsg('collection image set in ' + path);
+                                 // this overwrites a server error message
+                                 // statusMsg('collection image set in ' + path);
                                  if ( pcol[0] ) {
                                      // parent collection open
                                      // refresh the parent collection
@@ -1193,8 +1197,13 @@ function setCollectionImg(cid) {
                                      getColFromServer(ppath, refreshCollection);
                                  }
                              });
+            }
+            else if ( $(img).hasClass('data-md') ) {
+                // it's a .md text file
+                // so take this as the collection blog text
+                modifyServer('colblog', path, pos, noop);
             } else {
-                statusError('not a .jpg image');
+                statusError('not a .jpg image or a .md text file');
             }
         } else {
             statusError('marked entry is a collection, not an image');

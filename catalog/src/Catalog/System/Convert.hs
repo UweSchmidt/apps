@@ -187,7 +187,7 @@ createImageFromTxt d'geo d s =
   where
     go = do
       headline <-
-        T.concat . take 1 . filter (not . T.null) . map T.strip . T.lines <$>
+        T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
         readFileT s
       let str1 = headline ^. isoString
       let str2 = pathToBreadCrump s
@@ -197,6 +197,9 @@ createImageFromTxt d'geo d s =
         fromMaybe ps'blank <$>
         genAssetIcon (sed (const "_") "/" s) str
       genImage $ "/" ++ d'geo ^. isoString ++ icon
+
+    cleanup :: Text -> Text
+    cleanup = T.dropWhile (not . isAlphaNum)
 
 -- ----------------------------------------
 

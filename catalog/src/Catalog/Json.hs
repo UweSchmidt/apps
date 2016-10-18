@@ -163,10 +163,19 @@ jsonCall fct i n args =
 
     -- set or unset the collection image
     -- i must reference a collection, not an image
+    -- pos must be an index to an ImgRef for a .jpg image
     -- nothing is returned
-    "colimg" -> do
-      jl $ \ ix' ->
-             void $ setColImg ix' i n
+    "colimg" ->
+      jl $ \ pos ->
+             void $ setColImg pos i n
+
+    -- set or unset the collection blog text
+    -- i must reference a collection, not an image
+    -- pos must be an index to an ImgRef for a .md text
+    -- nothing is returned
+    "colblog" ->
+      jl $ \ pos ->
+             void $ setColBlog pos i n
 
     -- create a new collection with name nm in
     -- collection i
@@ -361,6 +370,18 @@ setColImg :: Int -> ObjId -> ImgNode -> Cmd ()
 setColImg pos oid n
   | Just (iid, inm, _im) <- n ^? theColEntries . ix pos . theColImgRef =
       adjustColImg (const $ Just (iid, inm)) oid
+
+  | otherwise =
+      adjustColImg (const Nothing) oid
+
+-- set or unset the "blog text" of a collection
+-- to one of the blog texts in the collection
+-- The pos param specifies the position or, if -1, the unset op
+
+setColBlog :: Int -> ObjId -> ImgNode -> Cmd ()
+setColBlog pos oid n
+  | Just (iid, inm, _im) <- n ^? theColEntries . ix pos . theColImgRef =
+      adjustColBlog (const $ Just (iid, inm)) oid
 
   | otherwise =
       adjustColImg (const Nothing) oid
