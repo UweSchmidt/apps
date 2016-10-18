@@ -11,7 +11,7 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Html.Photo2 (buildImgPath, colImgRef)
+import           Catalog.Html.Photo2 (buildImgPath, colImgRef, getColBlogCont)
 import           Catalog.System.ExifTool (getMetaData)
 -- import           Catalog.Journal
 -- import           Catalog.Cmd.Types
@@ -455,8 +455,14 @@ previewImgRef pos g n =
 
 getBlogCont :: Int -> ImgNode -> Cmd Text
 getBlogCont pos n = do
-  ce <- undefined
-  return undefined
+  ce <- maybe
+        (abort $ "getBlogCont: illegal index in collection: " ++ show pos)
+        return
+        (n ^? theColEntries . ix pos)
+  processColEntry
+    (\ i nm _md -> getColBlogCont i nm)
+    (const $ return mempty)
+    ce
 
 -- ----------------------------------------
 

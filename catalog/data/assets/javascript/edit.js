@@ -608,6 +608,14 @@ function insertEntries(colId, entries) {
     col.find('div.dia.imgmark button.dia-btn-writeprotected')
         .addClass('hidden');
 
+    // .md text files don't have meta data
+    col.find('div.dia.imgmark.data-md button.dia-btn-meta')
+        .addClass('hidden');
+    col.find('div.dia.imgmark.data-md button.dia-btn-title')
+        .addClass('hidden');
+    col.find('div.dia.imgmark.data-md button.dia-btn-colimg')
+        .addClass('hidden');
+
     // clipboard has a special set of image buttons
     if (colId === idClipboard()) {
         col.find('div.dia button.dia-btn-movefromclipboard')
@@ -652,7 +660,7 @@ function newEntry(entry, i) {
         // "jpg" for images,
         // "md" or "txt" for blog entries (markdown text)
         // in preview modal box this info becomes important
-        p.addClass('data-' + entry.ext);
+        p.addClass('data-' + splitPath(entry.part).ext);
 
         sc = sc + ref.cpath + "/" + entry.part;
         mk = "imgmark";
@@ -1464,7 +1472,11 @@ function previewImage() {
 
     if ( $(args.dia).hasClass('data-jpg') ) {
         getPreviewRef(args);
-    } else {
+    }
+    else if ( $(args.dia).hasClass('data-md') ) {
+        getBlogText(args);
+    }
+    else {
         statusError('preview not available for ' + args.name);
     }
 }
@@ -1484,6 +1496,25 @@ function insertPreviewRef(ref, args) {
     $('#PreviewModalLabel')
         .empty()
         .append('Preview: ' + args.path + "/" + args.name);
+
+    $('#PreviewModal').modal('show');
+}
+
+function insertBlogText(txt, args) {
+    console.log('insertBlogText');
+    console.log(txt);
+    console.log(args);
+
+    // make the div for images visible
+    $('#PreviewModalBody > div').addClass('hidden');
+    $('#PreviewModalBody div.data-md').removeClass('hidden');
+
+    $('#PreviewModalBlog')
+        .empty()
+        .append(txt);
+    $('#PreviewModalLabel')
+        .empty()
+        .append('Blog text: ' + args.path + "/" + args.name);
 
     $('#PreviewModal').modal('show');
 }
@@ -1580,6 +1611,14 @@ function getPreviewRef(args) {
                 args.path,
                 [args.pos, args.fmt],
                 function (res) { insertPreviewRef(res, args); }
+               );
+}
+
+function getBlogText(args) {
+    readServer1('blogcontents',
+                args.path,
+                args.pos,
+                function (res) { insertBlogText(res, args); }
                );
 }
 
