@@ -549,7 +549,7 @@ colImgMeta' gm = colImgOp (\ i -> getImgVals i theColMetaData) iop
       | gm        = getMetaData j
       | otherwise = return m
 
-colImgBlog :: ColRef -> Cmd String
+colImgBlog :: ColRef -> Cmd Text
 colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
   where
     cref i = do
@@ -608,7 +608,7 @@ colImgRef i = do
 
 -- ----------------------------------------
 
-colBlogCont :: ImgType -> ColRef -> Cmd String
+colBlogCont :: ImgType -> ColRef -> Cmd Text
 colBlogCont IMGtxt cr = do
   colImgOp (\ _i -> return mempty) iop cr
   where
@@ -616,12 +616,13 @@ colBlogCont IMGtxt cr = do
 
 colBlogCont _ _ = return mempty
 
-getColBlogCont :: ObjId -> Name -> Cmd String
+getColBlogCont :: ObjId -> Name -> Cmd Text
 getColBlogCont i n = do
       p <- objid2path i
-      -- remove "/archive" prefix from path
-      -- and subst the name by the part name
-      genBlogText ((substPathName n $ tailPath p) ^. isoString)
+      -- subst the name by the part name
+      -- and build a file path
+      f <- toFilePath (substPathName n p)
+      genBlogText f
 
 -- ----------------------------------------
 

@@ -105,6 +105,10 @@ jsonCall fct i n args =
       jl $ \ fmt ->
              (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
 
+    "blogcontents" ->
+      jl $ \ pos ->
+             getBlogCont pos n
+
     -- compute the image ref of a collection entry
     -- for previewing the image
     "previewref" ->
@@ -448,6 +452,11 @@ previewImgRef pos g n =
        (\ ii nm _md -> buildImgPath ii nm)
        colImgRef
        ce
+
+getBlogCont :: Int -> ImgNode -> Cmd Text
+getBlogCont pos n = do
+  ce <- undefined
+  return undefined
 
 -- ----------------------------------------
 

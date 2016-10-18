@@ -319,18 +319,17 @@ fontList = toFL <$> execProcess "bash" [] shellCmd
 
 -- ----------------------------------------
 
-genBlogText :: FilePath -> Cmd String
-genBlogText path = do
-  -- add mount path for image root
-  src <- (++ path) <$> view envMountPath
+genBlogText :: FilePath -> Cmd Text
+genBlogText src = do
   dx  <- fileExist src
-  trc $ unwords ["genBlogText", show path, show src, show dx]
+  trc $ unwords ["genBlogText", show src, show dx]
   if dx
     then formatBlogText src
-    else return $ "no blog text found for " ++ show path
+    else return $ ("no file found for blog text: " ++ show src) ^. isoText
 
-formatBlogText :: FilePath -> Cmd String
-formatBlogText f = do -- pandoc not yet called
-  execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
+formatBlogText :: FilePath -> Cmd Text
+formatBlogText f =
+  (^. isoText) <$>
+    execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
 
 -- ----------------------------------------

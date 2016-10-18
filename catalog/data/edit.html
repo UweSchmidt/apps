@@ -490,17 +490,19 @@
                 id="PreviewModalLabel"
                 >Preview last marked image</h4>
           </div>
-          <div class="modal-body">
-            <!-- the preview image -->
-            <div class="thumbnail">
+          <div id="PreviewModalBody"
+               class="modal-body">
+            <!-- the preview image part -->
+            <div class="thumbnail data-jpg hidden">
               <img id="PreviewModalImgRef"
                    class="data-jpg"
                    src=""
                    alt="">
-              <!-- TODO preview of md text -->
-              <div id="PreviewModalBlog"
-                   class="data-md data-txt hidden">
-              </div>
+            </div>
+            <!-- the preview for markdown or text -->
+            <div id="PreviewModalBlog"
+                 class="data-md data-txt hidden">
+              the markdown text
             </div>
           </div>
         </div>

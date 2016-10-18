@@ -660,6 +660,10 @@ function newEntry(entry, i) {
     }
     if (entry.ColEntry === "COL") {
         setDiaColName(p, ref.name);
+        // collections always have a .jpg as preview
+        p.addClass('data-jpg');
+
+
         // this ref is a dummy
         // the real ref of a collection is inserted later
         // by a server call
@@ -1454,7 +1458,15 @@ function previewImage() {
     args.name = getDiaName(args.dia);
     args.fmt  = previewSize();
     clearEntryMark($(args.dia));
-    getPreviewRef(args);
+
+    // if dia is a .jpg then load the prview ref and show the image
+    // via call back insertPreviewRef
+
+    if ( $(args.dia).hasClass('data-jpg') ) {
+        getPreviewRef(args);
+    } else {
+        statusError('preview not available for ' + args.name);
+    }
 }
 
 function insertPreviewRef(ref, args) {
@@ -1462,12 +1474,17 @@ function insertPreviewRef(ref, args) {
     console.log(ref);
     console.log(args);
 
+    // make the div for images visible
+    $('#PreviewModalBody > div').addClass('hidden');
+    $('#PreviewModalBody div.data-jpg').removeClass('hidden');
+
     $('#PreviewModalImgRef')
         .attr('src', ref)
         .attr('alt', args.path);
     $('#PreviewModalLabel')
         .empty()
-        .append('Preview of ' + args.name + ' in collection ' + args.path);
+        .append('Preview: ' + args.path + "/" + args.name);
+
     $('#PreviewModal').modal('show');
 }
 

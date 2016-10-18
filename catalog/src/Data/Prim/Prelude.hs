@@ -335,12 +335,10 @@ removeAt _ [] = []
 removeAt i (x : xs) = x : removeAt (i - 1) xs
 
 insertAt :: Int -> a -> [a] -> [a]
+insertAt _ x []        =  x : []
 insertAt i x xs
-  | i <= 0
-    ||
-    null xs = x : xs
-insertAt i x (x1 : xs) =
-  x1 : insertAt (i - 1) x xs
+  | i <= 0             =  x : xs
+insertAt i x (x1 : xs) = x1 : insertAt (i - 1) x xs
 
 -- ----------------------------------------
 
