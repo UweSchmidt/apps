@@ -11,7 +11,7 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.Convert (genAssetIcon, genBlogText)
+import Catalog.System.Convert (genAssetIcon, genBlogText, genBlogHtml)
 import Catalog.System.ExifTool (getMetaData)
 import Text.SimpleTemplate
 
@@ -618,6 +618,14 @@ colBlogCont _ _ = return mempty
 
 getColBlogCont :: ObjId -> Name -> Cmd Text
 getColBlogCont i n = do
+      p <- objid2path i
+      -- subst the name by the part name
+      -- and build a file path
+      f <- toFilePath (substPathName n p)
+      genBlogHtml f
+
+getColBlogSource :: ObjId -> Name -> Cmd Text
+getColBlogSource i n = do
       p <- objid2path i
       -- subst the name by the part name
       -- and build a file path

@@ -188,6 +188,12 @@ function diaBtnColimg(e) {
     $('#CollectionImgButton').click();
 }
 
+function diaBtnBlog(e) {
+    var o  = diaButton(e);
+    setEntryMark(o.dia);
+    $('#BlogEditButton0').click();
+}
+
 // ----------------------------------------
 //
 // mark/unmark entries
@@ -587,6 +593,8 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnColimg);
     col.find('div.dia.data-md button.dia-btn-colblog')
         .on('click', diaBtnColimg);
+    col.find('div.dia.data-md button.dia-btn-blog')
+        .on('click', diaBtnBlog);
 
     //collections don't have all buttons
     col.find('div.dia.colmark button.dia-btn-colimg')
@@ -618,6 +626,8 @@ function insertEntries(colId, entries) {
     // redefine colimg button to set colblog entry
     col.find('div.dia.imgmark.data-md button.dia-btn-colimg')
         .attr('title',"Take this text as blog text for the current collection");
+    col.find('div.dia.imgmark.data-md button.dia-btn-blog')
+        .removeClass('hidden');
 
     // clipboard has a special set of image buttons
     if (colId === idClipboard()) {
@@ -1535,6 +1545,73 @@ function insertBlogText(txt, args) {
 
 // ----------------------------------------
 
+function blogEdit() {
+    statusClear();
+    var args  = {};
+    args.cid  = activeCollectionId();
+    args.path = collectionPath(args.cid);
+    args.img  = getLastMarkedEntry(args.cid);
+    if (! args.img) {
+        statusError("no blog entry marked in: " + args.path);
+        return;
+    }
+    if (! $(args.img).hasClass('data-md')) {
+        statusError("last marked isn't a blog entry in: " + args.path);
+        return;
+    }
+    args.iname = getDiaName(args.img);
+    args.pos   = getEntryPos(args.img);
+
+    // prepare the edit modal title
+    $('#EditBlogModalLabel')
+        .empty()
+        .append('Edit blog entry: ' + args.iname);
+
+    console.log('blogEdit');
+    console.log(args);
+
+    clearEntryMark($(args.img));
+
+    // on the highway to call back hell
+    getBlogTextForEdit(args);
+}
+
+function insertBlogTextForEdit(res, args) {
+    // come from: blogEdit
+
+    console.log('insertBlogTextForEdit');
+    console.log(res);
+
+    $('#EditBlogContents')
+        .empty()
+        .val(res);
+
+    // install event handler for OK button
+    // and pass the args data to the handler
+    $('#EditBlogOK')
+        .off('click')
+        .on('click', function () {
+            console.log("EditBlogOK clicked");
+            $('#EditBlogModal').modal('hide');
+            saveBlogText(args);
+        });
+
+    // modal box is configured,
+    // show it and wait for the save button beeing clicked
+    $('#BlogEditButton').click();
+}
+
+function saveBlogText(args) {
+    // come from: insertBlogTextForEdit
+    var res = $('#EditBlogContents').val();
+    console.log('saveBlogText');
+    console.log(args);
+    console.log(res);
+
+}
+
+// ----------------------------------------
+
 // ajax calls
 
 function removeFromColOnServer(path, args) {
@@ -1633,6 +1710,14 @@ function getBlogText(args) {
                 args.path,
                 args.pos,
                 function (res) { insertBlogText(res, args); }
+               );
+}
+
+function getBlogTextForEdit(args) {
+    readServer1('blogsource',
+                args.path,
+                args.pos,
+                function (res) { insertBlogTextForEdit(res, args); }
                );
 }
 
@@ -1821,6 +1906,15 @@ $(document).ready(function () {
             statusClear();
             getMetaData();
         });
+
+    $('#BlogEditButton0')
+        .on('click', function () {
+            statusClear();
+            blogEdit();
+        });
+
+    // #BlogEditButton triggers the modal box
+    // it is invoked by blogEdit handler
 
 });
 

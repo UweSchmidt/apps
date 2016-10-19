@@ -9,6 +9,7 @@ module Catalog.System.Convert
        , genIcon
        , genAssetIcon
        , genBlogText
+       , genBlogHtml
        , selectFont
        )
 where
@@ -324,6 +325,14 @@ fontList = toFL <$> execProcess "bash" [] shellCmd
 
 genBlogText :: FilePath -> Cmd Text
 genBlogText src = do
+  dx  <- fileExist src
+  trc $ unwords ["genBlogText", show src, show dx]
+  if dx
+    then readFileT src
+    else return $ ("no file found for blog text: " ++ show src) ^. isoText
+
+genBlogHtml :: FilePath -> Cmd Text
+genBlogHtml src = do
   dx  <- fileExist src
   trc $ unwords ["genBlogText", show src, show dx]
   if dx

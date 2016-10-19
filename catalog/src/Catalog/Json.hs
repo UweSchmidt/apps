@@ -11,7 +11,7 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Html.Photo2 (buildImgPath, colImgRef, getColBlogCont)
+import           Catalog.Html.Photo2 (buildImgPath, colImgRef, getColBlogCont, getColBlogSource)
 import           Catalog.System.ExifTool (getMetaData)
 -- import           Catalog.Journal
 -- import           Catalog.Cmd.Types
@@ -105,7 +105,13 @@ jsonCall fct i n args =
       jl $ \ fmt ->
              (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
 
+    -- get the contents of a blog entry, already converted to HTML
     "blogcontents" ->
+      jl $ \ pos ->
+             getBlogContHtml pos n
+
+    -- get the contents of a blog entry, already converted to HTML
+    "blogsource" ->
       jl $ \ pos ->
              getBlogCont pos n
 
@@ -474,6 +480,17 @@ previewImgRef pos g n =
        colImgRef
        ce
 
+getBlogContHtml :: Int -> ImgNode -> Cmd Text
+getBlogContHtml pos n = do
+  ce <- maybe
+        (abort $ "getBlogContHtml: illegal index in collection: " ++ show pos)
+        return
+        (n ^? theColEntries . ix pos)
+  processColEntry
+    (\ i nm _md -> getColBlogCont i nm)
+    (const $ return mempty)
+    ce
+
 getBlogCont :: Int -> ImgNode -> Cmd Text
 getBlogCont pos n = do
   ce <- maybe
@@ -481,7 +498,7 @@ getBlogCont pos n = do
         return
         (n ^? theColEntries . ix pos)
   processColEntry
-    (\ i nm _md -> getColBlogCont i nm)
+    (\ i nm _md -> getColBlogSource i nm)
     (const $ return mempty)
     ce
 
