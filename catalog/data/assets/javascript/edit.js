@@ -1359,12 +1359,17 @@ function setMetaData() {
     var cid   = activeCollectionId();
     var cpath = collectionPath(cid);
 
+    /*
+     // write protection is limited to collection entries,
+     // collection image and meta data may be modified
+
     if (collectionIsWriteProtected(cid)) {
         statusError('can\'t set meta data, active collection is write protected: '
                     + cpath
                    );
         return;
     }
+     */
 
     var metadata = {};
     var keys = ["Title", "Subtitle", "Comment",
@@ -1437,7 +1442,7 @@ function showMetaData(md0, args) {
 
     $('#ShowMetaDataModalLabel')
         .empty()
-        .append('Metadata of ' + args.name + ' in collection '+ args.path);
+        .append('Metadata: ' + args.path + "/" + args.name);
 
     var kvs = [];
     $.each(md, function (k, v) {
