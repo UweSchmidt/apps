@@ -10,9 +10,16 @@ import Catalog.Cmd
 import Data.ImgTree
 import Data.MetaData
 import Data.Prim
+
 import Catalog.Html.Templates.Photo2.AlbumPage
-import Catalog.System.Convert (genAssetIcon, genBlogText, genBlogHtml)
+import Catalog.Journal
+import Catalog.System.Convert ( genAssetIcon
+                              , genBlogText
+                              , genBlogHtml
+                              , writeBlogText
+                              )
 import Catalog.System.ExifTool (getMetaData)
+
 import Text.SimpleTemplate
 
 -- ----------------------------------------
@@ -626,11 +633,18 @@ getColBlogCont i n = do
 
 getColBlogSource :: ObjId -> Name -> Cmd Text
 getColBlogSource i n = do
-      p <- objid2path i
-      -- subst the name by the part name
-      -- and build a file path
-      f <- toFilePath (substPathName n p)
-      genBlogText f
+  p <- objid2path i
+  -- subst the name by the part name
+  -- and build a file path
+  f <- toFilePath (substPathName n p)
+  genBlogText f
+
+putColBlogSource :: Text -> ObjId -> Name -> Cmd ()
+putColBlogSource t i n = do
+  p <- objid2path i
+  f <- toFilePath (substPathName n p)
+  writeBlogText t f
+  journalChange $ SaveBlogText i n t
 
 -- ----------------------------------------
 

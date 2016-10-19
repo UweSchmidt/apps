@@ -46,6 +46,9 @@ readFileLB = io . LB.readFile
 readFileT :: FilePath -> Cmd Text
 readFileT = io . T.readFile
 
+writeFileT :: FilePath -> Text -> Cmd ()
+writeFileT f = io . T.writeFile f
+
 removeFile :: FilePath -> Cmd ()
 removeFile = io . D.removeFile
 

@@ -26,6 +26,7 @@ data Journal' ref = MkIMG         ref Name
                   | InitImgStore  Name Name FilePath
                   | LoadImgStore  FilePath
                   | SaveImgStore  FilePath
+                  | SaveBlogText  ref Name Text
 
 deriving instance (Show ref) => Show (Journal' ref)
 deriving instance Functor Journal'

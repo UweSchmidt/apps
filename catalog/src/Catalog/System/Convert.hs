@@ -10,6 +10,7 @@ module Catalog.System.Convert
        , genAssetIcon
        , genBlogText
        , genBlogHtml
+       , writeBlogText
        , selectFont
        )
 where
@@ -343,5 +344,9 @@ formatBlogText :: FilePath -> Cmd Text
 formatBlogText f =
   (^. isoText) <$>
     execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
+
+writeBlogText :: Text -> FilePath -> Cmd ()
+writeBlogText t dst = do
+  writeFileT dst t
 
 -- ----------------------------------------

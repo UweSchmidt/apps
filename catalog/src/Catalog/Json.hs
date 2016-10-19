@@ -11,7 +11,12 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Html.Photo2 (buildImgPath, colImgRef, getColBlogCont, getColBlogSource)
+import           Catalog.Html.Photo2 ( buildImgPath
+                                     , colImgRef
+                                     , getColBlogCont
+                                     , getColBlogSource
+                                     , putColBlogSource
+                                     )
 import           Catalog.System.ExifTool (getMetaData)
 -- import           Catalog.Journal
 -- import           Catalog.Cmd.Types
@@ -114,6 +119,10 @@ jsonCall fct i n args =
     "blogsource" ->
       jl $ \ pos ->
              getBlogCont pos n
+
+    "saveblogsource" ->
+      jl $ \ (pos, val) ->
+             putBlogCont val pos n
 
     -- compute the image ref of a collection entry
     -- for previewing the image
@@ -502,15 +511,26 @@ getBlogCont pos n = do
     (const $ return mempty)
     ce
 
+putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
+putBlogCont val pos n = do
+  ce <- maybe
+        (abort $ "putBlogCont: illegal index in collection: " ++ show pos)
+        return
+        (n ^? theColEntries . ix pos)
+  processColEntry
+    (\ i nm _md -> putColBlogSource val i nm)
+    (const $ return mempty)
+    ce
+
 -- ----------------------------------------
 
 changeColWriteProtectedByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
 changeColWriteProtectedByIxList ixs ro n = do
-  sequence_ $ zipWith3 markRO [(0::Int)..] ixs (n ^. theColEntries)
+  sequence_ $ zipWith markRO ixs (n ^. theColEntries)
   where
     cf | ro        = addNoWriteAccess
        | otherwise = subNoWriteAccess
-    markRO pos mark ce
+    markRO mark ce
       | mark < 0 =
           return ()
       | otherwise =

@@ -161,7 +161,11 @@ fromFilePath f = do
 --
 -- smart constructors
 
-mkImg' :: (ObjId -> Name -> Journal) -> (ImgNode -> Bool) -> ImgNode -> ObjId -> Name -> Cmd ObjId
+mkImg' :: (ObjId -> Name -> Journal) ->
+          (ImgNode -> Bool) ->
+          ImgNode ->
+          ObjId ->
+          Name -> Cmd ObjId
 mkImg' mkj isN v i n = dt >>= go
   where
     go t = do

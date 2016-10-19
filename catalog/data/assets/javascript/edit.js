@@ -625,7 +625,9 @@ function insertEntries(colId, entries) {
         .addClass('hidden');
     // redefine colimg button to set colblog entry
     col.find('div.dia.imgmark.data-md button.dia-btn-colimg')
-        .attr('title',"Take this text as blog text for the current collection");
+        .attr('title', "Take this text as blog text for the current collection");
+    col.find('div.dia.imgmark.data-md button.dia-btn-view')
+        .attr('title', "Preview this blog text");
     col.find('div.dia.imgmark.data-md button.dia-btn-blog')
         .removeClass('hidden');
 
@@ -763,14 +765,17 @@ function refreshCollection(path, colVal) {
 
 // ----------------------------------------
 
+// messages don't overwrite errors
 function statusMsg(msg) {
-    $('#status-container')
-        .removeClass('status-err-bg');
-    $('#status-message')
-        .removeClass('error-msg')
-        .addClass('status-msg')
-        .empty()
-        .append(msg);
+    if (! $('#status-container')
+         .hasClass('status-err-bg') ) {
+
+        $('#status-message')
+            .removeClass('error-msg')
+            .addClass('status-msg')
+            .empty()
+            .append(msg);
+    }
 }
 
 function statusError(msg) {
@@ -783,7 +788,10 @@ function statusError(msg) {
         .append(msg);
 }
 
+// clear errors and messages
 function statusClear() {
+    $('#status-container')
+        .removeClass('status-err-bg');
     statusMsg('');
 }
 
@@ -1198,8 +1206,7 @@ function setCollectionImg(cid) {
                              function () {
                                  var ppath = o.cpath;
                                  var pcol = isAlreadyOpen(ppath);
-                                 // this overwrites a server error message
-                                 // statusMsg('collection image set in ' + path);
+                                 statusMsg('collection image set in: ' + path);
                                  if ( pcol[0] ) {
                                      // parent collection open
                                      // refresh the parent collection
@@ -1607,7 +1614,7 @@ function saveBlogText(args) {
     console.log('saveBlogText');
     console.log(args);
     console.log(res);
-
+    saveBlogTextFromEdit(args, res);
 }
 
 // ----------------------------------------
@@ -1719,6 +1726,15 @@ function getBlogTextForEdit(args) {
                 args.pos,
                 function (res) { insertBlogTextForEdit(res, args); }
                );
+}
+
+function saveBlogTextFromEdit(args,text) {
+    modifyServer("saveblogsource",
+                 args.path,
+                 [args.pos, text],
+                 function () {
+                     statusMsg('blog contents saved for: ' + args.iname);
+                 });
 }
 
 // ----------------------------------------
