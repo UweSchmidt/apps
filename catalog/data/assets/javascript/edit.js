@@ -1606,11 +1606,6 @@ function insertBlogTextForEdit(res, args) {
     console.log('insertBlogTextForEdit');
     console.log(res);
 
-    if (args.iscol) {
-        statusError("TODO: getBlogText from collection entry: " + args.iname);
-        return;
-    }
-
     $('#EditBlogContents')
         .empty()
         .val(res);
@@ -1636,6 +1631,7 @@ function saveBlogText(args) {
     console.log('saveBlogText');
     console.log(args);
     console.log(res);
+
     saveBlogTextFromEdit(args, res);
 }
 

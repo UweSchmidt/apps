@@ -494,19 +494,30 @@ getBlogCont =
     (\ i -> do
         be        <- getImgVals i theColBlog
         (bi, bn)  <- maybe
-          ( do p <- objid2path i
-               abort ("getBlogCont: no blog entry set in collection: "
-                      ++ p ^. isoString)
-          )
-          return
-          be
+                     ( do p <- objid2path i
+                          abort ("getBlogCont: no blog entry set in collection: "
+                                 ++ p ^. isoString)
+                     )
+                     return
+                     be
         getColBlogSource bi bn
     )
 
 putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
 putBlogCont val =
-  processColImgEntryAt
+  processColEntryAt
     (\ i nm _md -> putColBlogSource val i nm)
+    (\ i -> do
+        be        <- getImgVals i theColBlog
+        (bi, bn)  <- maybe
+                     ( do p <- objid2path i
+                          abort ("putBlogCont: no blog entry set in collection: "
+                                 ++ p ^. isoString)
+                     )
+                     return
+                     be
+        putColBlogSource val bi bn
+    )
 
 -- ----------------------------------------
 
