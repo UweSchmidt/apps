@@ -142,8 +142,8 @@ processNewImages colSyncTime pc i0 = do
       return (yc, mc, dc)
       where
         py = pc `snocPath` mkName y
-        pm = py `snocPath` mkName m
-        pd = pm `snocPath` mkName d
+        pm = py `snocPath` mkName (y ++ "-" ++ m)
+        pd = pm `snocPath` mkName (y ++ "-" ++ m ++ "-" ++ d)
 
         setupYearCol y' _i = do
           mkColMeta t "" "" o a
@@ -211,8 +211,9 @@ genCollectionsByDir = do
           a = no'wrtdel
       mkColMeta t "" "" o a
 
-    -- TODO
-    -- search for a IMGtxt entry in DIR entries, take the 1. as blog entry for the collection
+    -- TODO (really)
+    -- search for a IMGtxt entry in DIR entries,
+    -- take the 1. as blog entry for the collection
     -- setupDirTxt :: ObjId -> Cmd (Maybe (ObjId, Name))
     -- setupDirTxt = undefined
 

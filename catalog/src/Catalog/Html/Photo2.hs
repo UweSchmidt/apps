@@ -745,7 +745,7 @@ ymdRE =
   ++
   "/({year}[0-9]{4})"
   ++
-  "(/({month}[0-9]{2})(/({day}[0-9]{2}))?)?"
+  "(/([-0-9]*({month}[0-9]{2}))(/([-0-9]*({day}[0-9]{2})))?)?"
 
 dirRE :: Regex -- for collections for all folders
 dirRE =
