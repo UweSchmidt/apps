@@ -26,6 +26,7 @@ module Data.ImgNode
        , isCOL
        , isColColRef
        , isColImgRef
+       , colEntry
        , isoImgParts
        , isoImgPartsMap
        , isoDirEntries
@@ -392,6 +393,13 @@ mkColImgRef i n = ImgRef i n mempty
 mkColColRef :: ref -> (ColEntry' ref)
 mkColColRef = ColRef
 {-# INLINE mkColColRef #-}
+
+colEntry :: (ref -> Name -> MetaData -> a) ->
+            (ref -> a) ->
+            ColEntry' ref -> a
+colEntry  imgRef _colRef (ImgRef i n md) = imgRef i n md
+colEntry _imgRef  colRef (ColRef i     ) = colRef i
+
 
 theColObjId :: Lens' (ColEntry' ref) ref
 theColObjId k (ImgRef i n m) = (\ new -> ImgRef new n m) <$> k i

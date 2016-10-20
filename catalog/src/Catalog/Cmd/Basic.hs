@@ -276,16 +276,6 @@ adjustNodeVal mkj theComp f i = do
 
 -- ----------------------------------------
 --
--- process collection entries
-
-processColEntry :: (ObjId -> Name -> MetaData -> Cmd a) ->
-                   (ObjId -> Cmd a) ->
-                   (ColEntry -> Cmd a)
-processColEntry  imgRef _colRef (ImgRef i n md) = imgRef i n md
-processColEntry _imgRef  colRef (ColRef i     ) = colRef i
-
--- ----------------------------------------
---
 -- search, sort and merge ops for collections
 
 findAllColEntries :: (ColEntry -> Cmd Bool) -> ObjId -> Cmd [(Int, ColEntry)]
@@ -325,6 +315,34 @@ mergeColEntries es1 es2 =
 mergeColEntries' :: [ColEntry] -> [ColEntry] -> [ColEntry]
 mergeColEntries' ns os =
   (ns ++ os) ^. (from isoDirEntries) . isoDirEntries
+
+-- get the collection entry at an index pos
+-- if it's not there an error is thrown
+colEntryAt :: Int -> ImgNode -> Cmd ColEntry
+colEntryAt pos n =
+  maybe
+  (abort $ "colEntryAt: illegal index in collection: " ++ show pos)
+  return
+  (n ^? theColEntries . ix pos)
+
+-- process a collection entry at an index pos
+-- if not there, an error is thrown
+processColEntryAt :: (ObjId -> Name -> MetaData -> Cmd a) ->
+                     (ObjId -> Cmd a) ->
+                     Int ->
+                     ImgNode -> Cmd a
+processColEntryAt imgRef colRef pos n =
+  colEntryAt pos n >>=
+  colEntry imgRef colRef
+
+-- process a collection image entry at an index pos
+-- if not there, an error is thrown
+processColImgEntryAt :: Monoid a =>
+                        (ObjId -> Name -> MetaData -> Cmd a) ->
+                        Int ->
+                        ImgNode -> Cmd a
+processColImgEntryAt imgRef =
+  processColEntryAt imgRef (const $ return mempty)
 
 -- ----------------------------------------
 --

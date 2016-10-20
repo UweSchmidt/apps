@@ -253,7 +253,7 @@ removeFrCol ixs i n = do
 
 removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFrCol i pos =
-  processColEntry
+  colEntry
   (\ _ _ _ -> adjustColEntries (removeAt pos) i)
   (\ ci    -> rmRec ci)
 
@@ -282,7 +282,7 @@ copyToCol ixs di n = do
 
 copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
 copyEntryToCol di ce =
-  processColEntry
+  colEntry
   (\ _ _ _ -> adjustColEntries (++ [ce]) di)
   copyColToCol
   ce
@@ -383,11 +383,12 @@ cmp (mi, mx) (i, x) (j, y)
 
 setColImg :: Int -> ObjId -> ImgNode -> Cmd ()
 setColImg pos oid n
-  | Just (iid, inm, _im) <- n ^? theColEntries . ix pos . theColImgRef =
-      adjustColImg (const $ Just (iid, inm)) oid
-
-  | otherwise =
+  | pos < 0 =
       adjustColImg (const Nothing) oid
+  | otherwise =
+      processColImgEntryAt
+        (\ iid inm _md -> adjustColImg (const $ Just (iid, inm)) oid)
+        pos n
 
 -- set or unset the "blog text" of a collection
 -- to one of the blog texts in the collection
@@ -395,11 +396,12 @@ setColImg pos oid n
 
 setColBlog :: Int -> ObjId -> ImgNode -> Cmd ()
 setColBlog pos oid n
-  | Just (iid, inm, _im) <- n ^? theColEntries . ix pos . theColImgRef =
-      adjustColBlog (const $ Just (iid, inm)) oid
-
+  | pos < 0 =
+      adjustColBlog (const Nothing) oid
   | otherwise =
-      adjustColImg (const Nothing) oid
+      processColImgEntryAt
+        (\ iid inm _md -> adjustColBlog (const $ Just (iid, inm)) oid)
+        pos n
 
 -- ----------------------------------------
 
@@ -444,7 +446,7 @@ setMeta md ixs i n = do
       | mark < 0 =
           return ()
       | otherwise =
-          processColEntry
+          colEntry
           (\ _ _ _ -> adjustColEntries (ix pos . theColImgRef . _3 %~ (md <>)) i)
           (adjustMetaData (md <>))
           ce
@@ -452,15 +454,10 @@ setMeta md ixs i n = do
 -- ----------------------------------------
 
 getMeta :: Int -> ImgNode -> Cmd MetaData
-getMeta pos n = do
-  ce <- maybe
-    (abort $ "getMeta: illegal index in collection: " ++ show pos)
-    return
-    (n ^? theColEntries . ix pos)
-  processColEntry
+getMeta =
+  processColEntryAt
     (\ ii _ md -> (md <>) <$> getMetaData ii)
     (\ ci      -> getImgVals ci theColMetaData)
-    ce
 
 -- ----------------------------------------
 
@@ -480,53 +477,31 @@ iconImgRef g i =
 previewImgRef :: Int -> Maybe GeoAR -> ImgNode -> Cmd FilePath
 previewImgRef pos g n =
   addGeoToPath g $
-  do ce <- maybe
-           (abort $ "previewImgRef: illegal index in collection: " ++ show pos)
-           return
-           (n ^? theColEntries . ix pos)
-     processColEntry
-       (\ ii nm _md -> buildImgPath ii nm)
-       colImgRef
-       ce
+  processColEntryAt
+    (\ ii nm _md -> buildImgPath ii nm)
+    colImgRef
+    pos n
 
 getBlogContHtml :: Int -> ImgNode -> Cmd Text
-getBlogContHtml pos n = do
-  ce <- maybe
-        (abort $ "getBlogContHtml: illegal index in collection: " ++ show pos)
-        return
-        (n ^? theColEntries . ix pos)
-  processColEntry
+getBlogContHtml =
+  processColImgEntryAt
     (\ i nm _md -> getColBlogCont i nm)
-    (const $ return mempty)
-    ce
 
 getBlogCont :: Int -> ImgNode -> Cmd Text
-getBlogCont pos n = do
-  ce <- maybe
-        (abort $ "getBlogCont: illegal index in collection: " ++ show pos)
-        return
-        (n ^? theColEntries . ix pos)
-  processColEntry
+getBlogCont =
+  processColImgEntryAt
     (\ i nm _md -> getColBlogSource i nm)
-    (const $ return mempty)
-    ce
 
 putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
-putBlogCont val pos n = do
-  ce <- maybe
-        (abort $ "putBlogCont: illegal index in collection: " ++ show pos)
-        return
-        (n ^? theColEntries . ix pos)
-  processColEntry
+putBlogCont val =
+  processColImgEntryAt
     (\ i nm _md -> putColBlogSource val i nm)
-    (const $ return mempty)
-    ce
 
 -- ----------------------------------------
 
 changeColWriteProtectedByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
-changeColWriteProtectedByIxList ixs ro n = do
-  sequence_ $ zipWith markRO ixs (n ^. theColEntries)
+changeColWriteProtectedByIxList ixs ro n =
+  zipWithM_ markRO ixs (n ^. theColEntries)
   where
     cf | ro        = addNoWriteAccess
        | otherwise = subNoWriteAccess
@@ -534,7 +509,7 @@ changeColWriteProtectedByIxList ixs ro n = do
       | mark < 0 =
           return ()
       | otherwise =
-          processColEntry
+          colEntry
           (\ _ _ _ -> return ())            -- ignore ImgRef's
           (adjustMetaData cf)
           ce
