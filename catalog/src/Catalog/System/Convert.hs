@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Catalog.System.Convert
-       ( getImageSize
+{- }
+  ( getImageSize
        , createImageCopy
        , genImage
        , createImageFromTxt
@@ -12,7 +13,7 @@ module Catalog.System.Convert
        , genBlogHtml
        , writeBlogText
        , selectFont
-       )
+       ) -}
 where
 
 import           Catalog.Cmd
@@ -99,7 +100,7 @@ genImageFromTxt =
 --
 -- example:             "/fix-160x120/archive/photo/pic-30.jpg"
 --
--- subdir is dst dir is "mountPath/fix-160x120"
+-- dst img is           "mountPath/fix-160x120/photo/pic-30.jpg"
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
@@ -154,17 +155,17 @@ genImage' createImageC imgPath2Geo imgSrc url = do
 objPath2Geo :: Regex -> FilePath -> Maybe (GeoAR, FilePath)
 objPath2Geo iex p =
   case matchSubexRE iex p of
-    -- remove the redundant "/archive" part for images from the archive
-    [("geoar", geoar), ("topdir", "/archive"), ("path", path)] ->
-      Just (geoar ^. from isoString, path)
+    [("geoar", geoar), ("topdir", topdir), ("path", path)]
+      | topdir == p'archive ^. isoString ->
+          -- remove the redundant "/archive" part for images from the archive
+          Just (geoar ^. from isoString, path)
 
-    -- remain the top dir part, e.g for "/assets/icons/blank.jpg""
-    [("geoar", geoar), ("topdir", topdir), ("path", path)] ->
-      Just (geoar ^. from isoString, topdir ++ path)
+      | otherwise ->
+          -- remain the top dir part, e.g for "/assets/icons/blank.jpg""
+          Just (geoar ^. from isoString, topdir ++ path)
 
-    -- wrong url
-    _ ->
-      Nothing
+    _ ->  -- wrong url
+          Nothing
 
 -- ----------------------------------------
 
@@ -183,6 +184,9 @@ parseGeo s =
 
 -- ----------------------------------------
 
+-- try to create an icon from some text found in the file path
+-- if s is a .md or .txt file, take the 1. line of that file contents
+
 createImageFromTxt :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
 createImageFromTxt d'geo d s =
   go
@@ -192,12 +196,12 @@ createImageFromTxt d'geo d s =
         T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
         readFileT s
       let str1 = headline ^. isoString
-      let str2 = pathToBreadCrump s
-      let str  = concat . take 1 $ [str1, str2]
+      let str2 = sed (const "") ".*/" s  -- base name -- pathToBreadCrump s
+      let str  = concat . take 1 . filter (not . null) $ [str1, str2]
       trc $ unwords ["createImageFromTxt:", show d'geo, d, s, str]
       icon <-
         fromMaybe ps'blank <$>
-        genAssetIcon (sed (const "_") "/" s) str
+        genAssetIcon (sed (const "_") "[ /$]" s) str
       genImage $ "/" ++ d'geo ^. isoString ++ icon
 
     cleanup :: Text -> Text
