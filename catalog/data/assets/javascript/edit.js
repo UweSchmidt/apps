@@ -194,12 +194,6 @@ function diaBtnBlog(e) {
     $('#BlogEditButton0').click();
 }
 
-function diaBtnColBlog(e) {
-    var o  = diaButton(e);
-    setEntryMark(o.dia);
-    $('#ColBlogEditButton0').click();
-}
-
 // ----------------------------------------
 //
 // mark/unmark entries
@@ -602,7 +596,7 @@ function insertEntries(colId, entries) {
     col.find('div.dia.data-md button.dia-btn-blog')
         .on('click', diaBtnBlog);
     col.find('div.dia.colmark button.dia-btn-blog')
-        .on('click', diaBtnColBlog);
+        .on('click', diaBtnBlog);
 
     //collections don't have all buttons
     col.find('div.dia.colmark button.dia-btn-colimg')
@@ -1563,37 +1557,6 @@ function insertBlogText(txt, args) {
 
 // ----------------------------------------
 
-function colBlogEdit() {
-    statusClear();
-    var args  = {};
-    args.cid  = activeCollectionId();
-    args.path = collectionPath(args.cid);
-    args.img  = getLastMarkedEntry(args.cid);
-    if (! args.img) {
-        statusError("no blog entry marked in: " + args.path);
-        return;
-    }
-    if (! $(args.img).hasClass('colmark')) {
-        statusError("last marked isn't a collection: " + args.path);
-        return;
-    }
-    args.iname = getDiaName(args.img);
-    args.pos   = getEntryPos(args.img);
-
-    // prepare the edit modal title
-    $('#EditBlogModalLabel')
-        .empty()
-        .append('Edit blog text for collection: ' + args.iname);
-
-    console.log('colBlogEdit');
-    console.log(args);
-
-    clearEntryMark($(args.img));
-
-    // on the highway to call back hell
-    statusError('TODO: getColBlogTextForEdit(args)');
-}
-
 function blogEdit() {
     statusClear();
     var args  = {};
@@ -1604,17 +1567,29 @@ function blogEdit() {
         statusError("no blog entry marked in: " + args.path);
         return;
     }
-    if (! $(args.img).hasClass('data-md')) {
+    args.isimg  = $(args.img).hasClass('imgmark');
+    args.iscol  = $(args.img).hasClass('colmark');
+    args.isblog = $(args.img).hasClass('data-md');
+
+    if (args.isimg && ! args.isblog) {
         statusError("last marked isn't a blog entry in: " + args.path);
         return;
     }
     args.iname = getDiaName(args.img);
     args.pos   = getEntryPos(args.img);
 
+    var hdl = "???";
+    if (args.iscol) {
+        hdl = 'Edit blog text for collection: ';
+    }
+    if (args.isimg) {
+        hdl = 'Edit blog entry: ';
+    }
+
     // prepare the edit modal title
     $('#EditBlogModalLabel')
         .empty()
-        .append('Edit blog entry: ' + args.iname);
+        .append(hdl);
 
     console.log('blogEdit');
     console.log(args);
@@ -1630,6 +1605,11 @@ function insertBlogTextForEdit(res, args) {
 
     console.log('insertBlogTextForEdit');
     console.log(res);
+
+    if (args.iscol) {
+        statusError("TODO: getBlogText from collection entry: " + args.iname);
+        return;
+    }
 
     $('#EditBlogContents')
         .empty()
@@ -1969,12 +1949,6 @@ $(document).ready(function () {
         .on('click', function () {
             statusClear();
             blogEdit();
-        });
-
-    $('#ColBlogEditButton0')
-        .on('click', function () {
-            statusClear();
-            colBlogEdit();
         });
 
     // #BlogEditButton triggers the modal box
