@@ -484,8 +484,14 @@ previewImgRef pos g n =
 
 getBlogContHtml :: Int -> ImgNode -> Cmd Text
 getBlogContHtml =
-  processColImgEntryAt
-    (\ i nm _md -> getColBlogCont i nm)
+  processColEntryAt
+    (\ i nm _md -> getColBlogCont i nm)   -- ImgRef: entry is a blog text
+    (\ i -> do                            -- ColRef: lookup the col blog ref
+        be <- getImgVals i theColBlog
+        maybe (return mempty)             -- return nothing, when not there
+              (uncurry getColBlogCont)    -- else generate the HTML
+              be
+    )
 
 getBlogCont :: Int -> ImgNode -> Cmd Text
 getBlogCont =

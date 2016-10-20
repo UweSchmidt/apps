@@ -593,9 +593,8 @@ function insertEntries(colId, entries) {
         .on('click', diaBtnColimg);
     col.find('div.dia.data-md button.dia-btn-colblog')
         .on('click', diaBtnColimg);
+    // all col dias and .md img dias get this handler
     col.find('div.dia.data-md button.dia-btn-blog')
-        .on('click', diaBtnBlog);
-    col.find('div.dia.colmark button.dia-btn-blog')
         .on('click', diaBtnBlog);
 
     //collections don't have all buttons
@@ -604,6 +603,9 @@ function insertEntries(colId, entries) {
     col.find('div.dia.colmark button.dia-btn-blog')
         .removeClass('hidden')
         .attr('title', 'Edit blog text for this collection');
+    col.find('div.dia.colmark button.dia-btn-view')
+        .attr('title', 'Preview image and/or blog text for this collection');
+
 
     // hide write protect button for generated collections
     col.find('div.dia.colmark')
@@ -689,7 +691,8 @@ function newEntry(entry, i) {
     if (entry.ColEntry === "COL") {
         setDiaColName(p, ref.name);
         // collections always have a .jpg as preview
-        p.addClass('data-jpg');
+        p.addClass('data-jpg')
+         .addClass('data-md');
 
 
         // this ref is a dummy
@@ -1498,59 +1501,61 @@ function previewImage() {
         statusError('no marked image/collection found');
         return ;
     }
-    args.pos = getEntryPos(args.dia);
-    args.name = getDiaName(args.dia);
-    args.fmt  = previewSize();
+    args.iscol  = $(args.dia).hasClass('colmark');
+    args.pos    = getEntryPos(args.dia);
+    args.name   = getDiaName(args.dia);
+    args.fmt    = previewSize();
     clearEntryMark($(args.dia));
 
-    // if dia is a .jpg then load the prview ref and show the image
+    // make all stuff in the modal box invisible
+    $('#PreviewModalBody > div').addClass('hidden');
+    $('#PreviewModalLabel')
+        .empty()
+        .append('Preview: ' + args.path + "/" + args.name);
+
+    // if dia has a .jpg then load the preview ref and show the image
     // via call back insertPreviewRef
 
     if ( $(args.dia).hasClass('data-jpg') ) {
         getPreviewRef(args);
     }
-    else if ( $(args.dia).hasClass('data-md') ) {
+    if ( $(args.dia).hasClass('data-md') ) {
         getBlogText(args);
-    }
-    else {
-        statusError('preview not available for ' + args.name);
     }
 }
 
 function insertPreviewRef(ref, args) {
+    // come from: previewImage and getPreviewRef
     console.log('insertPreviewRef');
     console.log(ref);
     console.log(args);
 
     // make the div for images visible
-    $('#PreviewModalBody > div').addClass('hidden');
     $('#PreviewModalBody div.data-jpg').removeClass('hidden');
 
+    // insert the image ref, browser will load and show the image
     $('#PreviewModalImgRef')
         .attr('src', ref)
         .attr('alt', args.path);
-    $('#PreviewModalLabel')
-        .empty()
-        .append('Preview: ' + args.path + "/" + args.name);
 
     $('#PreviewModal').modal('show');
 }
 
 function insertBlogText(txt, args) {
+    // come from: previewImage and getPreviewRef
     console.log('insertBlogText');
     console.log(txt);
     console.log(args);
 
+    if (txt === "") {
+        console.log('empty text');
+        return;
+    }
     // make the div for images visible
-    $('#PreviewModalBody > div').addClass('hidden');
     $('#PreviewModalBody div.data-md').removeClass('hidden');
-
     $('#PreviewModalBlog')
         .empty()
         .append(txt);
-    $('#PreviewModalLabel')
-        .empty()
-        .append('Blog text: ' + args.path + "/" + args.name);
 
     $('#PreviewModal').modal('show');
 }
