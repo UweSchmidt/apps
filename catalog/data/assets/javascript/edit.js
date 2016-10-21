@@ -18,11 +18,6 @@ function navClicked(e) {
      */
 }
 
-$('#collectionTab a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-});
-
 // ----------------------------------------
 //
 // dia button group handler
@@ -537,7 +532,9 @@ function isAlreadyOpen(path) {
 }
 
 function setActiveTab(colId) {
-    $('#collectionTab').find('a[aria-controls=' + colId + ']').trigger('click');
+    $('#collectionTab')
+        .find('a[aria-controls=' + colId + ']')
+        .trigger('click');
 }
 
 function insertEntries(colId, entries) {
@@ -1821,6 +1818,11 @@ function noop() {}
 // set the event handlers
 
 $(document).ready(function () {
+    $('#collectionTab a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    });
+
     openSystemCollections();
 
     // event handler for navbar buttons
