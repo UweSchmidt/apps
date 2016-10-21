@@ -1,23 +1,3 @@
-// TODO no-write (access rights) when copying collection is not yet o.k.
-// read only is removed during copy from clipboard to collection not o.k.
-//   "   "    "    "      "      "   to   "        , o.k.
-// copy into write protected collection is possible, not o.k.
-
-function navClicked(e) {
-    e.preventDefault();
-    console.log("nav button was clicked");
-    console.log(e);
-    console.log(e.target);
-    /*
-    alert("nav button was clicked: "
-          + e.target + ", " + e.currentTarget
-          + ", " + e.pageX + "x" + e.pageY
-          + ", " + e.which + ", " + e.type
-          + ", " + e.target.id + ", " + e.currentTarget.id
-         );
-     */
-}
-
 // ----------------------------------------
 //
 // dia button group handler
@@ -197,11 +177,33 @@ function diaBtnBlog(e) {
 function toggleSlideMark(e) {
     e.preventDefault();
     statusClear();
-    console.log("mark image was clicked");
-    console.log(e);
-    console.log(e.target);
-    var dia = $(e.target).closest("div.dia");
-    toggleMark(dia);
+    // console.log("mark image was clicked");
+    // console.log(e);
+    // console.log(e.shiftKey);
+    // console.log(e.target);
+
+    var dia      = $(e.target).closest("div.dia");
+    var unmarked = dia.hasClass('unmarked');
+    if (e. shiftKey) {
+        toggleLeft(dia, unmarked);
+    } else {
+        toggleMark(dia);
+    }
+}
+
+function toggleLeft(dia, unmarked) {
+    var dno = getDiaNo(dia);
+    var uml  = dia.hasClass('unmarked');
+    // console.log('toggleLeft', dno, uml);
+
+    if (unmarked === uml) {
+        if (dno > 0) {
+            var prev = dia.prev('div.dia');
+            // console.log(prev);
+            toggleLeft(prev, unmarked);
+        }
+        toggleMark(dia);
+    }
 }
 
 function toggleMark(dia) {
