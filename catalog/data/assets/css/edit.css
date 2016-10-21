@@ -16,15 +16,30 @@
 body {
     padding-top: 50px;
     padding-bottom: 50px;
+    background-color: #333;        /* dark skin */
+    color: #ddd;                   /* dark skin */
 }
 
 .status-bar {
     height: 50px;
     min-height: 50px;
+    background-color: #222;        /* dark skin */
+    border-color: #666;            /* dark skin */
+}
+.nav-tabs {
+    border-bottom: 1px solid #666; /* dark skin */
 }
 
+.nav>li>a {
+    color: #59c;                   /* dark skin */
+}
+
+.modal-content {
+  color: #333;                     /* dark skin */
+  background-color: #eee;          /* dark skin */
+}
 .status-err-bg {
-  background-color: #f2dede;
+  /* background-color: #f2dede;    /* dark skin */
 }
 
 ul.pointer a {
@@ -68,11 +83,11 @@ img.curmarked {
 }
 
 .imgmark {
-  border: 2px solid #a0a0a0;
+  border: 2px solid #666; /* dark skin */ /*  #a0a0a0; */
 }
 
 .colmark {
-  border: 2px solid #d9534f; /* #800000; */
+  border: 2px solid #a00;  /* dark skin */ /* #d9534f; /* #800000; */
 }
 
 div.dia-top {
