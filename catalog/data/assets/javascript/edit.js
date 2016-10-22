@@ -678,8 +678,8 @@ function newEntry(entry, i) {
     if (entry.ColEntry === "IMG") {
         setDiaImgName(p, entry.part);
         // add the part extension as class to the entry
-        // "jpg" for images,
-        // "md" or "txt" for blog entries (markdown text)
+        // "data-jpg" for images,
+        // "data-md" for blog entries (markdown text .md or .txt)
         // in preview modal box this info becomes important
         var ep = splitPath(entry.part);
         if (ep.ext == "txt") {
