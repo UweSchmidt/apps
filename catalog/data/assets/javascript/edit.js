@@ -1598,7 +1598,7 @@ function blogEdit() {
     // prepare the edit modal title
     $('#EditBlogModalLabel')
         .empty()
-        .append(hdl);
+        .append(hdl + args.path + "/" + args.iname);
 
     console.log('blogEdit');
     console.log(args);
