@@ -648,8 +648,15 @@ function insertEntries(colId, entries) {
         col.find('div.dia button.dia-btn-copytoclipboard')
             .addClass('hidden');
     }
-    else {
+
+    // in clipboard and subcollections remove is possible
+    // not in the rest of the collections
+    // clipboard collections are never write protected
+    if ( ! isPathPrefix(pathClipboard(), path) ) {
         col.find('div.dia button.dia-btn-remove')
+            .addClass('hidden');
+    } else {
+        col.find('div.dia button.dia-btn-writeprotected')
             .addClass('hidden');
     }
 }
@@ -1058,8 +1065,13 @@ function closeSubCollections(cid) {
 // ----------------------------------------
 
 function removeMarkedFromClipboard() {
-    var cid = idClipboard();
-    setActiveTab(cid);
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+    statusClear();
+    if ( ! isPathPrefix(pathClipboard(), cpath)) {
+        statusError('removing images/collections only possible in clipboard collections');
+        return;
+    }
     removeMarkedFromCollection(cid);
 }
 
@@ -1069,7 +1081,6 @@ function removeMarkedFromCollection(cid) {
     // get marked collections (not images)
     // get all paths of open collections
     // the intersection is the set of collections to be closed
-    statusClear();
     closeSubCollections(cid);
 
     var cpath = collectionPath(cid);
