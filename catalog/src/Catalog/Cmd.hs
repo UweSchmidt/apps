@@ -71,6 +71,12 @@ saveImgStore p = do
       writeFileLB p' bs
       journalChange $ SaveImgStore p
 
+snapshotImgStore :: Cmd ()
+snapshotImgStore = do
+  pt <- view envJsonArchive
+  ts <- nowAsIso8601
+  saveImgStore $ pt ++ "." ++ ts
+
 loadImgStore :: FilePath -> Cmd ()
 loadImgStore p = do
   p' <- (</> p) <$> view envMountPath
@@ -89,7 +95,7 @@ loadImgStore p = do
 
 initEnv :: IO Env
 initEnv = do
-  return defaultEnv -- TODO process getArgs
+  return defaultEnv
 
 
 initState :: Env -> IO (Either String ImgStore)

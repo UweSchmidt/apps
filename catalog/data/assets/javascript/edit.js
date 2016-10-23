@@ -1764,6 +1764,15 @@ function saveBlogTextFromEdit(args,text) {
                  });
 }
 
+function saveImgStore() {
+    modifyServer("snapshot",
+                 pathArchive(),
+                 [],
+                 function () {
+                     statusMsg('image store on server side saved');
+                 });
+}
+
 // ----------------------------------------
 
 // http communication
@@ -1964,12 +1973,18 @@ $(document).ready(function () {
     // #BlogEditButton triggers the modal box
     // it is invoked by blogEdit handler
 
+    $('#SaveImgStore')
+        .on('click', function () {
+            statusClear();
+            saveImgStore();
+        });
 });
 
 // ----------------------------------------
 //
 // "constants"
 
+function pathArchive()     { return "/archive"; }
 function pathCollections() { return "/archive/collections"; }
 function pathClipboard()   { return "/archive/collections/clipboard"; }
 function pathPhotos()      { return "/archive/collections/photos"; }

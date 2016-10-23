@@ -207,6 +207,13 @@ jsonCall fct i n args =
       jl $ \ (ixs, md) ->
              setMeta md ixs i n
 
+    -- save a snapshot of the current image store
+    -- on client side, the 1. arg must be a path to an existing node
+    -- simply take p'archive ("/archive"), the root node
+    "snapshot" ->
+      jl $ \ () ->
+             snapshotImgStore
+
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
