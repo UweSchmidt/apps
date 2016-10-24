@@ -22,9 +22,8 @@ getExifTool f = do
 
   if ex && matchRE imgExtExpr f
     then
-      ( execExifTool ["-groupNames", "-json"] f
-        >>= (return . (^. from isoString))
-        >>= buildMetaData
+      ( do md <- (^. from isoString) <$> execExifTool ["-groupNames", "-json"] f
+           buildMetaData md
       )
       `catchError`
       ( \ e -> do
@@ -36,7 +35,7 @@ getExifTool f = do
 
 execExifTool :: [String] -> FilePath -> Cmd String
 execExifTool args f = do
-  verbose $ unwords ["exiftool", show $ (args ++ [f]), ""]
+  verbose $ unwords ["exiftool", show (args ++ [f]), ""]
   execProcess "exiftool" (args ++ [f]) ""
 
 buildMetaData :: ByteString -> Cmd MetaData
@@ -47,7 +46,7 @@ buildMetaData =
 
 writeMetaData :: FilePath -> MetaData -> Cmd ()
 writeMetaData f m =
-  runDry ("write metadata to file " ++ show f) $ do
+  runDry ("write metadata to file " ++ show f) $
     writeFileLB f (J.encodePretty' conf m)
   where
     conf = J.defConfig {J.confCompare = compare}
@@ -79,7 +78,7 @@ syncMetaData i = do
 
   p  <- exifPath ip          -- the exif file path
   px <- fileExist p
-  unless px $ do             -- the dir for the exif file
+  unless px $                -- the dir for the exif file
     createDir $ takeDirectory p
   ts <- if px
         then getModiTime p   -- the time stamp
@@ -88,7 +87,9 @@ syncMetaData i = do
   ps <- getImgVals i (theParts . isoImgParts)
   fu <- view envForceMDU
 
-  verbose $ "syncMetaData: syncing exif data " ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
+  verbose $
+    "syncMetaData: syncing exif data "
+    ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
 
   -- collect meta data from raw and xmp parts
   mapM_ (syncMD isRawMeta fu ip p ts) ps
@@ -98,7 +99,7 @@ syncMetaData i = do
     mapM_ (syncMD isJpg fu ip p ts) ps
 
 syncMD :: (ImgPart -> Bool) -> Bool -> Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
-syncMD p fu ip fp ts pt = do
+syncMD p fu ip fp ts pt =
   when ( p pt    -- ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
          &&
          (fu || tw >= ts)                     -- force update or part has been changed

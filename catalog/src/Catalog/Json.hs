@@ -48,7 +48,7 @@ mkOK :: (ToJSON a) => a -> Cmd J.Value
 mkOK x = return $ J.toJSON x
 
 mkER :: Text -> Cmd J.Value
-mkER t = return $ J.toJSON $ (ER t :: JsonRes ())
+mkER t = return $ J.toJSON (ER t :: JsonRes ())
 
 mkErrMsg :: Msg -> Cmd J.Value
 mkErrMsg e = mkER $ e' ^. isoText
@@ -68,7 +68,7 @@ mkErrMsg e = mkER $ e' ^. isoText
 -- 1. step: parse the json function name
 
 jsonRPC :: J.Value -> Cmd J.Value
-jsonRPC jv = do
+jsonRPC jv =
   case  J.fromJSON jv :: J.Result (Text, (Text, J.Value)) of
     J.Error e ->
       mkER $ "illegal JSON RPC call: " <> e ^. isoText
@@ -155,11 +155,7 @@ jsonCall fct i n args =
     "copyToCollection" ->
       jl $ \ (ixs, dPath) ->
              do
-               (di, dn) <- getIdNode' dPath
-               unless (isCOL dn) $
-                 abort ("jsonCall: not a collection: " ++ show dPath)
-               unless (isWriteable $ dn ^. theColMetaData) $
-                 abort ("jsonCall: collection is write protected: " ++ show dPath)
+               di <- checkWriteableCol dPath
                copyToCol ixs di n
 
     -- move marked images and collections in a source col
@@ -168,11 +164,7 @@ jsonCall fct i n args =
     "moveToCollection" ->
       jl $ \ (ixs, dPath) ->
              do
-               (di, dn) <- getIdNode' dPath
-               unless (isCOL dn) $
-                 abort ("jsonCall: not a collection: " ++ show dPath)
-               unless (isWriteable $ dn ^. theColMetaData) $
-                 abort ("jsonCall: collection is write protected: " ++ show dPath)
+               di <- checkWriteableCol dPath
                copyToCol   ixs di   n
                removeFrCol ixs    i n
 
@@ -227,13 +219,22 @@ jsonCall fct i n args =
 -- make the call of the internal operation and
 -- convert the result back to JSON
 
-jsonLift :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> (J.Value -> Cmd J.Value)
+jsonLift :: (FromJSON a, ToJSON b) => (a -> Cmd b) -> J.Value -> Cmd J.Value
 jsonLift cmd jv =
   case J.fromJSON jv of
     J.Error e ->
       mkER $ "illegal JSON post arg: " <> e ^. isoText
     J.Success v ->
       cmd v >>= mkOK
+
+checkWriteableCol :: Path -> Cmd ObjId
+checkWriteableCol dPath = do
+  (di, dn) <- getIdNode' dPath
+  unless (isCOL dn) $
+    abort ("jsonCall: not a collection: " ++ show dPath)
+  unless (isWriteable $ dn ^. theColMetaData) $
+    abort ("jsonCall: collection is write protected: " ++ show dPath)
+  return di
 
 -- ----------------------------------------
 
@@ -262,7 +263,7 @@ removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFrCol i pos =
   colEntry
   (\ _ _ _ -> adjustColEntries (removeAt pos) i)
-  (\ ci    -> rmRec ci)
+  rmRec
 
 {- -- avoid case over constructors
 removeEntryFrCol i pos (ImgRef{}) =
@@ -276,7 +277,7 @@ removeEntryFrCol _i _pos (ColRef ci) =
 -- copy entries to a collection
 
 copyToCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
-copyToCol ixs di n = do
+copyToCol ixs di n =
   traverse_ (\ e -> copyEntryToCol di e) toBeCopied
   where
     toBeCopied :: [ColEntry]
@@ -429,9 +430,8 @@ renameCol newName i = do
 
   -- find position of objid i in parent collection
   ps <- flip findFstColEntry iParent $
-        \ ce -> do
-          return (i == ce ^. theColObjId)
-  let pos = fromMaybe (-1) . fmap fst $ ps
+        \ ce -> return (i == ce ^. theColObjId)
+  let pos = maybe (-1) fst ps
 
   -- remove i in parent collection
   rmRec i
@@ -446,7 +446,7 @@ renameCol newName i = do
 -- ----------------------------------------
 
 setMeta :: MetaData -> [Int] -> ObjId -> ImgNode -> Cmd ()
-setMeta md ixs i n = do
+setMeta md ixs i n =
   sequence_ $ zipWith3 setMeta1 [(0::Int)..] ixs (n ^. theColEntries)
   where
     setMeta1 pos mark ce
@@ -470,7 +470,7 @@ getMeta =
 
 addGeoToPath :: Maybe GeoAR -> Cmd FilePath -> Cmd FilePath
 addGeoToPath Nothing _ =
-  abort $ "addGeoToPath: wrong image geometry value"
+  abort "addGeoToPath: wrong image geometry value"
 addGeoToPath (Just g) cmd =
   (ppx ++) <$> cmd
   where

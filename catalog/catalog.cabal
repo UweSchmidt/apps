@@ -47,6 +47,7 @@ library
                      Catalog.Journal
                      Catalog.Options
                      Catalog.Sync
+                     Catalog.System.CatalogIO
                      Catalog.System.Convert
                      Catalog.System.ExifTool
                      Catalog.System.IO

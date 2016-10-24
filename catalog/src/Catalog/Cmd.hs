@@ -14,6 +14,7 @@ module Catalog.Cmd
        , module Catalog.Cmd.CopyRemove
        , module Catalog.Cmd.CWN
        , module Catalog.Cmd.ArchiveCollection
+       , module Catalog.System.CatalogIO
        , module Catalog.System.IO
        , module Control.Monad.RWSErrorIO
        , module Control.Monad.Except
@@ -29,6 +30,7 @@ import           Catalog.Cmd.List
 import           Catalog.Journal
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
+import           Catalog.System.CatalogIO
 import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
@@ -59,7 +61,7 @@ invImages = do  -- TODO
   return ()
 
 -- ----------------------------------------
-
+{- }
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
   bs <- uses id J.encodePretty
@@ -91,13 +93,13 @@ loadImgStore p = do
     Just st -> do
       put st
       journalChange $ LoadImgStore p
-
+-- -}
 -- ----------------------------------------
 --
 -- initialization on program start
 
 initEnv :: IO Env
-initEnv = do
+initEnv =
   return defaultEnv
 
 
