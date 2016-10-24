@@ -395,8 +395,15 @@ function collectionIsWriteProtected(cid) {
     return res;
 }
 
+function collectionIsSortProtected(cid) {
+    var res = $('#' + cid).hasClass('no-sort');
+    console.log('collectionIsSortProtected');
+    console.log(res);
+    return res;
+}
+
 function collectionIsGenerated(path) {
-    console.log('collectionisgenerated');
+    console.log('collectionIsGenerated');
     console.log(path);
     return path === pathClipboard()
         || path === pathCollections()
@@ -1165,7 +1172,7 @@ function sortCollection(cid) {
     console.log('sort collection: ' + cid);
 
     // var sr = $('#' + cid).hasClass('no-sort');
-    var sr = collectionIsWriteProtected(cid);
+    var sr = collectionIsSortProtected(cid);
     console.log(sr);
     if ( sr ) {
         var path = collectionPath(cid);
@@ -1780,7 +1787,7 @@ function saveImgStore() {
                  pathArchive(),
                  [],
                  function () {
-                     statusMsg('image store on server side saved');
+                     statusMsg('snapshot of image store taken on server side');
                  });
 }
 

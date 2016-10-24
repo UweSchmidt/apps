@@ -290,7 +290,7 @@ findFstColEntry p i = listToMaybe <$> findAllColEntries p i
 sortColEntries :: (ColEntry -> Cmd a) ->
                   (a -> a -> Ordering) ->
                   [ColEntry] -> Cmd [ColEntry]
-sortColEntries getVal cmpVal es = do
+sortColEntries getVal cmpVal es =
   map fst . sortBy (cmpVal `on` snd) <$> mapM mkC es
   where
     -- mkC :: ColEntry -> Cmd (ColEntry, a)

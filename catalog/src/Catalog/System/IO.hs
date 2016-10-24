@@ -53,6 +53,9 @@ writeFileT f = io . T.writeFile f
 removeFile :: FilePath -> Cmd ()
 removeFile = io . D.removeFile
 
+renameFile :: FilePath -> FilePath -> Cmd ()
+renameFile old new = io $ X.rename old new
+
 createDir :: FilePath -> Cmd ()
 createDir = io . D.createDirectoryIfMissing True
 
@@ -79,6 +82,8 @@ putStrLnLB = io . LB.putStrLn
 
 putStrLn' :: String -> Cmd ()
 putStrLn' = io . putStrLn
+
+-- ----------------------------------------
 
 atThisMoment :: Cmd UTCTime
 atThisMoment = io C.getCurrentTime

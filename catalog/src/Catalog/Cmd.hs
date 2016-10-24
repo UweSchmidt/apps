@@ -75,7 +75,10 @@ snapshotImgStore :: Cmd ()
 snapshotImgStore = do
   pt <- view envJsonArchive
   ts <- nowAsIso8601
-  saveImgStore $ pt ++ "." ++ ts
+  let pt' = pt ++ "." ++ ts
+  verbose $ "snapshotImgStore: make a snapshot into " ++ show pt'
+  renameFile pt pt'
+  saveImgStore $ pt
 
 loadImgStore :: FilePath -> Cmd ()
 loadImgStore p = do

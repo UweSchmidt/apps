@@ -55,7 +55,7 @@ genSysCollection n'sys tt'sys = do
         s = ""
         c = ""
         o = ""
-        a = no'delete
+        a = no'wrtdel
 
 
 -- TODO: use time stamp of dirs and collections to
