@@ -7,3 +7,5 @@ pad-1400x1050
 catalog/
 pad-160x160/
 pad-900x600/
+pad-*x*/
+fix-*x*/
