@@ -1176,7 +1176,7 @@ function sortCollection(cid) {
     console.log(sr);
     if ( sr ) {
         var path = collectionPath(cid);
-        statusError('not sortable, the collection is write protected: ' + path);
+        statusError('not sortable, the collection is sort protected: ' + path);
         return;
     }
 
@@ -1209,57 +1209,59 @@ function getEntryPos(img) {
 function setCollectionImg(cid) {
     statusClear();
     console.log("setCollectionImg: " + cid);
-    var path = collectionPath(cid);
-    var o    = splitPath(path);
-    var img  = getLastMarkedEntry(cid);
-    var gn   = collectionIsGenerated(path);
+    var path  = collectionPath(cid);
+    var o     = splitPath(path);
 
-    /*
-    if (collectionIsGenerated(path)) {
-        statusError('generated collection can\'t be modified: ' + path);
+    // first try current collection for a marked image
+    // then lookup clipboard for a marked entry
+    var scid  = cid;
+    var spath = path;
+    var simg  = getLastMarkedEntry(scid);
+    if (! simg) {
+        scid  = idClipboard();
+        spath = pathClipboard();
+        simg  = getLastMarkedEntry(scid);
+    }
+    if (! simg) {
+        statusError('no marked image found');
         return;
     }
-    */
+    if ( $(simg).hasClass('imgmark') ) {
+        var pos = getDiaNo(simg);
+        console.log('setCollectionImg:');
+        console.log(pos);
+        console.log(path);
+        console.log(spath);
+        console.log(o);
 
-    if (img) {
-        if ( $(img).hasClass('imgmark') ) {
-            var pos = getDiaNo(img);
-            console.log('setCollectionImg:');
-            console.log(pos);
-            console.log(path);
-            console.log(o);
-
-            if ( $(img).hasClass('data-jpg') ) {
-                // it's a .jpg image
-                // so take this image as collection image
-                modifyServer('colimg', path, pos,
-                             function () {
-                                 var ppath = o.cpath;
-                                 var pcol = isAlreadyOpen(ppath);
-                                 statusMsg('collection image set in: ' + path);
-                                 if ( pcol[0] ) {
-                                     // parent collection open
-                                     // refresh the parent collection
-                                     // to show the new collection image
-                                     getColFromServer(ppath, refreshCollection);
-                                 }
-                             });
-            }
-            else if ( $(img).hasClass('data-md') ) {
-                // it's a .md text file
-                // so take this as the collection blog text
-                modifyServer('colblog', path, pos, noop);
-            } else {
-                statusError('not a .jpg image or a .md text file');
-            }
-        } else {
-            statusError('marked entry is a collection, not an image');
+        if ( $(simg).hasClass('data-jpg') ) {
+            // it's a .jpg image
+            // so take this image as collection image
+            modifyServer('colimg', path, [spath, pos],
+                         function () {
+                             var ppath = o.cpath;
+                             var pcol = isAlreadyOpen(ppath);
+                             statusMsg('collection image set in: ' + path);
+                             if ( pcol[0] ) {
+                                 // parent collection open
+                                 // refresh the parent collection
+                                 // to show the new collection image
+                                 getColFromServer(ppath, refreshCollection);
+                             }
+                         });
         }
-        // unmark last marked entry
-        toggleMark($(img));
+        else if ( $(simg).hasClass('data-md') ) {
+            // it's a .md text file
+            // so take this as the collection blog text
+            modifyServer('colblog', path, [spath, pos], noop);
+        } else {
+            statusError('not a .jpg image or a .md text file');
+        }
     } else {
-        statusError('no marked image/collection found');
+        statusError('marked entry is a collection, not an image');
     }
+    // unmark last marked entry
+    toggleMark($(simg));
 }
 
 // ----------------------------------------

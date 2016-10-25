@@ -173,16 +173,16 @@ jsonCall fct i n args =
     -- pos must be an index to an ImgRef for a .jpg image
     -- nothing is returned
     "colimg" ->
-      jl $ \ pos ->
-             void $ setColImg pos i n
+      jl $ \ (sPath, pos) ->
+             void $ setColImg sPath pos i
 
     -- set or unset the collection blog text
     -- i must reference a collection, not an image
     -- pos must be an index to an ImgRef for a .md text
     -- nothing is returned
     "colblog" ->
-      jl $ \ pos ->
-             void $ setColBlog pos i n
+      jl $ \ (sPath, pos) ->
+             void $ setColBlog sPath pos i
 
     -- create a new collection with name nm in
     -- collection i
@@ -389,27 +389,38 @@ cmp (mi, mx) (i, x) (j, y)
 -- to one of the images in the collection
 -- The pos param specifies the position or, if -1, the unset op
 
-setColImg :: Int -> ObjId -> ImgNode -> Cmd ()
-setColImg pos oid n
+setColImg :: Path -> Int -> ObjId -> Cmd ()
+setColImg sPath pos oid
   | pos < 0 =
       adjustColImg (const Nothing) oid
-  | otherwise =
+  | otherwise = do
+      scn <- jsonPath2ColNode sPath
       processColImgEntryAt
         (\ iid inm _md -> adjustColImg (const $ Just (iid, inm)) oid)
-        pos n
+        pos scn
 
 -- set or unset the "blog text" of a collection
 -- to one of the blog texts in the collection
 -- The pos param specifies the position or, if -1, the unset op
 
-setColBlog :: Int -> ObjId -> ImgNode -> Cmd ()
-setColBlog pos oid n
+setColBlog :: Path -> Int -> ObjId -> Cmd ()
+setColBlog sPath pos oid
   | pos < 0 =
       adjustColBlog (const Nothing) oid
-  | otherwise =
+  | otherwise = do
+      scn <- jsonPath2ColNode sPath
       processColImgEntryAt
         (\ iid inm _md -> adjustColBlog (const $ Just (iid, inm)) oid)
-        pos n
+        pos scn
+
+jsonPath2ColNode :: Path -> Cmd ImgNode
+jsonPath2ColNode path = do
+  v <- lookupByPath path
+  case v of
+    Nothing ->
+      abort $ "jsonPath2Id: entry not found: " <> show path
+    Just idn ->
+      return $ snd idn
 
 -- ----------------------------------------
 
