@@ -51,4 +51,7 @@ instance ToJSON ObjId where
 instance FromJSON ObjId where
   parseJSON o = toObjId <$> parseJSON o
 
+instance IsoString ObjId where
+  isoString = objId2integer . isoString
+
 -- ----------------------------------------

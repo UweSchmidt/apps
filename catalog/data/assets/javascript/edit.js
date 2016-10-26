@@ -1801,6 +1801,7 @@ function callServer(getOrModify, fct, args, processRes, processNext) {
     var rpc = [fct, args];
     console.log('callServer: ' + getOrModify);
     console.log(rpc);
+    console.log(JSON.stringify(rpc));
 
     $.ajax({
         type: "POST",

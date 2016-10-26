@@ -52,7 +52,7 @@ checkinImgStore pt = do
       [ "cd", qt $ FP.takeDirectory pt, ";"
       , "git add -A ;"
       , "git diff --quiet --exit-code --cached ||"
-      , "git commit -m", qt ts, qt $ FP.takeFileName pt
+      , "git commit -m", qt ("catalog-server: " ++ ts), qt $ FP.takeFileName pt
       ]
     qt s = '\'' : s ++ "'"
 

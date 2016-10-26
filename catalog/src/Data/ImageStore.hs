@@ -27,7 +27,7 @@ import qualified Data.Aeson as J
 
 data ImgStore' ref = IS !(DirTree ImgNode' ref) !FilePath !ref
 
-type ImgStore = ImgStore' ObjId
+type ImgStore  = ImgStore' ObjId
 
 deriving instance (Show ref) => Show (ImgStore' ref)
 
@@ -57,7 +57,7 @@ theWE :: Lens' (ImgStore' ref) ref
 theWE k (IS t p w) = (\new -> IS t p new) <$> k w
 {-# INLINE theWE #-}
 
--- almost a functor
+-- almost a functor, the Ord constraint is the problem
 mapImgStore :: (Ord ref') => (ref -> ref') -> ImgStore' ref -> ImgStore' ref'
 mapImgStore f (IS i mp wd) =
   IS (mapRefTree f i) mp (f wd)

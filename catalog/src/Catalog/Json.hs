@@ -92,7 +92,7 @@ jsonCall fct i n args =
 
     -- read a whole collection
     "collection" ->
-      jl $ \ () -> return n
+      jl $ \ () -> mapObjId2Path n  -- return n
 
     -- access restrictions on a collection
     "isWriteable" ->

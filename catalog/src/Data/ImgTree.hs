@@ -19,6 +19,9 @@ type ImgNode    = ImgNode'  ObjId
 type ColEntry   = ColEntry' ObjId
 type DirEntries = DirEntries' ObjId
 
+type ImgNodeP   = ImgNode' Path
+type ImgTreeP   = DirTree ImgNode' Path
+
 -- ----------------------------------------
 
 -- the tree for the image hierachy

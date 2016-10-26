@@ -30,13 +30,13 @@ genCollectionRootMeta = do
 -- create the special collections for clipboard and trash
 
 genClipboardCollection :: Cmd ()
-genClipboardCollection = genSysCollection n'clipboard tt'clipboard
+genClipboardCollection = genSysCollection no'delete n'clipboard tt'clipboard
 
 genTrashCollection :: Cmd ()
-genTrashCollection = genSysCollection n'trash tt'trash
+genTrashCollection = genSysCollection no'delete n'trash tt'trash
 
-genSysCollection :: Name -> Text -> Cmd ()
-genSysCollection n'sys tt'sys = do
+genSysCollection :: Text -> Name -> Text -> Cmd ()
+genSysCollection a n'sys tt'sys = do
   ic <- getRootImgColId
   pc <- objid2path ic
   let sys'path = pc `snocPath` n'sys
@@ -55,8 +55,6 @@ genSysCollection n'sys tt'sys = do
         s = ""
         c = ""
         o = ""
-        a = no'wrtdel
-
 
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir

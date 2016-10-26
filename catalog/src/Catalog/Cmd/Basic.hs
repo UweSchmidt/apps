@@ -140,6 +140,32 @@ objid2contNames i = getImgVal i >>= go
           return []
 
 -- ----------------------------------------
+
+-- replace an ObjId by a Path in an arbitrary functor, e.g. ImgNode'
+-- ObjId, the internal key type, can be implemented more efficiently
+-- than taking the whole path as key, e..g. by a hash. But the path variant
+-- is more readable, and it's needed by clients, cilents can't handle
+-- internal keys, like hashes ore similar data
+
+mapObjId2Path :: Functor f => f ObjId -> Cmd (f Path)
+mapObjId2Path x =
+  (<$> x) <$> objid2pathMap
+  -- do f <- objid2pathMap
+  --    return $ fmap f x
+
+-- convert an ImgStore to an isomorphic ImgStore' Path with paths as keys
+mapImgStore2Path :: Cmd (ImgStore' Path)
+mapImgStore2Path = do
+  x <- get
+  (`mapImgStore` x) <$> objid2pathMap
+
+-- get the mapping from internal keys, ObjId, to paths as keys
+objid2pathMap :: Cmd (ObjId -> Path)
+objid2pathMap = dt >>= go
+  where
+    go t = return (\ i -> refPath i t)
+
+-- ----------------------------------------
 --
 
 -- | convert an image path to a file system path
