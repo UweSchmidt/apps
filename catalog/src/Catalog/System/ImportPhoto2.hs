@@ -18,6 +18,7 @@ import qualified System.FilePath as FP
 import qualified Data.Aeson as J
 import           Data.Map (Map)
 import qualified Data.Map as M
+import qualified Data.Text as T
 
 -- ----------------------------------------
 
@@ -74,6 +75,7 @@ insertImportPhoto2 :: ImportCol -> Cmd ()
 insertImportPhoto2 ipd = go ipd
   where
     ppx = p'albums
+    ppi = p'arch'photos
     go (IC pt0 ty jpg raw (MD2 md) cont) = do
       -- verbose $ "iip2: " ++ show path
       case ty of
@@ -83,16 +85,40 @@ insertImportPhoto2 ipd = go ipd
       -- so the result lists can be constructed by consing, not appending elements
       mapM_ go $ reverse cont
         where
-          path :: Path
-          path = ("/" <> pt0) ^. isoString . from isoString . to (tailPath . concPath ppx)
-          (dp, nm) = path ^. viewBase
+          toPath :: Text -> Path
+          toPath s = ("/" <> s) ^. isoString . from isoString
+
+          path           = tailPath . concPath ppx . toPath $ pt0
+          (colPath, cnm) = path ^. viewBase
+
+          imgPath0
+            | T.null raw  = toPath jpg
+            | otherwise   = toPath raw
+
+          imgPath = ppi `concPath` imgPath1
+
+          (imgPath1, imgName)
+            | ty21 /= IMGother = (p2 `snocPath` nm21, n21)
+            | otherwise        = (p1 `snocPath` nm1 , n1 )
+            where
+              (p1, n1)     = imgPath0 ^. viewBase
+              (p2, n2)     = p1       ^. viewBase
+              n21          = mkName $ (n2 ^. isoString) ++ "/" ++ (n1 ^. isoString)
+              (nm21, ty21) = n21      ^. isoString . to filePathToImgType
+              (nm1,  ty1 ) = n1       ^. isoString . to filePathToImgType
 
           insPic = do
-            verbose $ unwords ["PIC ", show pno, show dp]
-            return ()
-              where
+            verbose $ unwords ["PIC ", show pno, show imgPath, show imgName]
+            cin <- lookupByPath colPath
+            iin <- lookupByPath imgPath
+            flip (maybe (verbose $ "img not found: " ++ show imgPath)) iin $
+              \ (iid, _iin) ->
+                flip (maybe (verbose $ "col not found: " ++ show colPath)) cin $
+                  \ (cid, _cin) -> do
+                    adjustColEntries (mkColImgRef iid imgName :) cid
+            where
               pno :: Int
-              pno = read $ drop 4 $ show nm
+              pno = read $ drop 4 $ show cnm
 
           insAlbum = do
             verbose $ "ALBUM: " ++ show path

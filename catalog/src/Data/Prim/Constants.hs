@@ -44,6 +44,7 @@ s'clipboard    = n'clipboard    ^. isoString
 s'trash        = n'trash        ^. isoString
 
 p'archive
+  , p'arch'photos
   , p'albums
   , p'clipboard
   , p'collections
@@ -52,6 +53,7 @@ p'archive
   , p'trash :: Path
 
 p'archive      = mkPath n'archive
+p'arch'photos  = p'archive     `snocPath` n'photos
 p'albums       = p'collections `snocPath` n'albums
 p'collections  = p'archive     `snocPath` n'collections
 p'bycreatedate = p'collections `snocPath` n'bycreatedate
