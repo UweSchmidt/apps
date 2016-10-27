@@ -163,7 +163,13 @@ mapImgStore2Path = do
 objid2pathMap :: Cmd (ObjId -> Path)
 objid2pathMap = dt >>= go
   where
-    go t = return (\ i -> refPath i t)
+    go t = return (`refPath` t)
+
+mapPath2ObjId :: Functor f => f Path -> f ObjId
+mapPath2ObjId = fmap mkObjId
+
+mapImgStore2ObjId :: ImgStore' Path -> ImgStore
+mapImgStore2ObjId = mapImgStore mkObjId
 
 -- ----------------------------------------
 --

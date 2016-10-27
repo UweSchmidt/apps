@@ -20,22 +20,38 @@ import qualified System.FilePath as FP
 
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
-  bs <- uses id J.encodePretty
-  if null p
-    then putStrLnLB    bs
-    else do
-      p' <- (</> p) <$> view envMountPath
-      verbose $ "saveImgStore: save state to " ++ show p'
-      writeFileLB p' bs
-      journalChange $ SaveImgStore p
+  bs <- toBS
+  p' <- (</> p) <$> view envMountPath
+  verbose $ "saveImgStore: save state to " ++ show p'
+  writeFileLB p' bs
+  journalChange $ SaveImgStore p
+  where
+    toBS
+      | isHashIdArchive p =
+          J.encodePretty <$> get
+      | isPathIdArchive p =
+          J.encodePretty <$> mapImgStore2Path
+      | otherwise =
+          abort $ "saveImgStore: wrong archive extenstion in " ++ show p
 
+-- take a snapshot of the catalog and store it in a git archive
+-- Test: save 2 versions of the catalog
+-- with ObjId (hashes) as keys and (more readable) with Path as keys
+--
+-- both can be loaded during server startup
 
 snapshotImgStore :: Cmd ()
 snapshotImgStore = do
   pt <- view envJsonArchive
+
   verbose $ "snapshotImgStore: make a snapshot into " ++ show pt
   saveImgStore pt
   checkinImgStore pt
+
+  let pt' = switchArchiveName pt
+  verbose $ "snapshotImgStore: make a snapshot into " ++ show pt'
+  saveImgStore pt'
+  checkinImgStore pt'
 
 checkinImgStore :: FilePath -> Cmd ()
 checkinImgStore pt = do
@@ -52,7 +68,7 @@ checkinImgStore pt = do
       [ "cd", qt $ FP.takeDirectory pt, ";"
       , "git add -A ;"
       , "git diff --quiet --exit-code --cached ||"
-      , "git commit -m", qt ("catalog-server: " ++ ts), qt $ FP.takeFileName pt
+      , "git commit -a -m", qt ("catalog-server: " ++ ts)
       ]
     qt s = '\'' : s ++ "'"
 
@@ -61,11 +77,44 @@ loadImgStore p = do
   p' <- (</> p) <$> view envMountPath
   verbose $ "loadImgStore: load State from " ++ show p'
   bs <- readFileLB p'
-  case J.decode' bs of
+  case fromBS bs of
     Nothing ->
       abort $ "loadImgStore: JSON input corrupted: " ++ show p
     Just st -> do
       put st
       journalChange $ LoadImgStore p
+  where
+    fromBS
+      | isPathIdArchive p = fmap mapImgStore2ObjId . J.decode'
+      | otherwise         = J.decode'
+
+archiveName :: FilePath -> (FilePath, String, String)
+archiveName p = (p', e1, e2)
+  where
+    (p1, e2) = FP.splitExtension p
+    (p', e1) = FP.splitExtension p1
+
+isHashIdArchive :: FilePath -> Bool
+isHashIdArchive p = e1 == hidx
+  where
+    (_, e1, _) = archiveName p
+
+isPathIdArchive :: FilePath -> Bool
+isPathIdArchive p = e1 == pidx
+  where
+    (_, e1, _) = archiveName p
+
+switchArchiveName :: FilePath -> FilePath
+switchArchiveName p =
+  p' ++ e1' ++ e2'
+  where
+    (p', e1, e2') = archiveName p
+    e1' | e1 == hidx = pidx
+        | e1 == pidx = hidx
+        | otherwise  = e1
+
+pidx, hidx :: String
+pidx = ".pathid"
+hidx = ".hashid"
 
 -- ----------------------------------------
