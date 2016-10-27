@@ -32,5 +32,5 @@ instance Monoid ImgType where
   mempty = IMGother
   IMGother `mappend` t2 = t2
   t1       `mappend` _  = t1
-  
+
 -- ----------------------------------------

@@ -8,6 +8,7 @@ import Data.Prim.Prelude
 import qualified Data.Text as T
 
 n'archive
+  , n'albums
   , n'bycreatedate
   , n'clipboard
   , n'collections
@@ -15,6 +16,7 @@ n'archive
   , n'trash :: Name
 
 n'archive      = "archive"
+n'albums       = "albums"
 n'bycreatedate = "timeline"
 n'clipboard    = "clipboard"
 n'collections  = "collections"
@@ -42,6 +44,7 @@ s'clipboard    = n'clipboard    ^. isoString
 s'trash        = n'trash        ^. isoString
 
 p'archive
+  , p'albums
   , p'clipboard
   , p'collections
   , p'bycreatedate
@@ -49,6 +52,7 @@ p'archive
   , p'trash :: Path
 
 p'archive      = mkPath n'archive
+p'albums       = p'collections `snocPath` n'albums
 p'collections  = p'archive     `snocPath` n'collections
 p'bycreatedate = p'collections `snocPath` n'bycreatedate
 p'photos       = p'collections `snocPath` n'photos

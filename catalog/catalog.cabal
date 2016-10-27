@@ -50,6 +50,7 @@ library
                      Catalog.System.CatalogIO
                      Catalog.System.Convert
                      Catalog.System.ExifTool
+                     Catalog.System.ImportPhoto2
                      Catalog.System.IO
                      Text.SimpleTemplate
   
