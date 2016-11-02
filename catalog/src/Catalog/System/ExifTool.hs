@@ -94,7 +94,7 @@ syncMetaData i = do
   -- collect meta data from raw and xmp parts
   mapM_ (syncMD isRawMeta fu ip p ts) ps
 
-  -- if nor raw or xmp there, collect meta from jpg files
+  -- if neither raw nor xmp there, collect meta from jpg files
   unless (has (traverse . isA isRawMeta) ps) $
     mapM_ (syncMD isJpg fu ip p ts) ps
 

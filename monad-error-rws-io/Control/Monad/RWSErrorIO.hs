@@ -3,7 +3,7 @@
 module Control.Monad.RWSErrorIO
     ( module Control.Monad.RWSErrorIO
     , module Control.Monad.Trans.Except
-    , module Control.Monad.RWS
+    , module Control.Monad.RWS.Strict
     , module Control.Monad
     )
 where
@@ -13,7 +13,7 @@ import Control.Exception        ( SomeException
                                 )
 
 import Control.Monad.Trans.Except
-import Control.Monad.RWS
+import Control.Monad.RWS.Strict
 import Control.Monad
 
 -- import Data.Monoid

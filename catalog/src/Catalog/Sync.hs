@@ -187,7 +187,7 @@ checkEmptyDir i = do
 fsStat :: String -> (FilePath -> Cmd Bool) -> FilePath -> Cmd FileStatus
 fsStat msg exists p = do
   ex <- exists p
-  when (not ex) $
+  unless ex $
     abort $ "fs entry not found or not a " ++ msg ++ ": " ++ show (show p)
   getFileStatus p
 

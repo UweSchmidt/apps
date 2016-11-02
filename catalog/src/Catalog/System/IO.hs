@@ -7,12 +7,12 @@ import           Catalog.Cmd.Types
 import qualified Data.ByteString.Lazy.Char8 as LB
 import           Data.Prim.Prelude
 import           Data.Prim.TimeStamp
-import qualified Data.Text.IO as T
+import qualified Data.Text.IO     as T
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Time.Clock  as C
 import qualified Data.Time.Format as C
 import qualified System.Directory as D
-import qualified System.Posix as X
+import qualified System.Posix     as X
 
 -- ----------------------------------------
 
@@ -28,8 +28,7 @@ getFileStatus :: FilePath -> Cmd FileStatus
 getFileStatus = io . X.getFileStatus
 
 getModiTime :: FilePath -> Cmd TimeStamp
-getModiTime f = do
-  fsTimeStamp <$> getFileStatus f
+getModiTime f = fsTimeStamp <$> getFileStatus f
 
 getModiTime' :: FilePath -> Cmd TimeStamp
 getModiTime' f = do
