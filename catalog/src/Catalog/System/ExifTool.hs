@@ -98,11 +98,12 @@ syncMetaData i = do
   unless (has (traverse . isA isRawMeta) ps) $
     mapM_ (syncMD isJpg fu ip p ts) ps
 
-syncMD :: (ImgPart -> Bool) -> Bool -> Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
+syncMD :: (ImgPart -> Bool) ->
+          Bool -> Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
 syncMD p fu ip fp ts pt =
   when ( p pt    -- ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
          &&
-         (fu || tw >= ts)                     -- force update or part has been changed
+         (fu || tw >= ts)              -- force update or part has been changed
        ) $ do
     sp <- toFilePath (substPathName tn ip)
     trc $ "syncMD: syncing with " ++ show sp

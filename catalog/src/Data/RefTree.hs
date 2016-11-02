@@ -76,10 +76,12 @@ theNode r = entryAt r . checkJust ("atRef: undefined ref " ++ show r)
 --
 -- almost a functor, f must be an injective function
 
-mapRefTree :: (Functor node, Ord ref') => (ref -> ref') -> RefTree node ref -> RefTree node ref'
+mapRefTree :: (Functor node, Ord ref') =>
+              (ref -> ref') ->
+              RefTree node ref -> RefTree node ref'
 mapRefTree f (RT r t) =
   RT (f r) ( M.foldrWithKey'
-             (\ k v acc -> M.insert (f k) (fmap f v) acc)
+             (\ k !v !acc -> M.insert (f k) (fmap f v) acc)
              M.empty
              t
            )
@@ -89,9 +91,9 @@ mapRefTree f (RT r t) =
 -- An UpLink adds two components to a node,
 -- first a ref to the parent node,
 -- second a name.
--- The root node has the root a parent ref
+-- The root node has the root and a parent ref
 
-data UpLink  node ref = UL ref Name (node ref)
+data UpLink  node ref = UL !ref !Name !(node ref)
 
 deriving instance (Show ref, Show (node ref)) => Show (UpLink  node ref)
 

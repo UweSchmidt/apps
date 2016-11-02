@@ -5,8 +5,8 @@ module Catalog.Sync
 where
 
 import Catalog.Cmd
-import Catalog.FilePath
-import Catalog.System.ExifTool
+import Catalog.FilePath (filePathToImgType)
+import Catalog.System.ExifTool (syncMetaData)
 import Data.ImgTree
 import Data.Prim
 

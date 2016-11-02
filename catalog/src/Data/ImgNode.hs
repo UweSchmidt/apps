@@ -473,15 +473,23 @@ isoDirEntries = iso (\ (DE xs) -> xs) DE
 {-# INLINE isoDirEntries #-}
 
 addDirEntry :: ref -> DirEntries' ref -> DirEntries' ref
-addDirEntry r (DE rs) = DE $ r : rs
+addDirEntry r (DE rs) = DE rs'
+  where
+    !rs' = r : rs
 {-# INLINE addDirEntry #-}
 
 delDirEntry :: (Eq ref) => ref -> DirEntries' ref -> DirEntries' ref
-delDirEntry r (DE rs) = DE $ filter (/= r) rs
+delDirEntry r (DE rs) =
+  DE (length rs' `seq` rs')  -- eval whole list
+  where
+    rs'  = filter (/= r) rs
 {-# INLINE delDirEntry #-}
 
 delColEntry :: (Eq ref) => ref -> [ColEntry' ref] -> [ColEntry' ref]
-delColEntry r cs = filter (\ ce -> ce ^. theColObjId /= r) cs
+delColEntry r cs =
+  length cs' `seq` cs'  -- eval whole list
+  where
+    cs' = filter (\ ce -> ce ^. theColObjId /= r) cs
 {-# INLINE delColEntry #-}
 
 
