@@ -7,16 +7,18 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Types
 import           Catalog.Journal
 import           Catalog.System.IO
-import           Catalog.FilePath
-import qualified Data.Aeson as J
+import qualified Data.Aeson               as J
 import qualified Data.Aeson.Encode.Pretty as J
-import           Data.ImageStore
-import           Data.ImgTree
-import           Data.MetaData
 import           Data.Prim
-import qualified System.FilePath as FP
+import qualified System.FilePath          as FP
 
 -- ----------------------------------------
+
+encodeJSON :: ToJSON a => a -> LazyByteString
+encodeJSON = J.encodePretty' conf
+  where
+    conf = J.defConfig
+           { J.confIndent  = 2 }
 
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
@@ -28,9 +30,9 @@ saveImgStore p = do
   where
     toBS
       | isHashIdArchive p =
-          J.encodePretty <$> get
+          encodeJSON <$> get
       | isPathIdArchive p =
-          J.encodePretty <$> mapImgStore2Path
+          encodeJSON <$> mapImgStore2Path
       | otherwise =
           abort $ "saveImgStore: wrong archive extenstion in " ++ show p
 
