@@ -696,11 +696,13 @@ function newEntry(entry, i) {
         // "data-md" for blog entries (markdown text .md or .txt)
         // in preview modal box this info becomes important
         var ep = splitPath(entry.part);
-        if (ep.ext == "txt") {
-            // .txt is handled like .md
-            ep.ext = "md";
+        var ex = ep.ext;
+        if (ep.ext == "txt" || ep.ext == "md") {
+            ex = "data-md";
+        } else {
+            ex = "data-jpg";
         }
-        p.addClass('data-' + ep.ext);
+        p.addClass(ex);
 
         sc = sc + ref.cpath + "/" + entry.part;
         mk = "imgmark";
