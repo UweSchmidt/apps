@@ -104,7 +104,7 @@ genImageFromTxt =
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
-genImage = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
+genImage = genImage' (createImageCopy 0) (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
 
 genImage' :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
              (FilePath -> Maybe (GeoAR, FilePath)) ->
@@ -143,7 +143,7 @@ genImage' createImageC imgPath2Geo imgSrc url = do
                         fromMaybe ps'blank <$>
                         genAssetIcon "brokenImage" "broken\nimage"
                       warn $ "generate a substitute: " ++ show broken
-                      doit createImageCopy (geo, broken)
+                      doit (createImageCopy 0) (geo, broken)
                   )
               else
                 return dst
@@ -209,8 +209,13 @@ createImageFromTxt d'geo d s =
 
 -- ----------------------------------------
 
-createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageCopy d'geo d s =
+-- rot == 0:  no rotate
+-- rot == 1:  90 degrees clockwise
+-- rot == 2: 180 degrees clockwise
+-- rot == 3: 270 degrees clockwise
+
+createImageCopy :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
+createImageCopy rot d'geo d s =
   getImageSize s >>= go
   where
     go s'geo = do
@@ -218,12 +223,16 @@ createImageCopy d'geo d s =
         execProcess "bash" [] shellCmd >> return ()
       return d
       where
-        shellCmd = resizeShellCmd d'geo s'geo d s
+        shellCmd = resizeShellCmd rot d'geo s'geo d s
 
-resizeShellCmd :: GeoAR -> Geo -> FilePath -> FilePath -> String
-resizeShellCmd d'g s'geo d s =
+resizeShellCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
+resizeShellCmd rot d'g s'geo0 d s =
   shellCmd
   where
+    s'geo
+      | even rot  =         s'geo0
+      | otherwise = flipGeo s'geo0
+
     d'geo       = d'g ^. theGeo
     aspect      = d'g ^. theAR
     (Geo cw ch, Geo xoff yoff)
@@ -249,6 +258,11 @@ resizeShellCmd d'g s'geo d s =
                                  else "95"
                                ]
     interlace   = [ "-interlace", "Plane" ]
+
+    rotate
+      | rot == 0  = []
+      | otherwise = [ "-rotate", show ((rot `mod` 4) * 90) ]
+
     isPad       = (xoff == (-1) && yoff == (-1))
     isCrop      = (xoff > 0     || yoff > 0)
     isThumbnail = let Geo dw dh = d'geo
@@ -277,6 +291,7 @@ resizeShellCmd d'g s'geo d s =
                   cmdName
                   ++ interlace
                   ++ quality
+                  ++ rotate
                   ++ cmdArgs
 
 -- ----------------------------------------

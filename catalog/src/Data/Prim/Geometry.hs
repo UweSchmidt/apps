@@ -43,6 +43,9 @@ readGeo' s =
     build _
       = Nothing
 
+flipGeo :: Geo -> Geo
+flipGeo (Geo w h) = Geo h w
+
 -- the r.e. is a more general, the geo spec maybe surrounded
 -- by arbitrary other stuff (used in parsing exit data)
 
