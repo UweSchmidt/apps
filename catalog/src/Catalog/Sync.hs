@@ -56,6 +56,7 @@ syncDirCont :: Bool -> ObjId -> Cmd ()
 syncDirCont recursive i = do
   -- trcObj i "syncDirCont: syncing entries in dir "
   (subdirs, imgfiles) <- collectDirCont i
+  -- trc $ "syncDirCont: " ++ show (subdirs, imgfiles)
   p  <- objid2path i
 
   cont <- objid2contNames i

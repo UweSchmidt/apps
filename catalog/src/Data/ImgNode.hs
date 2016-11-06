@@ -361,6 +361,13 @@ deriving instance (Show ref) => Show (ColEntry' ref)
 
 deriving instance Functor ColEntry'
 
+instance Eq ref => Eq (ColEntry' ref) where
+  ImgRef r1 n1 _md1 == ImgRef r2 n2 _md2 =
+    r1 == r2 && n1 == n2
+  ColRef r1 == ColRef r2 =
+    r1 == r2
+  _ == _ = False
+
 instance (ToJSON ref) => ToJSON (ColEntry' ref) where
   toJSON (ImgRef i n m) = J.object $
     [ "ColEntry"  J..= ("IMG" :: String)

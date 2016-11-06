@@ -229,7 +229,7 @@ genCollectionsByDir = do
 
         imgA i pts = do
           let res = (map (mkColImgRef i) $ sort ns)
-          -- trcObj i $ "genCol img: " ++ show res
+          trcObj i $ "genCol img: " ++ show res
           return res
           where
             ns = pts ^.. thePartNamesI

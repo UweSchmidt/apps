@@ -337,16 +337,7 @@ sortColEntries getVal cmpVal es =
 
 mergeColEntries :: [ColEntry] -> [ColEntry] -> [ColEntry]
 mergeColEntries es1 es2 =
-  es1 ++ filter (`notIn` map (^. theColObjId) es1) es2
-  where
-    notIn e' es' = (e' ^. theColObjId) `notElem` es'
-
--- a faster version, where the result is unordered
--- duplicates are removed, useful when the list of entries
--- is sorted afterwards
-mergeColEntries' :: [ColEntry] -> [ColEntry] -> [ColEntry]
-mergeColEntries' ns os =
-  (ns ++ os) ^. (from isoDirEntries) . isoDirEntries
+  es1 ++ filter (`notElem` es1) es2
 
 -- get the collection entry at an index pos
 -- if it's not there an error is thrown
