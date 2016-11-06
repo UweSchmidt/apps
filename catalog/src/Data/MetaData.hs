@@ -11,7 +11,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
-import           Text.Printf
+import           Text.Printf         ( printf )
 
 -- import Debug.Trace
 

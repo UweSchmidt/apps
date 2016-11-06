@@ -331,7 +331,7 @@ sortColEntries getVal cmpVal es =
       return (ce, v)
 
 
--- merge old an new entries
+-- merge old and new entries
 -- old entries are removed from list of new entries
 -- the remaining new entries are appended
 
@@ -358,7 +358,7 @@ colEntryAt pos n =
   (n ^? theColEntries . ix pos)
 
 -- process a collection entry at an index pos
--- if not there, an error is thrown
+-- if the entry isn't there, an error is thrown
 processColEntryAt :: (ObjId -> Name -> MetaData -> Cmd a) ->
                      (ObjId -> Cmd a) ->
                      Int ->
@@ -368,7 +368,7 @@ processColEntryAt imgRef colRef pos n =
   colEntry imgRef colRef
 
 -- process a collection image entry at an index pos
--- if not there, an error is thrown
+-- if the entry isn't there, an error is thrown
 processColImgEntryAt :: Monoid a =>
                         (ObjId -> Name -> MetaData -> Cmd a) ->
                         Int ->
