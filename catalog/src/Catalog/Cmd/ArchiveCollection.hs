@@ -104,8 +104,9 @@ processNewImages colSyncTime pc i0 = do
 
     -- read the jpg image part and the create date meta tag
     -- and build a list of pairs of date and ColImgRef's
-    imgA :: ObjId -> ImgParts -> Cmd [((String, String, String), ColEntry)]
-    imgA i pts = do
+    imgA :: ObjId -> ImgParts -> MetaData ->
+            Cmd [((String, String, String), ColEntry)]
+    imgA i pts _md = do
       md <- getMetaData i
       let mymd = getCreateMeta parseDate md
       -- trcObj i $ "processnewimages: mymd: " ++ show mymd
@@ -227,7 +228,7 @@ genCollectionsByDir = do
       where
         -- collect all processed jpg images for a single img
 
-        imgA i pts = do
+        imgA i pts _md = do
           let res = (map (mkColImgRef i) $ sort ns)
           trcObj i $ "genCol img: " ++ show res
           return res

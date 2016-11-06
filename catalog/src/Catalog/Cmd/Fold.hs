@@ -11,7 +11,7 @@ import           Data.Prim
 
 type Act r = ObjId -> Cmd r
 
-foldMT :: (         ObjId -> ImgParts                            -> Cmd r) ->  -- IMG
+foldMT :: (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
           (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
           (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
           (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
@@ -29,8 +29,8 @@ foldMT imgA dirA' rootA' colA' i0 = do
       n <- getTree (theNode i)
       -- trc $ "foldMT: " ++ show n
       case n ^. nodeVal of
-        IMG pts ->
-          imgA i pts
+        IMG pts md ->
+          imgA i pts md
         DIR es ts ->
           dirA i es ts
         ROOT dir col ->
@@ -41,7 +41,7 @@ foldMT imgA dirA' rootA' colA' i0 = do
 -- ----------------------------------------
 
 processImgDirs :: Monoid r =>
-                  (         ObjId -> ImgParts                -> Cmd r) ->
+                  (         ObjId -> ImgParts   -> MetaData  -> Cmd r) ->
                   (Act r -> ObjId -> DirEntries -> TimeStamp -> Cmd r) ->
                   Act r
 processImgDirs imgA dirA =
@@ -64,12 +64,12 @@ processCollections colA =
   where
     rootA go _i dir _col  = go dir
     dirA  _  _  _es _ts   = return mempty
-    imgA  _  _pts         = return mempty
+    imgA  _  _pts   _md   = return mempty
 
 -- ----------------------------------------
 
 processImages :: Monoid r =>
-                 (ObjId -> ImgParts -> Cmd r) -> ObjId -> Cmd r
+                 (ObjId -> ImgParts -> MetaData -> Cmd r) -> ObjId -> Cmd r
 processImages imgA =
   processImgDirs imgA dirA
   where

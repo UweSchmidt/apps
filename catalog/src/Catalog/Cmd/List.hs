@@ -6,6 +6,7 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Data.ImageStore
 import           Data.ImgTree
+import           Data.MetaData
 import           Data.Prim
 
 -- ----------------------------------------
@@ -17,7 +18,7 @@ listNames i0 =
     nm i     = show <$> getImgName i
     ind n xs = n : map ("  " ++) xs
 
-    imgA i ps = do
+    imgA i ps _md = do
       n <- nm i
       return $
         ind n (ps ^.. isoImgParts . traverse . theImgName . isoString)
@@ -50,7 +51,7 @@ listPaths' :: ObjId -> Cmd [Path]
 listPaths' =
   foldMT imgA dirA rootA colA
   where
-    imgA i ps = do
+    imgA i ps _md = do
       p  <- objid2path i
       let pp = ps ^.. isoImgParts . traverse . theImgName . to (`substPathName` p)
       return $
@@ -90,8 +91,8 @@ listImages' = do
   r <- use (theImgTree . rootRef)
   processImages listImg r
   where
-    listImg :: ObjId -> ImgParts -> Cmd [(Path, [Name])]
-    listImg i ps = do
+    listImg :: ObjId -> ImgParts -> MetaData -> Cmd [(Path, [Name])]
+    listImg i ps md = do
       p <- objid2path i
       let pns = ps ^.. isoImgParts . traverse . theImgName
       return [(p, pns)]

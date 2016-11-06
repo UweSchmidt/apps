@@ -94,7 +94,7 @@ copyColEntries :: (Path -> Path) -> ObjId -> Cmd ()
 copyColEntries pf =
       foldMT imgA dirA rootA colA
       where
-        imgA      _i _p      = return ()  -- NOOP
+        imgA      _i _p  _md = return ()  -- NOOP
         dirA  _go _i _es _ts = return ()  -- NOOP
         rootA _go _i _d  _c  = return ()  -- NOOP
 
@@ -126,7 +126,7 @@ removeEntry p = do
 rmRec :: ObjId -> Cmd ()
 rmRec = foldMT imgA dirA rootA colA
   where
-    imgA i _p = rmImgNode i
+    imgA i _p _md = rmImgNode i
 
     dirA go i es _ts = do
       trc $ "dirA: " ++ show (es ^. isoDirEntries)

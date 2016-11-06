@@ -40,6 +40,7 @@ module Data.ImgNode
        , theImgCheckSum
        , theDir
        , theDirEntries
+       , theMetaData
        , theSyncTime
        , theRootImgDir
        , theRootImgCol
@@ -69,6 +70,7 @@ import qualified Data.Map.Strict as M
 
 
 data ImgNode' ref = IMG  !ImgParts
+                         !MetaData             -- image meta data other than exif data
                   | DIR  !(DirEntries' ref)    -- the contents of an image dir
                          !TimeStamp            -- the last sync with the file system
                   | ROOT !ref !ref
@@ -85,15 +87,16 @@ deriving instance (Show ref) => Show (ImgNode' ref)
 deriving instance Functor ImgNode'
 
 instance IsEmpty (ImgNode' ref) where
-  isempty (IMG _pts)               = True
+  isempty (IMG _pts _md)           = True
   isempty (DIR es _ts)             = isempty es
   isempty (COL _md _im _be cs _ts) = isempty cs
   isempty (ROOT _d _c)             = False
 
 instance ToJSON ref => ToJSON (ImgNode' ref) where
-  toJSON (IMG pm) = J.object
+  toJSON (IMG pm md) = J.object
     [ "ImgNode"     J..= ("IMG" :: String)
     , "parts"       J..= pm
+    , "metadata"    J..= md
     ]
   toJSON (DIR rs ts) = J.object
     [ "ImgNode"     J..= ("DIR" :: String)
@@ -124,6 +127,7 @@ instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
        case t :: String of
          "IMG" ->
            IMG  <$> o J..: "parts"
+                <*> o J..: "metadata"
          "DIR" ->
            DIR  <$> o J..: "children"
                 <*> o J..:? "sync" J..!= mempty
@@ -143,7 +147,7 @@ emptyImgDir = DIR mempty mempty
 {-# INLINE emptyImgDir #-}
 
 emptyImg :: ImgNode' ref
-emptyImg = IMG mempty
+emptyImg = IMG mempty mempty
 {-# INLINE emptyImg #-}
 
 emptyImgRoot :: Monoid ref => ImgNode' ref
@@ -156,13 +160,22 @@ emptyImgCol = COL mempty Nothing Nothing [] mempty
 
 -- image node optics
 
-theParts :: Prism' (ImgNode' ref) ImgParts
-theParts
-  = prism IMG (\ x -> case x of
-                  IMG m -> Right m
-                  _     -> Left  x
+thePartsMd :: Prism' (ImgNode' ref) (ImgParts, MetaData)
+thePartsMd
+  = prism (uncurry IMG)
+          (\ x -> case x of
+                  IMG pm md -> Right (pm, md)
+                  _         -> Left  x
               )
+{-# INLINE thePartsMd #-}
+
+theParts :: Traversal' (ImgNode' ref) ImgParts
+theParts = thePartsMd . _1
 {-# INLINE theParts #-}
+
+theImgMetaData :: Traversal' (ImgNode' ref) MetaData
+theImgMetaData = thePartsMd . _2
+{-# INLINE theImgMetaData #-}
 
 theDir :: Prism' (ImgNode' ref) (DirEntries' ref, TimeStamp)
 theDir =
@@ -180,6 +193,15 @@ theDirEntries = theDir . _1
 -- traverseWords :: Traverasl' State Word8
 -- traverseWords :: Applicative f => (Word8 -> f Word8) -> State -> f State
 -- traverseWords inj (State wa wb) = State <$> inj wa <*> inj wb
+
+theMetaData :: Traversal' (ImgNode' ref) MetaData
+theMetaData inj (IMG pm md)
+  = IMG pm <$> inj md
+theMetaData inj (COL md im be es ts)
+  = COL <$> inj md <*> pure im <*> pure be <*> pure es <*> pure ts
+theMetaData _   n
+  = pure n
+{-# INLINE theMetaData #-}
 
 theSyncTime :: Traversal' (ImgNode' ref) TimeStamp
 theSyncTime inj (DIR es ts)          = DIR es <$> inj ts
