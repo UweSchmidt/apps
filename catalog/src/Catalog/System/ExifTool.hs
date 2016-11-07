@@ -106,7 +106,7 @@ syncMD p fu ip fp ts pt =
          (fu || tw >= ts)              -- force update or part has been changed
        ) $ do
     sp <- toFilePath (substPathName tn ip)
-    trc $ "syncMD: syncing with " ++ show sp
+    verbose $ "syncMetaData: syncing with " ++ show sp
     m1 <- readMetaData fp
     m2 <- filterMetaData ty <$> getExifTool sp
     writeMetaData fp (m2 <> m1)
