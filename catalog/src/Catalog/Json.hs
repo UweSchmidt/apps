@@ -465,8 +465,8 @@ setMeta md ixs i n =
           return ()
       | otherwise =
           colEntry
-          (\ _ _ _ -> adjustColEntries (ix pos . theColImgRef . _3 %~ (md <>)) i)
-          (adjustMetaData (md <>))
+          (\ ii _ _ -> adjustMetaData (md <>) ii)
+          (\ ci     -> adjustMetaData (md <>) ci)
           ce
 
 -- ----------------------------------------
@@ -474,8 +474,11 @@ setMeta md ixs i n =
 getMeta :: Int -> ImgNode -> Cmd MetaData
 getMeta =
   processColEntryAt
-    (\ ii _ md -> (md <>) <$> getMetaData ii)
-    (\ ci      -> getImgVals ci theColMetaData)
+    (\ ii _ _md -> do exifMD <- getMetaData ii               -- exif meta data
+                      imgMD  <- getImgVals  ii theMetaData   -- title, comment, ...
+                      return $ imgMD <> exifMD
+    )
+    (\ ci      -> getImgVals ci theMetaData)
 
 -- ----------------------------------------
 

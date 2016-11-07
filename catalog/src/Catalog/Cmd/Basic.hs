@@ -263,7 +263,7 @@ adjustDirEntries :: (DirEntries -> DirEntries) -> ObjId -> Cmd ()
 adjustDirEntries = adjustNodeVal AdjDirEntries theDirEntries
 
 adjustMetaData :: (MetaData -> MetaData) -> ObjId -> Cmd ()
-adjustMetaData = adjustNodeVal AdjMetaData theColMetaData
+adjustMetaData = adjustNodeVal AdjMetaData theMetaData
 
 adjustColImg :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
 adjustColImg = adjustNodeVal AdjColImg theColImg
