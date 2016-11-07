@@ -110,7 +110,7 @@ copyColEntries pf =
           where
 
             copy :: ColEntry -> Cmd ColEntry
-            copy r@(ImgRef _i _n _m) =
+            copy r@(ImgRef _i _n) =
               return r
             copy (ColRef i') = do
               copy'path <- pf <$> objid2path i'
@@ -131,8 +131,8 @@ rmRec = foldMT imgA dirA rootA colA
     dirA go i es _ts = do
       trc $ "dirA: " ++ show (es ^. isoDirEntries)
       mapM_ go (es ^. isoDirEntries)            -- process subdirs first
-      pe <- getImgParent i >>= getImgVal        -- remode dir node
-      when (not $ isROOT pe) $                  -- if it's not the top dir
+      pe <- getImgParent i >>= getImgVal        -- remove dir node
+      unless (isROOT pe) $                      -- if it's not the top dir
         rmImgNode i
 
     rootA go _i dir col =
@@ -195,7 +195,7 @@ cleanupCollections = do
             adjustColEntries (const es') i'
           where
             cleanupE :: ColEntry -> Cmd Bool
-            cleanupE (ImgRef j n _m) = do
+            cleanupE (ImgRef j n) = do
               exImg j n
             cleanupE (ColRef j) = do
               -- recurse into subcollection and cleanup

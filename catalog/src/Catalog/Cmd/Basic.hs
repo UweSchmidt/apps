@@ -350,8 +350,8 @@ colEntryAt pos n =
 
 -- process a collection entry at an index pos
 -- if the entry isn't there, an error is thrown
-processColEntryAt :: (ObjId -> Name -> MetaData -> Cmd a) ->
-                     (ObjId -> Cmd a) ->
+processColEntryAt :: (ObjId -> Name -> Cmd a) ->
+                     (ObjId ->         Cmd a) ->
                      Int ->
                      ImgNode -> Cmd a
 processColEntryAt imgRef colRef pos n =
@@ -361,7 +361,7 @@ processColEntryAt imgRef colRef pos n =
 -- process a collection image entry at an index pos
 -- if the entry isn't there, an error is thrown
 processColImgEntryAt :: Monoid a =>
-                        (ObjId -> Name -> MetaData -> Cmd a) ->
+                        (ObjId -> Name -> Cmd a) ->
                         Int ->
                         ImgNode -> Cmd a
 processColImgEntryAt imgRef =

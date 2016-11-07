@@ -173,10 +173,6 @@ theParts :: Traversal' (ImgNode' ref) ImgParts
 theParts = thePartsMd . _1
 {-# INLINE theParts #-}
 
-theImgMetaData :: Traversal' (ImgNode' ref) MetaData
-theImgMetaData = thePartsMd . _2
-{-# INLINE theImgMetaData #-}
-
 theDir :: Prism' (ImgNode' ref) (DirEntries' ref, TimeStamp)
 theDir =
   prism (uncurry DIR)
@@ -376,27 +372,19 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-data ColEntry' ref = ImgRef !ref !Name !MetaData
+data ColEntry' ref = ImgRef !ref !Name
                    | ColRef !ref
 
+deriving instance (Eq   ref) => Eq   (ColEntry' ref)
 deriving instance (Show ref) => Show (ColEntry' ref)
-
 deriving instance Functor ColEntry'
 
-instance Eq ref => Eq (ColEntry' ref) where
-  ImgRef r1 n1 _md1 == ImgRef r2 n2 _md2 =
-    r1 == r2 && n1 == n2
-  ColRef r1 == ColRef r2 =
-    r1 == r2
-  _ == _ = False
-
 instance (ToJSON ref) => ToJSON (ColEntry' ref) where
-  toJSON (ImgRef i n m) = J.object $
+  toJSON (ImgRef i n) = J.object $
     [ "ColEntry"  J..= ("IMG" :: String)
     , "ref"       J..= i
     , "part"      J..= n
     ]
-    ++ ("metadata" .=?! m)        -- optional meta data (title, comment, ...)
 
   toJSON (ColRef i) = J.object
     [ "ColEntry"  J..= ("COL" :: String)
@@ -410,40 +398,39 @@ instance (FromJSON ref) => FromJSON (ColEntry' ref) where
          "IMG" ->
            ImgRef <$> o J..: "ref"
                   <*> o J..: "part"
-                  <*> o   .:?! "metadata"
          "COL" ->
            ColRef <$> o J..: "ref"
          _ -> mzero
 
-mkColImgRef :: ref -> Name -> (ColEntry' ref)
-mkColImgRef i n = ImgRef i n mempty
+mkColImgRef :: ref -> Name -> ColEntry' ref
+mkColImgRef i n = ImgRef i n
 {-# INLINE mkColImgRef #-}
 
-mkColColRef :: ref -> (ColEntry' ref)
+mkColColRef :: ref -> ColEntry' ref
 mkColColRef = ColRef
 {-# INLINE mkColColRef #-}
 
-colEntry :: (ref -> Name -> MetaData -> a) ->
-            (ref -> a) ->
+colEntry :: (ref -> Name -> a) ->
+            (ref         -> a) ->
             ColEntry' ref -> a
-colEntry  imgRef _colRef (ImgRef i n md) = imgRef i n md
-colEntry _imgRef  colRef (ColRef i     ) = colRef i
+colEntry  imgRef _colRef (ImgRef i n) = imgRef i n
+colEntry _imgRef  colRef (ColRef i  ) = colRef i
 
 
 theColObjId :: Lens' (ColEntry' ref) ref
-theColObjId k (ImgRef i n m) = (\ new -> ImgRef new n m) <$> k i
-theColObjId k (ColRef i)     = (\ new -> ColRef new)     <$> k i
+theColObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
+theColObjId k (ColRef i)   =           ColRef        <$> k i
 {-# INLINE theColObjId #-}
 
 -- theImgName :: Lens' ImgPart Name
 -- theImgName k (IP n t s c) = (\ new -> IP new t s c) <$> k n
 
-theColImgRef :: Prism' (ColEntry' ref) (ref, Name, MetaData)
+theColImgRef :: Prism' (ColEntry' ref) (ref, Name)
 theColImgRef =
-  prism (\ (i, n, m) -> ImgRef i n m)
+  prism (\ (i, n) -> ImgRef i n)
         (\ x -> case x of
-            ImgRef i n m -> Right (i, n, m)
-            _            -> Left  x
+            ImgRef i n -> Right (i, n)
+            _          -> Left  x
         )
 {-# INLINE theColImgRef #-}
 

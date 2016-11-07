@@ -262,7 +262,7 @@ removeFrCol ixs i n = do
 removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFrCol i pos =
   colEntry
-  (\ _ _ _ -> adjustColEntries (removeAt pos) i)
+  (\ _ _ -> adjustColEntries (removeAt pos) i)
   rmRec
 
 {- -- avoid case over constructors
@@ -278,7 +278,7 @@ removeEntryFrCol _i _pos (ColRef ci) =
 
 copyToCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
 copyToCol ixs di n =
-  traverse_ (\ e -> copyEntryToCol di e) toBeCopied
+  traverse_ (copyEntryToCol di) toBeCopied
   where
     toBeCopied :: [ColEntry]
     toBeCopied =
@@ -291,7 +291,7 @@ copyToCol ixs di n =
 copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
 copyEntryToCol di ce =
   colEntry
-  (\ _ _ _ -> adjustColEntries (++ [ce]) di)
+  (\ _ _ -> adjustColEntries (++ [ce]) di)
   copyColToCol
   ce
   where
@@ -396,7 +396,7 @@ setColImg sPath pos oid
   | otherwise = do
       scn <- jsonPath2ColNode sPath
       processColImgEntryAt
-        (\ iid inm _md -> adjustColImg (const $ Just (iid, inm)) oid)
+        (\ iid inm -> adjustColImg (const $ Just (iid, inm)) oid)
         pos scn
 
 -- set or unset the "blog text" of a collection
@@ -410,7 +410,7 @@ setColBlog sPath pos oid
   | otherwise = do
       scn <- jsonPath2ColNode sPath
       processColImgEntryAt
-        (\ iid inm _md -> adjustColBlog (const $ Just (iid, inm)) oid)
+        (\ iid inm -> adjustColBlog (const $ Just (iid, inm)) oid)
         pos scn
 
 jsonPath2ColNode :: Path -> Cmd ImgNode
@@ -465,8 +465,8 @@ setMeta md ixs i n =
           return ()
       | otherwise =
           colEntry
-          (\ ii _ _ -> adjustMetaData (md <>) ii)
-          (\ ci     -> adjustMetaData (md <>) ci)
+          (\ ii _ -> adjustMetaData (md <>) ii)
+          (\ ci   -> adjustMetaData (md <>) ci)
           ce
 
 -- ----------------------------------------
@@ -474,11 +474,11 @@ setMeta md ixs i n =
 getMeta :: Int -> ImgNode -> Cmd MetaData
 getMeta =
   processColEntryAt
-    (\ ii _ _md -> do exifMD <- getMetaData ii               -- exif meta data
-                      imgMD  <- getImgVals  ii theMetaData   -- title, comment, ...
-                      return $ imgMD <> exifMD
+    (\ i _ -> do exifMD <- getMetaData i               -- exif meta data
+                 imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
+                 return $ imgMD <> exifMD
     )
-    (\ ci      -> getImgVals ci theMetaData)
+    (\ i   -> getImgVals i theMetaData)
 
 -- ----------------------------------------
 
@@ -499,15 +499,15 @@ previewImgRef :: Int -> Maybe GeoAR -> ImgNode -> Cmd FilePath
 previewImgRef pos g n =
   addGeoToPath g $
   processColEntryAt
-    (\ ii nm _md -> buildImgPath ii nm)
+    (\ ii nm -> buildImgPath ii nm)
     colImgRef
     pos n
 
 getBlogContHtml :: Int -> ImgNode -> Cmd Text
 getBlogContHtml =
   processColEntryAt
-    (\ i nm _md -> getColBlogCont i nm)   -- ImgRef: entry is a blog text
-    (\ i -> do                            -- ColRef: lookup the col blog ref
+    (\ i nm -> getColBlogCont i nm)       -- ImgRef: entry is a blog text
+    (\ i    -> do                         -- ColRef: lookup the col blog ref
         be <- getImgVals i theColBlog
         maybe (return mempty)             -- return nothing, when not there
               (uncurry getColBlogCont)    -- else generate the HTML
@@ -517,8 +517,8 @@ getBlogContHtml =
 getBlogCont :: Int -> ImgNode -> Cmd Text
 getBlogCont =
   processColEntryAt
-    (\ i nm _md -> getColBlogSource i nm)
-    (\ i -> do
+    (\ i nm -> getColBlogSource i nm)
+    (\ i    -> do
         be        <- getImgVals i theColBlog
         (bi, bn)  <- maybe
                      ( do p <- objid2path i
@@ -533,8 +533,8 @@ getBlogCont =
 putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
 putBlogCont val =
   processColEntryAt
-    (\ i nm _md -> putColBlogSource val i nm)
-    (\ i -> do
+    (\ i nm -> putColBlogSource val i nm)
+    (\ i    -> do
         be        <- getImgVals i theColBlog
         (bi, bn)  <- maybe
                      ( do p <- objid2path i
@@ -559,7 +559,7 @@ changeColWriteProtectedByIxList ixs ro n =
           return ()
       | otherwise =
           colEntry
-          (\ _ _ _ -> return ())            -- ignore ImgRef's
+          (\ _ _ -> return ())            -- ignore ImgRef's
           (adjustMetaData cf)
           ce
 

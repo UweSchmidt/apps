@@ -160,7 +160,7 @@ normColRef = maybeColRef cref iref
       val <- getImgVal i
       return $
         case val ^? theColEntries . ix pos of
-          Just (ImgRef _ _ _) ->  -- ref to an image
+          Just (ImgRef _ _) ->    -- ref to an image
             Just $ mkColRefI i pos
           Just (ColRef j) ->      -- ref to a sub collection
             Just $ mkColRefC j
@@ -530,15 +530,15 @@ colHref cf (i, cix) = do
 -- ----------------------------------------
 
 colImgOp :: Monoid a =>
-            (ObjId -> Cmd a) ->
-            (ObjId -> Name -> MetaData -> Cmd a) ->
+            (ObjId -> Name -> Cmd a) ->
+            (ObjId ->         Cmd a) ->
             ColRef -> Cmd a
-colImgOp cop iop = maybeColRef cop iref
+colImgOp iop cop = maybeColRef cop iref
   where
     iref i pos = do
       cs <- getImgVals i theColEntries
       case cs ^? ix pos of
-        Just (ImgRef j n m) -> iop j n m
+        Just (ImgRef j n) -> iop j n
         _ -> return mempty
 
 -- ----------------------------------------
@@ -550,11 +550,12 @@ colImgMeta0 :: ColRef -> Cmd MetaData
 colImgMeta0 = colImgMeta' False
 
 colImgMeta' :: Bool -> ColRef -> Cmd MetaData
-colImgMeta' gm = colImgOp (\ i -> getImgVals i theColMetaData) iop
+colImgMeta' gm = colImgOp iop cop
   where
-    iop j _n m
-      | gm        = getMetaData j
-      | otherwise = return m
+    iop i _n
+      | gm        = getMetaData i              -- exif data and descr
+      | otherwise = getImgVals  i theMetaData  -- only descr
+    cop i         = getImgVals  i theMetaData
 
 colImgBlog :: ColRef -> Cmd Text
 colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
@@ -568,21 +569,25 @@ colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
 -- ----------------------------------------
 
 colImgType :: ColRef -> Cmd ImgType
-colImgType = colImgOp (\ _i -> return IMGjpg) iop
+colImgType = colImgOp iop cop
   where
-    iop i _n _m = do
+    iop i _n = do
       ity <$> getImgVals i theParts
       where
         ity ps
           | thePartNames' (`elem` [IMGimg, IMGjpg]) `has` ps = IMGjpg
           | thePartNames' (== IMGtxt)               `has` ps = IMGtxt
           | otherwise                                        = IMGother
+    cop i = return IMGjpg
 
 colImgName :: ColRef -> Cmd (Maybe Name)
-colImgName = colImgOp (\ _i -> return Nothing) (\ _i n _m -> return $ Just n)
+colImgName =
+  colImgOp
+  (\ _i n -> return $ Just n)
+  (\ _i   -> return Nothing)
 
 colImgPath :: ColRef -> Cmd (Maybe FilePath)
-colImgPath = colImgOp cop iop
+colImgPath = colImgOp iop cop
   where
     cop i = do -- col ref
       j'img <- getImgVals i theColImg
@@ -593,7 +598,7 @@ colImgPath = colImgOp cop iop
         _ ->
           return Nothing
 
-    iop j n _m = Just <$> buildImgPath j n
+    iop j n = Just <$> buildImgPath j n
 
 buildImgPath :: ObjId -> Name -> Cmd FilePath
 buildImgPath i n = do
@@ -617,10 +622,10 @@ colImgRef i = do
 
 colBlogCont :: ImgType -> ColRef -> Cmd Text
 colBlogCont IMGtxt cr = do
-  colImgOp (\ _i -> return mempty) iop cr
+  colImgOp iop cop cr
   where
-    iop i n _m = getColBlogCont i n
-
+    iop i n     = getColBlogCont i n
+    cop i       = return mempty
 colBlogCont _ _ = return mempty
 
 getColBlogCont :: ObjId -> Name -> Cmd Text

@@ -284,8 +284,8 @@ sortByName =
     -- collections come first and are sorted by name
     -- images are sorted by name and part name
     getVal :: ColEntry -> Cmd (Either Name (Name, Name))
-    getVal (ColRef j)       = Left                    <$> getImgName j
-    getVal (ImgRef j n1 _m) = (\ n -> Right (n, n1))  <$> getImgName j
+    getVal (ColRef j)    = Left                    <$> getImgName j
+    getVal (ImgRef j n1) = (\ n -> Right (n, n1))  <$> getImgName j
 
 sortByDate :: [ColEntry] -> Cmd [ColEntry]
 sortByDate =
@@ -299,7 +299,7 @@ sortByDate =
 
     getVal (ColRef j) =
       Left <$> getImgName j -- should never occur
-    getVal (ImgRef j n1 _m) = do
+    getVal (ImgRef j n1) = do
       md  <- getMetaData j
       let t = getCreateMeta parseTime md
       return $ Right (t, n1)
@@ -333,7 +333,7 @@ adjustColBy sortCol cs parent'i = do
 findFstTxtEntry :: ObjId -> Cmd (Maybe (Int, ColEntry))
 findFstTxtEntry = findFstColEntry isTxtEntry
   where
-    isTxtEntry (ImgRef i n _m) = do
+    isTxtEntry (ImgRef i n) = do
       nd <- getImgVal i
       let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
       return $ maybe False (== IMGtxt) ty
@@ -350,7 +350,7 @@ setColBlogToFstTxtEntry rm i = do
   fte <- findFstTxtEntry i
   maybe (return ()) setEntry fte
   where
-    setEntry (pos, ir@(ImgRef j n _m)) = do
+    setEntry (pos, ir@(ImgRef j n)) = do
       trc $ unwords ["setColBlogToFstTxtEntry", show i, show pos, show ir]
       adjustColBlog (const $ Just (j, n)) i
       when rm $
