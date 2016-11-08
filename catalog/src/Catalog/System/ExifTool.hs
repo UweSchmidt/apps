@@ -54,17 +54,14 @@ writeMetaData f m =
 readMetaData :: FilePath -> Cmd MetaData
 readMetaData f = do
   trc $ "readMetadata from " ++ show f
-  ex <- fileExist f
-  if ex
-    then do
+  whenM (fileExist f) $ do
       bs <- readFileLB f
       case J.decode' bs of
-        Nothing ->
-          abort $ "readMetaData: JSON input corrupted: " ++ show f
+        Nothing -> do
+          warn $ "readMetaData: no metadata, JSON input corrupted: " ++ show f
+          return mempty
         Just m ->
           return m
-    else
-      return mempty
 
 getMetaData :: ObjId -> Cmd MetaData
 getMetaData i =

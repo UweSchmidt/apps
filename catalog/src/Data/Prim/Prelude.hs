@@ -334,13 +334,13 @@ removeAt 0 xs = drop 1 xs
 removeAt i xs
   | i < 0 = xs
 removeAt _ [] = []
-removeAt i (x : xs) = x : removeAt (i - 1) xs
+removeAt i (x : xs) = (x :) $! removeAt (i - 1) xs
 
 insertAt :: Int -> a -> [a] -> [a]
 insertAt _ x []        =  x : []
 insertAt i x xs
   | i <= 0             =  x : xs
-insertAt i x (x1 : xs) = x1 : insertAt (i - 1) x xs
+insertAt i x (x1 : xs) = (x1 :) $! insertAt (i - 1) x xs
 
 -- ----------------------------------------
 
@@ -356,6 +356,9 @@ partBy f =
                     m) M.empty
 
 -- ----------------------------------------
+
+-- compare 2 values with a sequence of compare functions
+-- first res /= EQ wins
 
 compareBy :: [a -> a -> Ordering] -> a -> a -> Ordering
 compareBy fs x1 x2 =
@@ -386,10 +389,11 @@ compareJust' _         _         = EQ
 
 -- ----------------------------------------
 
-whenM :: Monad m => m Bool -> m () -> m ()
+whenM :: (Monoid a, Monad m) => m Bool -> m a -> m a
 whenM b c = do
   b' <- b
-  when b' c
+  if b' then c else return mempty
+
 {-# INLINE whenM #-}
 
 unlessM :: Monad m => m Bool -> m () -> m ()
