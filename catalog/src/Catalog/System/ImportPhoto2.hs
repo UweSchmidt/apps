@@ -123,4 +123,4 @@ insertImportPhoto2 ipd = go ipd
           insAlbum = do
             verbose $ "ALBUM: " ++ show path
 
-ttt = runCmd $ local ( & envVerbose %~ (const True)) $ (loadImportData "data/export.json") >>= insertImportPhoto2 >> return ()
+ttt = runCmd $ local (& envVerbose .~ True) $ (loadImportData "data/export.json") >>= insertImportPhoto2 >> return ()
