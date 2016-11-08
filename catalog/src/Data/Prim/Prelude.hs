@@ -89,6 +89,9 @@ module Data.Prim.Prelude
        , searchPos
        , removeAt
        , insertAt
+         -- Monad ops
+       , whenM
+       , unlessM
        )
 where
 
@@ -192,7 +195,6 @@ instance IsoString LazyByteString where
 instance IsoString Int
 
 instance IsoString Integer
-
 
 -- ----------------------------------------
 
@@ -381,5 +383,19 @@ compareJust' (Just _ ) _         = LT
 compareJust' _         (Just _ ) = GT
 compareJust' _         _         = EQ
 {-# INLINE compareJust' #-}
+
+-- ----------------------------------------
+
+whenM :: Monad m => m Bool -> m () -> m ()
+whenM b c = do
+  b' <- b
+  when b' c
+{-# INLINE whenM #-}
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM b c = do
+  b' <- b
+  unless b' c
+{-# INLINE unlessM #-}
 
 -- ----------------------------------------

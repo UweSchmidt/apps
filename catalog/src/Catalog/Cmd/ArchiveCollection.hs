@@ -32,6 +32,7 @@ genCollectionRootMeta = do
 genClipboardCollection :: Cmd ()
 genClipboardCollection = genSysCollection no'delete n'clipboard tt'clipboard
 
+-- at the moment not in use
 genTrashCollection :: Cmd ()
 genTrashCollection = genSysCollection no'delete n'trash tt'trash
 

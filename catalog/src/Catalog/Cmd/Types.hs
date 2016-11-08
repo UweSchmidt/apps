@@ -26,6 +26,7 @@ data Env = Env
   , _port        :: Int
   , _jsonArchive :: FilePath
   , _mountPath   :: FilePath
+  , _syncDir     :: FilePath
   , _fontName    :: Text
   }
 
@@ -49,6 +50,7 @@ defaultEnv = Env
   , _port         = 3001
   , _jsonArchive  = "catalog.json" -- rel to mount path
   , _mountPath    = "."
+  , _syncDir      = s'photos       -- the top archive dir
   , _fontName     = mempty
   }
 
@@ -78,6 +80,9 @@ envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
 
 envMountPath :: Lens' Env FilePath
 envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)
+
+envSyncDir :: Lens' Env FilePath
+envSyncDir k e = (\ new -> e {_syncDir = new}) <$> k (_syncDir e)
 
 envFontName :: Lens' Env Text
 envFontName k e = (\ new -> e {_fontName = new}) <$> k (_fontName e)

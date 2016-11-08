@@ -96,10 +96,9 @@ getIdNode' p =
 
 -- check path not there
 
-notTherePath :: String -> Path -> Cmd ()
-notTherePath msg p = do
-  exists <- isJust <$> lookupByPath p
-  when exists $
+alreadyTherePath :: String -> Path -> Cmd ()
+alreadyTherePath msg p = do
+  whenM (isJust <$> lookupByPath p) $
     abort $ msg ++ " " ++ show (show p)
 
 -- ----------------------------------------
@@ -243,7 +242,7 @@ mkCollection target'path = do
     abort $ "mkCollection: parent isn't a collection " ++ show (show parent'path)
 
   -- check collection does not yet exist
-  notTherePath "mkCollection: target collection already exists" target'path
+  alreadyTherePath "mkCollection: target collection already exists" target'path
 
   -- create a new empty collection and append it to the parent collection
   col'id <- mkImgCol parent'id target'name

@@ -35,7 +35,7 @@ getExifTool f = do
 
 execExifTool :: [String] -> FilePath -> Cmd String
 execExifTool args f = do
-  verbose $ unwords ["exiftool", show (args ++ [f]), ""]
+  trc $ unwords ["exiftool", show (args ++ [f]), ""]
   execProcess "exiftool" (args ++ [f]) ""
 
 buildMetaData :: ByteString -> Cmd MetaData
@@ -87,7 +87,7 @@ syncMetaData i = do
   ps <- getImgVals i (theParts . isoImgParts)
   fu <- view envForceMDU
 
-  verbose $
+  trc $
     "syncMetaData: syncing exif data "
     ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
 

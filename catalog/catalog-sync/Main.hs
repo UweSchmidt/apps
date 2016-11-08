@@ -18,35 +18,49 @@ syncMain env = do
 
 syncCatalog :: Cmd ()
 syncCatalog = do
-  jsonPath0 <- view envJsonArchive
   mountPath <- view envMountPath
 
-  verbose "create archive root"
-  initImgStore n'archive n'collections (mountPath </> s'photos)
+  verbose $
+    "syncCatalog: create archive at: " ++
+    (mountPath ^. isoString . to show)
 
-  let jsonPath = mountPath </> jsonPath0
+  initImgStore
+    n'archive n'collections (mountPath </> s'photos)
+
+  jsonPath <-
+    (mountPath </>) <$>
+    view envJsonArchive
+
   ex <- fileExist jsonPath
-  when ex $ do
+  whenM (fileExist jsonPath) $ do
     verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 
-  verbose "get the archive and the image root"
-  refRoot <- use (theImgTree . rootRef)
-  refImg  <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
+  -- verbose "syncCatalog: get the archive and the image root"
+  -- refRoot  <- use (theImgTree . rootRef)
+  -- refImg   <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
 
-  verbose "sync the archive with the file system"
-  syncFS refImg
+  syncPath <-
+    (n'archive `consPath`) . readPath . ("/" ++) <$>
+    view envSyncDir
+  verbose $
+    "syncCatalog: sync the archive dir with the file system: " ++
+    (syncPath ^. isoString . to show)
+  syncDir syncPath
+  -- syncFS refImg  -- old
 
-  verbose "create the collections for the archive dirs"
-  verbose "and the collections per date"
+  verbose "syncCatalog: create/update system collections"
   genCollectionRootMeta
   cleanupCollections
   genClipboardCollection
-  genTrashCollection
+
+  verbose "syncCatalog: create the collections for the archive dirs"
   genCollectionsByDir
+
+  verbose "syncCatalog: create the collections per date"
   genCollectionsByDate
 
-  verbose $ "save state to " ++ show jsonPath
+  verbose $ "syncCatalog: save state to " ++ show jsonPath
   saveImgStore jsonPath
 
-  verbose "sync finished"
+  verbose "syncCatalog: sync finished"

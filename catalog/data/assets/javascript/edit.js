@@ -1791,7 +1791,7 @@ function saveImgStore() {
                  pathArchive(),
                  [],
                  function () {
-                     statusMsg('snapshot of image store taken on server side');
+                     statusMsg('snapshot of image archive taken on server side');
                  });
 }
 
@@ -1998,7 +1998,8 @@ $(document).ready(function () {
 
     $('#SaveImgStore')
         .on('click', function () {
-            statusClear();
+            // statusClear();
+            statusMsg('taking snapshot of image archive, one moment please');
             saveImgStore();
         });
 });

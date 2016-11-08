@@ -41,9 +41,10 @@ readPath ('/' : xs0)
   = buildPath . tokenize "[^/]*" $ xs0
   where
     buildPath :: [String] -> Path
-    buildPath [xs] = BN $ mkName xs
-    buildPath (x : xs) = DN (mkName x) (buildPath xs)
-    buildPath [] = error "buildPath: empty path"
+    buildPath ("." : xs) = buildPath xs
+    buildPath [xs]       = BN $ mkName xs
+    buildPath (x : xs)   = DN (mkName x) (buildPath xs)
+    buildPath []         = emptyPath
 
 readPath ""
   = emptyPath

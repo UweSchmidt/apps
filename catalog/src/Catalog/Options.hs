@@ -2,14 +2,15 @@ module Catalog.Options
 where
 
 import Catalog.Cmd.Types
-import Catalog.System.Convert(selectFont)
-import Data.Maybe (fromJust)
+import Catalog.System.Convert (selectFont)
+import Data.Maybe             (fromJust)
 import Data.Prim.Prelude
 import System.Console.CmdTheLine
 import Text.PrettyPrint
 
 mainWithArgs :: String -> (Env -> IO ()) -> IO ()
-mainWithArgs theAppName theAppMain = run (theApp <$> oAll, appInfo theAppName)
+mainWithArgs theAppName theAppMain =
+  run (theApp <$> oAll, appInfo theAppName)
   where
     theApp :: (Env -> Env) -> IO ()
     theApp setOpts = do
@@ -42,7 +43,8 @@ oAll
   , oForceMDU
   , oPort
   , oMountPath
-  , oArchive :: Term (Env -> Env)
+  , oArchive
+  , oSyncDir :: Term (Env -> Env)
 
 oAll =
   oVerbose
@@ -53,6 +55,7 @@ oAll =
   <..> oPort
   <..> oMountPath
   <..> oArchive
+  <..> oSyncDir
 
 oVerbose =
   convFlag setVerbose $
@@ -129,6 +132,18 @@ oArchive =
     setArchive s
       | null s    = Just id
       | otherwise = Just (envJsonArchive .~ s)
+
+oSyncDir =
+  convStringValue "not a legal dir path" setMP $
+  (optInfo ["d", "dir-path"])
+    { optName = "DIR-PATH"
+    , optDoc = "For syncing only: The dir path for the subdir to be synchronized, default \".\""
+    }
+  where
+    setMP s
+      | null s    = Just id
+      | otherwise = Just (envSyncDir .~ s)
+
 
 -- ----------------------------------------
 

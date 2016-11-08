@@ -142,11 +142,12 @@ rmRec = foldMT imgA dirA rootA colA
       trc $ "colA: " ++ show cs
       let cs' = filter isColColRef cs           -- remove all images
       adjustColEntries (const cs') i            -- store remaining collections
+
       trc $ "colA: " ++ show cs'
-      mapM_ go (cs' ^.. traverse . theColColRef)  -- remove the remaining collections
-      pe <- getImgParent i >>= getImgVal        -- remove collection node
-      when (not $ isROOT pe) $                  -- if it's not the top collection
-        rmImgNode i
+      mapM_ go (cs' ^.. traverse . theColColRef) -- remove the remaining collections
+
+      unlessM (isROOT <$> (getImgParent i >>= getImgVal)) $
+        rmImgNode i                             -- remove node unless it's the top collection
 
 -- ----------------------------------------
 

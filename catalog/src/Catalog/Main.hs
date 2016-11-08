@@ -135,8 +135,7 @@ syncCatalog jsonPath0 mountPath = do
   initImgStore n'archive n'collections (mountPath </> s'photos)
 
   let jsonPath = mountPath </> jsonPath0
-  ex <- fileExist jsonPath
-  when ex $ do
+  whenM (fileExist jsonPath) $ do
     trc $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 

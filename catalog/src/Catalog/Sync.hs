@@ -5,7 +5,7 @@ module Catalog.Sync
 where
 
 import Catalog.Cmd
-import Catalog.FilePath (filePathToImgType)
+import Catalog.FilePath        (filePathToImgType)
 import Catalog.System.ExifTool (syncMetaData)
 import Data.ImgTree
 import Data.Prim
@@ -17,11 +17,27 @@ cwSyncFS = we >>= syncFS
 
 -- ----------------------------------------
 
+-- sync the whole photo archive with disk contents
+
 syncFS :: ObjId -> Cmd ()
 syncFS = idSyncFS True
 
+-- sync a single entry of the archive (image or dir) with disk contents
+
 syncNode :: ObjId -> Cmd ()
 syncNode = idSyncFS False
+
+-- sync a dir tree, given as path, in the archive with disk contents
+
+syncDir :: Path -> Cmd ()
+syncDir p = do
+  (i, n) <- getIdNode "syncDir: image dir not found:" p
+  unless (isDIR n) $
+    abort $ "syncDIR: path isn't an image dir: " ++ show (p ^. isoString)
+  idSyncFS True i
+
+-- ----------------------------------------
+-- the work horse
 
 idSyncFS :: Bool -> ObjId -> Cmd ()
 idSyncFS recursive i = getImgVal i >>= go
@@ -75,10 +91,9 @@ syncDirCont recursive i = do
 
     syncSubDir p n = do
       -- trc $ "syncSubDir: " ++ show p ++ "/" ++ show n
+      whenM (isNothing <$> getTree (entryAt new'i)) $
+        void $ mkImgDir i n
 
-      notex <- isNothing <$> getTree (entryAt new'i)
-      when notex $
-        mkImgDir i n >> return ()
       idSyncFS recursive new'i
       where
         new'i = mkObjId (p `snocPath` n)
@@ -136,9 +151,8 @@ type ClassifiedNames = [ClassifiedName]
 syncImg :: ObjId -> Path -> ClassifiedNames -> Cmd ()
 syncImg ip pp xs = do
   -- new image ?
-  notex <- isNothing <$> getTree (entryAt i)
-  when notex $
-    mkImg ip n >> return ()
+  whenM (isNothing <$> getTree (entryAt i)) $
+    void $ mkImg ip n
 
   -- trcObj i $ "syncImg: "
 
@@ -178,8 +192,7 @@ syncParts i pp = do
 
 checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
-  nv <- getImgVal i
-  when (isempty nv) $ do
+  whenM (isempty <$> getImgVal i) $ do
     p <- objid2path i
     verbose $ "sync: empty image dir ignored " ++ show (show p)
     rmImgNode i
