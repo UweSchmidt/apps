@@ -30,7 +30,7 @@ where
 
 import           Control.Monad.Except
 import           Data.Prim
-import qualified Data.Aeson as J
+import qualified Data.Aeson      as J
 import qualified Data.Map.Strict as M
 
 -- ----------------------------------------
