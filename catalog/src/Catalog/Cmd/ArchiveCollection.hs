@@ -15,6 +15,19 @@ import           Data.Prim
 
 -- ----------------------------------------
 
+genSysCollections :: Cmd ()
+genSysCollections = do
+  verbose "genSysCollections: create/update system collections (clipboard, albums, imports)"
+
+  -- the collection root is already there
+  -- just set the meta data
+  genCollectionRootMeta
+
+  -- gen clipboard albums and imports, if not already there
+  genClipboardCollection
+  genAlbumsCollection
+  genImportsCollection
+
 genCollectionRootMeta :: Cmd ()
 genCollectionRootMeta = do
   ic <- getRootImgColId
@@ -31,6 +44,12 @@ genCollectionRootMeta = do
 
 genClipboardCollection :: Cmd ()
 genClipboardCollection = genSysCollection no'delete n'clipboard tt'clipboard
+
+genAlbumsCollection :: Cmd ()
+genAlbumsCollection = genSysCollection no'restr n'albums tt'albums
+
+genImportsCollection :: Cmd ()
+genImportsCollection = genSysCollection no'restr n'imports tt'imports
 
 -- at the moment not in use
 genTrashCollection :: Cmd ()
@@ -206,10 +225,12 @@ genCollectionsByDir = do
       -- remove the 2 top level dirs
       -- remove leading "/"
 
-      t <- path2Title <$> objid2path i
-      let o = to'colandname
+      p  <- objid2path i
+      let t = path2Title p
+          s = path2Subtitle p
+          o = to'colandname
           a = no'wrtdel
-      mkColMeta t "" "" o a
+      mkColMeta t s "" o a
 
     -- TODO (really)
     -- search for a IMGtxt entry in DIR entries,
@@ -218,7 +239,12 @@ genCollectionsByDir = do
     -- setupDirTxt = undefined
 
     path2Title :: Path -> Text
-    path2Title p = tt p ^. isoText
+    path2Title p =
+      p ^. viewBase . _2 . isoText
+
+    path2Subtitle :: Path -> Text
+    path2Subtitle p =
+      tt p ^. isoText
       where
         tt = pathToBreadCrump . show . tailPath . tailPath
         -- substitute / by ->
@@ -383,29 +409,31 @@ mkColByPath insertCol setupCol p = do
     abort $ "mkColByPath: can't create collection " ++ show (show p)
 
   mid <- lookupByPath p
-  case mid of
-    -- collection does not yet exist
-    Nothing -> do
-      -- compute parent collection
-      let (p1, n) = p ^. viewBase
-      ip <- mkColByPath insertCol setupCol p1
-      -- trc $ "mkColByPath " ++ show p1 ++ "/" ++ show n
+  cid <-
+    case mid of
+      -- collection does not yet exist
+      Nothing -> do
+        -- compute parent collection
+        let (p1, n) = p ^. viewBase
+        ip <- mkColByPath insertCol setupCol p1
+        verbose $ "mkColByPath " ++ show p1 ++ "/" ++ show n
+        -- create collection
+        ic <- mkImgCol ip n
+        -- inser collection into parent collection
+        insertCol ic ip
+        return ic
 
-      -- create collection and set meta data
-      ic <- mkImgCol ip n
-      md <- setupCol ic
-      adjustMetaData (md <>) ic
+      -- entry already there
+      Just (ip, vp) -> do
+        unless (isCOL vp) $
+          abort $ "mkColByPath: can't create collection, other entry already there " ++
+                  show (show p)
+        return ip
 
-      -- inser collection into parent collection
-      insertCol ic ip
-
-      return ic
-
-    -- entry already there
-    Just (ip, vp) -> do
-      unless (isCOL vp) $
-        abort $ "mkColByPath: can't create collection, other entry already there " ++
-                show (show p)
-      return ip
+  -- meta data update always done,
+  -- neccessary if the titile generation has been modified
+  md <- setupCol cid
+  adjustMetaData (md <>) cid
+  return cid
 
 -- ----------------------------------------

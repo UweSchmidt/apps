@@ -7,12 +7,15 @@ module Catalog.Cmd.Types
        )
 where
 
+import           Control.Concurrent.QSem
+import           Control.Exception.Base (bracket_)
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.Prim
+import           System.IO
 
 -- ----------------------------------------
 
@@ -28,9 +31,10 @@ data Env = Env
   , _mountPath   :: FilePath
   , _syncDir     :: FilePath
   , _fontName    :: Text
+  , _logOp       :: Maybe (String -> IO ())
   }
 
-deriving instance Show Env
+-- deriving instance Show Env
 
 instance Config Env where
   traceOn   e = e ^. envTrc
@@ -52,6 +56,7 @@ defaultEnv = Env
   , _mountPath    = "."
   , _syncDir      = s'photos       -- the top archive dir
   , _fontName     = mempty
+  , _logOp        = Just (hPutStrLn stderr)
   }
 
 envTrc :: Lens' Env Bool
@@ -87,6 +92,9 @@ envSyncDir k e = (\ new -> e {_syncDir = new}) <$> k (_syncDir e)
 envFontName :: Lens' Env Text
 envFontName k e = (\ new -> e {_fontName = new}) <$> k (_fontName e)
 
+envLogOp :: Lens' Env (Maybe (String -> IO ()))
+envLogOp k e = (\ new -> e {_logOp = new}) <$> k (_logOp e)
+
 -- ----------------------------------------
 
 type Cmd = Action Env ImgStore
@@ -95,6 +103,22 @@ runCmd :: Cmd a -> IO (Either Msg a, ImgStore, Log)
 runCmd = runCmd' defaultEnv
 
 runCmd' :: Env -> Cmd a -> IO (Either Msg a, ImgStore, Log)
-runCmd' env cmd = runAction cmd env emptyImgStore
+runCmd' env cmd = do
+  logC <- logCmd           -- set the syncronized write to stderr as log cmd
+  let env' = env & envLogOp .~ Just logC
+  runAction cmd env' emptyImgStore
+
+-- synchronize the access to stderr
+--
+-- this syncronizes log messages from different threads,
+-- but does not work for server logging and application log messages
+logCmd :: IO (String -> IO ())
+logCmd = do
+  sem <- newQSem 1
+  return $ \ s ->
+    bracket_ (waitQSem sem) (signalQSem sem)
+    ( do hPutStrLn stderr s
+         hFlush    stderr
+    )
 
 -- ----------------------------------------

@@ -17,6 +17,7 @@ import Control.Monad.RWS.Strict
 import Control.Monad
 
 -- import Data.Monoid
+import Data.Maybe               ( isJust, fromMaybe )
 import System.Process           ( rawSystem, readProcessWithExitCode )
 import System.Exit
 import System.IO                ( hPutStr
@@ -60,7 +61,15 @@ class Config c where
     errorOn = const True
 
     stderrOn :: c -> Bool
-    stderrOn = const True
+    stderrOn = isJust . getLogOp
+
+    stderrOp :: c -> (String -> IO ())
+    stderrOp = fromMaybe (const $ return ()) . getLogOp
+
+    getLogOp :: c -> Maybe (String -> IO ())
+    getLogOp = const $ Just $ hPutStrLn stderr
+
+{-# DEPRECATED stderrOn, stderrOp "use getLogOp instead" #-}
 
 -- ----------------------------------------
 
@@ -94,11 +103,10 @@ instance Monoid Log where
 logg :: Config r => (r -> Bool) -> String -> String -> Action r s ()
 logg enabled level msg
     = do asks enabled `guards`
-           do s <- asks stderrOn
-              if s
-                 then io $ hPutStrLn stderr fmt
-              -- then io $ hPutStr  stderr fmt'
-                 else tell . LogMsg $ fmt
+           do s <- asks getLogOp
+              case s of
+                Just cmd -> io $ cmd fmt
+                Nothing  -> tell . LogMsg $ fmt
     where
       ind  = 10
       lln  = 128

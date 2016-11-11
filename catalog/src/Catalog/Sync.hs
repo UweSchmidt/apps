@@ -132,11 +132,11 @@ collectDirCont i = do
   realsubdirs <- filterM (isSubDir fp) subdirs
 
   unless (null rest3) $
-    verbose $ "collectDirCont: files ignored " ++ show rest3
+    trc $ "collectDirCont: files ignored " ++ show rest3
   unless (null realsubdirs) $
-    verbose $ "collectDirCont: subdirs "       ++ show realsubdirs
+    trc $ "collectDirCont: subdirs "       ++ show realsubdirs
   unless (null imgfiles) $
-    verbose $ "collectDirCont: imgfiles "      ++ show imgfiles
+    trc $ "collectDirCont: imgfiles "      ++ show imgfiles
 
   return ( realsubdirs ^.. traverse . _1
          , partitionBy (^. _2 . _1) imgfiles

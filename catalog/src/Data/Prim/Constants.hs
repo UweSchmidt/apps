@@ -12,6 +12,7 @@ n'archive
   , n'bycreatedate
   , n'clipboard
   , n'collections
+  , n'imports
   , n'photos
   , n'trash :: Name
 
@@ -20,6 +21,7 @@ n'albums       = "albums"
 n'bycreatedate = "timeline"
 n'clipboard    = "clipboard"
 n'collections  = "collections"
+n'imports      = "imports"
 n'photos       = "photos"
 n'trash        = "trash"
 
@@ -49,14 +51,16 @@ p'archive
   , p'clipboard
   , p'collections
   , p'bycreatedate
+  , p'imports
   , p'photos
   , p'trash :: Path
 
 p'archive      = mkPath n'archive
 p'arch'photos  = p'archive     `snocPath` n'photos
-p'albums       = p'collections `snocPath` n'albums
 p'collections  = p'archive     `snocPath` n'collections
+p'albums       = p'collections `snocPath` n'albums
 p'bycreatedate = p'collections `snocPath` n'bycreatedate
+p'imports      = p'collections `snocPath` n'imports
 p'photos       = p'collections `snocPath` n'photos
 p'clipboard    = p'collections `snocPath` n'clipboard
 p'trash        = p'collections `snocPath` n'trash
@@ -89,33 +93,35 @@ ps'css          = ps'assets </> "css"
 
 -- constants for generated collections
 
-tt'bydate
+tt'albums
+  , tt'bydate
   , tt'clipboard
+  , tt'imports
   , tt'trash
   , tt'collections
   , tt'photos :: Text
 
 tt'bydate      = "Geordnet nach Datum"
 tt'clipboard   = "Clipboard"
+tt'albums      = "Alle Alben"
+tt'imports     = "Photo2 Import"
 tt'trash       = "Papierkorb"
 tt'collections = "Uwe alle seine Bilder"
 tt'photos      = "Alle Ordner"
 
 tt'year :: String -> Text
-tt'year y = ("Bilder aus " ++ y) ^. isoText
+tt'year y = y ^. isoText
 
 tt'month :: String -> String -> Text
 tt'month y m =
-  unwords [ "Bilder aus dem"
-          , de'month (read m)
+  unwords [ de'month (read m)
           , y
           ]
   ^. isoText
 
 tt'day :: String -> String -> String -> Text
 tt'day y m d =
-  unwords [ "Bilder vom"
-          , show  (read d :: Int) ++ "."
+  unwords [ show  (read d :: Int) ++ "."
           , de'month (read m)
           , y
           ]
@@ -123,9 +129,11 @@ tt'day y m d =
 
 -- access restrictions
 
-no'change,
-  no'delete, no'sort, no'write, no'wrtdel :: Text
+no'restr
+  , no'change
+  , no'delete, no'sort, no'write, no'wrtdel :: Text
 
+no'restr  = ""
 no'write  = "no-write"
 no'sort   = "no-sort"
 no'delete = "no-delete"

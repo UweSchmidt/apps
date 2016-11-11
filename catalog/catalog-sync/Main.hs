@@ -31,7 +31,6 @@ syncCatalog = do
     (mountPath </>) <$>
     view envJsonArchive
 
-  ex <- fileExist jsonPath
   whenM (fileExist jsonPath) $ do
     verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
@@ -49,10 +48,10 @@ syncCatalog = do
   syncDir syncPath
   -- syncFS refImg  -- old
 
-  verbose "syncCatalog: create/update system collections"
-  genCollectionRootMeta
   cleanupCollections
-  genClipboardCollection
+
+  verbose "syncCatalog: create the system collections"
+  genSysCollections
 
   verbose "syncCatalog: create the collections for the archive dirs"
   genCollectionsByDir
