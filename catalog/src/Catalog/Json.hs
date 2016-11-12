@@ -24,7 +24,7 @@ import           Control.Lens
 -- import           Control.Monad.Except
 -- import           Control.Monad.RWSErrorIO
 -- import           Data.Prim
-import           Data.ImageStore
+-- import           Data.ImageStore
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.MetaData
@@ -197,7 +197,7 @@ jsonCall fct i n args =
 
     "setMetaData" ->
       jl $ \ (ixs, md) ->
-             setMeta md ixs i n
+             setMeta md ixs n
 
     -- save a snapshot of the current image store
     -- on client side, the 1. arg must be a path to an existing node
@@ -456,11 +456,11 @@ renameCol newName i = do
 
 -- ----------------------------------------
 
-setMeta :: MetaData -> [Int] -> ObjId -> ImgNode -> Cmd ()
-setMeta md ixs i n =
-  sequence_ $ zipWith3 setMeta1 [(0::Int)..] ixs (n ^. theColEntries)
+setMeta :: MetaData -> [Int] -> ImgNode -> Cmd ()
+setMeta md ixs n =
+  sequence_ $ zipWith setMeta1 ixs (n ^. theColEntries)
   where
-    setMeta1 pos mark ce
+    setMeta1 mark ce
       | mark < 0 =
           return ()
       | otherwise =

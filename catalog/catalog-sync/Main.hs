@@ -3,8 +3,8 @@ module Main where
 import           Catalog.Cmd
 import           Catalog.Options
 import           Catalog.Sync
-import           Data.ImageStore
-import           Data.ImgTree
+-- import           Data.ImageStore
+-- import           Data.ImgTree
 import           Data.Prim
 import           System.Exit
 
@@ -35,26 +35,17 @@ syncCatalog = do
     verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 
-  -- verbose "syncCatalog: get the archive and the image root"
-  -- refRoot  <- use (theImgTree . rootRef)
-  -- refImg   <- use (theImgTree . theNodeVal refRoot . theRootImgDir)
+  -- syncronize the image dir with the filesystem
+  syncDir
 
-  syncPath <-
-    (n'archive `consPath`) . readPath . ("/" ++) <$>
-    view envSyncDir
-  verbose $
-    "syncCatalog: sync the archive dir with the file system: " ++
-    (syncPath ^. isoString . to show)
-  syncDir syncPath
-  -- syncFS refImg  -- old
-
-  cleanupCollections
+  -- cleanup dead references
+  cleanupAllCollections
 
   verbose "syncCatalog: create the system collections"
   genSysCollections
 
   verbose "syncCatalog: create the collections for the archive dirs"
-  genCollectionsByDir
+  genAllCollectionsByDir
 
   verbose "syncCatalog: create the collections per date"
   genCollectionsByDate

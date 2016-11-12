@@ -198,22 +198,26 @@ processNewImages colSyncTime pc i0 = do
 -- The collections are updatet only if the corresponding archive
 -- dir is newer than the collection. This makes an update pretty fast
 
-genCollectionsByDir :: Cmd ()
-genCollectionsByDir = do
-  ic <- getRootImgColId                 -- the collection root
-  pc <- objid2path ic
-  di <- getRootImgDirId
-  dp <- objid2path di
+img2colPath :: Cmd (Path -> Path)
+img2colPath = do
+  pc <- getRootImgColId >>= objid2path -- the collection root path
 
   -- create root collection for archive dir hierachy
   let (rootName, pc1) = pc  ^. viewTop
   let (colName, _pc2) = pc1 ^. viewTop
   let old'px  = mkPath rootName
   let new'px  = rootName `consPath` mkPath colName
-  let img2col = substPathPrefix old'px new'px
+  return $ substPathPrefix old'px new'px
 
+genAllCollectionsByDir :: Cmd ()
+genAllCollectionsByDir = do
+  getRootImgDirId >>= genCollectionsByDir
+
+genCollectionsByDir :: ObjId -> Cmd ()
+genCollectionsByDir di = do
+  img2col <- img2colPath
+  dp      <- objid2path di
   void $ mkColByPath insertColByName setupDirCol (img2col dp)
-
   void $ genCol img2col di
   -- adjustColEntries (`mergeColEntries` es) ic
   -- trc $ "genCollectionsbydir: " ++ show es
@@ -222,10 +226,7 @@ genCollectionsByDir = do
     -- meta data for generated collections
     setupDirCol :: ObjId -> Cmd MetaData
     setupDirCol i = do
-      -- remove the 2 top level dirs
-      -- remove leading "/"
-
-      p  <- objid2path i
+      p  <- tailPath . tailPath <$> objid2path i
       let t = path2Title p
           s = path2Subtitle p
           o = to'colandname
@@ -239,15 +240,20 @@ genCollectionsByDir = do
     -- setupDirTxt = undefined
 
     path2Title :: Path -> Text
-    path2Title p =
-      p ^. viewBase . _2 . isoText
+    path2Title p
+      | isempty b && n == n'photos =
+          tt'photos ^. isoText
+      | otherwise =
+          n ^. isoText
+      where
+        (b, n) = p ^. viewBase
 
     path2Subtitle :: Path -> Text
-    path2Subtitle p =
-      tt p ^. isoText
+    path2Subtitle p
+      | isempty bs = mempty
+      | otherwise  = (pathToBreadCrump . show) p ^. isoText
       where
-        tt = pathToBreadCrump . show . tailPath . tailPath
-        -- substitute / by ->
+        bs = p ^. viewBase . _1
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
@@ -392,12 +398,12 @@ mkColMeta t s c o a = do
   d <- (\ t' -> show t' ^. isoText) <$> atThisMoment
   return $
       mempty
-      & metaDataAt "descr:Title"      .~ t
-      & metaDataAt "descr:Subtitle"   .~ s
-      & metaDataAt "descr:Comment"    .~ c
-      & metaDataAt "descr:OrderedBy"  .~ o
-      & metaDataAt "descr:CreateDate" .~ d
-      & metaDataAt "descr:Access"     .~ a
+      & metaDataAt descrTitle      .~ t
+      & metaDataAt descrSubtitle   .~ s
+      & metaDataAt descrComment    .~ c
+      & metaDataAt descrOrderedBy  .~ o
+      & metaDataAt descrCreateDate .~ d
+      & metaDataAt descrAccess     .~ a
 
 -- create collections recursively, similar to 'mkdir -p'
 
@@ -413,9 +419,10 @@ mkColByPath insertCol setupCol p = do
     case mid of
       -- collection does not yet exist
       Nothing -> do
-        -- compute parent collection
+        -- compute (create) parent collection(s)
+        -- meta data of parent collections remains unchanged
         let (p1, n) = p ^. viewBase
-        ip <- mkColByPath insertCol setupCol p1
+        ip <- mkColByPath insertCol (const $ return mempty) p1
         verbose $ "mkColByPath " ++ show p1 ++ "/" ++ show n
         -- create collection
         ic <- mkImgCol ip n
@@ -427,7 +434,7 @@ mkColByPath insertCol setupCol p = do
       Just (ip, vp) -> do
         unless (isCOL vp) $
           abort $ "mkColByPath: can't create collection, other entry already there " ++
-                  show (show p)
+                  show (p ^. isoString)
         return ip
 
   -- meta data update always done,

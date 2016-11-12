@@ -37,9 +37,6 @@ import           Control.Monad.RWSErrorIO
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.Prim
-import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
-
 
 -- ----------------------------------------
 

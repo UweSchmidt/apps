@@ -163,12 +163,16 @@ rmRec = foldMT imgA dirA rootA colA
 
 -- TODO: test test test
 
-cleanupCollections :: Cmd ()
-cleanupCollections = do
-  trc "cleanupcollections: existence check of images referenced in collections"
-  -- start with collection root
-  getRootImgColId >>= cleanup
-  trc "cleanupcollections: finished"
+cleanupAllCollections :: Cmd ()
+cleanupAllCollections =
+  getRootImgColId >>= cleanupCollections
+
+cleanupCollections :: ObjId -> Cmd ()
+cleanupCollections i0 = do
+  p <- objid2path i0
+  trc $ "cleanupcollections: existence check of images referenced in " ++ show (p ^. isoString)
+  cleanup i0
+  trc $ "cleanupcollections: cleanup finished in " ++ show (p ^. isoString)
   where
     cleanup :: ObjId -> Cmd ()
     cleanup i = do
@@ -183,8 +187,7 @@ cleanupCollections = do
       where
         cleanupIm :: ObjId -> Maybe (ObjId, Name) -> Cmd ()
         cleanupIm i' (Just (j, n)) = do
-          ex <- exImg j n
-          unless ex $ do
+          unlessM (exImg j n) $ do
             adjustColImg (const Nothing) i'
         cleanupIm _ Nothing =
           return ()

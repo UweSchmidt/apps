@@ -15,8 +15,7 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-  exposed-modules:   Catalog.Main
-                     Data.Catalog
+  exposed-modules:   Data.Catalog
                      Data.MetaData
                      Data.ImgNode
                      Data.ImgTree

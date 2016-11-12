@@ -156,17 +156,17 @@ convFlag setFct
 
 convStringValue :: String -> (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
 convStringValue msg setFct
-    = convertSeqIO id (return . setFct) msg . fmap toList . value . opt ""
+    = convertSeqIO id (return . setFct) msg . fmap toList' . value . opt ""
     where
-      toList "" = []
-      toList s  = [s]
+      toList' "" = []
+      toList' s  = [s]
 
 convDefaultStringValue :: String -> (String -> Maybe (b -> b)) -> String -> OptInfo -> Term (b -> b)
 convDefaultStringValue msg setFct defaultValue
-    = convertSeqIO id (return . setFct) msg . fmap toList . value . defaultOpt defaultValue ""
+    = convertSeqIO id (return . setFct) msg . fmap toList' . value . defaultOpt defaultValue ""
     where
-      toList "" = []
-      toList s  = [s]
+      toList' "" = []
+      toList' s  = [s]
 
 convStringSeqValue :: String -> (String -> Maybe (b -> b)) -> OptInfo -> Term (b -> b)
 convStringSeqValue msg setFct

@@ -6,6 +6,7 @@ module Data.MetaData
 where
 
 import           Data.Prim
+import           Data.Monoid
 import qualified Data.Aeson          as J
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text           as T
@@ -118,7 +119,7 @@ lookupByNames ns md =
 
 modifyAccess :: (Text -> Text) -> (MetaData -> MetaData)
 modifyAccess f md =
-  md & metaDataAt "descr:Access" %~ f
+  md & metaDataAt descrAccess %~ f
 
 setAccess :: [Text] -> MetaData -> MetaData
 setAccess ts = modifyAccess (const $ T.unwords ts)
@@ -151,7 +152,7 @@ subNoDeleteAccess = allowAccess [no'delete]
 
 getAccess :: ([Text] -> Bool) -> MetaData -> Bool
 getAccess f md =
-  md ^. metaDataAt "descr:Access" . to (f . T.words)
+  md ^. metaDataAt descrAccess . to (f . T.words)
 
 isWriteable
   , isSortable, isRemovable :: MetaData -> Bool
@@ -349,13 +350,13 @@ loc2googleMapsUrl loc =
 
 -- ----------------------------------------
 
-type AttrGroup = (String, [String])
+type AttrGroup = (Text, [Text])
 
 attrGroups2regex :: [AttrGroup] -> RegexText
 attrGroups2regex =
   parseRegex' .
   mkAlt .
-  map (\ (px, attr) -> (px ++ ":" ++ mkAlt attr))
+  map (\ (px, attr) -> (px ^. isoString ++ ":" ++ mkAlt (map (^. isoString) attr)))
   where
     mkPar :: String -> String
     mkPar s = "(" ++ s ++ ")"
@@ -379,8 +380,8 @@ reXmp = attrGroups2regex
 
 -- ----------------------------------------
 
-px2a :: String -> [Name]
-px2a s = map mkName ag20
+px2a :: Text -> [Name]
+px2a s = map (^. from isoText) ag20
 {-}
   case ag20 of
     [x1] -> mkName x1
@@ -388,42 +389,53 @@ px2a s = map mkName ag20
     xs   -> error $ "ambigious name abreviation " ++ show s ++ " matches " ++ show xs
 -- -}
   where
-    (g, n) | null n'   = ("", g')
-           | otherwise = (g', tail n')
+    g, n :: Text
+    (g, n) | T.null n'   = ("", g')
+           | otherwise = (g', T.tail n')
       where
-        (g', n') = span (/= ':') s
+        (g', n') = T.span (/= ':') s
 
     filterNotNull =
       filter (not . null .snd)
 
-    ag20 = concatMap (\ (x, xs) -> map ((x ++ ":") ++) xs) ag11
+    ag20 :: [Text]
+    ag20 = concatMap (\ (x, xs) -> map ((x <> ":") <>) xs) ag11
     -- exact name matches are prefered
 
+    ag11 :: [AttrGroup]
     ag11
       | null ag10 = filterNotNull $
-                    map (second (filter (n `isPrefixOf`))) ag01
+                    map (second (filter (n `T.isPrefixOf`))) ag01
       | otherwise = ag10
 
+    ag10 :: [AttrGroup]
     ag10 = filterNotNull $
       map (second (filter (== n))) ag01
 
     -- exact group matches are prefered
+    ag01 :: [AttrGroup]
     ag01
-      | null ag00 = filter ((g `isPrefixOf`) . fst) attrGroups
+      | null ag00 = filter ((g `T.isPrefixOf`) . fst) allAttrGroups
       | otherwise = ag00
 
+    ag00 :: [AttrGroup]
     ag00
-      | null g    = attrGroups
-      | otherwise = filter ((== g) .fst) attrGroups
+      | T.null g  = allAttrGroups
+      | otherwise = filter ((== g) .fst) allAttrGroups
 
 -- ----------------------------------------
 
-attrGroups :: [AttrGroup]
-attrGroups =
+attrGroup2attrName :: AttrGroup -> [Name]
+attrGroup2attrName (px, as) = map (\ a -> (px <> ":" <> a) ^. from isoText) as
+
+allAttrGroups :: [AttrGroup]
+allAttrGroups =
   [ attrFile
   , attrExif
+  , attrMaker
   , attrComposite
   , attrXmp
+  , attrCol
   ]
 
 attrFile :: AttrGroup
@@ -535,5 +547,33 @@ attrCol =
     , "Duration"
     ]
   )
+descrTitle
+  , descrSubtitle
+  , descrTitleEnglish
+  , descrTitleLatin
+  , descrKeywords
+  , descrWeb
+  , descrWikipedia
+  , descrGoogleMaps
+  , descrComment
+  , descrCreateDate
+  , descrOrderedBy
+  , descrAccess
+  , descrDuration :: Name
+
+[descrTitle
+  , descrSubtitle
+  , descrTitleEnglish
+  , descrTitleLatin
+  , descrKeywords
+  , descrWeb
+  , descrWikipedia
+  , descrGoogleMaps
+  , descrComment
+  , descrCreateDate
+  , descrOrderedBy
+  , descrAccess
+  , descrDuration
+  ] = attrGroup2attrName attrCol
 
 -- ----------------------------------------

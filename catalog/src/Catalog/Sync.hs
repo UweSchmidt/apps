@@ -12,8 +12,10 @@ import Data.Prim
 
 -- ----------------------------------------
 
-cwSyncFS :: Cmd ()
-cwSyncFS = we >>= syncFS
+syncDirPath :: Cmd Path
+syncDirPath =
+  (n'archive `consPath`) . readPath . ("/" ++) <$>
+  view envSyncDir
 
 -- ----------------------------------------
 
@@ -29,11 +31,27 @@ syncNode = idSyncFS False
 
 -- sync a dir tree, given as path, in the archive with disk contents
 
-syncDir :: Path -> Cmd ()
-syncDir p = do
-  (i, n) <- getIdNode "syncDir: image dir not found:" p
-  unless (isDIR n) $
-    abort $ "syncDIR: path isn't an image dir: " ++ show (p ^. isoString)
+syncDir :: Cmd ()
+syncDir = do
+  p <- syncDirPath
+  verbose $
+    "syncDir: sync the archive dir with the file system: " ++
+    show (p ^. isoString)
+  mbi <- lookupByPath p
+  i <- case mbi of
+    Nothing -> do
+      -- try to create new dir in parent dir, parent must already be there
+      let (p1, n) = p ^.viewBase
+      (di, dn) <- getIdNode' p1
+      unless (isDIR dn) $
+        abort $ "syncDir: parent isn't an image dir: " ++ show (p1 ^. isoString)
+      mkImgDir di n
+
+    Just (i', n') -> do
+      unless (isDIR n') $
+        abort $ "syncDIR: path isn't an image dir: " ++ show (p ^. isoString)
+      return i'
+
   idSyncFS True i
 
 -- ----------------------------------------

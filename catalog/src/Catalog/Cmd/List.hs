@@ -92,7 +92,7 @@ listImages' = do
   processImages listImg r
   where
     listImg :: ObjId -> ImgParts -> MetaData -> Cmd [(Path, [Name])]
-    listImg i ps md = do
+    listImg i ps _md = do
       p <- objid2path i
       let pns = ps ^.. isoImgParts . traverse . theImgName
       return [(p, pns)]

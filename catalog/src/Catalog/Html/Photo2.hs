@@ -11,7 +11,7 @@ import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 
-import Catalog.Html.Templates.Photo2.AlbumPage
+import Catalog.Html.Templates.Photo2.AlbumPage (photo2Tmpl)
 import Catalog.Journal
 import Catalog.System.Convert ( genAssetIcon
                               , genBlogText
@@ -301,14 +301,14 @@ genHtmlPage' p = do
   let prev'href'    = noTxtRef prev'type prev'href
 
   let getMD md n    = md ^. metaDataAt n . isoString
-  let getTitle md   = getMD md "descr:Title"
+  let getTitle md   = getMD md descrTitle
 
   let this'title    = take1st [ getTitle this'meta
                               , this'fname
                               ]
-  let this'subtitle = getMD this'meta "descr:SubTitle"
-  let this'comment  = getMD this'meta "descr:Comment"
-  let this'duration = take1st [ getMD this'meta "descr:Duration"
+  let this'subtitle = getMD this'meta descrSubtitle
+  let this'comment  = getMD this'meta descrComment
+  let this'duration = take1st [ getMD this'meta descrDuration
                               , "1.0"
                               ]
 
@@ -444,13 +444,13 @@ genHtmlPage' p = do
 insMetaData :: MetaData -> TmplEnv Cmd -> TmplEnv Cmd
 insMetaData md env =
   env
-  & insMD "descrTitle"                   (gmd "descr:Title")
-  & insMD "descrSubtitle"                (gmd "descr:Subtitle")
-  & insMD "descrTitleEnglish"            (gmd "descr:TitleEnglish")
-  & insMD "descrTitleLatin"              (gmd "descr:TitleLatin")
-  & insMD "descrComment"                 (gmd "descr:Comment")
-  & insMD "descrWeb"                     (gmd "descr:Web")
-  & insMD "descrWikipedia"               (gmd "descr:Wikipedia")
+  & insMD "descrTitle"                   (gmd descrTitle)
+  & insMD "descrSubtitle"                (gmd descrSubtitle)
+  & insMD "descrTitleEnglish"            (gmd descrTitleEnglish)
+  & insMD "descrTitleLatin"              (gmd descrTitleLatin)
+  & insMD "descrComment"                 (gmd descrComment)
+  & insMD "descrWeb"                     (gmd descrWeb)
+  & insMD "descrWikipedia"               (gmd descrWikipedia)
   & insMDmaps "descrGoogleMaps"          (md ^. metaDataAt "Composite:GPSPosition")
 
   & insMD "exifCreateDate"               (gmd "EXIF:CreateDate")
@@ -578,7 +578,7 @@ colImgType = colImgOp iop cop
           | thePartNames' (`elem` [IMGimg, IMGjpg]) `has` ps = IMGjpg
           | thePartNames' (== IMGtxt)               `has` ps = IMGtxt
           | otherwise                                        = IMGother
-    cop i = return IMGjpg
+    cop _i = return IMGjpg
 
 colImgName :: ColRef -> Cmd (Maybe Name)
 colImgName =
@@ -625,7 +625,7 @@ colBlogCont IMGtxt cr = do
   colImgOp iop cop cr
   where
     iop i n     = getColBlogCont i n
-    cop i       = return mempty
+    cop _       = return mempty
 colBlogCont _ _ = return mempty
 
 getColBlogCont :: ObjId -> Name -> Cmd Text
@@ -662,7 +662,7 @@ path2href c p = "/" ++ c ++ p ++ ".html"
 
 iconRef :: ObjId -> Cmd FilePath
 iconRef i = do
-  t  <- getImgVals i (theMetaData . metaDataAt "descr:Title")
+  t  <- getImgVals i (theMetaData . metaDataAt descrTitle)
 
   mbf <-
     if isempty t  -- no title there
@@ -723,6 +723,7 @@ path2img f
   | [("name", n)] <- m2 =
       genAssetIcon n n
 
+{-
   | f == ps'bycreatedate =           -- "/archive/collections/byCreateDate"
       genAssetIcon s'bycreatedate (tt'bydate ^. isoString)
 
@@ -737,6 +738,7 @@ path2img f
 
   | f == ps'collections =            -- "/archive/collections"
       genAssetIcon s'collections (tt'collections ^. isoString)
+-- -}
 
   | otherwise =
       return Nothing
@@ -749,7 +751,6 @@ path2img f
       where
         i :: Int
         i = read s
-
 
 
 ymdRE :: Regex -- for collections sorted by date
