@@ -44,9 +44,6 @@ syncCatalog = do
   verbose "syncCatalog: create the system collections"
   genSysCollections
 
-  verbose "syncCatalog: create the collections for the archive dirs"
-  genAllCollectionsByDir
-
   verbose "syncCatalog: create the collections per date"
   genCollectionsByDate
 

@@ -61,12 +61,12 @@ dupColRec src dstParent dstName = do
   srcVal  <- getImgVal src
   srcPath <- objid2path src
   unless (isCOL srcVal) $ do
-    abort $ "dupColRec: source isn't a collection " ++ show (show srcPath)
+    abort $ "dupColRec: source isn't a collection " ++ quotePath srcPath
 
   dstParentVal  <- getImgVal  dstParent
   dstParentPath <- objid2path dstParent
   unless (isCOL dstParentVal) $ do
-    abort $ "dupColRec: target isn't a collection " ++ show (show dstParentPath)
+    abort $ "dupColRec: target isn't a collection " ++ quotePath dstParentPath
 
   let dstPath  = dstParentPath `snocPath` dstName
   let editPath = substPathPrefix srcPath dstPath
@@ -163,6 +163,11 @@ rmRec = foldMT imgA dirA rootA colA
 
 -- TODO: test test test
 
+cleanupColByPath :: Path -> Cmd ()
+cleanupColByPath p = do
+  verbose $ "cleanupColByPath: cleanup col: " ++ quotePath p
+  lookupByPath p >>= maybe (return ()) (cleanupCollections . fst)
+
 cleanupAllCollections :: Cmd ()
 cleanupAllCollections =
   getRootImgColId >>= cleanupCollections
@@ -170,9 +175,9 @@ cleanupAllCollections =
 cleanupCollections :: ObjId -> Cmd ()
 cleanupCollections i0 = do
   p <- objid2path i0
-  trc $ "cleanupcollections: existence check of images referenced in " ++ show (p ^. isoString)
+  trc $ "cleanupcollections: existence check of images referenced in " ++ quotePath p
   cleanup i0
-  trc $ "cleanupcollections: cleanup finished in " ++ show (p ^. isoString)
+  trc $ "cleanupcollections: cleanup finished in " ++ quotePath p
   where
     cleanup :: ObjId -> Cmd ()
     cleanup i = do

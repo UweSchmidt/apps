@@ -115,7 +115,7 @@ processNewImages colSyncTime pc i0 = do
   where
     -- skip unchanged dirs
     dirA go _i es dirSyncTime = do
-      es' <- if colSyncTime >= dirSyncTime
+      es' <- if False -- colSyncTime >= dirSyncTime
              then
                getImgSubDirs es
              else
@@ -213,6 +213,11 @@ genAllCollectionsByDir :: Cmd ()
 genAllCollectionsByDir = do
   getRootImgDirId >>= genCollectionsByDir
 
+genCollectionsByDir' :: Path -> Cmd ()
+genCollectionsByDir' p = do
+  mbi <- lookupByPath p
+  maybe (return ()) (genCollectionsByDir . fst) mbi
+
 genCollectionsByDir :: ObjId -> Cmd ()
 genCollectionsByDir di = do
   img2col <- img2colPath
@@ -276,16 +281,16 @@ genCollectionsByDir di = do
         dirA go i es _ts = do
           p  <- objid2path i
           let cp = fp p
-          -- trcObj i $ "genCol dir " ++ show cp
+          trcObj i $ "genCol dir " ++ show cp
 
-          -- check or create colection
+          -- check or create collection
           -- with action for meta data
           ic <- mkColByPath insertColByName setupDirCol cp
 
           dirSyncTime <- getImgVals i  theSyncTime
           colSyncTime <- getImgVals ic theSyncTime
 
-          if colSyncTime >= dirSyncTime
+          if False -- colSyncTime >= dirSyncTime
             then do
               -- the collection is up to date
               -- only the subdirs need to be traversed
@@ -295,13 +300,19 @@ genCollectionsByDir di = do
             else do
               -- get collection entries, and insert them into collection
               cs  <- concat <$> mapM go (es ^. isoDirEntries)
+
+              trcObj ic "genCol dir: set dir contents"
               adjustColByName cs ic
+              trcObj ic "genCol dir: dir contents is set"
 
               -- set the blog entry, if there's a txt entry in cs
               setColBlogToFstTxtEntry False ic
+              trcObj ic "genCol dir: col blog set"
 
               -- set time processed
               setSyncTime ic
+
+              -- TODO: recurce into subdirs ???
 
           return [mkColColRef ic]
 
@@ -357,9 +368,13 @@ adjustColBy :: ([ColEntry] -> Cmd [ColEntry]) ->
                [ColEntry] ->
                ObjId -> Cmd ()
 adjustColBy sortCol cs parent'i = do
+  verbose $ "adjustColBy begin"
   cs'old <- getImgVals parent'i theColEntries
+  verbose $ "adjustColBy" ++ show cs'old
   cs'new <- sortCol $ cs'old `mergeColEntries` cs
+  verbose $ "adjustColBy" ++ show cs'new
   adjustColEntries (const cs'new) parent'i
+  verbose $ "adjustColBy end"
 
 -- ----------------------------------------
 
@@ -412,7 +427,7 @@ mkColByPath insertCol setupCol p = do
   -- trc $ "mkColByPath " ++ show p
   -- check for legal path
   when (isempty $ tailPath p) $
-    abort $ "mkColByPath: can't create collection " ++ show (show p)
+    abort $ "mkColByPath: can't create collection " ++ quotePath p
 
   mid <- lookupByPath p
   cid <-
@@ -434,7 +449,7 @@ mkColByPath insertCol setupCol p = do
       Just (ip, vp) -> do
         unless (isCOL vp) $
           abort $ "mkColByPath: can't create collection, other entry already there " ++
-                  show (p ^. isoString)
+                  quotePath p
         return ip
 
   -- meta data update always done,

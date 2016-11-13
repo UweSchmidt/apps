@@ -21,6 +21,7 @@ module Data.Prim.Path
        , showPath
        , viewTop
        , viewBase
+       , quotePath
        )
 where
 
@@ -143,6 +144,9 @@ showPath (BN n)
   | otherwise     = "/" ++ show n
 
 showPath (DN n p) = "/" ++ show n ++ showPath p
+
+quotePath :: (Monoid n, Eq n, Show n) => Path' n -> String
+quotePath = show . showPath
 
 deriving instance Eq n  => Eq  (Path' n)
 deriving instance Ord n => Ord (Path' n)

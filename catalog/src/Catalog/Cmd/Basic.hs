@@ -86,20 +86,20 @@ getIdNode msg p = do
   mv <- lookupImgPath p <$> dt
   case mv of
     Nothing ->
-      abort $ msg ++ " " ++ show (show p)
+      abort $ msg ++ " " ++ quotePath p
     Just res ->
       return res
 
 getIdNode' :: Path -> Cmd (ObjId, ImgNode)
 getIdNode' p =
-  getIdNode ("getIdNode': cant' find entry for path " ++ show (p ^. isoString)) p
+  getIdNode ("getIdNode': cant' find entry for path " ++ quotePath p) p
 
 -- check path not there
 
 alreadyTherePath :: String -> Path -> Cmd ()
 alreadyTherePath msg p = do
   whenM (isJust <$> lookupByPath p) $
-    abort $ msg ++ " " ++ show (show p)
+    abort $ msg ++ " " ++ quotePath p
 
 -- ----------------------------------------
 
@@ -239,7 +239,7 @@ mkCollection target'path = do
   -- parent is a collection
   -- TODO exists check
   unless (isCOL parent'node) $
-    abort $ "mkCollection: parent isn't a collection " ++ show (show parent'path)
+    abort $ "mkCollection: parent isn't a collection " ++ quotePath parent'path
 
   -- check collection does not yet exist
   alreadyTherePath "mkCollection: target collection already exists" target'path

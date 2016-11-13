@@ -17,6 +17,42 @@ syncDirPath =
   (n'archive `consPath`) . readPath . ("/" ++) <$>
   view envSyncDir
 
+allColEntries :: ObjId -> Cmd ColEntrySet
+allColEntries =
+  foldMT imgA dirA rootA colA
+  where
+    -- collect all ImgRef's by recursing into subcollections
+    -- union subcollection results and imgrefs together
+    colA  go  i _md _im _be cs _ts = do
+      p <- objid2path i
+      verbose $ "allColEntries: " ++ quotePath p
+
+      let (crs, irs) = partition isColColRef cs
+      iss <- mapM go (crs ^.. traverse . theColColRef)
+      return $ foldl' (<>) (fromListColEntrySet irs) iss
+
+    -- jump from the dir hierachy to the assosiated collection hierarchy
+    dirA  go i _es  _ts = do
+      p <- objid2path i
+      verbose $ "allColEntries: " ++ quotePath p
+
+      img2col <- img2colPath
+      dp      <- objid2path i
+      ci      <- fst <$> getIdNode' (img2col dp)
+      go ci
+
+    -- traverse the collection hierarchy
+    rootA go _i _dir col = go col
+
+    -- do nothing for img nodes, just to get a complete definition
+    imgA  _     _pts _md = return mempty
+
+allColEntries' :: Path -> Cmd ColEntrySet
+allColEntries' p = do
+  verbose $ "allColEntries': " ++ quotePath p
+  mbi <- lookupByPath p
+  maybe (return mempty) (allColEntries . fst) mbi
+
 -- ----------------------------------------
 
 -- sync the whole photo archive with disk contents
@@ -34,9 +70,50 @@ syncNode = idSyncFS False
 syncDir :: Cmd ()
 syncDir = do
   p <- syncDirPath
+  -- remember all ImgRef's in dir to be synchronized
+  old'refs <- allColEntries' p
   verbose $
-    "syncDir: sync the archive dir with the file system: " ++
-    show (p ^. isoString)
+    "syncDir: old'refs: " ++ show old'refs
+
+  -- sync the dir
+  syncDir' p
+
+  -- throw away all ImgRef's in associated collection of the synced dir
+  cp <- ($ p) <$> img2colPath
+  cleanupColByPath cp
+
+  verbose $
+    "syncCatalog: create the collections for the archive dir: " ++ quotePath p
+  genCollectionsByDir' p
+  verbose $
+    "syncCatalog: create the collections finished"
+
+  -- now the associated collection  for dir is up to date and
+  -- contains all ImgRef', which have been updated, so
+  -- collect all synchronized refs in assoc colllections
+  upd'refs <- allColEntries' p
+  verbose $
+    "syncDir: upd'refs: " ++ show upd'refs
+
+  let rem'refs = old'refs `diffColEntrySet` upd'refs
+  let new'refs = upd'refs `diffColEntrySet` old'refs
+  verbose $
+    "syncDir: images removed: " ++ show rem'refs
+  verbose $
+    "syncDir: images added:   " ++ show new'refs
+
+  -- now all collections can be cleaned up by removing those ImgRef's
+  -- which are elements of rem'refs
+  -- if just a few images are added, this becomes a noop
+  -- TODO:
+  -- cleanupByColEntrySet rem'refs
+
+  return ()
+
+syncDir' :: Path -> Cmd ()
+syncDir' p = do
+  verbose $
+    "syncDir': sync the archive dir with the file system: " ++ quotePath p
   mbi <- lookupByPath p
   i <- case mbi of
     Nothing -> do
@@ -44,12 +121,12 @@ syncDir = do
       let (p1, n) = p ^.viewBase
       (di, dn) <- getIdNode' p1
       unless (isDIR dn) $
-        abort $ "syncDir: parent isn't an image dir: " ++ show (p1 ^. isoString)
+        abort $ "syncDir: parent isn't an image dir: " ++ quotePath p1
       mkImgDir di n
 
     Just (i', n') -> do
       unless (isDIR n') $
-        abort $ "syncDIR: path isn't an image dir: " ++ show (p ^. isoString)
+        abort $ "syncDIR: path isn't an image dir: " ++ quotePath p
       return i'
 
   idSyncFS True i
@@ -90,12 +167,12 @@ syncDirCont :: Bool -> ObjId -> Cmd ()
 syncDirCont recursive i = do
   -- trcObj i "syncDirCont: syncing entries in dir "
   (subdirs, imgfiles) <- collectDirCont i
-  -- trc $ "syncDirCont: " ++ show (subdirs, imgfiles)
+  trc $ "syncDirCont: " ++ show (subdirs, imgfiles)
   p  <- objid2path i
 
   cont <- objid2contNames i
   let lost = filter (`notElem` (subdirs ++ (map (fst . snd . head) imgfiles))) cont
-
+  trc $ "syncDirCont: lost = " ++ show lost
   -- remove lost stuff
   mapM_ (remDirCont p) lost
 
@@ -117,7 +194,7 @@ syncDirCont recursive i = do
         new'i = mkObjId (p `snocPath` n)
 
     remDirCont p n = do
-      -- trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
+      trcObj i $ "remDirCont: remove entry " ++ show n ++ " from dir"
       rmRec new'i
       where
         new'i = mkObjId (p `snocPath` n)
@@ -182,7 +259,7 @@ syncImg ip pp xs = do
       syncParts i pp
     else do
       p <- objid2path i
-      verbose $ "sync: no raw, jpg or txt found for " ++ show (show p) ++ ", parts: " ++ show xs
+      verbose $ "sync: no raw, jpg or txt found for " ++ quotePath p ++ ", parts: " ++ show xs
       rmImgNode i
   where
     i  = mkObjId (pp `snocPath` n)
@@ -212,16 +289,15 @@ checkEmptyDir :: ObjId -> Cmd ()
 checkEmptyDir i = do
   whenM (isempty <$> getImgVal i) $ do
     p <- objid2path i
-    verbose $ "sync: empty image dir ignored " ++ show (show p)
+    verbose $ "sync: empty image dir ignored " ++ quotePath p
     rmImgNode i
 
 
 fsStat :: String -> (FilePath -> Cmd Bool) -> FilePath -> Cmd FileStatus
-fsStat msg exists p = do
-  ex <- exists p
-  unless ex $
-    abort $ "fs entry not found or not a " ++ msg ++ ": " ++ show (show p)
-  getFileStatus p
+fsStat msg exists f = do
+  unlessM (exists f) $
+    abort $ "fs entry not found or not a " ++ msg ++ ": " ++ show f
+  getFileStatus f
 
 fsDirStat :: FilePath -> Cmd FileStatus
 fsDirStat = fsStat "directory" dirExist

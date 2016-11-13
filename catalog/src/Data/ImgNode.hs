@@ -10,6 +10,8 @@ module Data.ImgNode
        , ImgParts
        , ImgPart
        , ColEntry'(..)
+       , ColEntrySet'
+       , ColEntrySet
        , DirEntries'
        , mkImgParts
        , mkImgPart
@@ -56,6 +58,10 @@ module Data.ImgNode
        , addDirEntry
        , delDirEntry
        , delColEntry
+       , memberColEntrySet
+       , singletonColEntrySet
+       , fromListColEntrySet
+       , diffColEntrySet
        )
 where
 
@@ -63,8 +69,9 @@ import           Control.Monad.Except
 import           Data.MetaData
 import           Data.Prim
 
-import qualified Data.Aeson as J
+import qualified Data.Aeson      as J
 import qualified Data.Map.Strict as M
+import qualified Data.Set        as S
 
 -- ----------------------------------------
 
@@ -376,6 +383,7 @@ data ColEntry' ref = ImgRef !ref !Name
                    | ColRef !ref
 
 deriving instance (Eq   ref) => Eq   (ColEntry' ref)
+deriving instance (Ord  ref) => Ord  (ColEntry' ref)
 deriving instance (Show ref) => Show (ColEntry' ref)
 deriving instance Functor ColEntry'
 
@@ -508,5 +516,32 @@ delColEntry r cs =
     cs' = filter (\ ce -> ce ^. theColObjId /= r) cs
 {-# INLINE delColEntry #-}
 
+
+-- ----------------------------------------
+
+newtype ColEntrySet' ref = CES (Set (ColEntry' ref))
+
+type ColEntrySet = ColEntrySet' ObjId
+
+deriving instance (Show ref) => Show (ColEntrySet' ref)
+
+instance Ord ref => Monoid (ColEntrySet' ref) where
+  mempty = CES S.empty
+  CES s1 `mappend` CES s2 = CES $ s1 `S.union` s2
+
+instance IsEmpty (ColEntrySet' ref) where
+  isempty (CES s) = S.null s
+
+memberColEntrySet :: Ord ref => ColEntry' ref -> ColEntrySet' ref -> Bool
+memberColEntrySet ce (CES s) = ce `S.member` s
+
+singletonColEntrySet :: Ord ref => ColEntry' ref -> ColEntrySet' ref
+singletonColEntrySet = CES . S.singleton
+
+fromListColEntrySet :: Ord ref => [ColEntry' ref] -> ColEntrySet' ref
+fromListColEntrySet = CES . S.fromList
+
+diffColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
+CES s1 `diffColEntrySet` CES s2 = CES $ s1 `S.difference` s2
 
 -- ----------------------------------------
