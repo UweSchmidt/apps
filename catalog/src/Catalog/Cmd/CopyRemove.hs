@@ -5,6 +5,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Data.ImgTree
+import           Data.MetaData
 import           Data.Prim
 
 -- ----------------------------------------
@@ -60,12 +61,14 @@ dupColRec :: ObjId -> ObjId -> Name -> Cmd ()
 dupColRec src dstParent dstName = do
   srcVal  <- getImgVal src
   srcPath <- objid2path src
-  unless (isCOL srcVal) $ do
+
+  unless (isCOL srcVal) $
     abort $ "dupColRec: source isn't a collection " ++ quotePath srcPath
 
   dstParentVal  <- getImgVal  dstParent
   dstParentPath <- objid2path dstParent
-  unless (isCOL dstParentVal) $ do
+
+  unless (isCOL dstParentVal) $
     abort $ "dupColRec: target isn't a collection " ++ quotePath dstParentPath
 
   let dstPath  = dstParentPath `snocPath` dstName
@@ -190,9 +193,10 @@ cleanupCollections i0 = do
         _ ->
           return ()
       where
+        -- TODO: Bug, for be adjustColBlog should be called
         cleanupIm :: ObjId -> Maybe (ObjId, Name) -> Cmd ()
-        cleanupIm i' (Just (j, n)) = do
-          unlessM (exImg j n) $ do
+        cleanupIm i' (Just (j, n)) =
+          unlessM (exImg j n) $
             adjustColImg (const Nothing) i'
         cleanupIm _ Nothing =
           return ()
@@ -204,7 +208,7 @@ cleanupCollections i0 = do
             adjustColEntries (const es') i'
           where
             cleanupE :: ColEntry -> Cmd Bool
-            cleanupE (ImgRef j n) = do
+            cleanupE (ImgRef j n) =
               exImg j n
             cleanupE (ColRef j) = do
               -- recurse into subcollection and cleanup
@@ -225,9 +229,78 @@ cleanupCollections i0 = do
                     n' `elem` ns
                 _ ->
                   False
-          unless ex $ do
-            trc  $ "exImg: image ref found in a collection for a deleted image: " ++ show (i', n')
+          unless ex $
+            trc  $ "exImg: image ref found in a collection for a deleted image: "
+                   ++ show (i', n')
           return ex
+
+cleanupRefs :: ColEntrySet -> ObjId -> Cmd ()
+cleanupRefs rs =
+  foldCollections colA
+  where
+    colA go i _md im be es _ts = do
+      cleanupIm
+      cleanupBe
+      cleanupEs
+      cleanupSubCols
+      removeEmptySubCols
+      return ()
+      where
+        cleanupSubCol :: ColEntry -> Cmd ()
+        cleanupSubCol =
+          colEntry (\ _ _ -> return ()) go
+
+        cleanupIm :: Cmd ()
+        cleanupIm = maybe (return ())
+          (\ (j, n) -> unless (exImg j n) $
+                       adjustColImg (const Nothing) i
+          ) im
+
+        cleanupBe :: Cmd ()
+        cleanupBe = maybe (return ())
+          (\ (j, n) -> unless (exImg j n) $
+                       adjustColBlog (const Nothing) i
+          ) be
+
+        cleanupEs :: Cmd ()
+        cleanupEs
+          | any (`memberColEntrySet` rs) es =
+              -- some refs must be deleted
+              -- only rebuild the list es if any refs must be deleted
+              adjustColEntries (const $ filter (not . (`memberColEntrySet` rs)) es) i
+          | otherwise =
+              return ()
+
+        cleanupSubCols :: Cmd ()
+        cleanupSubCols =
+          mapM_ cleanupSubCol es
+
+        exImg j n =
+          not $ mkColImgRef j n `memberColEntrySet` rs
+
+        removeEmptySubCols :: Cmd ()
+        removeEmptySubCols = do
+          -- recompute colentries, maybe modified by calls of cleanupSubCol
+          es1 <- getImgVals i theColEntries
+          es2 <- emptySubCols es1
+          mapM_ rmRec es2
+
+        emptySubCols :: [ColEntry] -> Cmd [ObjId]
+        emptySubCols = foldM checkESC []
+          where
+            checkESC :: [ObjId] -> ColEntry -> Cmd [ObjId]
+            checkESC res =
+              colEntry (\ _ _ -> return res)
+                       (\ ci -> do cn <- getImgVal ci
+                                   return $
+                                     if isCOL cn
+                                        &&
+                                        null (cn ^. theColEntries)
+                                        &&
+                                        isRemovable (cn ^. theMetaData)
+                                     then ci : res
+                                     else      res
+                       )
 
 -- ----------------------------------------
 {- }

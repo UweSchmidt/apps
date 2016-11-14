@@ -40,11 +40,11 @@ foldMT imgA dirA' rootA' colA' i0 = do
 
 -- ----------------------------------------
 
-processImgDirs :: Monoid r =>
-                  (         ObjId -> ImgParts   -> MetaData  -> Cmd r) ->
-                  (Act r -> ObjId -> DirEntries -> TimeStamp -> Cmd r) ->
-                  Act r
-processImgDirs imgA dirA =
+foldImgDirs :: Monoid r =>
+               (         ObjId -> ImgParts   -> MetaData  -> Cmd r) ->
+               (Act r -> ObjId -> DirEntries -> TimeStamp -> Cmd r) ->
+               Act r
+foldImgDirs imgA dirA =
   foldMT imgA dirA rootA colA
   where
     rootA go _i dir _col            = go dir
@@ -52,14 +52,14 @@ processImgDirs imgA dirA =
 
 -- ----------------------------------------
 
-processCollections ::
+foldCollections ::
   Monoid r =>
   (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
                               -> (Maybe (ObjId, Name))
                   -> [ColEntry] -> TimeStamp -> Cmd r) ->
   Act r
 
-processCollections colA =
+foldCollections colA =
   foldMT imgA dirA rootA colA
   where
     rootA go _i dir _col  = go dir
@@ -68,10 +68,10 @@ processCollections colA =
 
 -- ----------------------------------------
 
-processImages :: Monoid r =>
-                 (ObjId -> ImgParts -> MetaData -> Cmd r) -> ObjId -> Cmd r
-processImages imgA =
-  processImgDirs imgA dirA
+foldImages :: Monoid r =>
+              (ObjId -> ImgParts -> MetaData -> Cmd r) -> ObjId -> Cmd r
+foldImages imgA =
+  foldImgDirs imgA dirA
   where
     dirA  go _i es _ts = mconcat <$> traverse go (es ^. isoDirEntries)
 

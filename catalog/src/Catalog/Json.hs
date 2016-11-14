@@ -333,7 +333,7 @@ modifyMetaData mf path = do
 modifyMetaDataRec :: (MetaData -> MetaData) -> Path -> Cmd ()
 modifyMetaDataRec mf path = do
   i <- fst <$> getIdNode "modifyMetaDataRec: entry not found" path
-  processCollections
+  foldCollections
     ( \ go i' _md _im _be cs _ts -> do
         adjustMetaData mf i'
         let cs' = filter isColColRef cs

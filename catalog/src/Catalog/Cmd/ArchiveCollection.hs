@@ -110,7 +110,7 @@ genCollectionsByDate = do
 
 processNewImages :: TimeStamp -> Path -> ObjId -> Cmd ()
 processNewImages colSyncTime pc i0 = do
-  is <- partBy fst <$> processImgDirs imgA dirA i0
+  is <- partBy fst <$> foldImgDirs imgA dirA i0
   mapM_ addToCol is
   where
     -- skip unchanged dirs
@@ -262,7 +262,7 @@ genCollectionsByDir di = do
 
     genCol :: (Path -> Path) -> ObjId -> Cmd [ColEntry]
     genCol fp =
-      processImgDirs imgA dirA
+      foldImgDirs imgA dirA
       where
         -- collect all processed jpg images for a single img
 

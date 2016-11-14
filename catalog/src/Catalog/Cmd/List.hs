@@ -89,7 +89,7 @@ listPaths i = (unlines . map show) <$> listPaths' i
 listImages' :: Cmd [(Path, [Name])]
 listImages' = do
   r <- use (theImgTree . rootRef)
-  processImages listImg r
+  foldImages listImg r
   where
     listImg :: ObjId -> ImgParts -> MetaData -> Cmd [(Path, [Name])]
     listImg i ps _md = do
