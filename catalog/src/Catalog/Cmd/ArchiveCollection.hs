@@ -79,6 +79,11 @@ genSysCollection a n'sys tt'sys = do
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
 
+updateCollectionsByDate :: ColEntrySet -> Cmd ()
+updateCollectionsByDate rs = do
+  verbose $ "updateCollectionsByDate: new refs are added to byDate collections: " ++ show rs
+  verbose $ "updateCollectionsByDate: TODO: NOT YET IMPLEMENTED"
+
 genCollectionsByDate :: Cmd ()
 genCollectionsByDate = do
   ic <- getRootImgColId
@@ -115,7 +120,7 @@ processNewImages colSyncTime pc i0 = do
   where
     -- skip unchanged dirs
     dirA go _i es dirSyncTime = do
-      es' <- if False -- colSyncTime >= dirSyncTime
+      es' <- if False -- colSyncTime >= dirSyncTime  -- disable with False
              then
                getImgSubDirs es
              else
@@ -368,13 +373,13 @@ adjustColBy :: ([ColEntry] -> Cmd [ColEntry]) ->
                [ColEntry] ->
                ObjId -> Cmd ()
 adjustColBy sortCol cs parent'i = do
-  verbose $ "adjustColBy begin"
+  -- trc $ "adjustColBy begin"
   cs'old <- getImgVals parent'i theColEntries
-  verbose $ "adjustColBy" ++ show cs'old
+  -- trc $ "adjustColBy" ++ show cs'old
   cs'new <- sortCol $ cs'old `mergeColEntries` cs
-  verbose $ "adjustColBy" ++ show cs'new
+  -- trc $ "adjustColBy" ++ show cs'new
   adjustColEntries (const cs'new) parent'i
-  verbose $ "adjustColBy end"
+  -- trc $ "adjustColBy end"
 
 -- ----------------------------------------
 

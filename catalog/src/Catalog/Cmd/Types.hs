@@ -114,7 +114,7 @@ runCmd' env cmd = do
 -- but does not work for server logging and application log messages
 logCmd :: IO (String -> IO ())
 logCmd = do
-  sem <- newQSem 1
+  sem <- newQSem 0
   return $ \ s ->
     bracket_ (waitQSem sem) (signalQSem sem)
     ( do hPutStrLn stderr s

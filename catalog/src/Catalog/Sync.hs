@@ -72,8 +72,7 @@ syncDir = do
   p <- syncDirPath
   -- remember all ImgRef's in dir to be synchronized
   old'refs <- allColEntries' p
-  verbose $
-    "syncDir: old'refs: " ++ show old'refs
+  trc $ "syncDir: old'refs: " ++ show old'refs
 
   -- sync the dir
   syncDir' p
@@ -82,31 +81,25 @@ syncDir = do
   cp <- ($ p) <$> img2colPath
   cleanupColByPath cp
 
-  verbose $
-    "syncCatalog: create the collections for the archive dir: " ++ quotePath p
+  verbose $ "syncCatalog: create the collections for the archive dir: " ++ quotePath p
   genCollectionsByDir' p
-  verbose $
-    "syncCatalog: create the collections finished"
+  verbose $ "syncCatalog: create the collections finished"
 
-  -- now the associated collection  for dir is up to date and
-  -- contains all ImgRef', which have been updated, so
-  -- collect all synchronized refs in assoc colllections
+  -- now the associated collection for dir is up to date and
+  -- contains all ImgRef's, which have been updated,
+  -- now collect all synchronized refs in assoc colllections
   upd'refs <- allColEntries' p
-  verbose $
-    "syncDir: upd'refs: " ++ show upd'refs
+  trc $ "syncDir: upd'refs: " ++ show upd'refs
 
   let rem'refs = old'refs `diffColEntrySet` upd'refs
   let new'refs = upd'refs `diffColEntrySet` old'refs
-  verbose $
-    "syncDir: images removed: " ++ show rem'refs
-  verbose $
-    "syncDir: images added:   " ++ show new'refs
 
-  -- now all collections can be cleaned up by removing those ImgRef's
-  -- which are elements of rem'refs
-  -- if just a few images are added, this becomes a noop
-  -- TODO:
-  -- cleanupByColEntrySet rem'refs
+  verbose $ "syncDir: images removed: " ++ show rem'refs
+  verbose $ "syncDir: remove these refs in all collections"
+  cleanupAllRefs rem'refs
+
+  verbose $ "syncDir: images added:   " ++ show new'refs
+  updateCollectionsByDate new'refs
 
   return ()
 

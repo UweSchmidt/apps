@@ -23,8 +23,11 @@ copyCollection path'src path'dst = do
   when (path'src `isPathPrefix` path'dst) $
     abort ("can't copy a parent collection into a subcollection")
 
-  copyColRec id'src id'dst
+  -- copyColRec id'src id'dst
+  srcName   <- getImgName id'src
+  dupColRec id'src id'dst srcName
 
+{-
 -- copy a collection recursively into a destination collection
 -- TODO: do it with dupColRec
 
@@ -32,6 +35,7 @@ copyColRec :: ObjId -> ObjId -> Cmd ()
 copyColRec src dst = do
   srcName   <- getImgName src
   dupColRec src dst srcName
+-- -}
 {-
   srcVal <- getImgVal src
   unless (isCOL srcVal) $ do
@@ -234,9 +238,14 @@ cleanupCollections i0 = do
                    ++ show (i', n')
           return ex
 
+cleanupAllRefs :: ColEntrySet -> Cmd ()
+cleanupAllRefs rs = do
+  getRootImgColId >>= cleanupRefs rs
+
 cleanupRefs :: ColEntrySet -> ObjId -> Cmd ()
-cleanupRefs rs =
-  foldCollections colA
+cleanupRefs rs i0
+  | isempty rs = return ()
+  | otherwise  = foldCollections colA i0
   where
     colA go i _md im be es _ts = do
       cleanupIm

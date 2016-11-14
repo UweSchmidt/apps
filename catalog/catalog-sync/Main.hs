@@ -39,12 +39,13 @@ syncCatalog = do
   syncDir
 
   -- cleanup dead references
-  cleanupAllCollections
+  -- cleanupAllCollections -- already done in syncDir
 
   verbose "syncCatalog: create the system collections"
   genSysCollections
 
   verbose "syncCatalog: create the collections per date"
+  verbose "syncCatalog: TODO: skip this when updateCollectionsByDate is done"
   genCollectionsByDate
 
   verbose $ "syncCatalog: save state to " ++ show jsonPath
