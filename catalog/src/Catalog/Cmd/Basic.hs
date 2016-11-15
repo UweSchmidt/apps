@@ -229,10 +229,18 @@ rmImgNode i = dt >>= go
 --
 -- simple "file system" ops
 
--- create a new empty subcollection
+-- create a new empty subcollection and append it to the colrefs
 
 mkCollection :: Path -> Cmd ObjId
-mkCollection target'path = do
+mkCollection = mkCollection' (\ c cs -> cs ++ [c])
+
+-- create a new empty subcollection and cons it to the colrefs
+mkCollectionC :: Path -> Cmd ObjId
+mkCollectionC = mkCollection' (:)
+
+mkCollection' :: (ColEntry -> [ColEntry] -> [ColEntry]) ->
+                 Path -> Cmd ObjId
+mkCollection' merge target'path = do
   -- parent exists
   (parent'id, parent'node) <- getIdNode "mkCollection: parent doesn't exist" parent'path
 
@@ -246,7 +254,7 @@ mkCollection target'path = do
 
   -- create a new empty collection and append it to the parent collection
   col'id <- mkImgCol parent'id target'name
-  adjustColEntries (++ [mkColColRef col'id]) parent'id
+  adjustColEntries (merge $ mkColColRef col'id) parent'id
   return col'id
   where
     (parent'path, target'name) = target'path ^. viewBase
