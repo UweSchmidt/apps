@@ -61,6 +61,7 @@ module Data.ImgNode
        , memberColEntrySet
        , singletonColEntrySet
        , fromListColEntrySet
+       , toListColEntrySet
        , diffColEntrySet
        )
 where
@@ -540,6 +541,9 @@ singletonColEntrySet = CES . S.singleton
 
 fromListColEntrySet :: Ord ref => [ColEntry' ref] -> ColEntrySet' ref
 fromListColEntrySet = CES . S.fromList
+
+toListColEntrySet :: ColEntrySet' ref -> [ColEntry' ref]
+toListColEntrySet (CES s) = S.toList s
 
 diffColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
 CES s1 `diffColEntrySet` CES s2 = CES $ s1 `S.difference` s2

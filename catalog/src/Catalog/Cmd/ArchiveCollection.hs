@@ -10,8 +10,10 @@ import           Catalog.FilePath (pathToBreadCrump)
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Data.ImgTree
+import           Data.ImgNode
 import           Data.MetaData
 import           Data.Prim
+import qualified Data.IntMap as IM
 
 -- ----------------------------------------
 
@@ -25,7 +27,9 @@ genSysCollections = do
 
   -- gen clipboard albums and imports, if not already there
   genClipboardCollection
+  genPhotoCollection
   genAlbumsCollection
+  genByDateCollection
   genImportsCollection
 
 genCollectionRootMeta :: Cmd ()
@@ -45,11 +49,17 @@ genCollectionRootMeta = do
 genClipboardCollection :: Cmd ()
 genClipboardCollection = genSysCollection no'delete n'clipboard tt'clipboard
 
+genPhotoCollection :: Cmd ()
+genPhotoCollection = genSysCollection no'change n'photos tt'photos
+
 genAlbumsCollection :: Cmd ()
 genAlbumsCollection = genSysCollection no'restr n'albums tt'albums
 
 genImportsCollection :: Cmd ()
 genImportsCollection = genSysCollection no'restr n'imports tt'imports
+
+genByDateCollection :: Cmd ()
+genByDateCollection = genSysCollection no'change n'bycreatedate tt'bydate
 
 -- at the moment not in use
 genTrashCollection :: Cmd ()
@@ -78,11 +88,6 @@ genSysCollection a n'sys tt'sys = do
 
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
-
-updateCollectionsByDate :: ColEntrySet -> Cmd ()
-updateCollectionsByDate rs = do
-  verbose $ "updateCollectionsByDate: new refs are added to byDate collections: " ++ show rs
-  verbose $ "updateCollectionsByDate: TODO: NOT YET IMPLEMENTED"
 
 genCollectionsByDate :: Cmd ()
 genCollectionsByDate = do
@@ -151,44 +156,43 @@ processNewImages colSyncTime pc i0 = do
       let ymd = fst . head $ dcs
           cs  = map snd dcs
       -- check or create y/m/d hierachy
-      (yc, mc, dc) <-mkDateCol ymd
+      (yc, mc, dc) <-mkDateCol ymd pc
       -- trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
       adjustColByDate cs dc
       setSyncTime yc >> setSyncTime mc >> setSyncTime dc
-      where
 
-    -- create directory hierachy for Y/M/D
-    mkDateCol :: (String, String, String) -> Cmd (ObjId, ObjId, ObjId)
-    mkDateCol (y, m, d) = do
-      yc <- mkColByPath insertColByName (setupYearCol  y    ) py
-      mc <- mkColByPath insertColByName (setupMonthCol y m  ) pm
-      dc <- mkColByPath insertColByName (setupDayCol   y m d) pd
-      return (yc, mc, dc)
-      where
-        py = pc `snocPath` mkName y
-        pm = py `snocPath` mkName (y ++ "-" ++ m)
-        pd = pm `snocPath` mkName (y ++ "-" ++ m ++ "-" ++ d)
+-- create directory hierachy for Y/M/D
+mkDateCol :: (String, String, String) -> Path -> Cmd (ObjId, ObjId, ObjId)
+mkDateCol (y, m, d) pc = do
+  yc <- mkColByPath insertColByName (setupYearCol  y    ) py
+  mc <- mkColByPath insertColByName (setupMonthCol y m  ) pm
+  dc <- mkColByPath insertColByName (setupDayCol   y m d) pd
+  return (yc, mc, dc)
+  where
+    py = pc `snocPath` mkName y
+    pm = py `snocPath` mkName (y ++ "-" ++ m)
+    pd = pm `snocPath` mkName (y ++ "-" ++ m ++ "-" ++ d)
 
-        setupYearCol y' _i = do
-          mkColMeta t "" "" o a
-          where
-            t = tt'year y'
-            o = to'name
-            a = no'change
+    setupYearCol y' _i = do
+      mkColMeta t "" "" o a
+        where
+          t = tt'year y'
+          o = to'name
+          a = no'change
 
-        setupMonthCol y' m' _i = do
-          mkColMeta t "" "" o a
-          where
-            t = tt'month y' m'
-            o = to'name
-            a = no'change
+    setupMonthCol y' m' _i = do
+      mkColMeta t "" "" o a
+        where
+          t = tt'month y' m'
+          o = to'name
+          a = no'change
 
-        setupDayCol y' m' d' _i = do
-          mkColMeta t "" "" o a
-          where
-            t = tt'day y' m' d'
-            o = to'dateandtime
-            a = no'change
+    setupDayCol y' m' d' _i = do
+      mkColMeta t "" "" o a
+        where
+          t = tt'day y' m' d'
+          o = to'dateandtime
+          a = no'change
 
 -- ----------------------------------------
 
@@ -462,5 +466,48 @@ mkColByPath insertCol setupCol p = do
   md <- setupCol cid
   adjustMetaData (md <>) cid
   return cid
+
+-- ----------------------------------------
+
+type DateMap = IM.IntMap ColEntrySet
+
+updateCollectionsByDate :: ColEntrySet -> Cmd ()
+updateCollectionsByDate rs = do
+  verbose $ "updateCollectionsByDate: new refs are added to byDate collections: " ++ show rs
+  -- pc <- getRootImgColId >>= objid2path
+  dm <- colEntries2dateMap rs
+  dateMap2Collections p'bycreatedate dm
+
+-- group col entries by create date
+
+colEntries2dateMap :: ColEntrySet -> Cmd DateMap
+colEntries2dateMap rs = do
+  verbose $ "colEntries2dateMap: build DateMap"
+  foldlM add1 IM.empty $ toListColEntrySet rs
+  where
+    add1 :: DateMap -> ColEntry -> Cmd DateMap
+    add1 acc ce = do
+      meta <- getMetaData (ce ^. theColObjId)
+      let mdate = (^. isoDateInt) <$> getCreateMeta parseDate meta
+      return $
+        maybe acc
+        (\ i' -> IM.insertWith (<>) i' (singletonColEntrySet ce) acc)
+        mdate
+
+-- create/update day collection with a col entry sets
+-- pc is the path to the y/m/d collection hierachy
+
+dateMap2Collections :: Path -> DateMap -> Cmd ()
+dateMap2Collections pc dm =
+  mapM_ insCol $ IM.toList dm
+  where
+    insCol (i, ces) = do
+      (_yc, _mc, dc) <- mkDateCol ymd pc
+      adjustColByDate cs dc
+      verbose $ "dateMap2Collections: collection updated: " ++ show ymd
+      return ()
+      where
+        ymd = i ^. from isoDateInt
+        cs  = toListColEntrySet ces
 
 -- ----------------------------------------

@@ -286,6 +286,19 @@ parseDate :: String -> Maybe (String, String, String)
 parseDate str = fst <$> parseDateTime str
 {-# INLINE parseDate #-}
 
+isoDateInt :: Iso' (String, String, String) Int
+isoDateInt = iso toInt frInt
+  where
+    toInt (y, m, d) =
+      (read y * 100 + read m) * 100 + read d
+
+    frInt i = ( printf "%04d" y
+              , printf "%02d" m
+              , printf "%02d" d
+              )
+      where
+        (my, d) = i  `divMod` 100
+        (y,  m) = my `divMod` 100
 -- take the time part of a full date/time input
 parseTime :: String -> Maybe (String, String, String, String)
 parseTime str = do

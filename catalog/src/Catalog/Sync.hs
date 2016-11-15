@@ -69,7 +69,16 @@ syncNode = idSyncFS False
 
 syncDir :: Cmd ()
 syncDir = do
-  p <- syncDirPath
+  -- check whether clipboard, and other collections are there
+  verbose "syncDir: check/create the system collections"
+  genSysCollections
+
+  -- get the dir path for the (sub-)dir to be syncronized
+  -- and start sync
+  syncDirPath >>= syncDirP
+
+syncDirP :: Path -> Cmd ()
+syncDirP p = do
   -- remember all ImgRef's in dir to be synchronized
   old'refs <- allColEntries' p
   trc $ "syncDir: old'refs: " ++ show old'refs
@@ -81,9 +90,9 @@ syncDir = do
   cp <- ($ p) <$> img2colPath
   cleanupColByPath cp
 
-  verbose $ "syncCatalog: create the collections for the archive dir: " ++ quotePath p
+  verbose $ "syncDir: create the collections for the archive dir: " ++ quotePath p
   genCollectionsByDir' p
-  verbose $ "syncCatalog: create the collections finished"
+  verbose $ "syncDir: create the collections finished"
 
   -- now the associated collection for dir is up to date and
   -- contains all ImgRef's, which have been updated,
