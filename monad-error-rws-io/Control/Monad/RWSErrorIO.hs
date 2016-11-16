@@ -9,6 +9,7 @@ module Control.Monad.RWSErrorIO
 where
 
 import Control.Exception        ( SomeException
+                                , IOException
                                 , try
                                 )
 
@@ -149,7 +150,7 @@ io x
     = do r <- liftIO $ try x
          either (abort . showExc) return $ r
     where
-      showExc :: SomeException -> String
+      showExc :: IOException -> String
       showExc = show
 
 always :: Config r => Action r s () -> Action r s ()
