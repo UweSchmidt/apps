@@ -92,7 +92,7 @@ getIdNode msg p = do
 
 getIdNode' :: Path -> Cmd (ObjId, ImgNode)
 getIdNode' p =
-  getIdNode ("getIdNode': cant' find entry for path " ++ quotePath p) p
+  getIdNode ("getIdNode': cant' find entry for path:") p
 
 -- check path not there
 

@@ -16,6 +16,7 @@ module Data.Prim.Path
        , headPath
        , substPathName
        , substPathPrefix
+       , remCommonPathPrefix
        , isPathPrefix
        , nullPath
        , showPath
@@ -136,7 +137,16 @@ substPathPrefix old'px new'px p0 =
       where
         (hpx, tpx) = px ^. viewTop
         (hp,  tp ) = p  ^. viewTop
-{-# INLINE substPathPrefix #-}
+
+remCommonPathPrefix :: (Monoid n, Eq n) => Path' n -> Path' n -> (Path' n, Path' n)
+remCommonPathPrefix p1 p2
+  | n1 /= n2 = (p1, p2)
+  | nullPath p1' = (p1', p2')
+  | nullPath p2' = (p1', p2')
+  | otherwise    = remCommonPathPrefix p1' p2'
+  where
+    (n1, p1') = p1 ^. viewTop
+    (n2, p2') = p2 ^. viewTop
 
 showPath :: (Monoid n, Eq n, Show n) => Path' n -> String
 showPath (BN n)

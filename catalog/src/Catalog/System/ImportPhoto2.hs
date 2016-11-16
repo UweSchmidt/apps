@@ -71,6 +71,12 @@ loadImportData p = do
   where
     fromBS = J.decode'
 
+-- throw away last import
+cleanImportCols :: Cmd ()
+cleanImportCols = do
+  lookupByPath p'imports >>= maybe (return ()) (rmRec . fst)
+  genImportsCollection
+
 insertImportPhoto2 :: ImportCol -> Cmd ()
 insertImportPhoto2 ipd = go ipd
   where
@@ -78,15 +84,37 @@ insertImportPhoto2 ipd = go ipd
     ppi = p'arch'photos
     go (IC pt0 ty jpg raw (MD2 md) cont) = do
       -- verbose $ "iip2: " ++ show path
-      case ty of
-        PIC   -> insPic
-        ALBUM -> insAlbum
-      -- lists are processed from the end
-      -- so the result lists can be constructed by consing, not appending elements
-      mapM_ go $ reverse cont
+      ( case ty of
+          PIC   ->
+            insPic
+          ALBUM ->
+            insAlbum
+            >>
+            -- lists are processed from the end
+            -- so the result lists can be constructed by consing, not appending elements
+            mapM_ go (reverse cont)
+        )
+        `catchE`
+        (\ e -> warn $ "iip2: can't import image/collection: " ++ show e)
         where
           toPath :: Text -> Path
           toPath s = ("/" <> s) ^. isoString . from isoString
+
+          toArch :: Path -> Path
+          toArch = (ppi `concPath`)
+
+          imgPathAndName :: (Path, Name)
+          imgPathAndName
+            | T.null raw =
+                ( toArch $
+                  jpgPath
+                  `snocPath`
+                  (jpgName ^. isoString . to FP.dropExtension . from isoString)
+                , jpgName
+                )
+            | otherwise = (undefined, undefined)
+            where
+              (jpgPath, jpgName) = toPath jpg ^. viewBase
 
           path           = concPath ppx . tailPath . toPath $ pt0
           (colPath, cnm) = path ^. viewBase
@@ -109,12 +137,12 @@ insertImportPhoto2 ipd = go ipd
 
           insPic = do
             verbose $
-              unwords ["PIC ", show pno, show path, show imgPath, show imgName]
-            cin <- lookupByPath path
+              unwords ["PIC ", show pno, show colPath, show imgPath, show imgName]
+            cin <- lookupByPath colPath
             iin <- lookupByPath imgPath
             flip (maybe (verbose $ "img not found: " ++ show imgPath)) iin $
               \ (iid, _iin) ->
-                flip (maybe (verbose $ "col not found: " ++ show path)) cin $
+                flip (maybe (verbose $ "col not found: " ++ show colPath)) cin $
                   \ (cid, _cin) -> do
                     adjustColEntries (mkColImgRef iid imgName :) cid
             where
@@ -122,11 +150,11 @@ insertImportPhoto2 ipd = go ipd
               pno = read $ drop 4 $ show cnm
 
           insAlbum = do
-            verbose $ unwords ["ALBUM ", show colPath, show imgPath, show imgName]
-            cin <- lookupByPath colPath
+            verbose $ unwords ["ALBUM ", show path, show imgPath, show imgName]
+            cin <- lookupByPath path
 
             -- create the collection and/or get the collection id
-            cid <- maybe (mkCollectionC colPath) (return . fst) cin
+            cid <- maybe (mkCollectionC path) (return . fst) cin
 
             -- set the meta data and the collection image
             adjustMetaData (md <>) cid
@@ -141,7 +169,9 @@ ttt = runCmd $
           jp' <- view envJsonArchive
           initImgStore n'archive n'collections
             (mp' </> s'photos)) >>
+      loadImgStore "catalog/photos.pathid.json" >>
       genSysCollections >>
+      cleanImportCols >>
       (loadImportData "export.json") >>=
       insertImportPhoto2 >>
       return ()
