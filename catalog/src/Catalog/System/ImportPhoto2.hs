@@ -15,7 +15,7 @@ import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
-import qualified System.FilePath as FP
+import           System.FilePath (dropExtension, (</>))
 import           Data.Map (Map)
 import qualified Data.Map  as M
 import qualified Data.Text as T
@@ -103,37 +103,31 @@ insertImportPhoto2 ipd = go ipd
           toArch :: Path -> Path
           toArch = (ppi `concPath`)
 
-          imgPathAndName :: (Path, Name)
-          imgPathAndName
+          imgPath :: Path
+          imgName :: Name
+          (imgPath, imgName)
             | T.null raw =
-                ( toArch $
-                  jpgPath
-                  `snocPath`
-                  (jpgName ^. isoString . to FP.dropExtension . from isoString)
-                , jpgName
-                )
-            | otherwise = (undefined, undefined)
+                (toArch jpgPath', jpgPart)
+            | otherwise =
+                (toArch rawPath,  jpgP)
             where
+              rawPath = toPath raw ^. viewBase . _1
+              jpgN    = remCommonPathPrefix (toPath raw) (toPath jpg) ^. _2
+              jpgP    = jpgN ^. isoString . to (drop 1) . from isoString
               (jpgPath, jpgName) = toPath jpg ^. viewBase
+              (jpgDir,  jpgBase) = jpgPath    ^. viewBase
+              name        = jpgName & isoString %~ dropExtension
+              jpgBaseName = jpgBase ^. isoString </> jpgName ^. isoString
+              jpgType     = filePathToImgType jpgBaseName ^. _2
+              jpgPath'
+                | jpgType == IMGother = jpgPath `snocPath` name
+                | otherwise           = jpgDir  `snocPath` name
+              jpgPart
+                | jpgType == IMGother = jpgName
+                | otherwise           = jpgBaseName ^. from isoString
 
           path           = concPath ppx . tailPath . toPath $ pt0
           (colPath, cnm) = path ^. viewBase
-
-          imgPath0
-            | T.null raw  = toPath jpg
-            | otherwise   = toPath raw
-
-          imgPath = ppi `concPath` imgPath1
-
-          (imgPath1, imgName)
-            | ty21 /= IMGother = (p2 `snocPath` nm21, n21)
-            | otherwise        = (p1 `snocPath` nm1 , n1 )
-            where
-              (p1, n1)     = imgPath0 ^. viewBase
-              (p2, n2)     = p1       ^. viewBase
-              n21          = mkName $ (n2 ^. isoString) ++ "/" ++ (n1 ^. isoString)
-              (nm21, ty21) = n21      ^. isoString . to filePathToImgType
-              (nm1,  ty1 ) = n1       ^. isoString . to filePathToImgType
 
           insPic = do
             verbose $
