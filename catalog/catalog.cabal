@@ -84,5 +84,4 @@ library
 
 --                   , SHA                 >= 1.5
                    
-  GHC-Options: -Wall -fwarn-tabs
- 
+  GHC-Options: -Wall -fwarn-tabs -funbox-strict-fields 
