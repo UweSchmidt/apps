@@ -27,35 +27,6 @@ copyCollection path'src path'dst = do
   srcName   <- getImgName id'src
   dupColRec id'src id'dst srcName
 
-{-
--- copy a collection recursively into a destination collection
--- TODO: do it with dupColRec
-
-copyColRec :: ObjId -> ObjId -> Cmd ()
-copyColRec src dst = do
-  srcName   <- getImgName src
-  dupColRec src dst srcName
--- -}
-{-
-  srcVal <- getImgVal src
-  unless (isCOL srcVal) $ do
-    p <- objid2path src
-    abort $ "copyColRec: source isn't a collection " ++ show (show p)
-
-  name'src    <- getImgName src
-  parent'src  <- getImgParent src
-  parent'path <- objid2path parent'src
-  dst'path    <- objid2path dst
-  let editPath = substPathPrefix parent'path dst'path
-
-  -- create empty subcollection in destination collection
-  let target'path = editPath (snocPath parent'path name'src)
-  void $ createColCopy target'path src
-
-  -- copy image and subcollections recursively into new dest collection
-  copyColEntries editPath src
--- -}
-
 -- ----------------------------------------
 --
 -- copy a collection src into a collection dstParent
@@ -166,9 +137,7 @@ rmRec = foldMT imgA dirA rootA colA
 --
 -- after a sync run and before the byDate collections are
 -- updated, removed images must also be removed in the collections
--- especially in the byDate colections
-
--- TODO: test test test
+-- especially in the byDate collections
 
 cleanupColByPath :: Path -> Cmd ()
 cleanupColByPath p = do
@@ -239,7 +208,7 @@ cleanupCollections i0 = do
           return ex
 
 cleanupAllRefs :: ColEntrySet -> Cmd ()
-cleanupAllRefs rs = do
+cleanupAllRefs rs =
   getRootImgColId >>= cleanupRefs rs
 
 cleanupRefs :: ColEntrySet -> ObjId -> Cmd ()

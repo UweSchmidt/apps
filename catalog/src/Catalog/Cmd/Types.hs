@@ -28,6 +28,7 @@ data Env = Env
   , _forceMDU    :: Bool  -- Meta Data Update
   , _port        :: Int
   , _jsonArchive :: FilePath
+  , _jsonImport  :: Maybe FilePath
   , _mountPath   :: FilePath
   , _syncDir     :: FilePath
   , _fontName    :: Text
@@ -53,6 +54,7 @@ defaultEnv = Env
   , _forceMDU     = False
   , _port         = 3001
   , _jsonArchive  = "catalog.json" -- rel to mount path
+  , _jsonImport   = Nothing
   , _mountPath    = "."
   , _syncDir      = s'photos       -- the top archive dir
   , _fontName     = mempty
@@ -82,6 +84,9 @@ envPort k e = (\ new -> e {_port = new}) <$> k (_port e)
 
 envJsonArchive :: Lens' Env FilePath
 envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
+
+envJsonImport :: Lens' Env (Maybe FilePath)
+envJsonImport k e = (\ new -> e {_jsonImport = new}) <$> k (_jsonImport e)
 
 envMountPath :: Lens' Env FilePath
 envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)

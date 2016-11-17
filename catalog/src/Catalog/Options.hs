@@ -44,6 +44,7 @@ oAll
   , oPort
   , oMountPath
   , oArchive
+  , oImport
   , oSyncDir :: Term (Env -> Env)
 
 oAll =
@@ -55,6 +56,7 @@ oAll =
   <..> oPort
   <..> oMountPath
   <..> oArchive
+  <..> oImport
   <..> oSyncDir
 
 oVerbose =
@@ -132,6 +134,21 @@ oArchive =
     setArchive s
       | null s    = Just id
       | otherwise = Just (envJsonArchive .~ s)
+
+oImport =
+  convStringValue "not a legal import name" setImport $
+  (optInfo ["i", "import"])
+    { optName = "IMPORT"
+    , optDoc  = "For syncing only: The JSON import file for collections to be imported" ++
+                ", default \"import.json\"." ++
+                " If import file is given, just an import is done, no sync."
+    }
+  where
+    setImport s
+      | null s    = setImport "import.json"
+      | otherwise = Just (envJsonImport .~ Just s)
+
+
 
 oSyncDir =
   convStringValue "not a legal dir path" setMP $

@@ -3,6 +3,10 @@ module Main where
 import           Catalog.Cmd
 import           Catalog.Options
 import           Catalog.Sync
+import           Catalog.System.ImportPhoto2 ( cleanImportCols
+                                             , loadImportData
+                                             , insertImportPhoto2
+                                             )
 -- import           Data.ImageStore
 -- import           Data.ImgTree
 import           Data.Prim
@@ -13,15 +17,15 @@ main = mainWithArgs "sync" syncMain
 
 syncMain :: Env -> IO ()
 syncMain env = do
-  res <- (^. _1) <$> runCmd (local (const env) syncCatalog)
+  res <- (^. _1) <$> runCmd (local (const env) syncOrImportCatalog)
   either (die . show) return res
 
-syncCatalog :: Cmd ()
-syncCatalog = do
+syncOrImportCatalog :: Cmd ()
+syncOrImportCatalog = do
   mountPath <- view envMountPath
 
   verbose $
-    "syncCatalog: create archive at: " ++
+    "syncOrImportCatalog: create archive at: " ++
     (mountPath ^. isoString . to show)
 
   initImgStore
@@ -35,20 +39,18 @@ syncCatalog = do
     verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 
-  -- syncronize the image dir with the filesystem
-  syncDir
+  -- if import file is set, do an import else sync an image dir
+  view envJsonImport >>=
+    maybe syncDir importCols
 
-  -- cleanup dead references
-  -- cleanupAllCollections -- already done in syncDir
-
-  -- verbose "syncCatalog: create the system collections"
-  -- genSysCollections
-
-  -- verbose "syncCatalog: create the collections per date"
-  -- verbose "syncCatalog: TODO: skip this when updateCollectionsByDate is done"
-  -- genCollectionsByDate
-
-  verbose $ "syncCatalog: save state to " ++ show jsonPath
+  verbose $ "syncOrImportCatalog: save state to " ++ show jsonPath
   saveImgStore jsonPath
 
-  verbose "syncCatalog: sync finished"
+  verbose "syncOrImportCatalog: sync finished"
+
+importCols :: FilePath -> Cmd ()
+importCols f = do
+  genSysCollections
+  cleanImportCols
+  d <- loadImportData f
+  insertImportPhoto2 d
