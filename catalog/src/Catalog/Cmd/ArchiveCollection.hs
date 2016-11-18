@@ -1,6 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Catalog.Cmd.ArchiveCollection
+       ( genSysCollections
+       , genImportsCollection
+       , genAllCollectionsByDir
+       , genCollectionsByDir
+       , genCollectionsByDir'
+       , updateCollectionsByDate
+       , img2colPath
+       )
 where
 
 import           Catalog.Cmd.Basic
@@ -61,9 +69,11 @@ genImportsCollection = genSysCollection no'restr n'imports tt'imports
 genByDateCollection :: Cmd ()
 genByDateCollection = genSysCollection no'change n'bycreatedate tt'bydate
 
+{-
 -- at the moment not in use
 genTrashCollection :: Cmd ()
 genTrashCollection = genSysCollection no'delete n'trash tt'trash
+-}
 
 genSysCollection :: Text -> Name -> Text -> Cmd ()
 genSysCollection a n'sys tt'sys = do
@@ -78,14 +88,14 @@ genSysCollection a n'sys tt'sys = do
     Just _ ->
       return ()
   where
-    setupSys _i = do
+    setupSys _i =
       mkColMeta t s c o a
       where
         t = tt'sys
         s = ""
         c = ""
         o = ""
-
+{- }
 -- TODO: use time stamp of dirs and collections to
 -- skip unchanged dirs, similar to genCollectionsByDir
 
@@ -160,6 +170,7 @@ processNewImages colSyncTime pc i0 = do
       -- trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
       adjustColByDate cs dc
       setSyncTime yc >> setSyncTime mc >> setSyncTime dc
+-}
 
 -- create directory hierachy for Y/M/D
 mkDateCol :: (String, String, String) -> Path -> Cmd (ObjId, ObjId, ObjId)
@@ -173,21 +184,21 @@ mkDateCol (y, m, d) pc = do
     pm = py `snocPath` mkName (y ++ "-" ++ m)
     pd = pm `snocPath` mkName (y ++ "-" ++ m ++ "-" ++ d)
 
-    setupYearCol y' _i = do
+    setupYearCol y' _i =
       mkColMeta t "" "" o a
         where
           t = tt'year y'
           o = to'name
           a = no'change
 
-    setupMonthCol y' m' _i = do
+    setupMonthCol y' m' _i =
       mkColMeta t "" "" o a
         where
           t = tt'month y' m'
           o = to'name
           a = no'change
 
-    setupDayCol y' m' d' _i = do
+    setupDayCol y' m' d' _i =
       mkColMeta t "" "" o a
         where
           t = tt'day y' m' d'
@@ -219,7 +230,7 @@ img2colPath = do
   return $ substPathPrefix old'px new'px
 
 genAllCollectionsByDir :: Cmd ()
-genAllCollectionsByDir = do
+genAllCollectionsByDir =
   getRootImgDirId >>= genCollectionsByDir
 
 genCollectionsByDir' :: Path -> Cmd ()
@@ -276,7 +287,7 @@ genCollectionsByDir di = do
         -- collect all processed jpg images for a single img
 
         imgA i pts _md = do
-          let res = (map (mkColImgRef i) $ sort ns)
+          let res = map (mkColImgRef i) $ sort ns
           trcObj i $ "genCol img: " ++ show res
           return res
           where
@@ -364,8 +375,8 @@ sortByDate =
 insertColByName :: ObjId -> ObjId -> Cmd ()
 insertColByName i = adjustColByName [mkColColRef i]
 
-insertColByDate :: ObjId -> ObjId -> Cmd ()
-insertColByDate i = adjustColByDate [mkColColRef i]
+-- insertColByDate :: ObjId -> ObjId -> Cmd ()
+-- insertColByDate i = adjustColByDate [mkColColRef i]
 
 adjustColByName :: [ColEntry] -> ObjId -> Cmd ()
 adjustColByName = adjustColBy sortByName
@@ -482,7 +493,7 @@ updateCollectionsByDate rs = do
 
 colEntries2dateMap :: ColEntrySet -> Cmd DateMap
 colEntries2dateMap rs = do
-  verbose $ "colEntries2dateMap: build DateMap"
+  verbose "colEntries2dateMap: build DateMap"
   foldlM add1 IM.empty $ toListColEntrySet rs
   where
     add1 :: DateMap -> ColEntry -> Cmd DateMap
