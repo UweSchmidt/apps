@@ -170,7 +170,7 @@ refPath r0 t
 -- It's the only node where the parent ref equals the ref.
 -- The generation of the reference is supplied by a conversion from path to ref
 
- mkDirRoot :: (Path -> ref) -> Name -> node ref -> DirTree node ref
+mkDirRoot :: (Path -> ref) -> Name -> node ref -> DirTree node ref
 mkDirRoot genRef n v
   = RT r (M.singleton r (UL r n v))
   where

@@ -19,6 +19,7 @@ import           System.FilePath (dropExtension, (</>))
 import           Data.Map (Map)
 import qualified Data.Map  as M
 import qualified Data.Text as T
+import           Text.Read(readMaybe)
 
 -- ----------------------------------------
 
@@ -111,11 +112,17 @@ insertImportPhoto2 ipd = go ipd
             | otherwise =
                 (toArch rawPath,  jpgP)
             where
-              rawPath = toPath raw ^. viewBase . _1
-              jpgN    = remCommonPathPrefix (toPath raw) (toPath jpg) ^. _2
-              jpgP    = jpgN ^. isoString . to (drop 1) . from isoString
-              (jpgPath, jpgName) = toPath jpg ^. viewBase
-              (jpgDir,  jpgBase) = jpgPath    ^. viewBase
+              (rawPath',
+               rawName)   = toPath raw ^. viewBase
+              rawName'    = rawName & isoString %~ dropExtension
+              rawPath     = rawPath' `snocPath` rawName'
+
+              jpgN        = remCommonPathPrefix (toPath raw) (toPath jpg) ^. _2
+              jpgP        = jpgN ^. isoString . to (drop 1) . from isoString
+              (jpgPath,
+               jpgName)   = toPath jpg ^. viewBase
+              (jpgDir,
+               jpgBase)   = jpgPath    ^. viewBase
               name        = jpgName & isoString %~ dropExtension
               jpgBaseName = jpgBase ^. isoString </> jpgName ^. isoString
               jpgType     = filePathToImgType jpgBaseName ^. _2
@@ -140,8 +147,8 @@ insertImportPhoto2 ipd = go ipd
                   \ (cid, _cin) -> do
                     adjustColEntries (mkColImgRef iid imgName :) cid
             where
-              pno :: Int
-              pno = read $ drop 4 $ show cnm
+              pno :: Maybe Int
+              pno = readMaybe $ drop 4 $ show cnm
 
           insAlbum = do
             verbose $ unwords ["ALBUM ", show path, show imgPath, show imgName]
