@@ -23,7 +23,7 @@ allColEntries =
   where
     -- collect all ImgRef's by recursing into subcollections
     -- union subcollection results and imgrefs together
-    colA  go  i _md _im _be cs _ts = do
+    colA  go  i _md _im _be cs = do
       p <- objid2path i
       verbose $ "allColEntries: " ++ quotePath p
 

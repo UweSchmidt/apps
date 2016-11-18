@@ -76,7 +76,7 @@ copyColEntries pf =
         dirA  _go _i _es _ts = return ()  -- NOOP
         rootA _go _i _d  _c  = return ()  -- NOOP
 
-        colA go i _md im be cs _ts  = do
+        colA go i _md im be cs = do
           dst'i  <- (mkObjId . pf) <$> objid2path i
           dst'cs <- mapM copy cs
           adjustColEntries (const dst'cs) dst'i
@@ -116,7 +116,7 @@ rmRec = foldMT imgA dirA rootA colA
     rootA go _i dir col =
       go dir >> go col                          -- recurse into dir and col hirachy
                                                 -- but don't change root
-    colA go i _md _im _be cs _ts = do
+    colA go i _md _im _be cs = do
       trc $ "colA: " ++ show cs
       let cs' = filter isColColRef cs           -- remove all images
       adjustColEntries (const cs') i            -- store remaining collections
@@ -159,7 +159,7 @@ cleanupCollections i0 = do
     cleanup i = do
       n <- getTree (theNode i)
       case n ^. nodeVal of
-        COL _md im be es _ts -> do
+        COL _md im be es -> do
           cleanupIm i im
           cleanupIm i be
           cleanupEs i es
@@ -216,7 +216,7 @@ cleanupRefs rs i0
   | isempty rs = return ()
   | otherwise  = foldCollections colA i0
   where
-    colA go i _md im be es _ts = do
+    colA go i _md im be es = do
       cleanupIm
       cleanupBe
       cleanupEs

@@ -69,12 +69,6 @@ genImportsCollection = genSysCollection no'restr n'imports tt'imports
 genByDateCollection :: Cmd ()
 genByDateCollection = genSysCollection no'change n'bycreatedate tt'bydate
 
-{-
--- at the moment not in use
-genTrashCollection :: Cmd ()
-genTrashCollection = genSysCollection no'delete n'trash tt'trash
--}
-
 genSysCollection :: Text -> Name -> Text -> Cmd ()
 genSysCollection a n'sys tt'sys = do
   ic <- getRootImgColId
@@ -83,8 +77,7 @@ genSysCollection a n'sys tt'sys = do
   ex <- lookupByPath sys'path
   case ex of
     Nothing -> do
-      sys'i <- mkColByPath insertColByName setupSys sys'path
-      setSyncTime sys'i
+      void $ mkColByPath insertColByName setupSys sys'path
     Just _ ->
       return ()
   where
@@ -95,82 +88,6 @@ genSysCollection a n'sys tt'sys = do
         s = ""
         c = ""
         o = ""
-{- }
--- TODO: use time stamp of dirs and collections to
--- skip unchanged dirs, similar to genCollectionsByDir
-
-genCollectionsByDate :: Cmd ()
-genCollectionsByDate = do
-  ic <- getRootImgColId
-  pc <- objid2path ic
-  di <- getRootImgDirId
-
-  -- create root col for year/month/day hierachy
-  -- "/archive/collections/byCreateDate"
-
-  let top'iPath = pc `snocPath` n'bycreatedate
-  top'i <- mkColByPath insertColByName setupByDate top'iPath
-  top'iSyncTime <- getImgVals top'i theSyncTime
-
-  -- fill the year/month/day hierachy
-  processNewImages top'iSyncTime top'iPath di
-
-  setSyncTime top'i
-  where
-
-    setupByDate :: ObjId -> Cmd MetaData
-    setupByDate _i = do
-      mkColMeta t s c o a
-      where
-        t = tt'bydate
-        s = ""
-        c = ""
-        o = to'colandname
-        a = no'change
-
-processNewImages :: TimeStamp -> Path -> ObjId -> Cmd ()
-processNewImages colSyncTime pc i0 = do
-  is <- partBy fst <$> foldImgDirs imgA dirA i0
-  mapM_ addToCol is
-  where
-    -- skip unchanged dirs
-    dirA go _i es dirSyncTime = do
-      es' <- if False -- colSyncTime >= dirSyncTime  -- disable with False
-             then
-               getImgSubDirs es
-             else
-               return (es ^. isoDirEntries)
-      concat <$> mapM go es'
-
-    -- read the jpg image part and the create date meta tag
-    -- and build a list of pairs of date and ColImgRef's
-    imgA :: ObjId -> ImgParts -> MetaData ->
-            Cmd [((String, String, String), ColEntry)]
-    imgA i pts _md = do
-      md <- getMetaData i
-      let mymd = getCreateMeta parseDate md
-      -- trcObj i $ "processnewimages: mymd: " ++ show mymd
-      case mymd of
-        Nothing ->
-          return []
-        Just ymd -> do
-          -- let res = [(ymd, mkColImgRef i n) | n <- ns]
-          -- trcObj i $ "processnewimages res: " ++ show res
-          return [(ymd, mkColImgRef i n) | n <- ns]
-      where
-        ns = pts ^.. thePartNamesI
-
-    -- add all images for 1 day into the corresponding collection
-    addToCol :: [((String, String, String), ColEntry)] -> Cmd ()
-    addToCol dcs = do
-      let ymd = fst . head $ dcs
-          cs  = map snd dcs
-      -- check or create y/m/d hierachy
-      (yc, mc, dc) <-mkDateCol ymd pc
-      -- trcObj dc $ "addToCol " ++ show (length cs) ++ " new images in"
-      adjustColByDate cs dc
-      setSyncTime yc >> setSyncTime mc >> setSyncTime dc
--}
 
 -- create directory hierachy for Y/M/D
 mkDateCol :: (String, String, String) -> Path -> Cmd (ObjId, ObjId, ObjId)
@@ -244,9 +161,6 @@ genCollectionsByDir di = do
   dp      <- objid2path di
   void $ mkColByPath insertColByName setupDirCol (img2col dp)
   void $ genCol img2col di
-  -- adjustColEntries (`mergeColEntries` es) ic
-  -- trc $ "genCollectionsbydir: " ++ show es
-  -- return ()
   where
     -- meta data for generated collections
     setupDirCol :: ObjId -> Cmd MetaData
@@ -257,12 +171,6 @@ genCollectionsByDir di = do
           o = to'colandname
           a = no'wrtdel
       mkColMeta t s "" o a
-
-    -- TODO (really)
-    -- search for a IMGtxt entry in DIR entries,
-    -- take the 1. as blog entry for the collection
-    -- setupDirTxt :: ObjId -> Cmd (Maybe (ObjId, Name))
-    -- setupDirTxt = undefined
 
     path2Title :: Path -> Text
     path2Title p
@@ -307,32 +215,16 @@ genCollectionsByDir di = do
           -- with action for meta data
           ic <- mkColByPath insertColByName setupDirCol cp
 
-          dirSyncTime <- getImgVals i  theSyncTime
-          colSyncTime <- getImgVals ic theSyncTime
+          -- get collection entries, and insert them into collection
+          cs  <- concat <$> mapM go (es ^. isoDirEntries)
 
-          if False -- colSyncTime >= dirSyncTime
-            then do
-              -- the collection is up to date
-              -- only the subdirs need to be traversed
-              trcObj i "genCol dir: dir is up to date, traversing subdirs"
-              cs  <- getImgSubDirs es
-              void $ mapM go cs
-            else do
-              -- get collection entries, and insert them into collection
-              cs  <- concat <$> mapM go (es ^. isoDirEntries)
+          trcObj ic "genCol dir: set dir contents"
+          adjustColByName cs ic
+          trcObj ic "genCol dir: dir contents is set"
 
-              trcObj ic "genCol dir: set dir contents"
-              adjustColByName cs ic
-              trcObj ic "genCol dir: dir contents is set"
-
-              -- set the blog entry, if there's a txt entry in cs
-              setColBlogToFstTxtEntry False ic
-              trcObj ic "genCol dir: col blog set"
-
-              -- set time processed
-              setSyncTime ic
-
-              -- TODO: recurce into subdirs ???
+          -- set the blog entry, if there's a txt entry in cs
+          setColBlogToFstTxtEntry False ic
+          trcObj ic "genCol dir: col blog set"
 
           return [mkColColRef ic]
 
@@ -442,7 +334,8 @@ mkColMeta t s c o a = do
 
 -- create collections recursively, similar to 'mkdir -p'
 
-mkColByPath :: (ObjId -> ObjId -> Cmd ()) -> (ObjId -> Cmd MetaData) -> Path -> Cmd ObjId
+mkColByPath :: (ObjId -> ObjId -> Cmd ()) ->
+               (ObjId -> Cmd MetaData) -> Path -> Cmd ObjId
 mkColByPath insertCol setupCol p = do
   -- trc $ "mkColByPath " ++ show p
   -- check for legal path
@@ -484,10 +377,11 @@ type DateMap = IM.IntMap ColEntrySet
 
 updateCollectionsByDate :: ColEntrySet -> Cmd ()
 updateCollectionsByDate rs = do
-  verbose $ "updateCollectionsByDate: new refs are added to byDate collections: " ++ show rs
-  -- pc <- getRootImgColId >>= objid2path
+  verbose $ "updateCollectionsByDate: new refs are added to byDate collections: "
+            ++ show rs
   dm <- colEntries2dateMap rs
   dateMap2Collections p'bycreatedate dm
+
 
 -- group col entries by create date
 
