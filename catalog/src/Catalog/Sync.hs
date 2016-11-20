@@ -29,13 +29,14 @@ allColEntries =
   where
     -- collect all ImgRef's by recursing into subcollections
     -- union subcollection results and imgrefs together
-    colA  go  i _md _im _be cs = do
+    colA  go  i _md im be cs = do
       p <- objid2path i
       verbose $ "allColEntries: " ++ quotePath p
-
+      let imref = im ^.. traverse . to (uncurry mkColImgRef)
+      let beref = be ^.. traverse . to (uncurry mkColImgRef)
       let (crs, irs) = partition isColColRef cs
       iss <- mapM go (crs ^.. traverse . theColColRef)
-      return $ foldl' (<>) (fromListColEntrySet irs) iss
+      return $ foldl' (<>) (fromListColEntrySet $ imref ++ beref ++ irs) iss
 
     -- jump from the dir hierachy to the assosiated collection hierarchy
     dirA  go i _es  _ts = do
@@ -98,6 +99,7 @@ syncDirP p = do
   -- throw away all ImgRef's in associated collection of the synced dir
   cp <- ($ p) <$> img2colPath
   cleanupColByPath cp
+  checkImgStore
 
   verbose $ "syncDir: create the collections for the archive dir: " ++ quotePath p
   genCollectionsByDir' p
@@ -112,14 +114,14 @@ syncDirP p = do
   let rem'refs = old'refs `diffColEntrySet` upd'refs
   let new'refs = upd'refs `diffColEntrySet` old'refs
 
-  rem'p <- trcColEntrySet rem'refs
-  new'p <- trcColEntrySet new'refs
+  -- rem'p <- trcColEntrySet rem'refs
+  -- new'p <- trcColEntrySet new'refs
 
-  verbose $ "syncDir: images removed: " ++ show rem'p
+  verbose $ "syncDir: images removed: " ++ show rem'refs
   verbose $ "syncDir: remove these refs in all collections"
   cleanupAllRefs rem'refs
 
-  verbose $ "syncDir: images added:   " ++ show new'p
+  verbose $ "syncDir: images added:   " ++ show new'refs
   updateCollectionsByDate new'refs
 
   return ()

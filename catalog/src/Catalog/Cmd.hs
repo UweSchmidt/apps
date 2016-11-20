@@ -10,6 +10,7 @@ module Catalog.Cmd
        , module Catalog.Cmd.Types
        , module Catalog.Cmd.Basic
        , module Catalog.Cmd.Fold
+       , module Catalog.Cmd.Invariant
        , module Catalog.Cmd.List
        , module Catalog.Cmd.CopyRemove
        , module Catalog.Cmd.CWN
@@ -26,6 +27,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.CopyRemove
 import           Catalog.Cmd.CWN
 import           Catalog.Cmd.Fold
+import           Catalog.Cmd.Invariant
 import           Catalog.Cmd.List
 import           Catalog.Journal
 import           Catalog.Cmd.Types

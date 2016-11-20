@@ -39,9 +39,13 @@ syncOrImportCatalog = do
     verbose $ "read the current archive data from file " ++ show jsonPath
     loadImgStore jsonPath
 
+  checkImgStore
+
   -- if import file is set, do an import else sync an image dir
   view envJsonImport >>=
     maybe syncDir importCols
+
+  checkImgStore
 
   verbose $ "syncOrImportCatalog: save state to " ++ show jsonPath
   saveImgStore jsonPath

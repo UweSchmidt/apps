@@ -224,8 +224,7 @@ cleanupRefs rs i0
   where
     colA go i _md im be es = do
       p <- objid2path i
-      verbose $ "cleanupRefs: collection: " ++ quotePath p
-      cleanupIm
+      cleanupIm p
       cleanupBe
       cleanupEs
       cleanupSubCols
@@ -236,15 +235,18 @@ cleanupRefs rs i0
         cleanupSubCol =
           colEntry (\ _ _ -> return ()) go
 
-        cleanupIm :: Cmd ()
-        cleanupIm = maybe (return ())
-          (\ (j, n) -> unless (exImg j n) $
-                       adjustColImg (const Nothing) i
+        cleanupIm :: Path -> Cmd ()
+        cleanupIm p = maybe (return ())
+          (\ (j, n) -> do
+              verbose $ "cleanupIm: collection: " ++ quotePath p ++ show (i, j, n)
+              when (removedImg j n) $ do
+                verbose "cleanupIm: removed"
+                adjustColImg (const Nothing) i
           ) im
 
         cleanupBe :: Cmd ()
         cleanupBe = maybe (return ())
-          (\ (j, n) -> unless (exImg j n) $
+          (\ (j, n) -> when (removedImg j n) $
                        adjustColBlog (const Nothing) i
           ) be
 
@@ -261,8 +263,8 @@ cleanupRefs rs i0
         cleanupSubCols =
           mapM_ cleanupSubCol es
 
-        exImg j n =
-          not $ mkColImgRef j n `memberColEntrySet` rs
+        removedImg j n =
+          mkColImgRef j n `memberColEntrySet` rs
 
         removeEmptySubCols :: Cmd ()
         removeEmptySubCols = do

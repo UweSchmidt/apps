@@ -6,21 +6,31 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Data.ImageStore
 import           Data.ImgTree
-import           Data.MetaData
 import           Data.Prim
 
-import           Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 
 -- ----------------------------------------
 
+checkImgStore :: Cmd ()
+checkImgStore = do
+  verbose "checkImgStore: check integrity of the archive"
+  cleanupDeadRefs
+  _us <- allUndefRefs
+  _ps <- allCheckUpLink
+  return ()
+
 allUndefRefs :: Cmd (Set ObjId)
 allUndefRefs = getRootId >>= undefRefs
 
 undefRefs :: ObjId -> Cmd (Set ObjId)
-undefRefs =
-  foldMT' undefId imgA dirA rootA colA
+undefRefs i0 = do
+  p <- objid2path i0
+  verbose $ "undefRefs: search undefined refs for: " ++ show (i0, p)
+  s <- foldMT' undefId imgA dirA rootA colA i0
+  verbose $ "undefRefs: to be cleaned up: " ++ show (S.toList s)
+  return s
   where
     undefId i
       = do warn $ "undefRefs: undefined obj id found: " ++ show i
@@ -36,7 +46,7 @@ undefRefs =
     colA go i _md im be es = do
       s1 <- maybe (return S.empty) (go . fst) im
       s2 <- maybe (return S.empty) (go . fst) be
-      s3 <- mapM (go . (^. theColColRef)) es
+      s3 <- mapM (go . (^. theColObjId)) (filter isColColRef es)
       warnU i $ S.unions (s1 : s2 : s3)
 
     rootA go i dir col = do
@@ -51,15 +61,19 @@ undefRefs =
           warn $ "undefRefs: undefined refs found: " ++ show (p, S.toList s)
           return s
 
-allUsedRefs :: Cmd (Set ObjId)
-allUsedRefs = getRootId >>= usedRefs
+allDefinedRefs :: Cmd (Set ObjId)
+allDefinedRefs = getRootId >>= definedRefs
 
-usedRefs :: ObjId -> Cmd (Set ObjId)
-usedRefs =
-  foldMT' undefId imgA dirA rootA colA
+definedRefs :: ObjId -> Cmd (Set ObjId)
+definedRefs i0 = do
+  p <- objid2path i0
+  verbose $ "definedRefs: compute defined refs for: " ++ show (i0, p)
+  s <- foldMT' undefId imgA dirA rootA colA i0
+  verbose $ "definedRefs: refs found: " ++ show (S.size s)
+  return s
   where
     undefId i = do
-      warn $ "usedRefs: undefined obj id found: " ++ show i
+      warn $ "definedRefs: undefined obj id found: " ++ show i
       return S.empty
 
     imgA i _pts _md =
@@ -71,7 +85,7 @@ usedRefs =
     colA go i _md im be es = do
       s1 <- maybe (return S.empty) (go . fst) im
       s2 <- maybe (return S.empty) (go . fst) be
-      s3 <- mapM (go . (^. theColObjId)) es
+      s3 <- mapM (go . (^. theColObjId)) (filter isColColRef es)
       return $ S.insert i $ S.unions (s1 : s2 : s3)
 
     rootA go i dir col = do
@@ -80,16 +94,24 @@ usedRefs =
 
 allDeadRefs :: Cmd (Set ObjId)
 allDeadRefs = do
-  us <- allUsedRefs
+  us <- allDefinedRefs
   as <- (S.fromList . M.keys) <$> getTree entries
   return $ as `S.difference` us
 
+allCheckUpLink :: Cmd (Set ObjId)
+allCheckUpLink = getRootId >>= checkUpLink
+
 checkUpLink :: ObjId -> Cmd (Set ObjId)
-checkUpLink =
-  foldMT' undefId imgA dirA rootA colA
+checkUpLink i0 = do
+  p <- objid2path i0
+  verbose $ "checkUpLink: check uplinks for: " ++ show (i0, p)
+  s <- foldMT' undefId imgA dirA rootA colA i0
+  unless (S.null s) $
+    warn $ "checkUpLink: wrong uplinks found: " ++ show (S.toList s)
+  return s
   where
     undefId i
-      = do warn $ "usedRefs: undefined obj id found: " ++ show i
+      = do warn $ "checkUpLink: undefined obj id found: " ++ show i
            return S.empty
 
     imgA _i _pts _md =
@@ -108,7 +130,7 @@ checkUpLink =
       unless (null ps) $ do
         p <- objid2path i
         warn $ "checkUpLink: uplink(s) wrong in COL node: " ++ show (p, ps)
-      s1 <- mapM go (es ^.. traverse . theColColRef)
+      s1 <- mapM (go . (^. theColObjId)) (filter isColColRef es)
       return $ S.fromList ps `S.union` S.unions s1
 
     rootA go i dir col = do
@@ -119,6 +141,14 @@ checkUpLink =
       s2 <- go col
       return $ S.fromList s0 `S.union` (s1 `S.union` s2)
 
+cleanupDeadRefs :: Cmd ()
+cleanupDeadRefs = do
+  ds <- allDeadRefs
+  unless (S.null ds) $ do
+    warn $ "cleanupDeadRefs: removing read refs: " ++ show (S.toList ds)
+    theImgTree . entries %= rmDeadRefs ds
+  where
+    rmDeadRefs ds m = m `M.difference` M.fromSet (const ()) ds
 
 {-
 listNames :: ObjId -> Cmd String
