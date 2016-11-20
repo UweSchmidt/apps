@@ -218,7 +218,11 @@ mkImg = mkImg' MkIMG isDIR emptyImg
 {-# INLINE mkImg #-}
 
 rmImgNode :: ObjId -> Cmd ()
-rmImgNode i = dt >>= go
+rmImgNode i = do
+  ex <- existsObjId i
+  if ex
+    then dt >>= go
+    else warn $ "rmImgNode: ObjId doesn't exist: " ++ i ^. isoString
   where
     go t = do
       t' <- liftE $ removeImgNode i t
@@ -408,7 +412,7 @@ runDry msg cmd = do
 
 trcObj :: ObjId -> String -> Cmd ()
 trcObj r msg = dt >>= \ t ->
-  trc $ msg ++ " " ++ show (refPath r t)
+  trc $ msg ++ " " ++ show (r, refPath r t)
 
 trcCmd :: Show a => Cmd a -> Cmd a
 trcCmd cmd
@@ -418,6 +422,7 @@ trcCmd cmd
 
 journalChange :: Journal -> Cmd ()
 journalChange j = do
-  logg (^. envJournal) "journal" (show j)
+  j' <- mapJA (objid2path) j
+  logg (^. envJournal) "journal" (show j')
 
 -- ----------------------------------------

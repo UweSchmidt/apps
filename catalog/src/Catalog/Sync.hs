@@ -17,6 +17,12 @@ syncDirPath =
   (n'archive `consPath`) . readPath . ("/" ++) <$>
   view envSyncDir
 
+allColEntries' :: Path -> Cmd ColEntrySet
+allColEntries' p = do
+  verbose $ "allColEntries': " ++ quotePath p
+  mbi <- lookupByPath p
+  maybe (return mempty) (allColEntries . fst) mbi
+
 allColEntries :: ObjId -> Cmd ColEntrySet
 allColEntries =
   foldMT imgA dirA rootA colA
@@ -47,11 +53,14 @@ allColEntries =
     -- do nothing for img nodes, just to get a complete definition
     imgA  _     _pts _md = return mempty
 
-allColEntries' :: Path -> Cmd ColEntrySet
-allColEntries' p = do
-  verbose $ "allColEntries': " ++ quotePath p
-  mbi <- lookupByPath p
-  maybe (return mempty) (allColEntries . fst) mbi
+trcColEntrySet :: ColEntrySet -> Cmd [(Path, Name)]
+trcColEntrySet cs =
+  traverse trcCE $ toListColEntrySet cs
+  where
+    trcCE = colEntry iref cref
+      where
+        iref i n = (\ p -> (p, n)) <$> objid2path i
+        cref i   = (\ p -> (p, mempty)) <$> objid2path i
 
 -- ----------------------------------------
 
@@ -81,7 +90,7 @@ syncDirP :: Path -> Cmd ()
 syncDirP p = do
   -- remember all ImgRef's in dir to be synchronized
   old'refs <- allColEntries' p
-  trc $ "syncDir: old'refs: " ++ show old'refs
+  verbose $ "syncDir: old'refs: " ++ show old'refs
 
   -- sync the dir
   syncDir' p
@@ -103,11 +112,14 @@ syncDirP p = do
   let rem'refs = old'refs `diffColEntrySet` upd'refs
   let new'refs = upd'refs `diffColEntrySet` old'refs
 
-  verbose $ "syncDir: images removed: " ++ show rem'refs
+  rem'p <- trcColEntrySet rem'refs
+  new'p <- trcColEntrySet new'refs
+
+  verbose $ "syncDir: images removed: " ++ show rem'p
   verbose $ "syncDir: remove these refs in all collections"
   cleanupAllRefs rem'refs
 
-  verbose $ "syncDir: images added:   " ++ show new'refs
+  verbose $ "syncDir: images added:   " ++ show new'p
   updateCollectionsByDate new'refs
 
   return ()

@@ -104,11 +104,17 @@ removeEntry p = do
 rmRec :: ObjId -> Cmd ()
 rmRec = foldMT imgA dirA rootA colA
   where
-    imgA i _p _md = rmImgNode i
+    go' gogo i' = do
+      ex <- existsObjId i'
+      if ex
+        then gogo i'
+        else warn $ "rmRec: invariant violated, ObjId doesn't exist: " ++ i' ^. isoString
+
+    imgA i _p _md = go' rmImgNode i
 
     dirA go i es _ts = do
-      trc $ "dirA: " ++ show (es ^. isoDirEntries)
-      mapM_ go (es ^. isoDirEntries)            -- process subdirs first
+      trc $ "dirA: " ++ show (i, es ^. isoDirEntries)
+      mapM_ (go' go) (es ^. isoDirEntries)      -- process subdirs first
       pe <- getImgParent i >>= getImgVal        -- remove dir node
       unless (isROOT pe) $                      -- if it's not the top dir
         rmImgNode i
@@ -217,6 +223,8 @@ cleanupRefs rs i0
   | otherwise  = foldCollections colA i0
   where
     colA go i _md im be es = do
+      p <- objid2path i
+      verbose $ "cleanupRefs: collection: " ++ quotePath p
       cleanupIm
       cleanupBe
       cleanupEs
