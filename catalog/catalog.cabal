@@ -39,6 +39,7 @@ library
                      Catalog.Cmd.CopyRemove
                      Catalog.Cmd.CWN
                      Catalog.Cmd.Fold
+                     Catalog.Cmd.Invariant
                      Catalog.Cmd.List
                      Catalog.Cmd.Types
                      Catalog.Html.Photo2

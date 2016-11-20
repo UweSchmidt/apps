@@ -11,12 +11,47 @@ import           Data.Prim
 
 type Act r = ObjId -> Cmd r
 
+foldMT' :: (         ObjId                                        -> Cmd r) ->  -- undef id
+           (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
+           (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
+           (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
+           (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
+                           -> (Maybe (ObjId, Name)) -> [ColEntry] -> Cmd r) ->  -- COL
+           Act r
+foldMT' undefId imgA dirA' rootA' colA' i0 = do
+  go i0
+  where
+    dirA  = dirA'  go
+    rootA = rootA' go
+    colA  = colA'  go
+    go i  = do
+      trcObj i $ "foldMT"
+      mn <- getTree (entryAt i)
+      trc $ "foldMT: " ++ show mn
+      case mn of
+        Nothing ->
+          undefId i
+        Just n ->
+          case n ^. nodeVal of
+            IMG pts md ->
+              imgA i pts md
+            DIR es ts ->
+              dirA i es ts
+            ROOT dir col ->
+              rootA i dir col
+            COL md im be es ->
+              colA i md im be es
+
 foldMT :: (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
           (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
           (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
           (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
                           -> (Maybe (ObjId, Name)) -> [ColEntry] -> Cmd r) ->  -- COL
            Act r
+foldMT = foldMT' undefId
+  where
+    undefId i = abort $ "foldMT: undefined obj id ignored: " ++ show i
+{-
 foldMT imgA dirA' rootA' colA' i0 = do
   go i0
   where
@@ -36,7 +71,7 @@ foldMT imgA dirA' rootA' colA' i0 = do
           rootA i dir col
         COL md im be es ->
           colA i md im be es
-
+-}
 -- ----------------------------------------
 
 foldImgDirs :: Monoid r =>
