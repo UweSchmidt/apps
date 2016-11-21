@@ -16,10 +16,110 @@ import qualified Data.Map.Strict as M
 checkImgStore :: Cmd ()
 checkImgStore = do
   verbose "checkImgStore: check integrity of the archive"
+  allCleanupImgRefs
   cleanupDeadRefs
   _us <- allUndefRefs
   _ps <- allCheckUpLink
   return ()
+
+-- ----------------------------------------
+
+allCleanupImgRefs :: Cmd ()
+allCleanupImgRefs = getRootId >>= cleanupImgRefs
+
+cleanupImgRefs :: ObjId -> Cmd ()
+cleanupImgRefs i0 = do
+  p <- objid2path i0
+  verbose $ "cleanImgRefs: remove outdated img refs for: " ++ show (i0, p)
+
+  foldMT' undefId imgA dirA rootA colA i0
+  where
+    undefId i
+      = warn $ "cleanImgRefs: undefined obj id ignored: " ++ show i
+
+    imgA _i _pts _md
+      = return ()
+
+    dirA go i es _ = do
+      p <- objid2path i0
+      verbose $ "cleanImgRefs: process img dir: " ++ quotePath p
+
+      es' <- filterM (isOK checkImgRef) (es ^. isoDirEntries)
+      when (length es' < length (es ^. isoDirEntries)) $ do
+        warn $ "cleanImgRefs: col entries removed in: "
+               ++ quotePath p ++ ", " ++ show (es, es')
+        adjustDirEntries (const $ es' ^. from isoDirEntries) i
+
+      mapM_ go es'
+
+    colA go i _md im be es = do
+      p <- objid2path i
+      verbose $ "cleanImgRefs: process collection: " ++ quotePath p
+
+      im' <- filterMM (isOK (uncurry checkImgPart)) im
+      when (im /= im') $ do
+        warn $ "cleanImgRefs: col img ref removed in: "
+               ++ quotePath p ++ ", " ++ show (im, im')
+        adjustColImg (const im') i
+
+      be' <- filterMM (isOK (uncurry checkImgPart)) be
+      when (be /= be') $ do
+        warn $ "cleanImgRefs: col blog ref removed in: "
+               ++ quotePath p ++ ", " ++ show (be, be')
+        adjustColBlog (const be') i
+
+      es' <- filterM (isOK checkColEntry) es
+      when (length es' < length es) $ do
+        warn $ "cleanImgRefs: col enties removed in: "
+               ++ quotePath p ++ ", " ++ show (es, es')
+        adjustColEntries (const es') i
+
+      mapM_ (colEntry (\ _ _ -> return ()) go) es'
+
+    rootA go _i dir col = go dir >> go col
+
+    filterMM :: (a -> Cmd Bool) -> Maybe a -> Cmd (Maybe a)
+    filterMM _ Nothing = return Nothing
+    filterMM f r@(Just x) = do
+      ok <- f x
+      return $
+        if ok then r else Nothing
+
+    isOK :: (b -> Cmd (Maybe a)) -> b -> Cmd Bool
+    isOK cmd i = isJust <$> cmd i
+
+    -- check whether the ref i exists and points to an IMG value
+    checkImgRef :: ObjId -> Cmd (Maybe ImgNode)
+    checkImgRef i = do
+      mn <- getTree (entryAt i)
+      return $
+        case mn of
+          Nothing -> Nothing
+          Just r ->
+            let n = r ^. nodeVal in
+            if isIMG n
+            then Just n
+            else Nothing
+
+    -- check whether both the ref and the part in an ImgRef exist
+    checkImgPart :: ObjId -> Name -> Cmd (Maybe ImgNode)
+    checkImgPart i nm = do
+      mn <- checkImgRef i
+      return $
+        case mn of
+          Nothing -> Nothing
+          Just n ->
+            case n ^? theParts . isoImgPartsMap . at nm of
+              Nothing -> Nothing
+              Just _  -> mn
+
+    checkColEntry :: ColEntry -> Cmd (Maybe ColEntry)
+    checkColEntry ce = colEntry imgRef (const $ return $ Just ce) ce
+      where
+        imgRef i nm = do res <- checkImgPart i nm
+                         return (const ce <$> res)
+
+-- ----------------------------------------
 
 allUndefRefs :: Cmd (Set ObjId)
 allUndefRefs = getRootId >>= undefRefs
@@ -44,10 +144,13 @@ undefRefs i0 = do
       warnU i s
 
     colA go i _md im be es = do
-      s1 <- maybe (return S.empty) (go . fst) im
-      s2 <- maybe (return S.empty) (go . fst) be
+      s1 <- mapMb im
+      s2 <- mapMb be
       s3 <- mapM (go . (^. theColObjId)) (filter isColColRef es)
       warnU i $ S.unions (s1 : s2 : s3)
+      where
+        mapMb =
+          maybe (return S.empty) (go . fst)
 
     rootA go i dir col = do
       s <- S.union <$> go dir <*> go col
@@ -60,6 +163,8 @@ undefRefs i0 = do
           p <- objid2path i
           warn $ "undefRefs: undefined refs found: " ++ show (p, S.toList s)
           return s
+
+-- ----------------------------------------
 
 allDefinedRefs :: Cmd (Set ObjId)
 allDefinedRefs = getRootId >>= definedRefs
@@ -92,11 +197,24 @@ definedRefs i0 = do
       s <- S.union <$> go dir <*> go col
       return $ S.insert i s
 
+-- ----------------------------------------
+
 allDeadRefs :: Cmd (Set ObjId)
 allDeadRefs = do
   us <- allDefinedRefs
   as <- (S.fromList . M.keys) <$> getTree entries
   return $ as `S.difference` us
+
+cleanupDeadRefs :: Cmd ()
+cleanupDeadRefs = do
+  ds <- allDeadRefs
+  unless (S.null ds) $ do
+    warn $ "cleanupDeadRefs: removing read refs: " ++ show (S.toList ds)
+    theImgTree . entries %= rmDeadRefs ds
+  where
+    rmDeadRefs ds m = m `M.difference` M.fromSet (const ()) ds
+
+-- ----------------------------------------
 
 allCheckUpLink :: Cmd (Set ObjId)
 allCheckUpLink = getRootId >>= checkUpLink
@@ -141,14 +259,7 @@ checkUpLink i0 = do
       s2 <- go col
       return $ S.fromList s0 `S.union` (s1 `S.union` s2)
 
-cleanupDeadRefs :: Cmd ()
-cleanupDeadRefs = do
-  ds <- allDeadRefs
-  unless (S.null ds) $ do
-    warn $ "cleanupDeadRefs: removing read refs: " ++ show (S.toList ds)
-    theImgTree . entries %= rmDeadRefs ds
-  where
-    rmDeadRefs ds m = m `M.difference` M.fromSet (const ()) ds
+-- ----------------------------------------
 
 {-
 listNames :: ObjId -> Cmd String
