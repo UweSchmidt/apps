@@ -4,6 +4,7 @@ module Catalog.System.CatalogIO
 where
 
 import           Catalog.Cmd.Basic
+import           Catalog.Cmd.Invariant    (checkImgStore)
 import           Catalog.Cmd.Types
 import           Catalog.Journal
 import           Catalog.System.IO
@@ -61,7 +62,7 @@ checkinImgStore pt = do
   verbose $ unwords ["bash []", checkinScript ts]
   void $ execProcess "bash" [] $ checkinScript ts
   where
-    -- the git script is somewhat fragile
+    -- the git script is somewhat fragile,
     -- if there are untracked files in the dir
     -- git returns exit code 1, this generates an error
     -- even if everything was o.k.
@@ -70,7 +71,7 @@ checkinImgStore pt = do
       [ "cd", qt $ FP.takeDirectory pt, ";"
       , "git add -A ;"
       , "git diff --quiet --exit-code --cached ||"
-      , "git commit -a -m", qt ("catalog-server: " ++ ts)
+      , "git commit -a -m", qt ("catalog-server: " ++ ts ++ ", " ++ pt)
       ]
     qt s = '\'' : s ++ "'"
 
@@ -85,6 +86,8 @@ loadImgStore p = do
     Just st -> do
       put st
       journalChange $ LoadImgStore p
+      -- make a "FS check" and throw away undefined refs
+      checkImgStore
   where
     fromBS
       | isPathIdArchive p = fmap mapImgStore2ObjId . J.decode'

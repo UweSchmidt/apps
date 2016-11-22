@@ -225,9 +225,10 @@ rmImgNode i = do
     else warn $ "rmImgNode: ObjId doesn't exist: " ++ i ^. isoString
   where
     go t = do
+      -- journal output must be done first, before calling removeImgNode
+      journalChange $ RmObj i
       t' <- liftE $ removeImgNode i t
       theImgTree .= t'
-      journalChange $ RmObj i
 
 -- ----------------------------------------
 --
@@ -422,7 +423,12 @@ trcCmd cmd
 
 journalChange :: Journal -> Cmd ()
 journalChange j = do
-  j' <- mapJA (objid2path) j
+  j' <- toJournalPath j
   logg (^. envJournal) "journal" (show j')
+
+toJournalPath :: Journal -> Cmd (Journal' Path)
+toJournalPath j = dt >>= go
+  where
+    go t = return ((`refPath` t) <$> j)
 
 -- ----------------------------------------

@@ -25,9 +25,9 @@ foldMT' undefId imgA dirA' rootA' colA' i0 = do
     rootA = rootA' go
     colA  = colA'  go
     go i  = do
-      trcObj i $ "foldMT"
+      -- trcObj i $ "foldMT"
       mn <- getTree (entryAt i)
-      trc $ "foldMT: " ++ show mn
+      -- trc $ "foldMT: " ++ show mn
       case mn of
         Nothing ->
           undefId i
@@ -50,28 +50,10 @@ foldMT :: (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -
            Act r
 foldMT = foldMT' undefId
   where
-    undefId i = abort $ "foldMT: undefined obj id ignored: " ++ show i
-{-
-foldMT imgA dirA' rootA' colA' i0 = do
-  go i0
-  where
-    dirA  = dirA'  go
-    rootA = rootA' go
-    colA  = colA'  go
-    go i  = do
-      trcObj i $ "foldMT"
-      n <- getTree (theNode i)
-      trc $ "foldMT: " ++ show n
-      case n ^. nodeVal of
-        IMG pts md ->
-          imgA i pts md
-        DIR es ts ->
-          dirA i es ts
-        ROOT dir col ->
-          rootA i dir col
-        COL md im be es ->
-          colA i md im be es
--}
+    undefId i = do
+      warn  $ "foldMT: undefined obj id found: " ++ show i
+      abort $ "foldMT: undefined obj id found: " ++ show i
+
 -- ----------------------------------------
 
 foldImgDirs :: Monoid r =>
