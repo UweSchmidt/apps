@@ -8,9 +8,9 @@ module Data.Prim.CheckSum
        )
 where
 
-import           Data.Bits
+-- import           Data.Bits
 import qualified Data.Digest.Murmur64 as MM
-import           Data.Foldable
+-- import           Data.Foldable
 import           Data.Word (Word64)
 import           Data.Prim.Prelude
 
@@ -51,26 +51,21 @@ instance Show CheckSum where
   show = ("0x" ++) . showCheckSum
 
 showCheckSum :: CheckSum -> String
-showCheckSum (CS csum) =
-  toHex 16 csum []
+showCheckSum (CS w) =
+  i ^. isoHex
   where
-    toHex :: Int -> Word64 -> String -> String
-    toHex  0  _  acc = acc
-    toHex !n !w !acc = let !c = toDig (w .&. 0xF)
-                       in
-                         toHex (n - 1) (w `shiftR` 4) (c : acc)
-
-    toDig :: Word64 -> Char
-    toDig w
-      | w < 10    = toEnum $ fromEnum w + fromEnum '0'
-      | otherwise = toEnum $ fromEnum w + (fromEnum 'a' - 10)
+    i :: Int
+    i = fromIntegral w
 
 readCheckSum :: String -> CheckSum
-readCheckSum = CS . foldl' nextDig 0
+readCheckSum s =
+  CS $ fromIntegral i
   where
-    nextDig !acc !c
-      | '0' <= c && c <= '9' = (acc `shiftL` 4) .|. toEnum (fromEnum c - fromEnum '0')
-      | otherwise            = (acc `shiftL` 4) .|. toEnum (fromEnum c - fromEnum 'a' + 10)
+    i :: Int
+    i = s ^. from isoHex
+
+instance IsoHex CheckSum where
+  isoHex = iso showCheckSum readCheckSum
 
 instance ToJSON CheckSum where
   toJSON = toJSON . showCheckSum
