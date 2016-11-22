@@ -11,6 +11,12 @@ import           Data.Prim
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 
+import           Control.Monad.Trans.Maybe
+
+-- ----------------------------------------
+
+type CmdMaybe a = MaybeT Cmd a
+
 -- ----------------------------------------
 
 checkImgStore :: Cmd ()
@@ -37,8 +43,12 @@ cleanupImgRefs i0 = do
     undefId i
       = warn $ "cleanImgRefs: undefined obj id ignored: " ++ show i
 
+    -- nothing to do in IMG cases
     imgA _i _pts _md
       = return ()
+
+    -- check all img refs in DIR case
+    -- and traverse all subcollection
 
     dirA go i es _ = do
       p <- objid2path i
@@ -53,6 +63,10 @@ cleanupImgRefs i0 = do
 
       mapM_ go es'
 -}
+    -- in COL case check optional img and/or blog ref
+    -- and all img refs in the entries list
+    -- and recurse into subcollections
+
     colA go i _md im be es = do
       p <- objid2path i
       trc $ "cleanImgRefs: process collection: " ++ quotePath p
@@ -77,7 +91,11 @@ cleanupImgRefs i0 = do
 
       mapM_ (colEntry (\ _ _ -> return ()) go) es'
 
+    -- in ROOT case: traverse COL and DIR hierachies
     rootA go _i dir col = go dir >> go col
+
+    -- the little helpers, a lot of Maybe's in command results
+    -- so the MaybeT transformer helps eliminating case expression
 
     filterMM :: (a -> Cmd Bool) -> Maybe a -> Cmd (Maybe a)
     filterMM _ Nothing = return Nothing
@@ -86,39 +104,37 @@ cleanupImgRefs i0 = do
       return $
         if ok then r else Nothing
 
-    isOK :: (b -> Cmd (Maybe a)) -> b -> Cmd Bool
-    isOK cmd i = isJust <$> cmd i
-
+    -- kill the case-Nothing-Just code with monad transformer MaybeT
     -- check whether the ref i exists and points to an IMG value
-    checkImgRef :: ObjId -> Cmd (Maybe ImgNode)
+
+    checkImgRef :: ObjId -> CmdMaybe ImgNode
     checkImgRef i = do
-      mn <- getTree (entryAt i)
-      return $
-        case mn of
-          Nothing -> Nothing
-          Just r ->
-            let n = r ^. nodeVal in
-            if isIMG n
-            then Just n
-            else Nothing
+      n <- (^. nodeVal) <$> (MaybeT $ getTree (entryAt i))
+      if isIMG n
+        then return n
+        else empty
 
     -- check whether both the ref and the part in an ImgRef exist
-    checkImgPart :: ObjId -> Name -> Cmd (Maybe ImgNode)
+    checkImgPart :: ObjId -> Name -> CmdMaybe ImgNode
     checkImgPart i nm = do
-      mn <- checkImgRef i
-      return $
-        case mn of
-          Nothing -> Nothing
-          Just n ->
-            case n ^? theParts . isoImgPartsMap . at nm of
-              Nothing -> Nothing
-              Just _  -> mn
+      n <- checkImgRef i
+      _ <- return $ n ^? theParts . isoImgPartsMap . at nm
+      return n
 
-    checkColEntry :: ColEntry -> Cmd (Maybe ColEntry)
-    checkColEntry ce = colEntry imgRef (const $ return $ Just ce) ce
+    -- check a ColEntry ref for existence
+    -- only the ImgRef's are checked, not the ColRef's
+    checkColEntry :: ColEntry -> CmdMaybe ColEntry
+    checkColEntry ce =
+      colEntry imgRef colRef ce
       where
-        imgRef i nm = do res <- checkImgPart i nm
-                         return (const ce <$> res)
+        colRef _ =
+          return ce
+        imgRef i nm =
+          checkImgPart i nm >> return ce
+
+    isOK :: (b -> CmdMaybe a) -> b -> Cmd Bool
+    isOK cmd i =
+      isJust <$> runMaybeT (cmd i)
 
 -- ----------------------------------------
 

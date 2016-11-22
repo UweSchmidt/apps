@@ -76,6 +76,7 @@ module Data.Prim.Prelude
        , IsoString(..)
        , IsoText(..)
        , IsoInteger(..)
+       , IsoHex(..)
        , IsoMaybe(..)
        , take1st
        , isoMapElems
@@ -121,7 +122,9 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import           Data.Vector (Vector)
+import           Numeric (readHex)
 import           System.FilePath
+import           Text.Printf (printf, PrintfArg)
 import           Text.Regex.XMLSchema.Generic
 import           Text.Regex.XMLSchema.Generic.RegexParser
 
@@ -217,6 +220,23 @@ class IsoInteger a where
   default isoInteger :: (Integral a) => Iso' a Integer
   isoInteger = iso toInteger fromInteger
   {-# INLINE isoInteger #-}
+
+-- ----------------------------------------
+
+class IsoHex a where
+  isoHex :: Iso' a String
+
+  default isoHex :: (Integral a, PrintfArg a) => Iso' a String
+  isoHex = iso toHex frHex
+    where
+      toHex   = printf "%016x"
+      frHex s
+        | [(i, "")] <- ps = i
+        | otherwise       = 0
+        where
+          ps = readHex s
+
+instance IsoHex Int
 
 -- ----------------------------------------
 

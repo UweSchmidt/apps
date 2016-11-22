@@ -42,7 +42,6 @@ objId2Maybe =
       (fromMaybe mempty)
 {-# INLINE objId2Maybe #-}
 
-
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 deriving instance Show ObjId
@@ -72,5 +71,8 @@ instance FromJSON ObjId where
 instance IsoString ObjId where
   isoString = objId2integer . isoString
   {-# INLINE isoString #-}
+
+instance IsoHex ObjId where
+  isoHex = objId2Int . isoHex
 
 -- ----------------------------------------

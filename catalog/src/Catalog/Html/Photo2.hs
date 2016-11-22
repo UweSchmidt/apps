@@ -662,19 +662,25 @@ path2href c p = "/" ++ c ++ p ++ ".html"
 
 iconRef :: ObjId -> Cmd FilePath
 iconRef i = do
-  t  <- getImgVals i (theMetaData . metaDataAt descrTitle)
+  t  <- getImgVals i (theMetaData . metaDataAt descrTitle . isoString)
 
   mbf <-
     if isempty t  -- no title there
     then do
       p <- (^. isoString) <$> objid2path i
       path2img p
-    else do
-      let t'hash = mkCheckSum (t ^. isoString) ^. isoString
-      genAssetIcon t'hash (t ^. isoString)
+    else
+      genAssetIcon (t'hash t) t
 
   return $
     fromMaybe (ps'blank ^. isoString) mbf
+  where
+    t'hash t' =
+      mkCheckSum t' ^. isoString . to toP
+      where
+        toP s = x ++ "/" ++ y
+          where
+            (x, y) = splitAt 2 s
 
 -- ----------------------------------------
 
