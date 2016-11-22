@@ -1453,6 +1453,48 @@ function setMetaData() {
 
 // ----------------------------------------
 
+// runs concurrently with metadata modal show event
+function fillMetaData() {
+    var o  = {};
+    o.cid  = activeCollectionId();
+    o.path = collectionPath(o.cid);
+    o.dia  = getLastMarkedEntry(o.cid);
+
+    if (! o.dia) {
+        statusError('no marked image/collection found');
+        return ;
+    }
+    o.pos  = getEntryPos(o.dia);
+    o.name = getDiaName(o.dia);
+    fillMetaFromServer(o);
+
+}
+
+function fillMetaData1(md0, args) {
+    // meta data is wrapped into a single element list (why?)
+    var md = md0[0];
+    console.log('fillMetaData1');
+    console.log(md);
+    console.log(args);
+
+    // insert fields into metadata edit form
+    var dt = md["descr:Title"] || "";
+    console.log(dt);
+    $('#descr-Title').val(dt);
+    var ds = md["descr:Subtitle"] || "";
+    $('#descr-Subtitle').val(ds);
+    var dc = md["descr:Comment"] || "";
+    $('#descr-Comment').val(dc);
+    var dk = md["descr:Keywords"] || "";
+    $('#descr-Keywords').val(dk);
+    var dw = md["descr:Web"] || "";
+    $('#descr-Web').val(dw);
+    var di = md["descr:Wikipedia"] || "";
+    $('#descr-Wikipedia').val(di);
+}
+
+// ----------------------------------------
+
 // check whether there is a marked entry
 // if not, it's a noop
 // else the real getMeta is performed
@@ -1469,7 +1511,7 @@ function getMetaData0() {
 }
 
 function getMetaData() {
-    var o = {};
+    var o  = {};
     o.cid  = activeCollectionId();
     o.path = collectionPath(o.cid);
     o.dia  = getLastMarkedEntry(o.cid);
@@ -1744,6 +1786,15 @@ function renameColOnServer(cpath, path, newname, showCol) {
                  });
 }
 
+function fillMetaFromServer(args) {
+    // thread the args object into the callback function
+    readServer1('metadata',
+                args.path,
+                args.pos,
+                function (res) { fillMetaData1(res, args); }
+               );
+}
+
 function getMetaFromServer(args) {
     // thread the args object into the callback function
     readServer1('metadata',
@@ -1955,6 +2006,7 @@ $(document).ready(function () {
     $('#MetaDataButton')
         .on('click', function () {
             statusClear();
+            fillMetaData();
         });
 
     $('#MetaDataModal')
