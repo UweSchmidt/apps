@@ -63,6 +63,7 @@ module Data.ImgNode
        , fromListColEntrySet
        , toListColEntrySet
        , diffColEntrySet
+       , intersectColEntrySet
        )
 where
 
@@ -543,5 +544,8 @@ toListColEntrySet (CES s) = S.toList s
 
 diffColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
 CES s1 `diffColEntrySet` CES s2 = CES $ s1 `S.difference` s2
+
+intersectColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
+CES s1 `intersectColEntrySet` CES s2 = CES $ s1 `S.intersection` s2
 
 -- ----------------------------------------

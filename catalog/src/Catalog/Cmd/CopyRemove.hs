@@ -225,8 +225,8 @@ cleanupRefs rs i0
     colA go i _md im be es = do
       p <- objid2path i
       cleanupIm p
-      cleanupBe
-      cleanupEs
+      cleanupBe p
+      cleanupEs p
       cleanupSubCols
       removeEmptySubCols
       return ()
@@ -238,24 +238,27 @@ cleanupRefs rs i0
         cleanupIm :: Path -> Cmd ()
         cleanupIm p = maybe (return ())
           (\ (j, n) -> do
-              verbose $ "cleanupIm: collection: " ++ quotePath p ++ show (i, j, n)
               when (removedImg j n) $ do
-                verbose "cleanupIm: removed"
+                warn $ "cleanupRefs: col img removed: " ++ quotePath p ++ ", " ++ show (i, j, n)
                 adjustColImg (const Nothing) i
           ) im
 
-        cleanupBe :: Cmd ()
-        cleanupBe = maybe (return ())
-          (\ (j, n) -> when (removedImg j n) $
-                       adjustColBlog (const Nothing) i
+        cleanupBe :: Path -> Cmd ()
+        cleanupBe p = maybe (return ())
+          (\ (j, n) -> do
+              when (removedImg j n) $ do
+                warn $ "cleanupRefs: col blog removed: " ++ quotePath p ++ ", " ++ show (i, j, n)
+                adjustColBlog (const Nothing) i
           ) be
 
-        cleanupEs :: Cmd ()
-        cleanupEs
-          | any (`memberColEntrySet` rs) es =
+        cleanupEs :: Path -> Cmd ()
+        cleanupEs p
+          | any (`memberColEntrySet` rs) es = do
               -- some refs must be deleted
               -- only rebuild the list es if any refs must be deleted
-              adjustColEntries (const $ filter (not . (`memberColEntrySet` rs)) es) i
+              let es' = filter (not . (`memberColEntrySet` rs)) es
+              warn $ "cleanupRefs: col entries removed: " ++ quotePath p ++ ", " ++ show (i, es, es')
+              adjustColEntries (const es') i
           | otherwise =
               return ()
 

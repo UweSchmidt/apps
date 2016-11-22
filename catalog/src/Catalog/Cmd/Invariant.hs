@@ -41,9 +41,10 @@ cleanupImgRefs i0 = do
       = return ()
 
     dirA go i es _ = do
-      p <- objid2path i0
+      p <- objid2path i
       verbose $ "cleanImgRefs: process img dir: " ++ quotePath p
-
+      verbose " cleanImgRefs: not yet implemented"
+{-
       es' <- filterM (isOK checkImgRef) (es ^. isoDirEntries)
       when (length es' < length (es ^. isoDirEntries)) $ do
         warn $ "cleanImgRefs: col entries removed in: "
@@ -51,7 +52,7 @@ cleanupImgRefs i0 = do
         adjustDirEntries (const $ es' ^. from isoDirEntries) i
 
       mapM_ go es'
-
+-}
     colA go i _md im be es = do
       p <- objid2path i
       verbose $ "cleanImgRefs: process collection: " ++ quotePath p
