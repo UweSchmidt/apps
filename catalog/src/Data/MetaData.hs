@@ -9,6 +9,7 @@ import           Data.Prim
 import           Data.Monoid
 import qualified Data.Aeson          as J
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List           as L
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
@@ -25,8 +26,8 @@ newtype MetaData = MD J.Object
 deriving instance Show MetaData
 
 instance Monoid MetaData where
-  mempty                = MD HM.empty
-  MD m1 `mappend` MD m2 = MD $ m1 `HM.union` m2
+  mempty  = MD HM.empty
+  mappend = mergeMD
   -- the left map entries are prefered
   {-# INLINE mappend #-}
   {-# INLINE mempty  #-}
@@ -44,6 +45,48 @@ instance FromJSON MetaData where
     case V.length v of
       1 -> J.withObject "MetaData" (return . MD) (V.head v)
       _ -> mzero
+
+foldWithKeyMD :: (Name -> Text -> a -> a) -> a -> MetaData -> a
+foldWithKeyMD f acc m@(MD hm) =
+  foldl' f' acc keys
+  where
+    keys :: [Name]
+    keys =
+      map (^. from isoText) (HM.keys hm)
+
+    f' acc' n' =
+      f n' (m ^. metaDataAt n') acc'
+
+-- merging of meta data
+-- default: entries of m1 overwrite entries of m2
+-- if an attr value in m1 is "-", the attribute is deleted in the result
+-- if an attr value in m1 is "", the m2 value is taken
+-- in keywords the "," separated list of keywords is computed
+-- and the union of the sets of keywords is taken,
+-- but all keywords in m1 starting with a "-" are removed
+
+mergeMD :: MetaData -> MetaData -> MetaData
+mergeMD m1 m2 =
+  foldWithKeyMD mergeAttr m2 m1
+  where
+    mergeAttr :: Name -> Text -> MetaData -> MetaData
+    mergeAttr n v acc
+      | v == "-"  = acc & metaDataAt n .~ "" -- remove attr
+      | T.null v  = acc                        -- attribute not changed
+      | n == "descr:Keywords"
+                  = acc & metaDataAt n %~ mergeKeywords v
+      | otherwise = acc & metaDataAt n .~ v
+
+mergeKeywords :: Text -> Text -> Text
+mergeKeywords t1 t2 =
+  T.intercalate "," kw
+  where
+    kw = (kw2 L.\\ rmv) `L.union` nub ins
+    kws = map T.strip . T.split (== ',')
+    kw1 = kws t1
+    kw2 = kws t2
+    (rmv', ins) = partition ((== "-"). T.take 1) kw1
+    rmv = map (T.drop 1) rmv'
 
 -- ----------------------------------------
 --
