@@ -336,8 +336,7 @@ modifyMetaDataRec mf path = do
   foldCollections
     ( \ go i' _md _im _be cs -> do
         adjustMetaData mf i'
-        let cs' = filter isColColRef cs
-        mapM_ go (cs' ^.. traverse . theColColRef)
+        mapM_ go (cs ^.. traverse . theColColRef)
     ) i
 
 -- ----------------------------------------
