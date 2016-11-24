@@ -79,6 +79,7 @@ ps'collections
 
 ps'clipboard    = p'clipboard    ^. isoString
 ps'trash        = p'trash        ^. isoString
+ps'cache        = "/cache"
 ps'collections  = p'collections  ^. isoString
 ps'bycreatedate = p'bycreatedate ^. isoString
 ps'photos       = p'photos       ^. isoString

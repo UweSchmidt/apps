@@ -121,7 +121,7 @@ genImage' createImageC imgPath2Geo imgSrc url = do
       doit createImg (geo, path) = do
         mp <- view envMountPath
         let src = mp ++ imgSrc path
-        let dst = mp </> (geo ^. isoString) ++ path
+        let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
         sx <- fileExist src
         if sx
           then do
