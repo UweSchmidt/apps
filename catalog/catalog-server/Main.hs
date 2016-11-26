@@ -117,6 +117,11 @@ matchJsonModify = matchPath $ "/modify-[a-zA-Z0-9]+/" <> t'archive <> "/.*[.]jso
 matchJsonOther :: RoutePattern
 matchJsonOther = matchPath ".*[.]json"
 
+
+-- match for old Photo2 album pages
+matchPhoto2 :: Text -> RoutePattern
+matchPhoto2 ext = matchPath ("/Alben/.*[.]" `T.append` ext)
+
 -- ----------------------------------------
 
 fileWithMime :: FilePath -> Text -> FilePath -> ActionM ()
@@ -147,40 +152,16 @@ main' env state = do
   scottyOpts opts $ do
 --    middleware $ staticPolicy (noDots >-> addBase "static/images") -- for favicon.ico
     middleware logStdoutDev
-    -- defined routes
-
-    -- ----------------------------------------
-
-    -- default route
-    get "/" $ text "the home page"
-
-    -- get "/help" $ text "help not yet available"
-
-    -- ----------------------------------------
-    -- bootstrap routes
-
-    get (matchBootstrap "js") $ do
-      param "path" >>= mimeFile "text/javascript"
-    get (matchBootstrap "html") $ do
-      param "path" >>= mimeFile "text/html"
-    get (matchBootstrap "css([.]map)?") $ do
-      param "path" >>= mimeFile "text/css"
-    get (matchBootstrap "svg") $ do
-      param "path" >>= mimeFile "image/svg+xml"
-    get (matchBootstrap "ttf") $ do
-      param "path" >>= mimeFile "application/x-font-ttf"
-    get (matchBootstrap "woff") $ do
-      param "path" >>= mimeFile "application/x-font-woff"
-    get (matchBootstrap "woff2") $ do
-      param "path" >>= mimeFile "application/font-woff2"
-    get (matchBootstrap "woff2") $ do
-      param "path" >>= mimeFile "application/vnd.ms-fontobject"
 
     -- ----------------------------------------
     -- the routes for photo edit and AJAX calls
+    -- default route
+
+    get "/" $
+      mimeFile "text/html" "/edit.html"
 
     -- the main page
-    get "/edit.html" $ do
+    get "/edit.html" $
       mimeFile "text/html" "/edit.html"
 
     post "/get.json" $ do
@@ -192,6 +173,38 @@ main' env state = do
       d   <- jsonData
       res <- runMody $ jsonRPC d
       json res
+
+    -- ----------------------------------------
+    -- bootstrap routes
+
+    sequence_ $
+      map (\ (ext, mty) ->
+            get (matchBootstrap ext) $
+            param "path" >>= mimeFile mty
+          )
+      [ ("js",           "text/javascript")
+      , ("html",         "text/html")
+      , ("css([.]map)?", "text/css")
+      , ("svg",          "image/svg+xml")
+      , ("ttf",          "application/x-font-ttf")
+      , ("woff",         "application/x-font-woff")
+      , ("woff2",        "application/font-woff2")
+      , ("woff2",        "application/vnd.ms-fontobject")
+      ]
+
+    -- ----------------------------------------
+    -- old Phot2 routes
+
+    sequence_ $
+      map (\ (ext, mty) ->
+            get (matchPhoto2 ext) $
+            param "path" >>= mimeFile mty
+          )
+      [ ("js",   "text/javascript")
+      , ("html", "text/html")
+      , ("css",  "text/css")
+      , ("jpg",  "image/jpg")
+      ]
 
     -- ----------------------------------------
     -- the routes for the slide show
