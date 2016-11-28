@@ -67,6 +67,7 @@ p'trash        = p'collections `snocPath` n'trash
 
 ps'collections
   , ps'bycreatedate
+  , ps'cache
   , ps'clipboard
   , ps'trash
   , ps'photos

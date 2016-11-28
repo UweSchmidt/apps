@@ -36,12 +36,12 @@ allCleanupImgRefs = getRootId >>= cleanupImgRefs
 cleanupImgRefs :: ObjId -> Cmd ()
 cleanupImgRefs i0 = do
   p <- objid2path i0
-  verbose $ "cleanImgRefs: remove outdated img refs for: " ++ show (i0, p)
+  verbose $ "cleanupImgRefs: remove outdated img refs for: " ++ show (i0, p)
 
   foldMT' undefId imgA dirA rootA colA i0
   where
     undefId i
-      = warn $ "cleanImgRefs: undefined obj id ignored: " ++ show i
+      = warn $ "cleanupImgRefs: undefined obj id ignored: " ++ show i
 
     -- nothing to do in IMG cases
     imgA _i _pts _md
@@ -50,42 +50,42 @@ cleanupImgRefs i0 = do
     -- check all img refs in DIR case
     -- and traverse all subcollection
 
-    dirA go i es _ = do
+    dirA go i es0 _ = do
       p <- objid2path i
-      verbose $ "cleanImgRefs: process img dir: " ++ quotePath p
-      verbose "cleanImgRefs: not yet implemented"
-{-
-      es' <- filterM (isOK checkImgRef) (es ^. isoDirEntries)
-      when (length es' < length (es ^. isoDirEntries)) $ do
-        warn $ "cleanImgRefs: col entries removed in: "
+      verbose $ "cleanupImgRefs: process img dir: " ++ quotePath p
+
+      let es = es0 ^. isoDirEntries
+      es' <- filterM (isOK checkDirRef) es
+      when (length es' < length es) $ do
+        warn $ "cleanupImgRefs: dir entries removed in: "
                ++ quotePath p ++ ", " ++ show (es, es')
         adjustDirEntries (const $ es' ^. from isoDirEntries) i
 
       mapM_ go es'
--}
+
     -- in COL case check optional img and/or blog ref
     -- and all img refs in the entries list
     -- and recurse into subcollections
 
     colA go i _md im be es = do
       p <- objid2path i
-      trc $ "cleanImgRefs: process collection: " ++ quotePath p
+      trc $ "cleanupImgRefs: process collection: " ++ quotePath p
 
       im' <- filterMM (isOK (uncurry checkImgPart)) im
       when (im /= im') $ do
-        warn $ "cleanImgRefs: col img ref removed in: "
+        warn $ "cleanupImgRefs: col img ref removed in: "
                ++ quotePath p ++ ", " ++ show (im, im')
         adjustColImg (const im') i
 
       be' <- filterMM (isOK (uncurry checkImgPart)) be
       when (be /= be') $ do
-        warn $ "cleanImgRefs: col blog ref removed in: "
+        warn $ "cleanupImgRefs: col blog ref removed in: "
                ++ quotePath p ++ ", " ++ show (be, be')
         adjustColBlog (const be') i
 
       es' <- filterM (isOK checkColEntry) es
       when (length es' < length es) $ do
-        warn $ "cleanImgRefs: col enties removed in: "
+        warn $ "cleanupImgRefs: col enties removed in: "
                ++ quotePath p ++ ", " ++ show (es, es')
         adjustColEntries (const es') i
 
@@ -107,9 +107,20 @@ cleanupImgRefs i0 = do
     -- kill the case-Nothing-Just code with monad transformer MaybeT
     -- check whether the ref i exists and points to an IMG value
 
+    checkRef :: ObjId -> CmdMaybe ImgNode
+    checkRef i =
+      (^. nodeVal) <$> (MaybeT $ getTree (entryAt i))
+
+    checkDirRef :: ObjId -> CmdMaybe ImgNode
+    checkDirRef i = do
+      n <- checkRef i
+      if isIMG n || isDIR n
+        then return n
+        else empty
+
     checkImgRef :: ObjId -> CmdMaybe ImgNode
     checkImgRef i = do
-      n <- (^. nodeVal) <$> (MaybeT $ getTree (entryAt i))
+      n <- checkRef i
       if isIMG n
         then return n
         else empty

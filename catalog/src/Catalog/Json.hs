@@ -11,20 +11,17 @@ module Catalog.Json
 where
 
 import           Catalog.Cmd
-import           Catalog.Html.Photo2 ( buildImgPath
+import           Catalog.Html.Basic  ( buildImgPath
                                      , colImgRef
-                                     , getColBlogCont
                                      , getColBlogSource
                                      , putColBlogSource
+                                     , getColBlogCont
                                      )
 import           Catalog.System.ExifTool (getMetaData)
--- import           Catalog.Journal
--- import           Catalog.Cmd.Types
 import           Control.Lens
 -- import           Control.Monad.Except
 -- import           Control.Monad.RWSErrorIO
 -- import           Data.Prim
--- import           Data.ImageStore
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.MetaData

@@ -42,6 +42,7 @@ library
                      Catalog.Cmd.Invariant
                      Catalog.Cmd.List
                      Catalog.Cmd.Types
+                     Catalog.Html.Basic
                      Catalog.Html.Photo2
                      Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.Json

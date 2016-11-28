@@ -18,7 +18,7 @@ import           Catalog.FilePath (pathToBreadCrump)
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
 import           Data.ImgTree
-import           Data.ImgNode
+-- import           Data.ImgNode
 import           Data.MetaData
 import           Data.Prim
 import qualified Data.IntMap as IM

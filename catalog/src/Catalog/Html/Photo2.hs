@@ -6,18 +6,24 @@ module Catalog.Html.Photo2
 where
 
 import Catalog.Cmd
--- import Data.ImageStore
 import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 
+import Catalog.Html.Basic ( ColRef
+                          , ColRefPath
+                          , colBlogCont
+                          , getColBlogCont
+                          , colImgName
+                          , colImgOp
+                          , colImgPath
+                          , colImgType
+                          , iconRef
+                          , maybeColRef
+                          , mkColRefC
+                          , mkColRefI
+                          )
 import Catalog.Html.Templates.Photo2.AlbumPage (photo2Tmpl)
-import Catalog.Journal
-import Catalog.System.Convert ( genAssetIcon
-                              , genBlogText
-                              , genBlogHtml
-                              , writeBlogText
-                              )
 import Catalog.System.ExifTool (getMetaData)
 
 import Text.SimpleTemplate
@@ -35,9 +41,6 @@ type PageConfig = (String, (GeoAR, GeoAR, Int, TmplEnv Cmd))
 -- an entry in a collection is identified by an ObjId, Path, Filepath, ...
 -- and, an index into the list of collection entries, or it's a reference
 -- to the collection itself
-
-type ColRef' a   = (a, Maybe Int)
-type ColRef      = ColRef' ObjId
 
 type ActCmd      = TmplAct Cmd
 
@@ -99,7 +102,7 @@ isoPicNo = iso toS frS
 
 -- parse a .html url
 
-url2confPathNo :: FilePath -> Cmd (String, ColRef' Path)
+url2confPathNo :: FilePath -> Cmd (String, ColRefPath)
 url2confPathNo f =
   case matchSubexRE pagePathExpr f of
     [("config", config), ("path", path), ("no", no)] ->
@@ -117,7 +120,7 @@ url2confPathNo f =
     _ -> abort $ "can't process document ref " ++ show f
 
 -- TODO : remove it
-url2pathNo :: FilePath -> Cmd (ColRef' Path)
+url2pathNo :: FilePath -> Cmd ColRefPath
 url2pathNo f = snd <$> url2confPathNo f
 
 -- ----------------------------------------
@@ -133,24 +136,10 @@ url2objId :: FilePath -> Cmd ColRef
 url2objId f = snd <$> url2confObjId f
 
 -- convert a path ref into an object ref
-crPath2crObjId :: ColRef' Path -> Cmd (Maybe ColRef)
+crPath2crObjId :: ColRefPath -> Cmd (Maybe ColRef)
 crPath2crObjId (p, cix) = do
   i <- fst <$> getIdNode' p
   normColRef (i, cix)
-
--- ----------------------------------------
-
-maybeColRef :: (ObjId -> a) -> (ObjId -> Int -> a) -> ColRef -> a
-maybeColRef cref iref (i, p) =
-  case p of
-    Nothing  -> cref i
-    Just pos -> iref i pos
-
-mkColRefC :: ObjId -> ColRef
-mkColRefC i = (i, Nothing)
-
-mkColRefI :: ObjId -> Int -> ColRef
-mkColRefI i pos = (i, Just pos)
 
 -- ----------------------------------------
 
@@ -535,20 +524,6 @@ colHref cf (i, cix) = do
 
 -- ----------------------------------------
 
-colImgOp :: Monoid a =>
-            (ObjId -> Name -> Cmd a) ->
-            (ObjId ->         Cmd a) ->
-            ColRef -> Cmd a
-colImgOp iop cop = maybeColRef cop iref
-  where
-    iref i pos = do
-      cs <- getImgVals i theColEntries
-      case cs ^? ix pos of
-        Just (ImgRef j n) -> iop j n
-        _ -> return mempty
-
--- ----------------------------------------
-
 colImgMeta :: ColRef -> Cmd MetaData
 colImgMeta = colImgMeta' True
 
@@ -574,119 +549,10 @@ colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
 
 -- ----------------------------------------
 
-colImgType :: ColRef -> Cmd ImgType
-colImgType = colImgOp iop cop
-  where
-    iop i _n = do
-      ity <$> getImgVals i theParts
-      where
-        ity ps
-          | thePartNames' (`elem` [IMGimg, IMGjpg]) `has` ps = IMGjpg
-          | thePartNames' (== IMGtxt)               `has` ps = IMGtxt
-          | otherwise                                        = IMGother
-    cop _i = return IMGjpg
-
-colImgName :: ColRef -> Cmd (Maybe Name)
-colImgName =
-  colImgOp
-  (\ _i n -> return $ Just n)
-  (\ _i   -> return Nothing)
-
-colImgPath :: ColRef -> Cmd (Maybe FilePath)
-colImgPath = colImgOp iop cop
-  where
-    cop i = do -- col ref
-      j'img <- getImgVals i theColImg
-      case j'img of
-        -- collection has a front page image
-        Just (k, n) ->
-          Just <$> buildImgPath k n
-        _ ->
-          return Nothing
-
-    iop j n = Just <$> buildImgPath j n
-
-buildImgPath :: ObjId -> Name -> Cmd FilePath
-buildImgPath i n = do
-  p <- objid2path i
-  return $ substPathName n' p ^. isoString
- where
-    -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
-    n' | ".jpg" `isNameSuffix` n = n
-       | otherwise               = substNameSuffix "" ".jpg" n
-
--- compute the image ref of a collection
--- if collection has an front page image, take that
--- otherwise take the ref to a generated image
-
-colImgRef :: ObjId -> Cmd FilePath
-colImgRef i = do
-  p <- colImgPath (i, Nothing)
-  maybe (iconRef i) return p
-
--- ----------------------------------------
-
-colBlogCont :: ImgType -> ColRef -> Cmd Text
-colBlogCont IMGtxt cr = do
-  colImgOp iop cop cr
-  where
-    iop i n     = getColBlogCont i n
-    cop _       = return mempty
-colBlogCont _ _ = return mempty
-
-getColBlogCont :: ObjId -> Name -> Cmd Text
-getColBlogCont i n = do
-      p <- objid2path i
-      -- subst the name by the part name
-      -- and build a file path
-      f <- toFilePath (substPathName n p)
-      genBlogHtml f
-
-getColBlogSource :: ObjId -> Name -> Cmd Text
-getColBlogSource i n = do
-  p <- objid2path i
-  -- subst the name by the part name
-  -- and build a file path
-  f <- toFilePath (substPathName n p)
-  genBlogText f
-
-putColBlogSource :: Text -> ObjId -> Name -> Cmd ()
-putColBlogSource t i n = do
-  p <- objid2path i
-  f <- toFilePath (substPathName n p)
-  writeBlogText t f
-  journalChange $ SaveBlogText i n t
-
--- ----------------------------------------
-
 -- compute the navigation hrefs for previous, next and parent image/collection
 
 path2href :: String -> FilePath -> FilePath
 path2href c p = "/" ++ c ++ p ++ ".html"
-
--- compute the icon ref of a collection
-
-iconRef :: ObjId -> Cmd FilePath
-iconRef i = do
-  t  <- getImgVals i (theMetaData . metaDataAt descrTitle . isoString)
-
-  mbf <-
-    if isempty t  -- no title there
-    then do
-      p <- (^. isoString) <$> objid2path i
-      path2img p
-    else
-      genAssetIcon (t'hash t) t
-
-  return $
-    fromMaybe (ps'blank ^. isoString) mbf
-  where
-    t'hash t' =
-      mkCheckSum t' ^. isoString . to toP
-      where
-        toP s = x ++ "/" ++ y
-          where
-            (x, y) = splitAt 2 s
 
 -- ----------------------------------------
 
@@ -709,78 +575,12 @@ blankIcon _ (Just f) =
   -- image there
   xtxt f
 
-blankIcon (Just (i, Nothing)) _ = do
+blankIcon (Just (i, Nothing)) _ =
   -- ref to a collection, try to generate a collection icon
   liftTA (iconRef i) >>= xtxt
 
 blankIcon _ _ =
   -- image not there
   xtxt ps'blank
-
-path2img :: FilePath -> Cmd (Maybe FilePath)
-path2img f
-  | [("year", y)] <- m1 =
-      genAssetIcon y y
-
-  | [("year", y), ("month", m)] <- m1 =
-      let s = toN m ++ "." ++ y
-      in
-        genAssetIcon (y </> s) s
-
-  | [("year", y), ("month", m), ("day", d)] <- m1 =
-      let s = toN d ++ "." ++ toN m ++ "." ++ y
-      in
-        genAssetIcon (y </> s) s
-
-  | [("name", n)] <- m2 =
-      genAssetIcon n n
-
-{-
-  | f == ps'bycreatedate =           -- "/archive/collections/byCreateDate"
-      genAssetIcon s'bycreatedate (tt'bydate ^. isoString)
-
-  | f == ps'clipboard =              -- "/archive/collections/photos/clipboard"
-      genAssetIcon s'clipboard (tt'clipboard ^. isoString)
-
-  | f == ps'trash =              -- "/archive/collections/photos/trash"
-      genAssetIcon s'trash (tt'trash ^. isoString)
-
-  | f == ps'photos =                 -- "/archive/collections/photos"
-      genAssetIcon s'photos (tt'photos ^. isoString)
-
-  | f == ps'collections =            -- "/archive/collections"
-      genAssetIcon s'collections (tt'collections ^. isoString)
--- -}
-
-  | otherwise =
-      return Nothing
-  where
-    m1 = matchSubexRE ymdRE f
-    m2 = matchSubexRE dirRE f
-
-    toN :: String -> String
-    toN s = show i
-      where
-        i :: Int
-        i = read s
-
-
-ymdRE :: Regex -- for collections sorted by date
-ymdRE =
-  parseRegexExt $
-  ps'bycreatedate                    -- "/archive/collections/byCreateDate"
-  ++
-  "/({year}[0-9]{4})"
-  ++
-  "(/([-0-9]*({month}[0-9]{2}))(/([-0-9]*({day}[0-9]{2})))?)?"
-
-dirRE :: Regex -- for collections for all folders
-dirRE =
-  parseRegexExt $
-  ps'photos                          -- "/archive/collections/photos"
-  ++
-  "(/[^/]+)*"
-  ++
-  "(/({name}[^/]+))"
 
 -- ----------------------------------------
