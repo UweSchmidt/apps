@@ -52,7 +52,7 @@ cleanupImgRefs i0 = do
 
     dirA go i es0 _ = do
       p <- objid2path i
-      verbose $ "cleanupImgRefs: process img dir: " ++ quotePath p
+      trc $ "cleanupImgRefs: process img dir: " ++ quotePath p
 
       let es = es0 ^. isoDirEntries
       es' <- filterM (isOK checkDirRef) es

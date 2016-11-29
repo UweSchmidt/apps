@@ -40,24 +40,28 @@ oAll
   , oJournal
   , oTrc
   , oQuiet
+  , oDryRun
   , oForceMDU
   , oPort
   , oMountPath
   , oArchive
   , oImport
-  , oSyncDir :: Term (Env -> Env)
+  , oSyncDir
+  , oUpdCache :: Term (Env -> Env)
 
 oAll =
   oVerbose
   <..> oJournal
   <..> oTrc
   <..> oQuiet
+  <..> oDryRun
   <..> oForceMDU
   <..> oPort
   <..> oMountPath
   <..> oArchive
   <..> oImport
   <..> oSyncDir
+  <..> oUpdCache
 
 oVerbose =
   convFlag setVerbose $
@@ -91,6 +95,14 @@ oQuiet =
     setQuiet True  e = e & envVerbose .~ False
                          & envTrc     .~ False
     setQuiet False e = e
+
+oDryRun =
+  convFlag setDry $
+  (optInfo ["y", "dry-run"])
+    { optDoc = "Dry run for generating .jpg images." }
+  where
+    setDry True  = envDryRun .~ True
+    setDry False = id
 
 oForceMDU =
   convFlag setFMDU $
@@ -149,7 +161,6 @@ oImport =
       | otherwise = Just (envJsonImport .~ Just s)
 
 
-
 oSyncDir =
   convStringValue "not a legal dir path" setMP $
   (optInfo ["d", "dir-path"])
@@ -160,6 +171,17 @@ oSyncDir =
     setMP s
       | null s    = Just id
       | otherwise = Just (envSyncDir .~ s)
+
+oUpdCache =
+  convStringValue "not a legal path name" setUpd $
+  (optInfo ["c", "update-cache"])
+    { optName = "IMGDIR"
+    , optDoc  = "For catalog-sync only: Update the image cache for given image directory"
+    }
+  where
+    setUpd s
+      | null s    = Nothing
+      | otherwise = Just (envUpdateCache .~ Just s)
 
 
 -- ----------------------------------------

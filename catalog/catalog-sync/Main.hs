@@ -7,9 +7,10 @@ import           Catalog.System.ImportPhoto2 ( cleanImportCols
                                              , loadImportData
                                              , insertImportPhoto2
                                              )
--- import           Data.ImageStore
--- import           Data.ImgTree
+import           Catalog.Html.Cache ( fillImgCache )
+
 import           Data.Prim
+
 import           System.Exit
 
 main :: IO ()
@@ -40,17 +41,28 @@ syncOrImportCatalog = do
     loadImgStore jsonPath
 
   checkImgStore
-
-  -- if import file is set, do an import else sync an image dir
-  view envJsonImport >>=
-    maybe syncDir importCols
-
-  checkImgStore
-
-  verbose $ "syncOrImportCatalog: save state to " ++ show jsonPath
-  saveImgStore jsonPath
-
+  doIt jsonPath
   verbose "syncOrImportCatalog: sync finished"
+
+doIt :: FilePath -> Cmd ()
+doIt jp = do
+  ip <- view envJsonImport
+  case ip of
+    Just i -> do
+      importCols i
+      saveImgStore jp
+
+    Nothing -> do
+      uc <- view envUpdateCache
+      case uc of
+        Just f ->
+          updateCache f
+
+        Nothing -> do
+          syncDir
+          checkImgStore
+          saveImgStore jp
+
 
 importCols :: FilePath -> Cmd ()
 importCols f = do
@@ -58,3 +70,10 @@ importCols f = do
   cleanImportCols
   d <- loadImportData f
   insertImportPhoto2 d
+  checkImgStore
+
+updateCache :: FilePath -> Cmd ()
+updateCache f = do
+  fillImgCache $ readPath p
+  where
+    p = ps'collections </> f

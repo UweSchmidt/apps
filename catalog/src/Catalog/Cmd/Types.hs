@@ -33,6 +33,7 @@ data Env = Env
   , _syncDir     :: FilePath
   , _fontName    :: Text
   , _logOp       :: Maybe (String -> IO ())
+  , _updateCache :: Maybe FilePath
   }
 
 -- deriving instance Show Env
@@ -59,6 +60,7 @@ defaultEnv = Env
   , _syncDir      = s'photos       -- the top archive dir
   , _fontName     = mempty
   , _logOp        = Just (hPutStrLn stderr)
+  , _updateCache  = Nothing
   }
 
 envTrc :: Lens' Env Bool
@@ -99,6 +101,9 @@ envFontName k e = (\ new -> e {_fontName = new}) <$> k (_fontName e)
 
 envLogOp :: Lens' Env (Maybe (String -> IO ()))
 envLogOp k e = (\ new -> e {_logOp = new}) <$> k (_logOp e)
+
+envUpdateCache :: Lens' Env (Maybe FilePath)
+envUpdateCache k e = (\ new -> e {_updateCache = new}) <$> k (_updateCache e)
 
 -- ----------------------------------------
 

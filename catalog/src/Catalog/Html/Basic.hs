@@ -5,12 +5,12 @@
 module Catalog.Html.Basic
 where
 
-import Catalog.Cmd
 import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 
-import Catalog.Journal
+import Catalog.Cmd
+import Catalog.Journal        ( Journal'(SaveBlogText) )
 import Catalog.System.Convert ( genAssetIcon
                               , genBlogText
                               , genBlogHtml
