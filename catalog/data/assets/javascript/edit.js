@@ -777,6 +777,36 @@ function newEntry(entry, i) {
 
 // ----------------------------------------
 
+function checkColIsThere(cid) {
+    var path = collectionPath(cid);
+    console.log('colIsThere: ' + path);
+    getIsColFromServer(path,
+                       function (isThere) {
+                           if (! isThere) {
+                               removeCollectionFromDom(cid);
+                               statusMsg('collection closed: ' + path);
+                           }
+                       });
+}
+
+function checkAllColAreThere() {
+    var colIds = allCollectionIds();
+    colIds.forEach(function (cid, i) {
+        checkColIsThere(cid);
+    });
+
+}
+// ----------------------------------------
+
+// for remove, move and rename commands
+// check wheter subcollections are still there
+// those maybe removed or moved too
+
+function refreshCollection1(path, colVal) {
+    refreshCollection(path, colVal);
+    checkAllColAreThere();
+}
+
 function refreshCollection(path, colVal) {
     var o = splitPath(path);
     console.log('refreshCollection');
@@ -1401,7 +1431,7 @@ function renameCollection() {
         return;
     }
 
-    renameColOnServer(cpath, path, newname, refreshCollection);
+    renameColOnServer(cpath, path, newname, refreshCollection1);
 }
 
 // ----------------------------------------
@@ -1715,7 +1745,7 @@ function saveBlogText(args) {
 function removeFromColOnServer(path, args) {
     modifyServer("removeFromCollection", path, args,
                  function () {
-                     getColFromServer(path, refreshCollection);
+                     getColFromServer(path, refreshCollection1);
                  });
 }
 
@@ -1730,8 +1760,8 @@ function moveToColOnServer(spath, dpath, args) {
 function copyMoveToColOnServer(cpmv, spath, dpath, args) {
     modifyServer(cpmv, spath, [args, dpath],
                  function () {
-                     getColFromServer(spath, refreshCollection);
-                     getColFromServer(dpath, refreshCollection);
+                     getColFromServer(spath, refreshCollection );
+                     getColFromServer(dpath, refreshCollection1);
                  });
 }
 
@@ -1768,6 +1798,10 @@ function getIsWriteableFromServer(path, markWriteable) {
     readServer('isWriteable', path, markWriteable);
 }
 
+function getIsColFromServer(path, cleanupCol) {
+    readServer('isCollection', path, cleanupCol);
+}
+
 function getIconRefFromServer(path, fmt, insertSrcRef) {
     readServer1('iconref', path, fmt, insertSrcRef);
 }
@@ -1782,7 +1816,7 @@ function createColOnServer(path, name, showCol) {
 function renameColOnServer(cpath, path, newname, showCol) {
     modifyServer("renamecol", path, newname,
                  function () {
-                     getColFromServer(cpath, refreshCollection);
+                     getColFromServer(cpath, refreshCollection1);
                  });
 }
 

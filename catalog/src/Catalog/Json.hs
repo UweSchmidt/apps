@@ -74,7 +74,11 @@ jsonRPC jv =
       v <- lookupByPath path'
       case v of
         Nothing ->
-          mkER $ fct <> ": entry not found: " <> path
+          case fct of
+            "isCollection" ->
+              mkOK False
+            _ ->
+              mkER $ fct <> ": entry not found: " <> path
         Just (i, n) ->
           jsonCall fct i n args
 
@@ -100,6 +104,11 @@ jsonCall fct i n args =
 
     "isSortable" ->
       jl $ \ () -> return (isSortable $ n ^. theColMetaData)
+
+    -- existence check of a collection
+    -- the 1. half of the check is done in jsonRPC in the Nothing case
+    "isCollection" ->
+      jl $ \ () -> return $ isCOL n
 
     -- read the src path for a collection icon
     -- result is an url pointing to the icon src
