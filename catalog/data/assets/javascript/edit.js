@@ -40,7 +40,7 @@ function eqCol(col, col1) {
     }
     var es  = col.entries;
     var es1 = col1.entries;
-    return es.length == es.length
+    return es.length == es1.length
         && cmpEnt(es, es1);
 }
 function cmpEnt(ent, ent1) {
@@ -843,30 +843,42 @@ function newEntry(entry, i) {
 
 // ----------------------------------------
 
-function checkColIsThere(cid) {
-    var path = collectionPath(cid);
+function checkAndRefreshCol(path, refresh) {
     console.log('colIsThere: ' + path);
     getIsColFromServer(path,
                        function (isThere) {
                            if (! isThere) {
+                               var cid = collectionId(path);
                                removeCollectionFromDom(cid);
                                statusMsg('collection closed: ' + path);
+                               if ( refresh ) {
+                                   updateCollection(path);
+                               }
                            }
                        });
 }
 
-function checkAllColAreThere() {
-    var colIds = allCollectionIds();
-    colIds.forEach(function (cid, i) {
-        checkColIsThere(cid);
+function checkAllColAreThere(refresh) {
+    var colPaths = allCollectionPaths();
+    colPaths.forEach(function (path, i) {
+        checkAndRefreshCol(path,refresh);
     });
 
 }
+
+// ----------------------------------------
+
+function syncActiveCollection() {
+    var cid  = activeCollectionId();
+    var path = collectionPath(cid);
+    console.log("syncActiveCollection: " + path);
+}
+
 // ----------------------------------------
 
 // for remove, move and rename commands
-// check wheter subcollections are still there
-// those maybe removed or moved too
+// check whether subcollections are still there
+// maybe sometimes there are some, which were removed or moved
 
 function refreshCollection1(path, colVal) {
     refreshCollection(path, colVal);
@@ -892,14 +904,6 @@ function refreshCollection(path, colVal) {
     } else {
         unmarkAll(collectionId(path));
     }
-}
-
-function refreshAllCollections() {
-    console.log('refreshAllCollections');
-    var colPaths = allCollectionPaths();
-    colPaths.forEach(function (path, ix) {
-        updateCollection(path);
-    });
 }
 
 // ----------------------------------------
@@ -1058,7 +1062,7 @@ function markAll(cid) {
 }
 
 function unmarkAll(cid) {
-    statusClear();
+    // statusClear();
     console.log('unmark all images in ' + cid);
 
     var col = $('#' + cid);
@@ -2173,6 +2177,23 @@ $(document).ready(function () {
             statusMsg('taking snapshot of image archive, one moment please');
             saveImgStore();
         });
+
+    $('#SyncCollection')
+        .on('click', function () {
+            // statusClear();
+            statusMsg('sync collection with images on the filesystem, one moment please');
+            syncActiveCollection();
+        });
+
+    /* just a test
+    // refresh all collections
+    $('#RefreshCollection')
+        .on('click', function () {
+            // statusClear();
+            statusMsg('refreshing all open collections');
+            checkAllColAreThere(true);
+        });
+    */
 });
 
 // ----------------------------------------
