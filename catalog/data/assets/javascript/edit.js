@@ -1,5 +1,69 @@
 // ----------------------------------------
 //
+// global state
+
+var openCollections = {};
+
+// remove a collection
+function remCol(path) {
+    console.log('remCol: ' + path);
+    openCollections[path] = undefined;
+}
+
+// insert a  collection
+function insCol(path, col) {
+    console.log('insCol: ' + path);
+    console.log(col);
+    openCollections[path] = col;
+}
+
+// update a  collection and
+// return whether col has changed
+function updCol(path, col) {
+    console.log('updCol: ' + path);
+    var unchanged = eqCol(openCollections[path], col);
+    if ( unchanged ) {
+        console.log('nothing has changed');
+    } else {
+        console.log('something has changed');
+        console.log(openCollections[path]);
+        console.log(col);
+        openCollections[path] = col;
+    }
+    return ! unchanged;
+}
+
+// compare collections
+function eqCol(col, col1) {
+    if (! col || ! col1) {
+        return false;
+    }
+    var es  = col.entries;
+    var es1 = col1.entries;
+    return es.length == es.length
+        && cmpEnt(es, es1);
+}
+function cmpEnt(ent, ent1) {
+    while (ent.length > 0) {
+        var e  = ent.pop();
+        var e1 = ent1.pop();
+        if (e.ColEntry != e1.ColEntry) {
+            return false;
+        }
+        if (e.ref != e1.ref) {
+            return false;
+        }
+        if (e.ColEntry === 'IMG'
+            && e.part != e1.part) {
+            return false;
+        }
+    }
+    // console.log("cmpEnt: true");
+    return true;
+}
+
+// ----------------------------------------
+//
 // dia button group handler
 
 function diaButton(e) {
@@ -453,6 +517,8 @@ function isNotSortableCollection(colVal) {
 // ----------------------------------------
 
 function showNewCollection(path, colVal) {
+    // insert into global state
+    insCol(path, colVal);
 
     // compute colId and colName from path
     var o = splitPath(path);
@@ -813,12 +879,27 @@ function refreshCollection(path, colVal) {
     console.log(o);
     console.log(colVal);
 
-    var io = isAlreadyOpen(path);
-    // check whether collection is already there
-    if ( io[0]) {
-        o.colId = io[1];
-        insertEntries(o.colId, colVal.entries);
+    // only if the collection content has changed
+    // update the entries
+    var changed = updCol(path, colVal);
+    if ( changed ) {
+        var io = isAlreadyOpen(path);
+        // check whether collection is already there
+        if ( io[0]) {
+            o.colId = io[1];
+            insertEntries(o.colId, colVal.entries);
+        }
+    } else {
+        unmarkAll(collectionId(path));
     }
+}
+
+function refreshAllCollections() {
+    console.log('refreshAllCollections');
+    var colPaths = allCollectionPaths();
+    colPaths.forEach(function (path, ix) {
+        updateCollection(path);
+    });
 }
 
 // ----------------------------------------
@@ -956,8 +1037,12 @@ function closeCollection(cid) {
 }
 
 function removeCollectionFromDom(cid) {
+    // remove from state
+    remCol(collectionPath(cid));
+
     // remove the tab content
     $('#' + cid).remove();
+
     // remove the tab
     $('li > a[aria-controls=' + cid + ']').remove();
 }
