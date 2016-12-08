@@ -906,6 +906,20 @@ function refreshCollection(path, colVal) {
     }
 }
 
+function refreshCollection0(path, colVal) {
+    var o = splitPath(path);
+    console.log('refreshCollection0');
+    console.log(o);
+    console.log(colVal);
+
+    var io = isAlreadyOpen(path);
+    // check whether collection is already there
+    if ( io[0]) {
+        o.colId = io[1];
+        insertEntries(o.colId, colVal.entries);
+    }
+}
+
 // ----------------------------------------
 
 // messages don't overwrite errors
@@ -1367,7 +1381,7 @@ function setCollectionImg(cid) {
                                  // parent collection open
                                  // refresh the parent collection
                                  // to show the new collection image
-                                 getColFromServer(ppath, refreshCollection);
+                                 getColFromServer(ppath, refreshCollection0);
                              }
                          });
         }
