@@ -38,15 +38,16 @@ function eqCol(col, col1) {
     if (! col || ! col1) {
         return false;
     }
-    var es  = col.entries;
+    var es  =  col.entries;
     var es1 = col1.entries;
-    return es.length == es1.length
-        && cmpEnt(es, es1);
-}
-function cmpEnt(ent, ent1) {
-    while (ent.length > 0) {
-        var e  = ent.pop();
-        var e1 = ent1.pop();
+    var ln  = es.length;
+    if ( ln != es1.length ) {
+        return false;
+    }
+    var i = 0;
+    for (i = 0; i < ln; ++i) {
+        var e  =  es[i];
+        var e1 = es1[i];
         if (e.ColEntry != e1.ColEntry) {
             return false;
         }
@@ -58,7 +59,6 @@ function cmpEnt(ent, ent1) {
             return false;
         }
     }
-    // console.log("cmpEnt: true");
     return true;
 }
 
