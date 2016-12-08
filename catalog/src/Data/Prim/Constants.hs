@@ -76,6 +76,7 @@ ps'collections
   , ps'iconsgen
   , ps'javascript
   , ps'css
+  , ps'exifcache
   , ps'blank :: FilePath
 
 ps'clipboard    = p'clipboard    ^. isoString
@@ -90,6 +91,7 @@ ps'iconsgen     = ps'icons  </> "generated"
 ps'blank        = ps'icons  </> "blank.jpg"
 ps'javascript   = ps'assets </> "javascript"
 ps'css          = ps'assets </> "css"
+ps'exifcache    = ps'cache  </> "exif-meta"
 
 -- ----------------------------------------
 

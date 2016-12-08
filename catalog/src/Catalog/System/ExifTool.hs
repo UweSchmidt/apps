@@ -54,7 +54,11 @@ writeMetaData f m =
 readMetaData :: FilePath -> Cmd MetaData
 readMetaData f = do
   trc $ "readMetadata from " ++ show f
-  whenM (fileExist f) $ do
+  whenM (do ex <- fileExist f
+            unless ex $
+              warn $ "readMetaData: metadata file not found: " ++ show f
+            return ex
+        ) $ do
       bs <- readFileLB f
       case J.decode' bs of
         Nothing -> do
@@ -124,12 +128,12 @@ isJpg pt = pt ^. theImgType == IMGjpg
 --
 -- "/archive/photos/2016/emil"
 -- -->
--- "<mountpath>/exif-meta/photos/2016/emil.json"
+-- "<mountpath>/cache/exif-meta/photos/2016/emil.json"
 
 exifPath :: Path -> Cmd FilePath
 exifPath ip = do
   mp <- use theMountPath
   return $
-    mp </> "exif-meta" ++ tailPath ip ^. isoString ++ ".json"
+    mp ++ ps'exifcache ++ tailPath ip ^. isoString ++ ".json"
 
 -- ----------------------------------------
