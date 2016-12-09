@@ -234,7 +234,7 @@
                       aria-hidden="true"></span>
               </button>
             </li>
-            <li>
+            <!-- li>
               <button id="SaveImgStore"
                       class="btn btn-link btn-lg"
                       data-toggle="tooltip"
@@ -243,8 +243,8 @@
                 <span class="glyphicon glyphicon-download-alt"
                       aria-hidden="true"></span>
               </button>
-            </li>
-            <li>
+            </li -->
+            <!-- li>
               <button id="SyncCollection"
                       class="btn btn-link btn-lg"
                       data-toggle="tooltip"
@@ -253,7 +253,47 @@
                 <span class="glyphicon glyphicon-refresh"
                       aria-hidden="true"></span>
               </button>
+            </li -->
+            <li class="dropdown">
+              <button
+                 class="dropdown-toggle btn btn-link btn-lg"
+                 data-toggle="dropdown"
+                 role="button"
+                 aria-haspopup="true"
+                 aria-expanded="false"
+                 title="server menue">
+                <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a id="SaveImgStore">
+                    <span class="glyphicon glyphicon-download-alt"
+                          aria-hidden="true"></span>
+                    Save Archive
+                  </a>
+                </li>
+                <li>
+                  <a id="SyncCollection">
+                    <span class="glyphicon glyphicon-refresh"
+                          aria-hidden="true"></span>
+                    Sync photo collection with filesystem
+                  </a>
+                </li>
+                <li>
+                  <a id="RefreshCollection">
+                    <span class="glyphicon glyphicon-repeat"
+                          aria-hidden="true"></span>
+                    Refresh open collections
+                  </a>
+                </li>
+                <li><a href="#">Something else here</a></li>
+                <!-- li role="separator" class="divider"></li -->
+                <li><a href="#">Separated link</a></li>
+                <li><a href="#">One more separated link</a></li>
+              </ul>
             </li>
+
             <!--
             <li>
               <button id="RefreshCollection"

@@ -843,7 +843,7 @@ function newEntry(entry, i) {
 
 // ----------------------------------------
 
-function checkAndRefreshCol(path, refresh) {
+function checkAndRefreshCol(path, refresh, force) {
     console.log('colIsThere: ' + path);
     getIsColFromServer(path,
                        function (isThere) {
@@ -851,17 +851,21 @@ function checkAndRefreshCol(path, refresh) {
                                var cid = collectionId(path);
                                removeCollectionFromDom(cid);
                                statusMsg('collection closed: ' + path);
+                           } else {
                                if ( refresh ) {
+                                   if ( force ) {
+                                       remCol(path);
+                                   }
                                    updateCollection(path);
                                }
                            }
                        });
 }
 
-function checkAllColAreThere(refresh) {
+function checkAllColAreThere(refresh, force) {
     var colPaths = allCollectionPaths();
     colPaths.forEach(function (path, i) {
-        checkAndRefreshCol(path,refresh);
+        checkAndRefreshCol(path,refresh, force);
     });
 
 }
@@ -871,9 +875,17 @@ function checkAllColAreThere(refresh) {
 function syncActiveCollection() {
     var cid  = activeCollectionId();
     var path = collectionPath(cid);
-    console.log("syncActiveCollection: " + path);
+    syncCollectionWithFilesystem(path);
 }
 
+function syncCollectionWithFilesystem(path) {
+    console.log("syncCollectionWithFilesystem: " + path);
+
+    if ( ! isPathPrefix(pathPhotos(), path) ) {
+        statusError('collection to be synchronized must be a subcollection of ' + pathPhotos());
+        return;
+    }
+}
 // ----------------------------------------
 
 // for remove, move and rename commands
@@ -882,7 +894,7 @@ function syncActiveCollection() {
 
 function refreshCollection1(path, colVal) {
     refreshCollection(path, colVal);
-    checkAllColAreThere();
+    checkAllColAreThere(false, false);
 }
 
 function refreshCollection(path, colVal) {
@@ -903,20 +915,6 @@ function refreshCollection(path, colVal) {
         }
     } else {
         unmarkAll(collectionId(path));
-    }
-}
-
-function refreshCollection0(path, colVal) {
-    var o = splitPath(path);
-    console.log('refreshCollection0');
-    console.log(o);
-    console.log(colVal);
-
-    var io = isAlreadyOpen(path);
-    // check whether collection is already there
-    if ( io[0]) {
-        o.colId = io[1];
-        insertEntries(o.colId, colVal.entries);
     }
 }
 
@@ -1381,7 +1379,8 @@ function setCollectionImg(cid) {
                                  // parent collection open
                                  // refresh the parent collection
                                  // to show the new collection image
-                                 getColFromServer(ppath, refreshCollection0);
+                                 remCol(ppath); // force refresh
+                                 getColFromServer(ppath, refreshCollection);
                              }
                          });
         }
@@ -2199,15 +2198,15 @@ $(document).ready(function () {
             syncActiveCollection();
         });
 
-    /* just a test
+    /* just a test */
     // refresh all collections
     $('#RefreshCollection')
         .on('click', function () {
             // statusClear();
             statusMsg('refreshing all open collections');
-            checkAllColAreThere(true);
+            checkAllColAreThere(true, true);
         });
-    */
+    /* */
 });
 
 // ----------------------------------------
