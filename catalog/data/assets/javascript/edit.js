@@ -882,15 +882,37 @@ function syncCollectionWithFilesystem(path) {
     console.log("syncCollectionWithFilesystem: " + path);
 
     if ( ! isPathPrefix(pathPhotos(), path) ) {
-        statusError('collection to be synchronized must be a subcollection of ' + pathPhotos());
+        statusError('collection to be synchronized must be a subcollection of '
+                    + pathPhotos());
         return;
     }
+
+    // start syncing on server side
+    statusMsg('synchronizing collection with filesystem: ' + path);
+    modifyServer1("syncCol", path, [],
+                  function(log) {
+                      statusMsg('synchronizing on server side done');
+                      // TODO
+                      console.log(log);
+                  });
 }
+function checkArchiveConsistency() {
+    console.log("checkArchiveConsistency");
+    statusMsg('checking/repairing archive consistency');
+    modifyServer1("checkArchive", pathArchive(), [],
+                  function(log) {
+                      statusMsg('checking archive on server side done');
+                      // TODO
+                      console.log(log);
+                  });
+}
+
 // ----------------------------------------
 
 // for remove, move and rename commands
 // check whether subcollections are still there
-// maybe sometimes there are some, which were removed or moved
+// maybe sometimes there are subcollections,
+// which were also moved removed
 
 function refreshCollection1(path, colVal) {
     refreshCollection(path, colVal);
@@ -2020,12 +2042,17 @@ function readServer1(fct, path, args, processRes) {
 }
 
 // make a modifying call to server
-// modifying calls never get an interesting result back
+// modifying calls usualls don't get an interesting result back
 // in success case (), else the error message
-// all modifying ops are procedures, not functions
+// so most modifying ops are procedures, not functions
 
 function modifyServer(fct, path, args, processNext) {
     callServer("modify", fct, [path, args], ignoreRes, processNext);
+}
+
+// a modify with a result, e.g. a log file of the operation
+function modifyServer1(fct, path, args, processRes) {
+    callServer("modify", fct, [path, args], processRes, noop);
 }
 
 function ignoreRes(res) {}
@@ -2198,15 +2225,21 @@ $(document).ready(function () {
             syncActiveCollection();
         });
 
-    /* just a test */
-    // refresh all collections
+    // refresh all collections, just a debug op
     $('#RefreshCollection')
         .on('click', function () {
-            // statusClear();
-            statusMsg('refreshing all open collections');
+            statusClear();
+            // statusMsg('refreshing all open collections');
             checkAllColAreThere(true, true);
         });
-    /* */
+
+    $('#ConsistencyCheck')
+        .on('click', function () {
+            statusClear();
+            // statusMsg('refreshing all open collections');
+            checkArchiveConsistency();
+        });
+
 });
 
 // ----------------------------------------
