@@ -17,6 +17,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      , putColBlogSource
                                      , getColBlogCont
                                      )
+import           Catalog.Sync            (syncNode)
 import           Catalog.System.ExifTool (getMetaData)
 import           Control.Lens
 -- import           Control.Monad.Except
@@ -212,6 +213,11 @@ jsonCall fct i n args =
       jl $ \ () ->
              snapshotImgStore
 
+    -- sync a subcollection of /archive/photo with filesystem
+    "syncCol" ->
+      jl $ \ () ->
+             syncCol i
+
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
@@ -243,6 +249,17 @@ checkWriteableCol dPath = do
   return di
 
 -- ----------------------------------------
+
+syncCol :: ObjId -> Cmd ()
+syncCol i = do
+  path <- objid2path i
+  unless (isPathPrefix p'photos path) $
+    abort ("syncCol: collection does not have path prefix "
+           ++ quotePath p'photos ++ ": "
+           ++ quotePath path)
+  let path'dir = substPathPrefix p'photos p'arch'photos path
+  di <- fst <$> getIdNode' path'dir
+  syncNode di
 
 removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
 removeFrCol ixs i n = do
