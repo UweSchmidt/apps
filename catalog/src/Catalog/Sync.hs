@@ -89,6 +89,8 @@ syncDir = do
 
 syncDirP :: Path -> Cmd ()
 syncDirP p = do
+  verbose $ "syncDir: at " ++ quotePath p
+
   -- remember all ImgRef's in dir to be synchronized
   old'refs <- allColEntries' p
   verbose $ "syncDir: old'refs: " ++ show old'refs

@@ -894,6 +894,7 @@ function syncCollectionWithFilesystem(path) {
                       statusMsg('synchronizing on server side done');
                       // TODO
                       console.log(log);
+                      checkAllColAreThere(true, false);
                   });
 }
 function checkArchiveConsistency() {
