@@ -17,7 +17,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      , putColBlogSource
                                      , getColBlogCont
                                      )
-import           Catalog.Sync            (syncNode)
+import           Catalog.Sync            (syncFS)
 import           Catalog.System.ExifTool (getMetaData)
 import           Control.Lens
 -- import           Control.Monad.Except
@@ -258,8 +258,9 @@ syncCol i = do
            ++ quotePath p'photos ++ ": "
            ++ quotePath path)
   let path'dir = substPathPrefix p'photos p'arch'photos path
+  verbose $ "syncCol: directory " ++ quotePath path'dir
   di <- fst <$> getIdNode' path'dir
-  syncNode di
+  syncFS di
 
 removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
 removeFrCol ixs i n = do

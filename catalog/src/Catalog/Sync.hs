@@ -155,12 +155,13 @@ idSyncFS recursive i = getImgVal i >>= go
   where
     go e
       | isIMG e = do
-          -- trcObj i "idSyncFS: syncing image"
+          trcObj i "idSyncFS: syncing image"
           p  <- objid2path i
           ps <- collectImgCont i
           syncImg i p ps
 
       | isDIR e = do
+          trcObj i "idSyncFS: syncing directory"
           fp <- objid2path i >>= toFilePath
           ex <- dirExist fp
           if ex
@@ -173,10 +174,11 @@ idSyncFS recursive i = getImgVal i >>= go
               rmImgNode i
 
       | isROOT e = do
-          -- trcObj i "idSyncFS: syncing root"
+          trcObj i "idSyncFS: syncing root"
           idSyncFS recursive (e ^. theRootImgDir)
 
-      | otherwise =
+      | otherwise = do
+          trcObj i "idSyncFS: nothing done for collection"
           return ()
 
 syncDirCont :: Bool -> ObjId -> Cmd ()
@@ -265,7 +267,11 @@ syncImg ip pp xs = do
   whenM (isNothing <$> getTree (entryAt i)) $
     void $ mkImg ip n
 
-  -- trcObj i $ "syncImg: "
+  unlessM (isIMG <$> getImgVal i) $
+    warn $ "syncImg: entry for image conflicts with directory entry:"
+           ++ quotePath p ++ ", entry ignored"
+
+  -- trcObj i $ "syncImg: " ++ show (pp, xs)
 
   -- is there at least a jpg or  raw image or a txt (something, that can be shown)?
   -- then update, else ignore the entry
@@ -274,13 +280,15 @@ syncImg ip pp xs = do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
     else do
-      p <- objid2path i
-      verbose $ "sync: no raw, jpg or txt found for " ++ quotePath p ++ ", parts: " ++ show xs
+      p' <- objid2path i
+      warn $ "sync: no raw, jpg or txt found for "
+             ++ quotePath p' ++ ", parts: " ++ show xs
       rmImgNode i
   where
-    i  = mkObjId (pp `snocPath` n)
+    p  = pp `snocPath` n
+    i  = mkObjId p
     n  = xs ^. to head . _2 . _1
-    ps = xs &  traverse %~ uncurry mkImgPart . (id *** snd)
+    ps = xs &  traverse %~ uncurry mkImgPart . second snd
 
 syncParts :: ObjId -> Path -> Cmd ()
 syncParts i pp = do
