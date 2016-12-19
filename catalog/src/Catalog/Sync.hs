@@ -83,7 +83,7 @@ syncDir = do
   verbose "syncDir: check/create the system collections"
   genSysCollections
 
-  -- get the dir path for the (sub-)dir to be syncronized
+  -- get the dir path for the (sub-)dir to be synchronized
   -- and start sync
   syncDirPath >>= syncDirP
 
@@ -105,7 +105,7 @@ syncDirP p = do
 
   verbose $ "syncDir: create the collections for the archive dir: " ++ quotePath p
   genCollectionsByDir' p
-  verbose $ "syncDir: create the collections finished"
+  verbose "syncDir: create the collections finished"
 
   -- now the associated collection for dir is up to date and
   -- contains all ImgRef's, which have been updated,
@@ -120,7 +120,7 @@ syncDirP p = do
   -- new'p <- trcColEntrySet new'refs
 
   verbose $ "syncDir: images removed: " ++ show rem'refs
-  verbose $ "syncDir: remove these refs in all collections"
+  verbose   "syncDir: remove these refs in all collections"
   cleanupAllRefs rem'refs
 
   verbose $ "syncDir: images added:   " ++ show new'refs
@@ -217,7 +217,7 @@ syncDirCont recursive i = do
   p  <- objid2path i
 
   cont <- objid2contNames i
-  let lost = filter (`notElem` (subdirs ++ (map (fst . snd . head) imgfiles))) cont
+  let lost = filter (`notElem` subdirs ++ (map (fst . snd . head) imgfiles)) cont
   trc $ "syncDirCont: lost = " ++ show lost
   -- remove lost stuff
   mapM_ (remDirCont p) lost
@@ -338,7 +338,7 @@ syncParts i pp = do
         else p
 
 checkEmptyDir :: ObjId -> Cmd ()
-checkEmptyDir i = do
+checkEmptyDir i =
   whenM (isempty <$> getImgVal i) $ do
     p <- objid2path i
     verbose $ "sync: empty image dir ignored " ++ quotePath p
@@ -359,7 +359,7 @@ fsFileStat = fsStat "regular file" fileExist
 
 parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
-  (es, jpgdirs)  <- classifyNames <$> scanDirCont p
+  (es, jpgdirs)  <- classifyNames <$> readDir p
   -- trc $ "parseDirCont: " ++ show (es, jpgdirs)
   jss <- mapM
          (parseJpgDirCont p)                       -- process jpg subdirs
@@ -372,11 +372,11 @@ parseDirCont p = do
       .
       filter    (hasImgType (/= IMGboring))  -- remove boring stuff
       .
-      map (\ n -> (mkName n, filePathToImgType n))
+      map (mkName &&& filePathToImgType)
 
 parseJpgDirCont :: FilePath -> FilePath -> Cmd [(Name, (Name, ImgType))]
 parseJpgDirCont p d =
-  classifyNames <$> scanDirCont (p </> d)
+  classifyNames <$> readDir (p </> d)
   where
     classifyNames =
       filter (\ n -> (n ^. _2 . _2) == IMGjpg)
@@ -385,15 +385,8 @@ parseJpgDirCont p d =
                   in (mkName dn, filePathToImgType dn)
           )
 
-
-scanDirCont :: FilePath -> Cmd [FilePath]
-scanDirCont p0 = do
-  -- trc $ "scanDirCont: reading dir " ++ show p0
-  res <- readDir p0
-  -- trc $ "scanDirCont: result is " ++ show res
-  return res
-
 hasImgType :: (ImgType -> Bool) -> (Name, (Name, ImgType)) -> Bool
-hasImgType p (_, (_, t)) = p t
+hasImgType p = p . (^. _2 . _2)
+{-# INLINE hasImgType #-}
 
 -- ----------------------------------------
