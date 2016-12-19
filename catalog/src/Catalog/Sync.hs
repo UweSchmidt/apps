@@ -98,7 +98,7 @@ syncDirP p = do
   -- sync the dir
   syncDir' p
 
-  -- throw away all ImgRef's in associated collection of the synced dir
+  -- throw away all ImgRef's in associated collection of the synchronized dir
   cp <- ($ p) <$> img2colPath
   cleanupColByPath cp
   checkImgStore
@@ -135,8 +135,8 @@ syncDir' p = do
   mbi <- lookupByPath p
   i <- case mbi of
     Nothing -> do
-      -- try to create new dir in parent dir, parent must already be there
-      let (p1, n) = p ^.viewBase
+      -- try to create new dir in parent dir, parent must be there already
+      let (p1, n) = p ^. viewBase
       (di, dn) <- getIdNode' p1
       unless (isDIR dn) $
         abort $ "syncDir: parent isn't an image dir: " ++ quotePath p1
@@ -148,6 +148,32 @@ syncDir' p = do
       return i'
 
   idSyncFS True i
+
+-- ----------------------------------------
+
+syncNewDirs :: Path -> Cmd ()
+syncNewDirs p = do
+  verbose $
+    "syncNewDirs: add new subdirs from filesystem into directory " ++ quotePath p
+  mbi <- lookupByPath p
+  case mbi of
+    Nothing ->
+      warn $ "syncNewDir: directory not found: " ++ quotePath p
+
+    Just (i', n') -> do
+      unless (isDIR n') $
+        abort $ "syncNewDirs: path isn't an image dir: " ++ quotePath p
+      whenM (objid2path i' >>= toFilePath >>= dirExist) $
+        syncNewDirsCont i'
+
+syncNewDirsCont :: ObjId -> Cmd ()
+syncNewDirsCont i = do
+  p       <- objid2path i
+  cont    <- objid2contNames i
+  newdirs <- (filter (`notElem` cont) . fst) <$>
+             collectDirCont i
+  trc $ "syncNewDirsCont: " ++ show newdirs
+  mapM_ (syncDir' . (p `snocPath`)) newdirs
 
 -- ----------------------------------------
 -- the work horse
