@@ -45,6 +45,7 @@ filePathConfig = map (first parseRegexExt) $
   , (mk1 baseName  ++ mk2 ptoExt,  IMGhugin)
   , (mk1 baseName  ++ mk2 dxoExt,  IMGdxo)
   , (mk1 baseName  ++ mk2 txtExt,  IMGtxt)
+  , (mk1 baseName  ++ mk2 dngExt,  IMGdng)
   , (mk1 jpgdirName,               IMGjpgdir)
   , (mk1 imgdirName,               IMGimgdir)
   , (jpgdirPre
@@ -53,18 +54,22 @@ filePathConfig = map (first parseRegexExt) $
   , (jpgdirPre
      ++ mk1 baseName
      ++ mk2 jpgExt,                IMGjpg)  -- these jpgs are developed from a raw image
+  , (jpgdirPre
+     ++ mk1 baseName
+     ++ mk2 dngExt,                IMGdng)  -- these dngs are developed from a raw image
   ]
   where
     mk1  e = "({1}(" ++ e ++ "))"
     mk2  e = "({2}(" ++ e ++ "))"
 
     baseName  = "[-+._A-Za-z0-9]+"
-    rawExt    = "[.](nef|NEF||rw2|RW2|dng|DNG)"
+    rawExt    = "[.](nef|NEF|rw2|RW2)"
     imgExt    = "[.](gif|tiff?|png|ppm|pgm|pbm)"
     xmpExt    = "[.](xmp|XMP)"
     dxoExt    = "[.]((nef|NEF|rw2|RW2|jpg|JPG)[.]dop)"
     ptoExt    = "[.]pto"
-    jsonExt   = "[.](json)"
+    jsonExt   = "[.]json"
+    dngExt    = "[.](dng|DNG)"
     jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"
     txtExt    = "[.](md|txt)"
@@ -81,6 +86,7 @@ filePathConfig = map (first parseRegexExt) $
            , "web"
            , "bw"
            , "jpg"
+           , "dng"
            ]
          )
       ++ ")"
