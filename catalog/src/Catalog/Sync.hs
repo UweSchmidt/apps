@@ -173,7 +173,7 @@ syncNewDirsCont i = do
   newdirs <- (filter (`notElem` cont) . fst) <$>
              collectDirCont i
   trc $ "syncNewDirsCont: " ++ show newdirs
-  mapM_ (syncDir' . (p `snocPath`)) newdirs
+  mapM_ (syncDirP . (p `snocPath`)) newdirs
 
 -- ----------------------------------------
 -- the work horse

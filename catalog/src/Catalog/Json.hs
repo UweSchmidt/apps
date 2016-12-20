@@ -17,7 +17,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      , putColBlogSource
                                      , getColBlogCont
                                      )
-import           Catalog.Sync            (syncDirP)
+import           Catalog.Sync            (syncDirP, syncNewDirs)
 import           Catalog.System.ExifTool (getMetaData)
 import           Control.Lens
 -- import           Control.Monad.Except
@@ -218,6 +218,11 @@ jsonCall fct i n args =
       jl $ \ () ->
              syncCol i
 
+    -- import new subcollection of a collection in /archive/photo
+    "newSubCols" ->
+      jl $ \ () ->
+             newSubCols i
+
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
   where
@@ -250,17 +255,22 @@ checkWriteableCol dPath = do
 
 -- ----------------------------------------
 
+newSubCols :: ObjId -> Cmd ()
+newSubCols = syncCol' syncNewDirs
+
 syncCol :: ObjId -> Cmd ()
-syncCol i = do
+syncCol = syncCol' syncDirP
+
+syncCol' :: (Path -> Cmd ()) -> ObjId -> Cmd ()
+syncCol' sync i = do
   path <- objid2path i
   unless (isPathPrefix p'photos path) $
-    abort ("syncCol: collection does not have path prefix "
+    abort ("syncCol': collection does not have path prefix "
            ++ quotePath p'photos ++ ": "
            ++ quotePath path)
   let path'dir = substPathPrefix p'photos p'arch'photos path
-  verbose $ "syncCol: directory " ++ quotePath path'dir
-  -- di <- fst <$> getIdNode' path'dir
-  syncDirP path'dir
+  verbose $ "syncCol': directory " ++ quotePath path'dir
+  sync path'dir
 
 removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
 removeFrCol ixs i n = do

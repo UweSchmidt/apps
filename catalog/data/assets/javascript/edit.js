@@ -872,13 +872,13 @@ function checkAllColAreThere(refresh, force) {
 
 // ----------------------------------------
 
-function syncActiveCollection() {
+function syncActiveCollection(sync) {
     var cid  = activeCollectionId();
     var path = collectionPath(cid);
-    syncCollectionWithFilesystem(path);
+    syncCollectionWithFilesystem(sync, path);
 }
 
-function syncCollectionWithFilesystem(path) {
+function syncCollectionWithFilesystem(sync, path) {
     console.log("syncCollectionWithFilesystem: " + path);
 
     if ( ! isPathPrefix(pathPhotos(), path) ) {
@@ -889,10 +889,10 @@ function syncCollectionWithFilesystem(path) {
 
     // start syncing on server side
     statusMsg('synchronizing collection with filesystem: ' + path);
-    modifyServer1("syncCol", path, [],
+    modifyServer1(sync, path, [],
                   function(log) {
                       statusMsg('synchronizing on server side done');
-                      // TODO
+                      // TODO: show log file in modal box
                       console.log(log);
                       checkAllColAreThere(true, false);
                   });
@@ -2223,7 +2223,14 @@ $(document).ready(function () {
         .on('click', function () {
             // statusClear();
             statusMsg('sync collection with images on the filesystem, one moment please');
-            syncActiveCollection();
+            syncActiveCollection('syncCol');
+        });
+
+    $('#NewCollection')
+        .on('click', function () {
+            // statusClear();
+            statusMsg('import new subcollections collection from filesystem, one moment please');
+            syncActiveCollection('newSubCols');
         });
 
     // refresh all collections, just a debug op
