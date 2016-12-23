@@ -86,7 +86,6 @@ filePathConfig = map (first parseRegexExt) $
            , "web"
            , "bw"
            , "jpg"
-           , "dng"
            ]
          )
       ++ ")"
