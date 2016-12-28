@@ -457,7 +457,7 @@ insMetaData md env =
   & insMD "exifExposureProgram"          (gmd "EXIF:ExposureProgram")
   & insMD "exifExposureCompensation"     (gmd "EXIF:ExposureCompensation")
   & insMD "exifFNumber"                  (gmd "EXIF:FNumber")
-  & insMD "exifFocusDistance"            (gmd "EXIF:FocusDistance")
+  & insMD "exifFocusDistance"            (gmd "MakerNotes:FocusDistance")
   & insMD "exifDepthOfField"             (gmd "Composite:DOF")
   & insMD "exifISO"                      (gmd "EXIF:ISO")
   & insMD "exifFocalLength"              (gmd "EXIF:FocalLength")
