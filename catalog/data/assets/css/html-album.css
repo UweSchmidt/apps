@@ -142,6 +142,11 @@ body {
   padding:  0px;
 }
 
+body.picture-2560x1440 {
+  width:  2560px;
+  height: 1440px;
+}
+
 body.picture-1920x1200 {
   width:  1920px;
   height: 1200px;
@@ -160,6 +165,13 @@ body.picture-1400x1050 {
 body.picture-1280x800 {
   width:  1280px;
   height:  800px;
+}
+
+body.album-2560x1440 {
+  width:        2530px;
+  height:       auto;
+  margin-left:  15px;
+  margin-right: 15px;
 }
 
 body.album-1920x1200 {
@@ -230,6 +242,14 @@ div.title-area-line, div.info-area-content {
   left:          0px;
   height:       auto;
   min-height:  100px;
+}
+
+div.title-area-line-2560x1440, div.info-area-content-2560x1440 {
+  padding-left:   20px;
+  padding-right:  20px;
+  padding-top:    15px;
+  padding-bottom: 15px;
+  width:        2100px;
 }
 
 div.title-area-line-1920x1200, div.info-area-content-1920x1200 {

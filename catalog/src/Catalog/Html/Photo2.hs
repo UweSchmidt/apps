@@ -48,7 +48,13 @@ type ActCmd      = TmplAct Cmd
 
 thePageConfigs :: [PageConfig]
 thePageConfigs =
-  [ ("html-1920x1200", ( GeoAR 1920 1200 Pad
+  [ ("html-2560x1440", ( GeoAR 2560 1440 Pad
+                       , GeoAR  160  120 Fix
+                       , 14
+                       , photo2Tmpl
+                       )
+    )
+  , ("html-1920x1200", ( GeoAR 1920 1200 Pad
                        , GeoAR  160  120 Fix
                        , 11
                        , photo2Tmpl
