@@ -1987,7 +1987,7 @@ function getBlogTextForEdit(args) {
                );
 }
 
-function saveBlogTextFromEdit(args,text) {
+function saveBlogTextFromEdit(args, text) {
     modifyServer("saveblogsource",
                  args.path,
                  [args.pos, text],
@@ -1996,12 +1996,21 @@ function saveBlogTextFromEdit(args,text) {
                  });
 }
 
-function saveImgStore() {
+function saveImgStoreStart() {
+    // statusClear();
+    statusMsg('taking snapshot of image archive, one moment please');
+    var name = $('#saveImgStoreName').val();
+    $('#saveImgStoreName').val('');
+    saveImgStore(name);
+}
+
+function saveImgStore(text) {
+    console.log('saveImgStore: ' + text);
     modifyServer("snapshot",
                  pathArchive(),
-                 [],
+                 text,
                  function () {
-                     statusMsg('snapshot of image archive taken on server side');
+                     statusMsg('snapshot of image archive taken');
                  });
 }
 
@@ -2212,12 +2221,21 @@ $(document).ready(function () {
     // #BlogEditButton triggers the modal box
     // it is invoked by blogEdit handler
 
+    $('#saveImgStoreOK')
+        .on('click', function (e) {
+            console.log("saveImgStoreOK clicked");
+            $('#saveImgStoreModal').modal('hide');
+            saveImgStoreStart();
+        });
+
+    /* saveImgStore is called via a modal box for a comment
     $('#SaveImgStore')
         .on('click', function () {
             // statusClear();
             statusMsg('taking snapshot of image archive, one moment please');
-            saveImgStore();
+            saveImgStore("a very descriptive comment");
         });
+     /* */
 
     $('#SyncCollection')
         .on('click', function () {

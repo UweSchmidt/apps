@@ -210,8 +210,8 @@ jsonCall fct i n args =
     -- on client side, the 1. arg must be a path to an existing node
     -- simply take p'archive ("/archive"), the root node
     "snapshot" ->
-      jl $ \ () ->
-             snapshotImgStore
+      jl $ \ cmt ->
+             snapshotImgStore cmt
 
     -- sync a subcollection of /archive/photo with filesystem
     "syncCol" ->

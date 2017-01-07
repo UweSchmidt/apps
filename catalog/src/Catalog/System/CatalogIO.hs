@@ -43,25 +43,27 @@ saveImgStore p = do
 --
 -- both can be loaded during server startup
 
-snapshotImgStore :: Cmd ()
-snapshotImgStore = do
+snapshotImgStore :: String -> Cmd ()
+snapshotImgStore cmt = do
   pt <- view envJsonArchive
 
   verbose $ "snapshotImgStore: make a snapshot into " ++ show pt
   saveImgStore pt
-  checkinImgStore pt
+  checkinImgStore cmt pt
 
   let pt' = switchArchiveName pt
   verbose $ "snapshotImgStore: make a snapshot into " ++ show pt'
   saveImgStore pt'
-  checkinImgStore pt'
+  checkinImgStore cmt pt'
 
-checkinImgStore :: FilePath -> Cmd ()
-checkinImgStore pt = do
+checkinImgStore :: String -> FilePath -> Cmd ()
+checkinImgStore cmt pt = do
   ts <- nowAsIso8601
   verbose $ unwords ["bash []", checkinScript ts]
   void $ execProcess "bash" [] $ checkinScript ts
   where
+    cmt' | null cmt  = cmt
+         | otherwise = ", " ++ cmt
     -- the git script is somewhat fragile,
     -- if there are untracked files in the dir
     -- git returns exit code 1, this generates an error
@@ -71,7 +73,7 @@ checkinImgStore pt = do
       [ "cd", qt $ FP.takeDirectory pt, ";"
       , "git add -A ;"
       , "git diff --quiet --exit-code --cached ||"
-      , "git commit -a -m", qt ("catalog-server: " ++ ts ++ ", " ++ pt)
+      , "git commit -a -m", qt ("catalog-server: " ++ ts ++ ", " ++ pt ++ cmt')
       ]
     qt s = '\'' : s ++ "'"
 
