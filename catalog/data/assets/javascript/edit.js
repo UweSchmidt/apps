@@ -1715,6 +1715,11 @@ function showMetaData(md0, args) {
     clearEntryMark($(args.dia));
 }
 
+function imageCarousel() {
+    console.log("imageCarousel: show carousel");
+    $('#CarouselModal').modal('show');
+}
+
 function previewImage() {
     var args = {};
     args.cid  = activeCollectionId();
@@ -2198,6 +2203,12 @@ $(document).ready(function () {
         .on('click', function () {
             statusClear();
             previewImage();
+        });
+
+    $('#CarouselButton')
+        .on('click', function () {
+            statusMsg("open image carousel");
+            imageCarousel();
         });
 
     $('#ShowMetaDataButton0')

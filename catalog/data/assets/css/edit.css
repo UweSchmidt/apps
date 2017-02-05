@@ -178,3 +178,29 @@ table.metadata-table th {
 .coltab-readonly {
   color: #d9534f;
 }
+
+.modal-carousel {
+  min-width: 1400px;
+  min-height: 1050px;
+}
+
+/* align and center an image in a fixed size box */
+
+.img-box {
+  width: 1400px;
+  height: 1050px;
+  position: relative;
+}
+
+.img-box > img {
+    max-height: 100%;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
