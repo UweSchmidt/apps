@@ -1716,7 +1716,40 @@ function showMetaData(md0, args) {
 }
 
 function imageCarousel() {
+    var args = {};
+    args.cid  = activeCollectionId();
+    args.path = collectionPath(args.cid);
+
     console.log("imageCarousel: show carousel");
+
+    // build the carousel DOM
+    var c   = $("#prototype-carousel")
+            .children("div")
+            .clone();
+    var cli = c.find('ol.carousel-indicators li')
+            .clone()
+            .removeClass('active');
+    var cit = c.find('div.carousel-inner div.item')
+            .clone()
+            .removeClass('active');
+
+    // insert images
+
+
+    // set the initially active slide
+    c.find("li[data-slide-to='0']")
+        .addClass('active');
+    c.find("div.carousel-inner div:first-child")
+        .addClass('active');
+
+    // make all stuff in the modal box invisible
+    // $('#CarouselModalBody > div').addClass('hidden');
+    $('#CarouselModalBody')
+        .empty()
+        .append(c);
+    $('#CarouselModalLabel')
+        .empty()
+        .append('Slideshow: ' + args.path);
     $('#CarouselModal').modal('show');
 }
 

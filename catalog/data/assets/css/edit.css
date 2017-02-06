@@ -190,6 +190,7 @@ table.metadata-table th {
   width: 1400px;
   height: 1050px;
   position: relative;
+  margin: auto;
 }
 
 .img-box > img {

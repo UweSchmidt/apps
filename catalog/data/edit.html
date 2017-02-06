@@ -671,10 +671,12 @@
                 <li data-target="#myCarousel" data-slide-to="2"></li>
               </ol>
               <div class="carousel-inner" role="listbox">
-                <div class="item active img-box">
-                  <img class="first-slide"
-                       src="/pad-1400x1050/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7092.jpg"
-                       alt="First slide">
+                <div class="item active">
+                  <div class="img-box">
+                    <img class="first-slide"
+                         src="/pad-1400x1050/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7092.jpg"
+                         alt="First slide">
+                  </div>
                   <div class="container">
                     <div class="carousel-caption">
                       <h1>Example headline.</h1>
@@ -687,10 +689,12 @@
                     </div>
                   </div>
                 </div>
-                <div class="item img-box">
-                  <img class="second-slide"
-                       src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7022.jpg"
-                       alt="Second slide">
+                <div class="item">
+                  <div class="img-box">
+                    <img class="second-slide"
+                         src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7022.jpg"
+                         alt="Second slide">
+                  </div>
                   <div class="container">
                     <div class="carousel-caption">
                       <h1>Another example headline.</h1>
@@ -699,10 +703,12 @@
                     </div>
                   </div>
                 </div>
-                <div class="item img-box">
-                  <img class="third-slide"
-                       src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7049.jpg"
-                       alt="Third slide">
+                <div class="item">
+                  <div class="img-box">
+                    <img class="third-slide"
+                         src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7049.jpg"
+                         alt="Third slide">
+                  </div>
                   <div class="container">
                     <div class="carousel-caption">
                       <h1>One more for good measure.</h1>
@@ -904,6 +910,40 @@
           </a>
         </li>
       </ul>
+    </div>
+
+    <!-- carousel prototype -->
+    <div id="prototype-carousel" class="prototype">
+      <div id="image-carousel" class="carousel no-slide" data-interval="500000">
+        <!-- Indicators -->
+        <ol class="carousel-indicators">
+          <li data-target="#image-carousel" data-slide-to="0" class="active"></li>
+        </ol>
+        <div class="carousel-inner" role="listbox">
+          <div class="item active">
+            <div class="img-box">
+              <img class="prototype-carousel-img"
+                   src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7022.jpg"
+                   alt="protype slide">
+            </div>
+            <div class="container">
+              <div class="carousel-caption">
+                <h1>Carousel Prototype</h1>
+                <p>the parent div.item must be duplicated for the carousel</p>
+                <p><a class="btn btn-lg btn-primary" href="#" role="button">push me</a></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <a class="left carousel-control" href="#image-arousel" role="button" data-slide="prev">
+          <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+          <span class="sr-only">Previous</span>
+        </a>
+        <a class="right carousel-control" href="#image-carousel" role="button" data-slide="next">
+          <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+          <span class="sr-only">Next</span>
+        </a>
+      </div>
     </div>
 
     <!-- Bootstrap core JavaScript
