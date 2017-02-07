@@ -1720,7 +1720,23 @@ function imageCarousel() {
     args.cid  = activeCollectionId();
     args.path = collectionPath(args.cid);
 
-    console.log("imageCarousel: show carousel");
+    console.log("imageCarousel: get collection from server:" + args.path);
+    getColFromServer(args.path,
+                     function (path, colVal) {
+                         buildImgCarousel(args, colVal)
+                     });
+}
+
+function buildImgCarousel(args, colVal) {
+    console.log("buildImgCarousel: " + args.path);
+    console.log(JSON.stringify(colVal));
+
+    if (colVal.entries.length == 0) {
+        statusError("empty collection: " + args.path);
+        return;
+    }
+
+    var g = previewGeo();
 
     // build the carousel DOM
     var c   = $("#prototype-carousel")
@@ -1732,9 +1748,48 @@ function imageCarousel() {
     var cit = c.find('div.carousel-inner div.item')
             .clone()
             .removeClass('active');
+    // add the appropriate geo class for carousel images to prototype
+    cit.find('div.img-box').addClass("img-box-" + g.geo);
+
+    // remove prototype list of indicators and list of items
+    c.find('ol.carousel-indicators').empty();
+    c.find('div.carousel-inner').empty();
 
     // insert images
+    colVal.entries.forEach(function (e, i) {
+        console.log("entry: " + i);
+        console.log(JSON.stringify(e));
 
+        // append to the list of carousel indicators
+        var item = $(cli).clone().attr("data-slide-to", i);
+        c.find('ol.carousel-indicators').append(item);
+
+        // append carousel item to item list
+        var cimg = $(cit).clone();
+        var eref = splitPath(e.ref);
+        var capt = "."
+                + (i + 1)
+                + " "
+                + (e.ColEntry == "COL" ? "Collection: " : "")
+                + eref.name;
+
+        cimg.find('div.carousel-caption')
+            .empty()
+            .append("<h1>" + capt + "</h1>");
+
+        // insert the icon ref into cimg
+        // this is done asynchronously by the callback fct
+        getIconRefFromServer(eref.path,
+                             previewSize(),
+                             function (ref) {
+                                 console.log("iconref: " + ref);
+                                 cimg.find("div.img-box img")
+                                     .attr('src', ref)
+                                     .attr('alt', eref.name);
+                             });
+        c.find('div.carousel-inner').append(cimg);
+
+    }); // end forEach loop
 
     // set the initially active slide
     c.find("li[data-slide-to='0']")
@@ -1742,14 +1797,15 @@ function imageCarousel() {
     c.find("div.carousel-inner div:first-child")
         .addClass('active');
 
-    // make all stuff in the modal box invisible
-    // $('#CarouselModalBody > div').addClass('hidden');
+    // configure the modal box and its size
+    $('#CarouselModal > div.modal-dialog')
+        .attr('class', 'modal-dialog modal-carousel-' + g.geo);
     $('#CarouselModalBody')
         .empty()
         .append(c);
     $('#CarouselModalLabel')
         .empty()
-        .append('Slideshow: ' + args.path);
+        .append('Collection ' + args.path + ": " + colVal.metadata[0]["descr:Title"]);
     $('#CarouselModal').modal('show');
 }
 
@@ -2328,6 +2384,17 @@ function idClipboard()   { return path2id(pathClipboard()); }
 function idTrash()       { return path2id(pathTrash()); }
 
 function iconSize()    { return "pad-160x160"; }
-function previewSize() { return "pad-900x600"; }
+// function previewSize() { return "pad-900x600"; }
+function previewSize() { return "pad-1400x1050"; }
+
+// function previewGeo() { return previewGeoXY(1400,1050); }
+function previewGeo() { return previewGeoXY(900,600); }
+
+function previewGeoXY(x, y) {
+    var o = {w : x, h: y};
+    o.geo = "" + o.w + "x" + o.h;
+    o.img = "pad-" + o.geo;
+    return o;
+}
 
 // ----------------------------------------

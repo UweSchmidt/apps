@@ -179,16 +179,44 @@ table.metadata-table th {
   color: #d9534f;
 }
 
-.modal-carousel {
+.modal-carousel-1400x1050 {
   min-width: 1400px;
   min-height: 1050px;
 }
 
+.modal-carousel-900x600 {
+  min-width: 900px;
+  min-height: 600px;
+}
+
+.modal-header-inverse {
+    padding: 15px;
+    border-bottom: 1px solid #555;
+}
+
+.modal-content-inverse {
+    color: #eee;
+    background-color: #222;
+    border-color: #080808;  /* no effect in carousel modal */
+}
+
+.bg-dark {
+  background-color: #333;
+}
+
 /* align and center an image in a fixed size box */
 
-.img-box {
+.img-box-1400x1050 {
   width: 1400px;
   height: 1050px;
+}
+
+.img-box-900x600 {
+  width: 900px;
+  height: 600px;
+}
+
+.img-box {
   position: relative;
   margin: auto;
 }
