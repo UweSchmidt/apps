@@ -60,7 +60,7 @@ library
   -- Other library packages from which modules are imported.
   build-depends:     base                 >= 4.5
                    , aeson                >= 0.8
-                   , aeson-pretty         >= 0.7
+                   , aeson-pretty         >= 0.8
                    , bytestring           >= 0.9
                    , cmdtheline           >= 0.2
                    , containers           >= 0.4

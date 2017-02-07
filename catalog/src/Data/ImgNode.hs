@@ -128,7 +128,7 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
          Nothing -> []
          Just p  -> ["blog"  J..= p]
 
-instance (Ord ref, FromJSON ref) => FromJSON (ImgNode' ref) where
+instance (FromJSON ref) => FromJSON (ImgNode' ref) where
   parseJSON = J.withObject "ImgNode" $ \ o ->
     do t <- o J..: "ImgNode"
        case t :: String of
@@ -533,7 +533,7 @@ instance IsEmpty (ColEntrySet' ref) where
 memberColEntrySet :: Ord ref => ColEntry' ref -> ColEntrySet' ref -> Bool
 memberColEntrySet ce (CES s) = ce `S.member` s
 
-singletonColEntrySet :: Ord ref => ColEntry' ref -> ColEntrySet' ref
+singletonColEntrySet :: ColEntry' ref -> ColEntrySet' ref
 singletonColEntrySet = CES . S.singleton
 
 fromListColEntrySet :: Ord ref => [ColEntry' ref] -> ColEntrySet' ref

@@ -19,7 +19,7 @@ encodeJSON :: ToJSON a => a -> LazyByteString
 encodeJSON = J.encodePretty' conf
   where
     conf = J.defConfig
-           { J.confIndent  = 2 }
+           { J.confIndent  = J.Spaces 2 }
 
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do

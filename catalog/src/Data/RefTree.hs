@@ -181,7 +181,7 @@ isDirRoot r t = t ^. theParent r == r
 {-# INLINE isDirRoot #-}
 
 -- lookup a (ref, nodeval) by a path
-lookupDirPath :: (Ord ref, Show ref) =>
+lookupDirPath :: (Ord ref) =>
                   (Path -> ref) ->
                   Path ->
                   DirTree node ref ->
