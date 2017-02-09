@@ -179,6 +179,17 @@ table.metadata-table th {
   color: #d9534f;
 }
 
+.modal-preview-1400x1050 {
+  min-width: 1400px;
+  min-height: 1050px;
+}
+
+.modal-preview-900x600 {
+  min-width: 900px;
+  min-height: 600px;
+}
+
+
 .modal-carousel-1400x1050 {
   min-width: 1400px;
   min-height: 1050px;

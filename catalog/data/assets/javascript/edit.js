@@ -1863,11 +1863,15 @@ function previewImage() {
     args.iscol  = $(args.dia).hasClass('colmark');
     args.pos    = getEntryPos(args.dia);
     args.name   = getDiaName(args.dia);
-    args.fmt    = previewSize();
+    args.fmt    = previewGeo().img;
     clearEntryMark($(args.dia));
 
-    // make all stuff in the modal box invisible
-    $('#PreviewModalBody > div').addClass('hidden');
+    $('#PreviewModal > div.modal-dialog')
+        .attr('class', 'modal-dialog modal-preview-' + previewGeo().geo);
+
+    $('#PreviewModalBody > div')
+        .addClass('hidden');
+
     $('#PreviewModalLabel')
         .empty()
         .append('Preview: ' + args.path + "/" + args.name);
