@@ -995,8 +995,16 @@ function splitPath(p) {
     }
 
     var a = p.path.split("/");
-    p.name  = a.pop();
-    p.cpath = a.join("/");
+    p.name    = a.pop();
+    // console.log(a);
+    p.cpath   = a.join("/");
+    // a.shift();
+    console.log(a);
+    p.topname = a.shift(); // get the name of the top dir
+    // console.log(a);
+    a.unshift("");
+    console.log(a);
+    p.cpath1  = a.join("/"); // remove the topdir
 
     var e = p.name.split(".");
     if (e.length < 2) {
@@ -1738,10 +1746,17 @@ function buildImgCarousel(args, colVal) {
 
     var g = previewGeo();
 
-    // build the carousel DOM
+    // build the carousel DOM by copying the prototype
+    // and rename id an did refs
     var c   = $("#prototype-carousel")
             .children("div")
             .clone();
+    c.attr('id', 'image-carousel');
+    c.find('[data-target="#proto-carousel"]')
+        .attr('data-target', "#image-carousel");
+    c.find('[href="#proto-carousel"]')
+        .attr('href', "#image-carousel");
+
     var cli = c.find('ol.carousel-indicators li')
             .clone()
             .removeClass('active');
@@ -1765,12 +1780,13 @@ function buildImgCarousel(args, colVal) {
         c.find('ol.carousel-indicators').append(item);
 
         // append carousel item to item list
+        var iscol = e.ColEntry == "COL";
         var cimg = $(cit).clone();
         var eref = splitPath(e.ref);
         var capt = "."
                 + (i + 1)
                 + " "
-                + (e.ColEntry == "COL" ? "Collection: " : "")
+                + (iscol ? "Collection: " : "")
                 + eref.name;
 
         cimg.find('div.carousel-caption')
@@ -1778,15 +1794,28 @@ function buildImgCarousel(args, colVal) {
             .append("<h1>" + capt + "</h1>");
 
         // insert the icon ref into cimg
-        // this is done asynchronously by the callback fct
-        getIconRefFromServer(eref.path,
-                             previewSize(),
-                             function (ref) {
-                                 console.log("iconref: " + ref);
-                                 cimg.find("div.img-box img")
-                                     .attr('src', ref)
-                                     .attr('alt', eref.name);
-                             });
+        if ( iscol ) {
+            // for a collection this is done asynchronously by the callback fct
+            getIconRefFromServer(eref.path,
+                                 previewGeo().img,
+                                 function (ref) {
+                                     console.log("iconref: " + ref);
+                                     cimg.find("div.img-box img")
+                                         .attr('src', ref)
+                                         .attr('alt', eref.name);
+                                 });
+        } else {
+            var iref = "/" + g.img + eref.cpath1 + "/" + e.part;
+            var notJpg = splitPath(e.part).ext !== "jpg";
+            if ( notJpg ) {
+                iref = iref + ".jpg";
+            }
+            console.log("iconref: " + iref);
+            cimg.find("div.img-box img")
+                .attr('src', iref)
+                .attr('alt', eref.name);
+
+        }
         c.find('div.carousel-inner').append(cimg);
 
     }); // end forEach loop
@@ -1803,9 +1832,22 @@ function buildImgCarousel(args, colVal) {
     $('#CarouselModalBody')
         .empty()
         .append(c);
+
+    var clab = "";
+    var ttt  = colVal.metadata[0]["descr:Title"];
+    if ( ttt ) {
+        clab += "<h3>" + ttt + "<h3>"
+    }
+    ttt  = colVal.metadata[0]["descr:Subtitle"];
+    if ( ttt ) {
+        clab += "<h4>" + ttt + "<h4>"
+    }
+    clab += "<h5>" + args.path + "</h5>";
+
     $('#CarouselModalLabel')
         .empty()
-        .append('Collection ' + args.path + ": " + colVal.metadata[0]["descr:Title"]);
+        .append(clab);
+
     $('#CarouselModal').modal('show');
 }
 
@@ -2384,11 +2426,14 @@ function idClipboard()   { return path2id(pathClipboard()); }
 function idTrash()       { return path2id(pathTrash()); }
 
 function iconSize()    { return "pad-160x160"; }
-// function previewSize() { return "pad-900x600"; }
-function previewSize() { return "pad-1400x1050"; }
 
-// function previewGeo() { return previewGeoXY(1400,1050); }
-function previewGeo() { return previewGeoXY(900,600); }
+function previewGeo() {
+    var g = window.screen;
+    if (g.width === 2560 && g.height === 1440) {
+        return previewGeoXY(1400, 1050);
+    }
+    return previewGeoXY(900,600);
+}
 
 function previewGeoXY(x, y) {
     var o = {w : x, h: y};

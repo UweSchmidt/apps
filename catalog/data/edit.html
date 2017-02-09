@@ -171,16 +171,14 @@
                       aria-hidden="true"></span>
               </button>
             </li>
-            <!-- carousel button -->
             <li>
               <button id="CarouselButton"
                       class="btn btn-link btn-lg"
                       title="image carousel for marked images">
-                <span class="glyphicon glyphicon-eye-open"
+                <span class="glyphicon glyphicon-film"
                       aria-hidden="true"></span>
               </button>
             </li>
-            <!-- carousel button -->
             <li>
               <button id="ShowMetaDataButton0"
                       class="btn btn-link btn-lg"
@@ -663,71 +661,7 @@
                class="modal-body">
 
             <!-- Carousel -->
-            <div id="myCarousel" class="carousel no-slide" data-interval="500000">
-              <!-- Indicators -->
-              <ol class="carousel-indicators">
-                <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
-                <li data-target="#myCarousel" data-slide-to="1"></li>
-                <li data-target="#myCarousel" data-slide-to="2"></li>
-              </ol>
-              <div class="carousel-inner" role="listbox">
-                <div class="item active">
-                  <div class="img-box">
-                    <img class="first-slide"
-                         src="/pad-1400x1050/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7092.jpg"
-                         alt="First slide">
-                  </div>
-                  <div class="container">
-                    <div class="carousel-caption">
-                      <h1>Example headline.</h1>
-                      <p>Note: If you're viewing this page via a
-                        <code>file://</code> URL, the "next" and
-                        "previous" Glyphicon buttons on the left and right might
-                        not load/display properly due to web browser security rules.
-                      </p>
-                      <p><a class="btn btn-lg btn-primary" href="#" role="button">Sign up today</a></p>
-                    </div>
-                  </div>
-                </div>
-                <div class="item">
-                  <div class="img-box">
-                    <img class="second-slide"
-                         src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7022.jpg"
-                         alt="Second slide">
-                  </div>
-                  <div class="container">
-                    <div class="carousel-caption">
-                      <h1>Another example headline.</h1>
-                      <p>Cras justo odio, dapibus ac facilisis in<p>
-                      <p><a class="btn btn-lg btn-primary" href="#" role="button">Learn more</a></p>
-                    </div>
-                  </div>
-                </div>
-                <div class="item">
-                  <div class="img-box">
-                    <img class="third-slide"
-                         src="/pad-900x600/archive/photos/themen/Reisen/Highway1-2015/Uwe/2015-08-03/srgb/_uwe7049.jpg"
-                         alt="Third slide">
-                  </div>
-                  <div class="container">
-                    <div class="carousel-caption">
-                      <h1>One more for good measure.</h1>
-                      <p>Cras justo odio, dapibus ac facilisis in</p>
-                      <p><a class="btn btn-lg btn-primary" href="#" role="button">Browse gallery</a></p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
-                <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
-                <span class="sr-only">Previous</span>
-              </a>
-              <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
-                <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
-                <span class="sr-only">Next</span>
-              </a>
-            </div>
-            <!-- /.carousel -->
+            <!-- prototype will br inserted here -->
 
           </div>
         </div>
@@ -914,10 +848,11 @@
 
     <!-- carousel prototype -->
     <div id="prototype-carousel" class="prototype">
-      <div id="image-carousel" class="carousel no-slide" data-interval="500000">
+      <div id="proto-carousel" class="carousel slide" data-interval="5000">
         <!-- Indicators -->
-        <ol class="carousel-indicators">
-          <li data-target="#image-carousel" data-slide-to="0" class="active"></li>
+        <ol class="carousel-indicators"
+            style="width: 90%; margin-left: -45%;">
+          <li data-target="#proto-carousel" data-slide-to="0" class="active"></li>
         </ol>
         <div class="carousel-inner bg-dark" role="listbox">
           <div class="item active">
@@ -934,11 +869,11 @@
             </div>
           </div>
         </div>
-        <a class="left carousel-control" href="#image-arousel" role="button" data-slide="prev">
+        <a class="left carousel-control" href="#proto-carousel" role="button" data-slide="prev">
           <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
           <span class="sr-only">Previous</span>
         </a>
-        <a class="right carousel-control" href="#image-carousel" role="button" data-slide="next">
+        <a class="right carousel-control" href="#proto-carousel" role="button" data-slide="next">
           <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
           <span class="sr-only">Next</span>
         </a>

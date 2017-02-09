@@ -204,6 +204,19 @@ table.metadata-table th {
   background-color: #333;
 }
 
+.carousel-indicators-lg {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    z-index: 15;
+    width: 90%;
+    padding-left: 0;
+    margin-left: -45%;
+    text-align: center;
+    list-style: none;
+}
+
+
 /* align and center an image in a fixed size box */
 
 .img-box-1400x1050 {
