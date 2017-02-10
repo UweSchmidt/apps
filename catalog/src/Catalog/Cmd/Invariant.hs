@@ -52,7 +52,7 @@ cleanupImgRefs i0 = do
 
     dirA go i es0 _ = do
       p <- objid2path i
-      trc $ "cleanupImgRefs: process img dir: " ++ quotePath p
+      -- trc $ "cleanupImgRefs: process img dir: " ++ quotePath p
 
       let es = es0 ^. isoDirEntries
       es' <- filterM (isOK checkDirRef) es
@@ -69,7 +69,7 @@ cleanupImgRefs i0 = do
 
     colA go i _md im be es = do
       p <- objid2path i
-      trc $ "cleanupImgRefs: process collection: " ++ quotePath p
+      -- trc $ "cleanupImgRefs: process collection: " ++ quotePath p
 
       im' <- filterMM (isOK (uncurry checkImgPart)) im
       when (im /= im') $ do

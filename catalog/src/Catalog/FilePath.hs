@@ -136,7 +136,7 @@ objSrc oex p =
 
 imgExtExpr :: Regex
 imgExtExpr =
-  parseRegex ".*[.](nef|NEF||rw2|RW2|dng|DNG|jpg|JPG)"
+  parseRegex ".*[.](nef|NEF||rw2|RW2|dng|DNG|jpg|JPG|xmp|XMP)"
 
 -- ----------------------------------------
 

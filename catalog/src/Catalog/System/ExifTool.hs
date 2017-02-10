@@ -86,26 +86,26 @@ syncMetaData i = do
         else return mempty
 
   ps <- getImgVals i (theParts . isoImgParts)
+
   fu <- view envForceMDU
+  let update = fu || (ts <= ps ^. traverse . theImgTimeStamp)
 
   trc $
     "syncMetaData: syncing exif data "
     ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
 
   -- collect meta data from raw and xmp parts
-  mapM_ (syncMD isRawMeta fu ip p ts) ps
+  when update $ do
+    mapM_ (syncMD isRawMeta ip p) ps
 
-  -- if neither raw nor xmp there, collect meta from jpg files
-  unless (has (traverse . isA isRawMeta) ps) $
-    mapM_ (syncMD isJpg fu ip p ts) ps
+    -- if neither raw nor xmp there, collect meta from jpg files
+    unless (has (traverse . isA isRawMeta) ps) $
+      mapM_ (syncMD isJpg ip p) ps
 
 syncMD :: (ImgPart -> Bool) ->
-          Bool -> Path -> FilePath -> TimeStamp -> ImgPart -> Cmd ()
-syncMD p fu ip fp ts pt =
-  when ( p pt    -- ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
-         &&
-         (fu || tw >= ts)              -- force update or part has been changed
-       ) $ do
+          Path -> FilePath -> ImgPart -> Cmd ()
+syncMD p ip fp pt =
+  when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
     sp <- toFilePath (substPathName tn ip)
     verbose $ "syncMetaData: syncing with " ++ show sp
     m1 <- readMetaData fp
@@ -113,7 +113,6 @@ syncMD p fu ip fp ts pt =
     writeMetaData fp (m2 <> m1)
   where
     ty = pt ^. theImgType
-    tw = pt ^. theImgTimeStamp
     tn = pt ^. theImgName
 
 isRawMeta :: ImgPart -> Bool
