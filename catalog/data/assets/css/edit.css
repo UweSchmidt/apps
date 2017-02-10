@@ -200,6 +200,29 @@ table.metadata-table th {
   min-height: 600px;
 }
 
+.carousel-image-capt:hover {}
+
+.carousel-image-mark {
+  padding-left: 0.5ex;
+  /* color: #d9534f; */
+}
+
+.carousel-image-marked {
+  color: red; /* #d9534f; */
+}
+
+.carousel-image-marked:hover {
+  color: #d9534f;
+}
+
+.carousel-image-unmarked {
+  color: #555; /* #d9534f; */
+}
+
+.carousel-image-unmarked:hover {
+  color: #777;
+}
+
 .modal-header-inverse {
     padding: 15px;
     border-bottom: 1px solid #555;

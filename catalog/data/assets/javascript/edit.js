@@ -125,6 +125,31 @@ function getDiaColWriteProtected(dia) {
     return res;
 }
 
+// --------------------
+
+function getDia(cid, i) {
+    var sel = '#' + cid + " > div.dia:nth-child(" + (i + 1) + ")";
+    console.log("getDia: sel: " + sel);
+    return $(sel);
+}
+
+function isMarkedDia(dia) {
+    if (dia) {
+        return dia.hasClass('marked');
+    }
+    return null;
+}
+
+function toggleDiaMark(cid, i) {
+    var dia = getDia(cid, i);
+    if (dia) {
+        dia = toggleOrSetMark(dia, 'toggle');
+    }
+    return dia;
+}
+
+// --------------------
+
 function getDiaNo(dia) {
     var pos = $(dia)
             .find('span.img-no')
@@ -1791,7 +1816,33 @@ function buildImgCarousel(args, colVal) {
 
         cimg.find('div.carousel-caption')
             .empty()
-            .append("<h1>" + capt + "</h1>");
+            .append('<h3>'
+                    + '<span class="carousel-image-capt">'
+                    + capt
+                    + '</span>'
+                    + '<a class="btn btn-link btn-lg carousel-image-mark"'
+                    + ' title="mark/unmark image">'
+                    + '<span class="glyphicon glyphicon-star"'
+                    + ' aria-hidden="true"></span>'
+                    + '</a>'
+                    + '</h3>'
+                   );
+        var state = isMarkedDia(getDia(args.cid, i));
+        var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
+
+        cimg.find('div.carousel-caption a.carousel-image-mark')
+            .addClass(cls)
+            .on('click', function (e){
+                var state = isMarkedDia(toggleDiaMark(args.cid, i));
+                var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
+                console.log(e.target);
+                $(e.target)
+                    .removeClass("carousel-image-marked")
+                    .removeClass("carousel-image-unmarked")
+                    .addClass(cls);
+                console.log(e.target);
+                console.log("toggle image mark: " + args.cid + " ." + i);
+            });
 
         // insert the icon ref into cimg
         if ( iscol ) {
