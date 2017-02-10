@@ -946,15 +946,23 @@ function refreshCollection1(path, colVal) {
 }
 
 function refreshCollection(path, colVal) {
+    refreshCollection2(path,colVal, false);
+}
+
+function refreshCollectionF(path, colVal) {
+    refreshCollection2(path,colVal, true);
+}
+
+function refreshCollection2(path, colVal, force) {
     var o = splitPath(path);
-    console.log('refreshCollection');
+    console.log('refreshCollection: ' + force);
     console.log(o);
     console.log(colVal);
 
     // only if the collection content has changed
     // update the entries
     var changed = updCol(path, colVal);
-    if ( changed ) {
+    if ( changed || force) {
         var io = isAlreadyOpen(path);
         // check whether collection is already there
         if ( io[0]) {
@@ -1497,7 +1505,7 @@ function writeProtectedCollection() {
     console.log(opcs);
     console.log(ro);
 
-    changeWriteProtectedOnServer(cpath,ixs, ro, opcs);
+    changeWriteProtectedOnServer(cpath, ixs, ro, opcs);
 }
 
 function markWriteProtected(opcs, ro) {
@@ -2091,7 +2099,7 @@ function sortColOnServer(path, ixs) {
 function changeWriteProtectedOnServer(path, ixs, ro, opcs) {
     modifyServer("changeWriteProtected", path, [ixs, ro],
                  function () {
-                     getColFromServer(path, refreshCollection);
+                     getColFromServer(path, refreshCollectionF);
                      markWriteProtected(opcs, ro);
                  });
 }
