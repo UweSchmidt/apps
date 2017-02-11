@@ -1885,6 +1885,23 @@ function buildImgCarousel(args, colVal) {
     c.find("div.carousel-inner div:first-child")
         .addClass('active');
 
+    $('#CarouselModal')
+        .off('keypress')
+        .on('keypress', function(e){
+        console.log('keydown: ' + e.keyCode);
+        if ( e.keyCode == 109 ) {  // 'm': mark
+            console.log('keypress: toggle image mark');
+            $('#CarouselModalBody div.carousel-inner div.item.active a.carousel-image-mark').click();
+        } else if ( e.keyCode == 110 ) { // 'n': next image
+            console.log('keypres: next image');
+            $("#CarouselModalBody .carousel-control.right").click();
+        } else if ( e.keyCode == 112 ) { // 'p': prev image
+            console.log('keypres: prev image');
+            $("#CarouselModalBody .carousel-control.left").click();
+        }
+        return false;
+    });
+
     // configure the modal box and its size
     $('#CarouselModal > div.modal-dialog')
         .attr('class', 'modal-dialog modal-carousel-' + g.geo);
