@@ -922,6 +922,31 @@ function syncCollectionWithFilesystem(sync, path) {
                       checkAllColAreThere(true, false);
                   });
 }
+
+function exifActiveCollection() {
+    var cid  = activeCollectionId();
+    var path = collectionPath(cid);
+    exifCollectionWithFilesystem(path);
+}
+
+function exifCollectionWithFilesystem(path) {
+    console.log("exifCollectionWithFilesystem: " + path);
+
+    if ( ! isPathPrefix(pathPhotos(), path) ) {
+        statusError('collection to be updated with exif must be a subcollection of '
+                    + pathPhotos());
+        return;
+    }
+
+    // start syncing on server side
+    statusMsg('recomputing exif data for: ' + path);
+    readServer1('syncExif', path, [],
+                function(log) {
+                    statusMsg('exif update done done');
+                    console.log(log);
+                });
+}
+
 function checkArchiveConsistency() {
     console.log("checkArchiveConsistency");
     statusMsg('checking/repairing archive consistency');
@@ -2464,6 +2489,13 @@ $(document).ready(function () {
             // statusClear();
             statusMsg('sync collection with images on the filesystem, one moment please');
             syncActiveCollection('syncCol');
+        });
+
+    $('#SyncExif')
+        .on('click', function () {
+            // statusClear();
+            statusMsg('recomputing exif data');
+            exifActiveCollection();
         });
 
     $('#NewCollection')
