@@ -18,7 +18,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      , getColBlogCont
                                      )
 import           Catalog.Sync            (syncDirP, syncNewDirs)
-import           Catalog.System.ExifTool (getMetaData)
+import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
 import           Control.Lens
 -- import           Control.Monad.Except
 -- import           Control.Monad.RWSErrorIO
@@ -217,6 +217,11 @@ jsonCall fct i n args =
     "syncCol" ->
       jl $ \ () ->
              syncCol i
+
+    -- sync a subcollection of /archive/photo with filesystem
+    "syncExif" ->
+      jl $ \ () ->
+             forceSyncAllMetaData i
 
     -- import new subcollection of a collection in /archive/photo
     "newSubCols" ->

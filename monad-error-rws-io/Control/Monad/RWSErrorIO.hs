@@ -153,11 +153,11 @@ io x
       showExc :: IOException -> String
       showExc = show
 
-always :: Config r => Action r s () -> Action r s ()
+always :: Action r s () -> Action r s ()
 always x
     = x `orElse` return ()
 
-orElse :: Config r => Action r s a -> Action r s a -> Action r s a
+orElse :: Action r s a -> Action r s a -> Action r s a
 orElse x1 x2
     = x1 `catchE` try2
     where
