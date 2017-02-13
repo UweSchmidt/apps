@@ -14,7 +14,7 @@ import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
 import           Text.Printf         ( printf )
-
+import           Text.Read           ( readMaybe )
 -- import Debug.Trace
 
 -- ----------------------------------------
@@ -71,9 +71,9 @@ mergeMD m1 m2 =
   where
     mergeAttr :: Name -> Text -> MetaData -> MetaData
     mergeAttr n v acc
-      | v == "-"  = acc & metaDataAt n .~ "" -- remove attr
+      | v == "-"  = acc & metaDataAt n .~ ""   -- remove attr
       | T.null v  = acc                        -- attribute not changed
-      | n == "descr:Keywords"
+      | n == descrKeywords
                   = acc & metaDataAt n %~ mergeKeywords v
       | otherwise = acc & metaDataAt n .~ v
 
@@ -221,6 +221,28 @@ getFileName :: MetaData -> Maybe Text
 getFileName md =
   md ^. metaDataAt "File:Filename" . isoMaybe
 {-# INLINE getFileName #-}
+
+type Rating = Int -- 0 .. 5
+
+getRating :: MetaData -> Rating
+getRating md =
+  lookupByNames
+  [ descrRating     -- descr:Rating has priority over
+  , "XMP:Rating"    -- XMP:Rating from LR
+  ] md
+  ^. isoString . isoRating
+
+isoRating :: Iso' String Rating
+isoRating = iso fromS show
+  where
+    fromS s = min 5 $ i1 `max` i2
+      where
+        i1 = max 0 . fromMaybe 0 . readMaybe $ s
+        i2 = s ^. from isoStars
+
+isoStars :: Iso' Rating String
+isoStars = iso (flip replicate '*')
+               (min 5 . length . filter (== '*'))
 
 -- ----------------------------------------
 --
@@ -582,6 +604,7 @@ attrXmp =
     , "GPSAltitude"
     , "Format"
     , "RawFileName"
+    , "Rating"
     ]
   )
 
@@ -601,6 +624,7 @@ attrCol =
     , "OrderedBy"
     , "Access"
     , "Duration"
+    , "Rating"
     ]
   )
 descrTitle
@@ -615,7 +639,8 @@ descrTitle
   , descrCreateDate
   , descrOrderedBy
   , descrAccess
-  , descrDuration :: Name
+  , descrDuration
+  , descrRating :: Name
 
 [descrTitle
   , descrSubtitle
@@ -630,6 +655,7 @@ descrTitle
   , descrOrderedBy
   , descrAccess
   , descrDuration
+  , descrRating
   ] = attrGroup2attrName attrCol
 
 -- ----------------------------------------
