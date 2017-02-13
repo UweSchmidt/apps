@@ -208,7 +208,7 @@ isDirRoot' :: (CatalogKey ref, Eq ref, Show ref) => ref -> DirTree' CatMap node 
 isDirRoot' r t = t ^. theParent' r == r
 {-# INLINE isDirRoot' #-}
 
-lookupDirPath' :: (CatalogKey ref, Show ref) =>
+lookupDirPath' :: (CatalogKey ref) =>
                   (Path -> ref) ->
                   Path ->
                   DirTree' CatMap node ref ->

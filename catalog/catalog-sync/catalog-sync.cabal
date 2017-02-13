@@ -1,5 +1,5 @@
 name:                catalog-sync
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Catalog sync
 description:         Please see README.md
 homepage:            https://github.com/UweSchmidt/apps/catalog
@@ -16,11 +16,9 @@ executable catalog-sync
   main-is:             Main.hs
   build-depends:       base
                      , catalog
-                     , cmdtheline            >= 0.2
                      , monad-error-rws-io
                      , mtl
                      , text
-                     , pretty                >= 1.1
                      , transformers
                      , unix
                      

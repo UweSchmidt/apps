@@ -1,5 +1,5 @@
 name:                catalog
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Image catalog
 description:         Please see README.md
 homepage:            http://github.com/UweSchmidt/apps/catalog#readme
@@ -62,7 +62,6 @@ library
                    , aeson                >= 0.8
                    , aeson-pretty         >= 0.8
                    , bytestring           >= 0.9
-                   , cmdtheline           >= 0.2
                    , containers           >= 0.4
                    , directory            >= 1.1
                    , filepath             >= 1
@@ -72,8 +71,8 @@ library
                    , monad-error-rws-io   >= 0.0.2
                    , mtl                  >= 2.2
                    , murmur-hash          >= 0.1
+                   , optparse-applicative
                    , pureMD5              >= 2
-                   , pretty               >= 1.1
                    , process
                    , scientific           >= 0.3
                    , string-qq            >= 0.0.2
