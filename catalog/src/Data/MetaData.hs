@@ -75,6 +75,8 @@ mergeMD m1 m2 =
       | T.null v  = acc                        -- attribute not changed
       | n == descrKeywords
                   = acc & metaDataAt n %~ mergeKeywords v
+      | n == descrRating
+                  = acc & metaDataAt n .~ (v ^. isoString . isoRating . isoString . isoText)
       | otherwise = acc & metaDataAt n .~ v
 
 mergeKeywords :: Text -> Text -> Text
@@ -224,6 +226,9 @@ getFileName md =
 
 type Rating = Int -- 0 .. 5
 
+ratingMax :: Rating
+ratingMax = 5
+
 getRating :: MetaData -> Rating
 getRating md =
   lookupByNames
@@ -235,14 +240,14 @@ getRating md =
 isoRating :: Iso' String Rating
 isoRating = iso fromS show
   where
-    fromS s = min 5 $ i1 `max` i2
+    fromS s = min ratingMax $ i1 `max` i2
       where
         i1 = max 0 . fromMaybe 0 . readMaybe $ s
         i2 = s ^. from isoStars
 
 isoStars :: Iso' Rating String
 isoStars = iso (flip replicate '*')
-               (min 5 . length . filter (== '*'))
+               (min ratingMax . length . filter (== '*'))
 
 -- ----------------------------------------
 --
