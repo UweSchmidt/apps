@@ -76,18 +76,16 @@ envp = Env
         <> value "catalog.json"
         <> help "The JSON archive file to be loaded, relative to mount path"
       )
-  <*> ( ( Just <$>
-          strOption
-          ( long "import"
-            <> short 'i'
-            <> metavar "IMPORT"
-            <> help ( "For syncing only: The JSON import file for collections to be imported"
-                      ++ " from old Album2 image organizer."
-                      ++ " If import file is given, just an import is done, no sync"
-                    )
-          )
+  <*> ( optional $
+        strOption
+        ( long "import"
+          <> short 'i'
+          <> metavar "IMPORT"
+          <> help ( "For syncing only: The JSON import file for collections to be imported"
+                    ++ " from old Album2 image organizer."
+                    ++ " If import file is given, just an import is done, no sync"
+                  )
         )
-        <|> pure Nothing
       )
   <*> strOption
       ( long "mount-path"
@@ -107,16 +105,13 @@ envp = Env
       )
   <*> pure (defaultEnv ^. envFontName)
   <*> pure (defaultEnv ^. envLogOp)
-  <*> ( ( Just <$>
-          strOption
-          ( long "update-cache"
-            <> short 'c'
-            <> metavar "IMGDIR"
-            <> help "For catalog-sync only: Update the image cache for given image directory"
-          )
+  <*> ( optional $
+        strOption
+        ( long "update-cache"
+          <> short 'c'
+          <> metavar "IMGDIR"
+          <> help "For catalog-sync only: Update the image cache for given image directory"
         )
-        <|>
-        pure Nothing
       )
 
 -- ----------------------------------------
