@@ -20,16 +20,12 @@ import           Catalog.Html.Basic  ( buildImgPath
 import           Catalog.Sync            (syncDirP, syncNewDirs)
 import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
 import           Control.Lens
--- import           Control.Monad.Except
--- import           Control.Monad.RWSErrorIO
--- import           Data.Prim
+import           Data.Prim           ()
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
--- import           Data.Foldable
 import qualified Data.Aeson as J
--- import qualified Data.Aeson.Encode.Pretty as J
 
 -- ----------------------------------------
 
@@ -140,7 +136,12 @@ jsonCall fct i n args =
     -- get the meta data of a collection entry
     "metadata" ->
       jl $ \ pos ->
-             getMeta pos n
+             getMeta1 pos n
+
+    -- get the rating field of a collection entry
+    "rating" ->
+      jl $ \ pos ->
+             getRating <$> getMeta1 pos n
 
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->
@@ -202,9 +203,25 @@ jsonCall fct i n args =
       jl $ \ new ->
              renameCol new i
 
+    -- set meta data fields for a list of selected collection entries
     "setMetaData" ->
       jl $ \ (ixs, md) ->
              setMeta md ixs n
+
+    -- set meta data fields for a single collection entry
+    "setMetaData1" ->
+      jl $ \ (i, md) ->
+             setMeta1 md i n
+
+    -- set the rating field for a list of selected collection entries
+    "setRating" ->
+      jl $ \ (ixs, r) ->
+             setRating r ixs n
+
+    -- set the rating field for a single collection entry
+    "setRating1" ->
+      jl $ \ (i, r) ->
+             setRating1 r i n
 
     -- save a snapshot of the current image store
     -- on client side, the 1. arg must be a path to an existing node
@@ -496,21 +513,33 @@ renameCol newName i = do
 
 setMeta :: MetaData -> [Int] -> ImgNode -> Cmd ()
 setMeta md ixs n =
-  sequence_ $ zipWith setMeta1 ixs (n ^. theColEntries)
+  sequence_ $ zipWith setMeta' ixs (n ^. theColEntries)
   where
-    setMeta1 mark ce
+    setMeta' mark ce
       | mark < 0 =
           return ()
       | otherwise =
           colEntry
           (\ ii _ -> adjustMetaData (md <>) ii)
-          (\ ci   -> adjustMetaData (md <>) ci)
+          (          adjustMetaData (md <>)   )
           ce
+
+setMeta1 :: MetaData -> Int -> ImgNode -> Cmd ()
+setMeta1 md i n =
+  setMeta md ixs n
+  where
+    ixs = replicate (i-1) (0-1) ++ [1]
+
+setRating :: Rating -> [Int] -> ImgNode -> Cmd ()
+setRating r = setMeta (mkRating r)
+
+setRating1 :: Rating -> Int -> ImgNode -> Cmd ()
+setRating1 r = setMeta1 (mkRating r)
 
 -- ----------------------------------------
 
-getMeta :: Int -> ImgNode -> Cmd MetaData
-getMeta =
+getMeta1 :: Int -> ImgNode -> Cmd MetaData
+getMeta1 =
   processColEntryAt
     (\ i _ -> do exifMD <- getMetaData i               -- exif meta data
                  imgMD  <- getImgVals  i theMetaData   -- title, comment, ...

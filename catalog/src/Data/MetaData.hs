@@ -249,6 +249,9 @@ isoStars :: Iso' Rating String
 isoStars = iso (flip replicate '*')
                (min ratingMax . length . filter (== '*'))
 
+mkRating :: Rating -> MetaData
+mkRating r = mempty & metaDataAt descrRating .~ (r ^. isoString . isoText)
+
 -- ----------------------------------------
 --
 -- compare function on meta data
