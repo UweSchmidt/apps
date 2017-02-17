@@ -216,11 +216,11 @@ table.metadata-table th {
 }
 
 .carousel-image-unmarked {
-  color: #555; /* #d9534f; */
+  color: #337ab7; /* #d9534f; */
 }
 
 .carousel-image-unmarked:hover {
-  color: #777;
+  color: #5bc0de;
 }
 
 .modal-header-inverse {
@@ -237,6 +237,11 @@ table.metadata-table th {
 .bg-dark {
   background-color: #333;
 }
+
+.star {
+  padding: 0;
+}
+
 .fg-grey { color: #555; }
 .fg-red  { color: #f00; }
 

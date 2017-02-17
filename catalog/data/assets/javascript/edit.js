@@ -127,6 +127,19 @@ function getDiaColWriteProtected(dia) {
 
 // --------------------
 
+function setDiaRating(dia, rating) {
+    console.log("TODO: setDiaRating: " + rating);
+    console.log(dia);
+}
+
+function setRatingInCollection(cid, i, rating) {
+    console.log("setRating: " + cid + ", " + i + ", " + rating);
+    var dia = getDia(cid, i);
+    setDiaRating(dia, rating);
+}
+
+// --------------------
+
 function getDia(cid, i) {
     var sel = '#' + cid + " > div.dia:nth-child(" + (i + 1) + ")";
     console.log("getDia: sel: " + sel);
@@ -1858,7 +1871,7 @@ function buildImgCarousel(args, colVal) {
 
         cimg.find('div.carousel-caption a.carousel-image-mark')
             .addClass(cls)
-            .on('click', function (e){
+            .on('click', function (e) {
                 var state = isMarkedDia(toggleDiaMark(args.cid, i));
                 var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
                 console.log(e.target);
@@ -1869,6 +1882,34 @@ function buildImgCarousel(args, colVal) {
                 console.log(e.target);
                 console.log("toggle image mark: " + args.cid + " ." + i);
             });
+
+        cimg.find('div.carousel-caption a.star')
+            .addClass("carousel-image-unmarked")
+            .on('click', function (e) {
+                // var state = isMarkedDia(toggleDiaMark(args.cid, i));
+                // var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
+                console.log(e.target);
+                var bno = parseInt($(e.target).closest("a.star").attr("data-star"));
+                var bgp = $(e.target).closest("span.carousel-stars");
+                var b1m = bgp.find('[data-star="1"]').hasClass("carousel-image-marked");
+                var b2u = bgp.find('[data-star="2"]').hasClass("carousel-image-unmarked");
+                if (bno === 1 && b1m && b2u) {
+                    bno = 0;
+                }
+                var j = 0;
+                for (j = 0; j <= 5; ++j) {
+                    var cls = j <= bno ? "carousel-image-marked" : "carousel-image-unmarked";
+                    bgp.find('[data-star="' + j + '"]')
+                        .removeClass("carousel-image-marked")
+                        .removeClass("carousel-image-unmarked")
+                        .addClass(cls);
+                }
+                // console.log(e.target);
+                console.log("set rating: " + args.cid + " ." + i + "= " + bno);
+                console.log(args);
+                setRatingOnServer(args.cid, args.path, i, bno);
+            });
+
 
         // insert the icon ref into cimg
         if ( iscol ) {
@@ -2144,6 +2185,14 @@ function setMetaOnServer(path, ixs, metadata) {
                  function () {
                      getColFromServer(path, refreshCollection);
                  });
+}
+
+function setRatingOnServer(cid, path, ix, rating) {
+    console.log('setRatingOnserver:' + path + ", " + ix + ", " + rating);
+    modifyServer1("setRating1", path, [ix, rating],
+                  function () {
+                      setRatingInCollection(cid, ix, rating);
+                  });
 }
 
 function getColFromServer(path, showCol) {
