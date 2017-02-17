@@ -237,6 +237,8 @@ table.metadata-table th {
 .bg-dark {
   background-color: #333;
 }
+.fg-grey { color: #555; }
+.fg-red  { color: #f00; }
 
 .carousel-indicators-lg {
     position: absolute;

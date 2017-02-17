@@ -1849,19 +1849,10 @@ function buildImgCarousel(args, colVal) {
                 + (iscol ? "Collection: " : "")
                 + eref.name;
 
-        cimg.find('div.carousel-caption')
+        cimg.find('.carousel-image-capt')
             .empty()
-            .append('<h3>'
-                    + '<span class="carousel-image-capt">'
-                    + capt
-                    + '</span>'
-                    + '<a class="btn btn-link btn-lg carousel-image-mark"'
-                    + ' title="mark/unmark image">'
-                    + '<span class="glyphicon glyphicon-star"'
-                    + ' aria-hidden="true"></span>'
-                    + '</a>'
-                    + '</h3>'
-                   );
+            .append(capt);
+
         var state = isMarkedDia(getDia(args.cid, i));
         var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
 
@@ -2203,6 +2194,17 @@ function getMetaFromServer(args) {
                 args.path,
                 args.pos,
                 function (res) { showMetaData(res, args); }
+               );
+}
+
+function getRatingFromServer(args) {
+    readServer1('rating',
+                args.path,
+                args.pos,
+                function (res) {
+                    console.log('getRating: ' + res);
+                    // showMetaData(res, args);
+                }
                );
 }
 
