@@ -1957,6 +1957,11 @@ function buildImgCarousel(args, colVal) {
         } else if ( e.keyCode == 112 ) { // 'p': prev image
             console.log('keypres: prev image');
             $("#CarouselModalBody .carousel-control.left").click();
+        } else if ( e.keyCode >= 48 && e.keyCode <= 53) { // '0'..'5' set rating
+            var rating = e.keyCode - 48;
+            var sel = '[data-star="' + rating + '"]';
+            console.log('keypress: set rating to ' + rating);
+            $('#CarouselModalBody div.carousel-inner div.item.active ' + sel).click();
         }
         return false;
     });
