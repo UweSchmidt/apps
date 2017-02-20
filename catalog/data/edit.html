@@ -242,6 +242,81 @@
                       aria-hidden="true"></span>
               </button>
             </li>
+
+            <!-- set rating -->
+            <li class="dropdown">
+              <button
+                 class="dropdown-toggle btn btn-link btn-lg"
+                 data-toggle="dropdown"
+                 role="button"
+                 aria-haspopup="true"
+                 aria-expanded="false"
+                 title="set rating">
+                <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a id="Rating0"
+                     title="clear rating"
+                     data-toggle="modal"
+                     data-target="#setRating0">
+                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Rating1"
+                     title="rating 1 star"
+                     data-toggle="modal"
+                     data-target="#setRating1">
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Rating2"
+                     title="rating 2 stars"
+                     data-toggle="modal"
+                     data-target="#setRating2">
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Rating3"
+                     title="rating 3 stars"
+                     data-toggle="modal"
+                     data-target="#setRating3">
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Rating4"
+                     title="rating 4 stars"
+                     data-toggle="modal"
+                     data-target="#setRating4">
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Rating5"
+                     title="rating 5 stars"
+                     data-toggle="modal"
+                     data-target="#setRating5">
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+
             <!-- dropdown system menue -->
             <li class="dropdown">
               <button
@@ -626,7 +701,10 @@
          tabindex="-1"
          role="dialog"
          aria-labelledby="PreviewModalLabel">
-      <!-- the real modal-preview class, which determines the modal size, is added at runtime-->
+      <!-- the real modal-preview class,
+           which determines the modal size,
+           is added at runtime
+        -->
       <div class="modal-dialog modal-preview" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -682,7 +760,7 @@
                class="modal-body">
 
             <!-- Carousel -->
-            <!-- prototype will br inserted here -->
+            <!-- prototype will be inserted here -->
 
           </div>
         </div>
@@ -766,17 +844,62 @@
           </div>
           <div class="dia-mark">00</div>
         </div>
-        <div class="dia-img">
-          <img class="dia-src"
-               src=""
-               title="Hurra, ein Bild"
-               >
+        <div class="dia-middle">
+          <div class="dia-sidebar">
+            <div class="btn-group-vertical dia-stars"
+                 role="group"
+                 aria-label="Image Rating">
+              <a class="btn btn-link btn-sm star dia-unmarked"
+                 title="rating 5 stars"
+                 data-star="5">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+              <a class="btn btn-link btn-sm star dia-unmarked"
+                 title="rating 4 stars"
+                 data-star="4">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+              <a class="btn btn-link btn-sm star dia-unmarked"
+                 title="rating 3 stars"
+                 data-star="3">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+              <a class="btn btn-link btn-sm star dia-unmarked"
+                 title="rating 2 stars"
+                 data-star="2">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+              <a class="btn btn-link btn-sm star dia-unmarked"
+                 title="rating 1 star"
+                 data-star="1">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+              <a class="hidden btn btn-link btn-sm star dia-unmarked"
+                 data-star="0">
+                <span class="glyphicon glyphicon-star"
+                      aria-hidden="true"></span>
+              </a>
+            </div>
+          </div>
+          <div class="dia-img">
+            <img class="dia-src"
+                 src=""
+                 title="Hurra, ein Bild"
+                 >
+          </div>
+          <div class="dia-sidebar">
+          </div>
         </div>
         <div class="dia-bot">
           <!-- the bottom line -->
           <div class="btn-group btn-group-xs dia-btn-group hidden"
                role="group"
-               aria-label="...">
+               aria-label="Image Actions">
             <button type="button"
                     class="btn btn-default dia-btn-remove"
                     title="Remove this and all marked images/collections">
@@ -888,26 +1011,31 @@
                       aria-label="Image Rating"
                       data-rating="0">
                   <a class="btn btn-link btn-lg star carousel-image-unmarked"
+                     title="rating 5 stars"
                      data-star="5">
                     <span class="glyphicon glyphicon-star"
                           aria-hidden="true"></span>
                   </a>
                   <a class="btn btn-link btn-lg star carousel-image-unmarked"
+                     title="rating 4 stars"
                      data-star="4">
                     <span class="glyphicon glyphicon-star"
                           aria-hidden="true"></span>
                   </a>
                   <a class="btn btn-link btn-lg star carousel-image-unmarked"
+                     title="rating 3 stars"
                      data-star="3">
                     <span class="glyphicon glyphicon-star"
                           aria-hidden="true"></span>
                   </a>
                   <a class="btn btn-link btn-lg star carousel-image-unmarked"
+                     title="rating 2 stars"
                      data-star="2">
                     <span class="glyphicon glyphicon-star"
                           aria-hidden="true"></span>
                   </a>
                   <a class="btn btn-link btn-lg star carousel-image-unmarked"
+                     title="rating 1 star"
                      data-star="1">
                     <span class="glyphicon glyphicon-star"
                           aria-hidden="true"></span>

@@ -128,14 +128,33 @@ function getDiaColWriteProtected(dia) {
 // --------------------
 
 function setDiaRating(dia, rating) {
-    console.log("TODO: setDiaRating: " + rating);
+    console.log("setDiaRating: " + rating);
     console.log(dia);
+    var stars = $(dia).find('div.dia-stars');
+    var j = 0;
+    for (j = 0; j <= 5; ++j) {
+        var cls = j <= rating ? "dia-marked" : "dia-unmarked";
+        stars.find('[data-star="' + j + '"]')
+            .removeClass("dia-marked")
+            .removeClass("dia-unmarked")
+            .addClass(cls);
+    }
 }
 
 function setRatingInCollection(cid, i, rating) {
     console.log("setRating: " + cid + ", " + i + ", " + rating);
     var dia = getDia(cid, i);
     setDiaRating(dia, rating);
+}
+
+function setRatingsInCollection(cid, ixs, rating) {
+    var i = 0;
+    for (i = 0; i < ixs.length; ++i) {
+        if ( ixs[i] >= 0 ) {
+            setRatingInCollection(cid, i, rating);
+        }
+    }
+    unmarkAll(cid);
 }
 
 // --------------------
@@ -872,7 +891,7 @@ function newEntry(entry, i) {
         .attr("title", tt);
 
     // add event handler for marking
-    p.children("div.dia-img")
+    p.find("div.dia-img")
         .on('click', toggleSlideMark)
         .css('cursor','pointer');
 
@@ -1685,6 +1704,21 @@ function setMetaData() {
     setMetaOnServer(cpath,ixs,metadata);
 }
 
+function setRating(rating) {
+    var cid   = activeCollectionId();
+    var cpath = collectionPath(cid);
+    var ixs   = getMarkedEntries(cid);
+
+    if (! anyMarked(ixs)) {
+        statusMsg('no marked images/collections found');
+        return;
+    }
+    console.log('setRating: ' + rating);
+    console.log(ixs);
+
+    setRatingsOnServer(cid, cpath, ixs, rating);
+}
+
 // ----------------------------------------
 
 // runs concurrently with metadata modal show event
@@ -1947,24 +1981,26 @@ function buildImgCarousel(args, colVal) {
     $('#CarouselModal')
         .off('keypress')
         .on('keypress', function(e){
-        console.log('keydown: ' + e.keyCode);
-        if ( e.keyCode == 109 ) {  // 'm': mark
-            console.log('keypress: toggle image mark');
-            $('#CarouselModalBody div.carousel-inner div.item.active a.carousel-image-mark').click();
-        } else if ( e.keyCode == 110 ) { // 'n': next image
-            console.log('keypres: next image');
-            $("#CarouselModalBody .carousel-control.right").click();
-        } else if ( e.keyCode == 112 ) { // 'p': prev image
-            console.log('keypres: prev image');
-            $("#CarouselModalBody .carousel-control.left").click();
-        } else if ( e.keyCode >= 48 && e.keyCode <= 53) { // '0'..'5' set rating
-            var rating = e.keyCode - 48;
-            var sel = '[data-star="' + rating + '"]';
-            console.log('keypress: set rating to ' + rating);
-            $('#CarouselModalBody div.carousel-inner div.item.active ' + sel).click();
-        }
-        return false;
-    });
+            console.log('CarouselModal:');
+            console.log(e);
+            var charCode = e.which || e.keyCode;
+            if ( charCode == 109 ) {  // 'm': mark
+                console.log('keypress: toggle image mark');
+                $('#CarouselModalBody div.carousel-inner div.item.active a.carousel-image-mark').click();
+            } else if ( charCode == 110 ) { // 'n': next image
+                console.log('keypres: next image');
+                $("#CarouselModalBody .carousel-control.right").click();
+            } else if ( charCode == 112 ) { // 'p': prev image
+                console.log('keypres: prev image');
+                $("#CarouselModalBody .carousel-control.left").click();
+            } else if ( charCode >= 48 && charCode <= 53) { // '0'..'5' set rating
+                var rating = charCode - 48;
+                var sel = '[data-star="' + rating + '"]';
+                console.log('keypress: set rating to ' + rating);
+                $('#CarouselModalBody div.carousel-inner div.item.active ' + sel).click();
+            }
+            return false;
+        });
 
     // configure the modal box and its size
     $('#CarouselModal > div.modal-dialog')
@@ -2193,10 +2229,17 @@ function setMetaOnServer(path, ixs, metadata) {
 }
 
 function setRatingOnServer(cid, path, ix, rating) {
-    console.log('setRatingOnserver:' + path + ", " + ix + ", " + rating);
-    modifyServer1("setRating1", path, [ix, rating],
+    modifyServer("setRating1", path, [ix, rating],
+                 function () {
+                     setRatingInCollection(cid, ix, rating);
+                 });
+}
+
+function setRatingsOnServer(cid, path, ixs, rating) {
+    console.log('setRatingsOnserver:' + path + ", " + ixs + ", " + rating);
+    modifyServer1("setRating", path, [ixs, rating],
                   function () {
-                      setRatingInCollection(cid, ix, rating);
+                      setRatingsInCollection(cid, ixs, rating);
                   });
 }
 
