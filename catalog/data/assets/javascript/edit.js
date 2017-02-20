@@ -678,7 +678,7 @@ function insertEntries(colId, entries) {
     var col = $('#' + colId);
     col.empty();
     entries.forEach(function (e, i) {
-        insertEntry(colId, e, i);
+        insertEntry(colId, path, e, i);
     });
 
     // set handler for showing edit buttons
@@ -791,17 +791,17 @@ function insertEntries(colId, entries) {
     }
 }
 
-function insertEntry(colId, entry, i) {
+function insertEntry(colId, colPath, entry, i) {
     // console.log('insertEntry');
     // console.log(colId);
     // console.log(entry);
 
-    var e = newEntry(entry, i);
+    var e = newEntry(colId, colPath, entry, i);
     $('#' + colId).append(e);
 }
 
-function newEntry(entry, i) {
-    console.log("newEntry");
+function newEntry(colId, colPath, entry, i) {
+    console.log("newEntry: colId=" + colId);
     console.log(entry);
     var p = $("#prototype-dia").children("div").clone();
 
@@ -894,6 +894,12 @@ function newEntry(entry, i) {
     p.find("div.dia-img")
         .on('click', toggleSlideMark)
         .css('cursor','pointer');
+
+    // set the rating stars
+    getRatingFromServer(colPath, i,
+                        function(res) {
+                            setRatingInCollection(colId, i, res);
+                        });
 
     return p;
 }
@@ -2294,15 +2300,8 @@ function getMetaFromServer(args) {
                );
 }
 
-function getRatingFromServer(args) {
-    readServer1('rating',
-                args.path,
-                args.pos,
-                function (res) {
-                    console.log('getRating: ' + res);
-                    // showMetaData(res, args);
-                }
-               );
+function getRatingFromServer(path, pos, setRating) {
+    readServer1('rating', path, pos, setRating);
 }
 
 function getPreviewRef(args) {
