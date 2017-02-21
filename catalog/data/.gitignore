@@ -1,14 +1,4 @@
-fix-75x75/
-fix-160x120/
-pad-1600x1200/
-exif-meta
-fix-140x105
-pad-1400x1050
 catalog/
-pad-160x160/
-pad-900x600/
-pad-*x*/
-fix-*x*/
 catalog-server
 catalog-sync
 photos
@@ -16,3 +6,7 @@ cache
 Alben
 bootstrap
 bootstrap-3.3.7/
+export.json
+photos.2004
+photos.2016
+photos.diakaesten
