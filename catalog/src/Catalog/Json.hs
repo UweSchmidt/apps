@@ -143,6 +143,11 @@ jsonCall fct i n args =
       jl $ \ pos ->
              getRating1 pos n
 
+    -- get the rating field of all entries in a collection
+    "ratings" ->
+      jl $ \ () ->
+             getRatings n
+
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->
       jl $ \ (ixs, ro) ->
@@ -550,12 +555,19 @@ getMeta1 =
 -- read only the internal meta data, not the exif stuff
 getMeta0 :: Int -> ImgNode -> Cmd MetaData
 getMeta0 =
-  processColEntryAt
-    (\ i _ -> getImgVals i theMetaData)
-    (\ i   -> getImgVals i theMetaData)
+  processColEntryAt (\ i' _ -> getM i') getM
+  where
+    getM i' = getImgVals i' theMetaData
 
 getRating1 :: Int -> ImgNode -> Cmd Rating
 getRating1 pos n = getRating <$> getMeta0 pos n
+
+getRatings :: ImgNode -> Cmd [Rating]
+getRatings n = traverse f (n ^. theColEntries)
+  where
+    f = colEntry (\ i' _ -> getR i') getR
+      where
+        getR i' = getRating <$> getImgVals i' theMetaData
 
 -- ----------------------------------------
 
