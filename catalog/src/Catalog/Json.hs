@@ -141,7 +141,7 @@ jsonCall fct i n args =
     -- get the rating field of a collection entry
     "rating" ->
       jl $ \ pos ->
-             getRating <$> getMeta1 pos n
+             getRating1 pos n
 
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->
@@ -210,8 +210,8 @@ jsonCall fct i n args =
 
     -- set meta data fields for a single collection entry
     "setMetaData1" ->
-      jl $ \ (i, md) ->
-             setMeta1 md i n
+      jl $ \ (i', md) ->
+             setMeta1 md i' n
 
     -- set the rating field for a list of selected collection entries
     "setRating" ->
@@ -220,8 +220,8 @@ jsonCall fct i n args =
 
     -- set the rating field for a single collection entry
     "setRating1" ->
-      jl $ \ (i, r) ->
-             setRating1 r i n
+      jl $ \ (i', r) ->
+             setRating1 r i' n
 
     -- save a snapshot of the current image store
     -- on client side, the 1. arg must be a path to an existing node
@@ -546,6 +546,16 @@ getMeta1 =
                  return $ imgMD <> exifMD
     )
     (\ i   -> getImgVals i theMetaData)
+
+-- read only the internal meta data, not the exif stuff
+getMeta0 :: Int -> ImgNode -> Cmd MetaData
+getMeta0 =
+  processColEntryAt
+    (\ i _ -> getImgVals i theMetaData)
+    (\ i   -> getImgVals i theMetaData)
+
+getRating1 :: Int -> ImgNode -> Cmd Rating
+getRating1 pos n = getRating <$> getMeta0 pos n
 
 -- ----------------------------------------
 

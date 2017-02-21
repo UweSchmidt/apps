@@ -14,6 +14,7 @@ import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
+import qualified Data.Text as T
 
 -- ----------------------------------------
 
@@ -105,8 +106,10 @@ syncAllMetaData i0 = do
 syncMetaData :: ObjId -> Cmd ()
 syncMetaData i = do
   ps <- getImgVals i (theParts . isoImgParts)
-  unless (null ps) $
+  unless (null ps) $ do
     syncMetaData' i ps
+    syncRating i
+
 
 syncMetaData' :: ObjId -> [ImgPart] -> Cmd ()
 syncMetaData' i ps = do
@@ -154,6 +157,25 @@ isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGmeta]
 
 isJpg :: ImgPart -> Bool
 isJpg pt = pt ^. theImgType == IMGjpg
+
+
+-- rating is stored in image node, not in exif data file
+-- but rating is imported from LR xmp file with keyword "XMP:Rating"
+-- if rating in .xmp is set, but not rating in image node
+-- the rating is copied to the image node
+--
+-- so for rating, there's no need to read the exif file
+-- except when syncing exif data
+
+syncRating :: ObjId -> Cmd ()
+syncRating i = do
+  md1 <- getImgVals i theMetaData
+  when (T.null $ md1 ^. metaDataAt descrRating) $ do
+    -- rating not yet set in catalog
+    -- try to take rating from .xmp file
+    md2 <- getMetaData i
+    unless (T.null $ md2 ^. metaDataAt "XMP:Rating") $
+      adjustMetaData ((mkRating $ getRating md2) <>) i
 
 -- ----------------------------------------
 
