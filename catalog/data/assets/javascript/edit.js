@@ -147,6 +147,14 @@ function setRatingInCollection(cid, i, rating) {
     setDiaRating(dia, rating);
 }
 
+// used as callback for getRatingsFromServer
+function setAllRatingsInCollection(cid, ratings) {
+    var i = 0;
+    for (i = 0; i < ratings.length; ++i) {
+        setRatingInCollection(cid, i, ratings[i]);
+    }
+}
+
 function setRatingsInCollection(cid, ixs, rating) {
     var i = 0;
     for (i = 0; i < ixs.length; ++i) {
@@ -681,6 +689,12 @@ function insertEntries(colId, entries) {
         insertEntry(colId, path, e, i);
     });
 
+    // insert the ratings
+    getRatingsFromServer(path,
+                         function(ratings) {
+                             setAllRatingsInCollection(colId, ratings);
+                         });
+
     // set handler for showing edit buttons
     col.find('div.dia')
         .hover(function () {
@@ -896,10 +910,10 @@ function newEntry(colId, colPath, entry, i) {
         .css('cursor','pointer');
 
     // set the rating stars
-    getRatingFromServer(colPath, i,
-                        function(res) {
-                            setRatingInCollection(colId, i, res);
-                        });
+ //   getRatingFromServer(colPath, i,
+   //                     function(res) {
+     //                       setRatingInCollection(colId, i, res);
+       //                 });
 
     return p;
 }
@@ -2581,14 +2595,39 @@ $(document).ready(function () {
             saveImgStoreStart();
         });
 
-    /* saveImgStore is called via a modal box for a comment
-    $('#SaveImgStore')
+    // don't use a for loop for this
+    // it wouldn't work
+    $('#Rating0')
         .on('click', function () {
-            // statusClear();
-            statusMsg('taking snapshot of image archive, one moment please');
-            saveImgStore("a very descriptive comment");
+            console.log("set ratings to 0");
+            setRating(0);
         });
-     /* */
+    $('#Rating1')
+        .on('click', function () {
+            console.log("set ratings to 1");
+            setRating(1);
+        });
+    $('#Rating2')
+        .on('click', function () {
+            console.log("set ratings to 2");
+            setRating(2);
+        });
+    $('#Rating3')
+        .on('click', function () {
+            console.log("set ratings to 3");
+            setRating(3);
+        });
+    $('#Rating4')
+        .on('click', function () {
+            console.log("set ratings to 4");
+            setRating(4);
+        });
+    $('#Rating5')
+        .on('click', function () {
+            console.log("set ratings to 5");
+            setRating(5);
+        });
+
 
     $('#SyncCollection')
         .on('click', function () {
