@@ -978,7 +978,7 @@ function exifCollectionWithFilesystem(path) {
 
     // start syncing on server side
     statusMsg('recomputing exif data for: ' + path);
-    readServer1('syncExif', path, [],
+    readServer('syncExif', path,
                 function(log) {
                     statusMsg('exif update done done');
                     console.log(log);
@@ -2302,6 +2302,12 @@ function getMetaFromServer(args) {
 
 function getRatingFromServer(path, pos, setRating) {
     readServer1('rating', path, pos, setRating);
+}
+
+// TODO: substitute getRatingFromServer for every picture
+// with getRatingsFromServer for the whole collection
+function getRatingsFromServer(path, setRating) {
+    readServer('ratings', path, setRating);
 }
 
 function getPreviewRef(args) {
