@@ -2595,39 +2595,13 @@ $(document).ready(function () {
             saveImgStoreStart();
         });
 
-    // don't use a for loop for this
-    // it wouldn't work
-    $('#Rating0')
-        .on('click', function () {
-            console.log("set ratings to 0");
-            setRating(0);
-        });
-    $('#Rating1')
-        .on('click', function () {
-            console.log("set ratings to 1");
-            setRating(1);
-        });
-    $('#Rating2')
-        .on('click', function () {
-            console.log("set ratings to 2");
-            setRating(2);
-        });
-    $('#Rating3')
-        .on('click', function () {
-            console.log("set ratings to 3");
-            setRating(3);
-        });
-    $('#Rating4')
-        .on('click', function () {
-            console.log("set ratings to 4");
-            setRating(4);
-        });
-    $('#Rating5')
-        .on('click', function () {
-            console.log("set ratings to 5");
-            setRating(5);
-        });
-
+    [0,1,2,3,4,5].forEach(function (e, i) {
+        $('#Rating' + i)
+            .on('click', function () {
+                console.log("set ratings to " + i);
+                setRating(i);
+            });
+    });
 
     $('#SyncCollection')
         .on('click', function () {

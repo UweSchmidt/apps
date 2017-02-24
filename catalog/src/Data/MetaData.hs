@@ -76,7 +76,15 @@ mergeMD m1 m2 =
       | n == descrKeywords
                   = acc & metaDataAt n %~ mergeKeywords v
       | n == descrRating
-                  = acc & metaDataAt n .~ (v ^. isoString . isoRating . isoString . isoText)
+                  = acc & metaDataAt n .~ (v ^. isoString . isoRating
+                                           .
+                                           to (\ r -> if r == 0
+                                                      then ""
+                                                      else show r
+                                              )
+                                           .
+                                           isoText
+                                          )
       | otherwise = acc & metaDataAt n .~ v
 
 mergeKeywords :: Text -> Text -> Text
@@ -106,7 +114,7 @@ metaDataAt key = md2obj . at (key ^. isoText) . val2text
     val2text = iso totext fromtext
       where
         totext (Just (J.String t)) = t
-        totext (Just (J.Number n)) = (showSc n) ^. from isoString
+        totext (Just (J.Number n)) = showSc n ^. from isoString
         totext _                   = ""
 
         fromtext t
@@ -162,7 +170,7 @@ lookupByNames ns md =
 --
 -- manipulate the access attributes in MetaData
 
-modifyAccess :: (Text -> Text) -> (MetaData -> MetaData)
+modifyAccess :: (Text -> Text) -> MetaData -> MetaData
 modifyAccess f md =
   md & metaDataAt descrAccess %~ f
 
@@ -172,7 +180,7 @@ setAccess ts = modifyAccess (const $ T.unwords ts)
 allowAccess :: [Text] -> MetaData -> MetaData
 allowAccess ts = modifyAccess f
   where
-    f= T.unwords . (filter (`notElem` ts)) . T.words
+    f= T.unwords . filter (`notElem` ts) . T.words
 
 restrAccess :: [Text] -> MetaData -> MetaData
 restrAccess ts = modifyAccess f
