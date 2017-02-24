@@ -70,11 +70,12 @@ function diaButton(e) {
     e.preventDefault();
     statusClear();
 
-    var res  = {};
-    res.dia  = $(e.target).closest('div.dia');
-    res.pos  = getEntryPos(res.dia);
-    res.cid  = activeCollectionId();
-    res.path = collectionPath(res.cid);
+    var res    = {};
+    res.dia    = $(e.target).closest('div.dia');
+    res.pos    = getEntryPos(res.dia);
+    res.cid    = activeCollectionId();
+    res.path   = collectionPath(res.cid);
+    res.rating = getRatingVal(res.dia);
     // res.name = getDiaName(res.dia);
     console.log(res);
     return res;
@@ -131,6 +132,7 @@ function setDiaRating(dia, rating) {
     console.log("setDiaRating: " + rating);
     console.log(dia);
     var stars = $(dia).find('div.dia-stars');
+    stars.attr('data-rating', rating);
     var j = 0;
     for (j = 0; j <= 5; ++j) {
         var cls = j <= rating ? "dia-marked" : "dia-unmarked";
@@ -707,6 +709,26 @@ function insertEntries(colId, entries) {
                 .addClass('hidden');
         });
 
+    // install handler at rating stars
+    col.find('div.dia div.dia-stars a.star')
+        .on('click', function (e) {
+            console.log('rating button');
+            console.log(e.target); // target is glyphicon-star span elem
+            var o = diaButton(e);
+            var s = $(e.target)
+                    .closest('a.star')
+                    .attr('data-star');
+            var newRating = parseInt(s) || 0;
+            var curRating = o.rating;
+            if ( curRating === 1 && newRating === 1) {
+                // 1 star set and 1 star pressed
+                // -> remove star
+                newRating = 0;
+            }
+            setEntryMark(o.dia);
+            setRating(newRating);
+        });
+
     // set handler for button groups
     col.find('div.dia button.dia-btn-remove')
         .on('click', diaBtnRemove);
@@ -806,10 +828,6 @@ function insertEntries(colId, entries) {
 }
 
 function insertEntry(colId, colPath, entry, i) {
-    // console.log('insertEntry');
-    // console.log(colId);
-    // console.log(entry);
-
     var e = newEntry(colId, colPath, entry, i);
     $('#' + colId).append(e);
 }
@@ -908,12 +926,6 @@ function newEntry(colId, colPath, entry, i) {
     p.find("div.dia-img")
         .on('click', toggleSlideMark)
         .css('cursor','pointer');
-
-    // set the rating stars
- //   getRatingFromServer(colPath, i,
-   //                     function(res) {
-     //                       setRatingInCollection(colId, i, res);
-       //                 });
 
     return p;
 }
@@ -1478,6 +1490,15 @@ function getEntryPos(img) {
     console.log('getEntryPos');
     console.log(pos);
     return pos;
+}
+
+function getRatingVal(img) {
+    var r = $(img)
+            .find('div.dia-stars')
+            .attr('data-rating');
+    r = parseInt(r) || 0;
+    console.log('getRatingVal: ' + r);
+    return r;
 }
 
 function setCollectionImg(cid) {
