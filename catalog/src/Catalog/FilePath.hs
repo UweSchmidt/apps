@@ -79,16 +79,18 @@ filePathConfig = map (first parseRegexExt) $
       "("
       ++ ( intercalate "|"
            [ "srgb[0-9]*"
-           , "srgb-bw"
+           , "srgb" ++ "(-bw)?" ++ og
            , "[0-9]+x[0-9]+"
            , "dxo"
-           , "small"
-           , "web"
-           , "bw"
-           , "jpg"
+           , "small" ++ og
+           , "web"   ++ og
+           , "bw"    ++ og
+           , "jpg"   ++ og
            ]
          )
       ++ ")"
+      where
+        og = "(-?([0-9]+(x[0-9]+)?))?"
 
     jpgdirPre =
       "(" ++ jpgdirName ++ "/)?"
