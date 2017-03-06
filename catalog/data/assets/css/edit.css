@@ -276,6 +276,8 @@ table.metadata-table th {
   padding: 0;
 }
 
+.mstar { font-size: 0.8em; }
+
 .fg-grey { color: #555; }
 .fg-red  { color: #f00; }
 

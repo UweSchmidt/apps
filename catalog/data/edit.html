@@ -243,6 +243,164 @@
               </button>
             </li>
 
+            <!-- mark images selected by rating -->
+            <li class="dropdown">
+              <button
+                 class="dropdown-toggle btn btn-link btn-lg"
+                 data-toggle="dropdown"
+                 role="button"
+                 aria-haspopup="true"
+                 aria-expanded="false"
+                 title="mark images/collections">
+                <span class="glyphicon glyphicon-flag" aria-hidden="true"></span>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a id="MarkAll"
+                     title="mark all marked images"
+                     data-toggle="modal"
+                     data-target="#mark0">
+                    Mark all
+                  </a>
+                </li>
+                <li>
+                  <a id="ToggleMark"
+                     title="invert marks"
+                     data-toggle="modal"
+                     data-target="#mark0">
+                    Invert marks
+                  </a>
+                </li>
+                <li>
+                  <a id="UnmarkAll"
+                     title="unmark all images"
+                     data-toggle="modal"
+                     data-target="#mark0">
+                    Unmark all
+                  </a>
+                </li>
+                <li>
+                  <a id="Mark1"
+                     title="mark all with rating 1 or more stars"
+                     data-toggle="modal"
+                     data-target="#mark1">
+                    Mark &ge;
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Mark2"
+                     title="mark all with rating 2 or more stars"
+                     data-toggle="modal"
+                     data-target="#mark2">
+                    Mark &ge;
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Mark3"
+                     title="mark all with rating 3 or more stars"
+                     data-toggle="modal"
+                     data-target="#mark3">
+                    Mark &ge;
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Mark4"
+                     title="mark all with rating 4 or more stars"
+                     data-toggle="modal"
+                     data-target="#mark4">
+                    Mark &ge;
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Mark5"
+                     title="mark all with rating 5 stars"
+                     data-toggle="modal"
+                     data-target="#mark5">
+                    Mark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark0"
+                     title="unmark all with rating 0 stars"
+                     data-toggle="modal"
+                     data-target="#mark1">
+                    Unmark unrated images
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark1"
+                     title="unmark all with rating 1 star"
+                     data-toggle="modal"
+                     data-target="#mark1">
+                    Unmark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark2"
+                     title="unmark all with rating 2 stars"
+                     data-toggle="modal"
+                     data-target="#mark2">
+                    Unmark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark3"
+                     title="unmark all with rating 3 stars"
+                     data-toggle="modal"
+                     data-target="#mark3">
+                    Unmark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark4"
+                     title="unmark all with rating 4 stars"
+                     data-toggle="modal"
+                     data-target="#mark4">
+                    Unmark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+                <li>
+                  <a id="Unmark5"
+                     title="unmark all with rating 5 stars"
+                     data-toggle="modal"
+                     data-target="#mark5">
+                    Unmark =
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+
             <!-- set rating -->
             <li class="dropdown">
               <button
@@ -252,7 +410,7 @@
                  aria-haspopup="true"
                  aria-expanded="false"
                  title="set rating for marked images/collections">
-                <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                 <span class="caret"></span>
               </button>
               <ul class="dropdown-menu">
@@ -261,7 +419,10 @@
                      title="clear rating"
                      data-toggle="modal"
                      data-target="#setRating0">
-                    <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+                    Clear rating
+                    <!--
+                    <span class="glyphicon glyphicon-minus mstar" aria-hidden="true"></span>
+                    -->
                   </a>
                 </li>
                 <li>
@@ -269,7 +430,8 @@
                      title="rating 1 star"
                      data-toggle="modal"
                      data-target="#setRating1">
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    Rating
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                   </a>
                 </li>
                 <li>
@@ -277,8 +439,9 @@
                      title="rating 2 stars"
                      data-toggle="modal"
                      data-target="#setRating2">
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    Rating
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                   </a>
                 </li>
                 <li>
@@ -286,9 +449,10 @@
                      title="rating 3 stars"
                      data-toggle="modal"
                      data-target="#setRating3">
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    Rating
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                   </a>
                 </li>
                 <li>
@@ -296,10 +460,11 @@
                      title="rating 4 stars"
                      data-toggle="modal"
                      data-target="#setRating4">
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    Rating
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                   </a>
                 </li>
                 <li>
@@ -307,11 +472,12 @@
                      title="rating 5 stars"
                      data-toggle="modal"
                      data-target="#setRating5">
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
-                    <span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+                    Rating
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-star mstar" aria-hidden="true"></span>
                   </a>
                 </li>
               </ul>
