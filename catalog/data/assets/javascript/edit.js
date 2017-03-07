@@ -182,6 +182,13 @@ function isMarkedDia(dia) {
     return null;
 }
 
+function isUnmarkedDia(dia) {
+    if (dia) {
+        return ! dia.hasClass('marked');
+    }
+    return null;
+}
+
 function toggleDiaMark(cid, i) {
     var dia = getDia(cid, i);
     if (dia) {
@@ -1214,6 +1221,48 @@ function removeCollectionFromDom(cid) {
 
     // remove the tab
     $('li > a[aria-controls=' + cid + ']').remove();
+}
+
+// ----------------------------------------
+// mark functions
+
+// process each dia in active collection
+function eachADia(pred, fct) {
+    eachDia(activeCollectionId(), pred, fct);
+}
+
+function eachDia(cid, pred, fct) {
+    console.log('eachDia: ' + cid);
+    $('#' + cid + ' > div.dia')
+        .each(function (i, e) {
+            if ( pred($(e)) ) {
+                fct($(e));
+            }
+        });
+}
+
+function constTrue(dia) { return true; }
+
+function hasRating(pred) {
+    var f = function (dia) {
+        var r = getRatingVal(dia);
+        return pred(r);
+    };
+    return f;
+}
+
+function eqInt(i) {
+    var p = function (j) {return j === i;}
+    return p;
+}
+
+function geInt(i) {
+    var p = function (j) {return j >= i;}
+    return p;
+}
+
+function testDia(dia) {
+    console.log(dia.find('img.dia-src').attr('title'));
 }
 
 function markAll(cid) {
@@ -2470,7 +2519,7 @@ $(document).ready(function () {
         .on('click', function (e) {
             closeCollection(activeCollectionId());
         });
-
+    /* now part of mark menue
     $("#MarkButton")
         .on('click', function (e) {
             markAll(activeCollectionId());
@@ -2480,6 +2529,7 @@ $(document).ready(function () {
         .on('click', function (e) {
             unmarkAll(activeCollectionId());
         });
+     */
 
     $("#MoveFromClipboardButton")
         .on('click', function (e) {
@@ -2609,13 +2659,22 @@ $(document).ready(function () {
     // #BlogEditButton triggers the modal box
     // it is invoked by blogEdit handler
 
-    $('#saveImgStoreOK')
-        .on('click', function (e) {
-            console.log("saveImgStoreOK clicked");
-            $('#saveImgStoreModal').modal('hide');
-            saveImgStoreStart();
-        });
+    // mark menue event handler
+    $('#MarkAll')   .on('click', function (e) { eachADia(isUnmarkedDia,       setEntryMark); });
+    $('#Mark1')     .on('click', function (e) { eachADia(hasRating(geInt(1)), setEntryMark); });
+    $('#Mark2')     .on('click', function (e) { eachADia(hasRating(geInt(2)), setEntryMark); });
+    $('#Mark3')     .on('click', function (e) { eachADia(hasRating(geInt(3)), setEntryMark); });
+    $('#Mark4')     .on('click', function (e) { eachADia(hasRating(geInt(4)), setEntryMark); });
+    $('#Mark5')     .on('click', function (e) { eachADia(hasRating(geInt(5)), setEntryMark); });
+    $('#ToggleMark').on('click', function (e) { eachADia(constTrue,           toggleMark); });
+    $('#UnmarkAll') .on('click', function (e) { eachADia(isMarkedDia,         clearEntryMark); });
+    $('#Unmark1')   .on('click', function (e) { eachADia(hasRating(eqInt(1)), clearEntryMark); });
+    $('#Unmark2')   .on('click', function (e) { eachADia(hasRating(eqInt(2)), clearEntryMark); });
+    $('#Unmark3')   .on('click', function (e) { eachADia(hasRating(eqInt(3)), clearEntryMark); });
+    $('#Unmark4')   .on('click', function (e) { eachADia(hasRating(eqInt(4)), clearEntryMark); });
+    $('#Unmark5')   .on('click', function (e) { eachADia(hasRating(eqInt(5)), clearEntryMark); });
 
+    // rating menue event handler
     [0,1,2,3,4,5].forEach(function (e, i) {
         $('#Rating' + i)
             .on('click', function () {
@@ -2623,6 +2682,14 @@ $(document).ready(function () {
                 setRating(i);
             });
     });
+
+
+    $('#saveImgStoreOK')
+        .on('click', function (e) {
+            console.log("saveImgStoreOK clicked");
+            $('#saveImgStoreModal').modal('hide');
+            saveImgStoreStart();
+        });
 
     $('#SyncCollection')
         .on('click', function () {
