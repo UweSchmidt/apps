@@ -1013,7 +1013,7 @@ function exifCollectionWithFilesystem(path) {
     statusMsg('recomputing exif data for: ' + path);
     readServer('syncExif', path,
                 function(log) {
-                    statusMsg('exif update done done');
+                    statusMsg('exif update done');
                     console.log(log);
                 });
 }
