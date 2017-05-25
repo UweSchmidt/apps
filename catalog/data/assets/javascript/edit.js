@@ -1442,6 +1442,18 @@ function removeMarkedFromCollection(cid) {
 
 // ----------------------------------------
 
+function moveAllFromClipboard(cid) {
+    console.log('moveAllFromClipboard' + cid);
+    markAll(idClipboard());
+    moveMarkedFromClipboard(cid);
+}
+
+function copyAllFromClipboard(cid) {
+    console.log('copyAllFromClipboard' + cid);
+    markAll(idClipboard());
+    copyMarkedFromClipboard(cid);
+}
+
 function moveMarkedFromClipboard(cid) {
     statusClear();
     var ixs = getMarkedEntries(idClipboard());
@@ -2519,17 +2531,16 @@ $(document).ready(function () {
         .on('click', function (e) {
             closeCollection(activeCollectionId());
         });
-    /* now part of mark menue
-    $("#MarkButton")
+
+    $("#MoveAllFromClipboardButton")
         .on('click', function (e) {
-            markAll(activeCollectionId());
+            moveAllFromClipboard(activeCollectionId());
         });
 
-    $("#UnmarkButton")
+    $("#CopyAllFromClipboardButton")
         .on('click', function (e) {
-            unmarkAll(activeCollectionId());
+            copyAllFromClipboard(activeCollectionId());
         });
-     */
 
     $("#MoveFromClipboardButton")
         .on('click', function (e) {

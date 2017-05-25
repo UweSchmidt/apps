@@ -62,26 +62,9 @@
                       aria-hidden="true"></span>
               </button>
             </li>
-            <!-- now part of mark menue
+            <!-- now part of move drop down
             <li>
-              <button id="MarkButton"
-                      class="btn btn-link btn-lg"
-                      title="mark all images/collections in current collection">
-                <span class="glyphicon glyphicon-collapse-up"
-                        aria-hidden="true"></span>
-              </button>
-            </li>
-            <li>
-              <button id="UnmarkButton"
-                      class="btn btn-link btn-lg"
-                      title="clear all marks of images/collections in current collection">
-                <span class="glyphicon glyphicon-unchecked"
-                        aria-hidden="true"></span>
-              </button>
-            </li>
-            -->
-            <li>
-              <button id="MoveFromClipboardButton"
+              <button id="XXMoveFromClipboardButton"
                       class="btn btn-link btn-lg"
                       title="move marked images/collections from clipboard to current collection">
                 <span class="glyphicon glyphicon-triangle-right"
@@ -89,7 +72,7 @@
               </button>
             </li>
             <li>
-              <button id="CopyFromClipboardButton"
+              <button id="XXCopyFromClipboardButton"
                       class="btn btn-link btn-lg"
                       title="copy marked images/collections from clipboard to current collection">
                 <span class="glyphicon glyphicon-forward"
@@ -97,7 +80,7 @@
               </button>
             </li>
             <li>
-              <button id="MoveToClipboardButton"
+              <button id="XXMoveToClipboardButton"
                       class="btn btn-link btn-lg"
                       title="move marked images/collections from current collection to clipboard">
                 <span class="glyphicon glyphicon-triangle-left"
@@ -105,7 +88,7 @@
               </button>
             </li>
             <li>
-              <button id="CopyToClipboardButton"
+              <button id="XXCopyToClipboardButton"
                       class="btn btn-link btn-lg"
                       title="copy marked images/collections from current collection to clipboard">
                 <span class="glyphicon glyphicon-backward"
@@ -113,13 +96,14 @@
               </button>
             </li>
             <li>
-              <button id="RemoveButton"
+              <button id="XXRemoveButton"
                       class="btn btn-link btn-lg"
                       title="remove marked images/collections from clipboard (sub-) collection">
                 <span class="glyphicon glyphicon-remove"
                       aria-hidden="true"></span>
               </button>
             </li>
+            -->
             <li>
               <button id="newCollectionButton"
                       class="btn btn-link btn-lg"
@@ -553,6 +537,68 @@
                 </li>
               </ul>
             </li>
+
+            <!-- dropdown copy/move menue -->
+            <li class="dropdown">
+              <button
+                 class="dropdown-toggle btn btn-link btn-lg"
+                 data-toggle="dropdown"
+                 role="button"
+                 aria-haspopup="true"
+                 aria-expanded="false"
+                 title="copy or move images/collections between current collection and clipboard">
+                <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a id="MoveAllFromClipboardButton">
+                    <span class="glyphicon glyphicon-star"           aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                    Move all from clipboard to current
+                  </a>
+                </li>
+                <li>
+                  <a id="CopyAllFromClipboardButton">
+                    <span class="glyphicon glyphicon-star"    aria-hidden="true"></span>
+                    <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+                    Copy all from clipboard to current
+                  </a>
+                </li>
+                <li>
+                  <a id="MoveFromClipboardButton">
+                    <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                    Move marked from clipboard to current
+                  </a>
+                </li>
+                <li>
+                  <a id="CopyFromClipboardButton">
+                    <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+                    Copy marked from clipboard to current
+                  </a>
+                </li>
+                <li>
+                  <a id="MoveToClipboardButton">
+                    <span class="glyphicon glyphicon-triangle-left" aria-hidden="true"></span>
+                    Move marked from current to clipboard
+                  </a>
+                </li>
+                <li>
+                  <a id="CopyToClipboardButton">
+                    <span class="glyphicon glyphicon-backward" aria-hidden="true"></span>
+                    Copy marked from current to clipboard
+                  </a>
+                </li>
+                <li>
+                  <a id="RemoveButton">
+                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                    Remove marked from clipboard (sub-)collection
+                  </a>
+                </li>
+              </ul>
+            </li>
+
+
             <!-- end of list of menue buttons -->
           </ul>
         </div><!--/.nav-collapse -->
