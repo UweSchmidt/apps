@@ -2002,8 +2002,20 @@ function buildImgCarousel(args, colVal) {
             .empty()
             .append(capt);
 
-        var state = isMarkedDia(getDia(args.cid, i));
+        var dia   = getDia(args.cid, i);
+        var state = isMarkedDia(dia);
         var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
+
+        var rt    = getRatingVal(dia);
+        console.log('init rating for entry ' + i + ' to ' + rt);
+        console.log(JSON.stringify(cimg));
+
+        var j = 1;
+        for (j = 1; j <= rt; ++j) {
+            cimg.find('div.carousel-caption a[data-star="' + j + '"]')
+                .removeClass("carousel-image-unmarked")
+                .addClass("carousel-image-marked");
+        }
 
         cimg.find('div.carousel-caption a.carousel-image-mark')
             .addClass(cls)
@@ -2020,7 +2032,6 @@ function buildImgCarousel(args, colVal) {
             });
 
         cimg.find('div.carousel-caption a.star')
-            .addClass("carousel-image-unmarked")
             .on('click', function (e) {
                 // var state = isMarkedDia(toggleDiaMark(args.cid, i));
                 // var cls   = state ? "carousel-image-marked" : "carousel-image-unmarked";
