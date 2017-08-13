@@ -340,7 +340,7 @@ parseDateTime' str =
     [("Y",y), ("M",m), ("D",d)] ->
       Just ((y, m, d), ("", "", "", ""))
 
-    -- date and time, witoutt msec
+    -- date and time, without msec
     [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
       Just ((y, m, d), (h, mi, s, ""))
 
@@ -380,6 +380,7 @@ isoDateInt = iso toInt frInt
       where
         (my, d) = i  `divMod` 100
         (y,  m) = my `divMod` 100
+
 -- take the time part of a full date/time input
 parseTime :: String -> Maybe (String, String, String, String)
 parseTime str = do

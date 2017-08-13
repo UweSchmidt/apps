@@ -338,7 +338,7 @@ fontList :: Cmd [Text]
 fontList = toFL <$> execProcess "bash" [] shellCmd
   where
     shellCmd =
-      "convert -list font| grep Font: | sed 's|^.*Font: ||'"
+      "convert -list font | grep Font: | sed 's|^.*Font: ||'"
 
     toFL :: String -> [Text]
     toFL = map (^. isoText) . lines

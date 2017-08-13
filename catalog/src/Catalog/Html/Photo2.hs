@@ -476,11 +476,11 @@ insMetaData md env =
                                           <> "/" <>
                                           gmd "File:FileName"
                                          )
-  & insMD "geoGPSLatitude"               (gmd "XMP:GPSLatitude")
-  & insMD "geoGPSLongitude"              (gmd "XMP:GPSLongitude")
+  & insMD "geoGPSLatitude"               (gmdDeg "XMP:GPSLatitude")
+  & insMD "geoGPSLongitude"              (gmdDeg "XMP:GPSLongitude")
   -- altitude disabled, XMP altitude is nonsense
-  & insMD "geoGPSAltitude"               (gmd "???:GPSAltitude")
-  & insMD "geoGPSPosition"               (gmd "Composite:GPSPosition")
+  & insMD "geoGPSAltitude"               (gmdDeg "???:GPSAltitude")
+  & insMD "geoGPSPosition"               (gmdDeg "Composite:GPSPosition")
 
   where
     insMD :: Text -> Text -> TmplEnv Cmd -> TmplEnv Cmd
@@ -488,8 +488,14 @@ insMetaData md env =
       | isempty res  = env' & insAct name mzero
       | otherwise    = env' & insAct (name <> "Val") (return res)
 
+    gmd' :: (String -> String) -> Name -> Text
+    gmd' f name = md ^. metaDataAt name . isoString . to (escHTML . f) . isoText
+
     gmd :: Name -> Text
-    gmd name = md ^. metaDataAt name . isoString . to escHTML . isoText
+    gmd = gmd' id
+
+    gmdDeg :: Name -> Text
+    gmdDeg = gmd' formatDegree
 
     insMDmaps :: Text -> Text -> TmplEnv Cmd -> TmplEnv Cmd
     insMDmaps name res' env' =
@@ -499,9 +505,13 @@ insMetaData md env =
       where
         res = res' ^. isoString
 
+    -- subst " deg" by degree char '\176'
+    formatDegree :: String -> String
+    formatDegree = sed (const "\176") " deg"
+
 -- ----------------------------------------
 
--- a little helpler for avoiding MaybeT transformer monad
+-- a little helper for avoiding MaybeT transformer monad
 
 bmb :: (Monad m, Monoid b) => (a -> m b) -> Maybe a -> m b
 bmb cmd = maybe (return mempty) cmd
