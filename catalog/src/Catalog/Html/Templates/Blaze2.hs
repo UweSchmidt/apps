@@ -37,7 +37,6 @@ t3 = putStr $ renderHtml $ p3
 
 p1 :: Html
 p1 = picPage'
-  "/root/path"
   "A Picture"
   "today"
   "The Pic Title"
@@ -58,7 +57,6 @@ p1 = picPage'
 
 p2 :: Html
 p2 = colPage'
-  "/root/path"
   "A Collection"
   "today"
   "The Title"
@@ -96,7 +94,6 @@ p2 = colPage'
 
 p3 :: Html
 p3 = txtPage'
-  "/root/path"
   "A Text page"
   "today"
   "5"
@@ -114,7 +111,7 @@ p3 = txtPage'
 
 type IconDescr = (Text, Text, Text, Text)
 
-colPage' :: Text -> Text -> Text ->
+colPage' :: Text -> Text ->
             Text -> Text -> Text ->
             Geo  ->
             Text -> Text -> Text ->
@@ -126,7 +123,7 @@ colPage' :: Text -> Text -> Text ->
             Int  -> [IconDescr] ->
             Html
 colPage'
-  rootPath theHeadTitle theDate
+  theHeadTitle theDate
   theTitle theSubTitle theComment
   theImgGeo
   theDuration thisHref thisPos
@@ -138,7 +135,6 @@ colPage'
   no'cols icons
 
   = colPage
-    rootPath
     theHeadTitle
     theDate
     theImgGeo
@@ -177,7 +173,7 @@ colPage'
       ( map (colIcon theIconGeoDir) icons )
     )
 
-picPage' :: Text -> Text -> Text ->
+picPage' :: Text -> Text ->
             Text -> Text -> Text ->
             Geo  ->
             Text -> Text -> Text ->
@@ -186,7 +182,7 @@ picPage' :: Text -> Text -> Text ->
             MetaData ->
             Html
 picPage'
-  rootPath theHeadTitle theDate
+  theHeadTitle theDate
   theTitle theSubTitle theComment
   theImgGeo
   theDuration thisHref thisPos
@@ -194,7 +190,6 @@ picPage'
   theImgGeoDir thisImgRef nextImgRef prevImgRef
   metaData
   = picPage
-    rootPath
     theHeadTitle
     theDate
     theImgGeo
@@ -225,20 +220,19 @@ picPage'
       metaData
     )
 
-txtPage' :: Text -> Text -> Text ->
+txtPage' :: Text -> Text ->
             Text -> Text -> Text ->
             Text -> Text -> Text ->
             Text -> Text -> Text ->
             Text ->
             Html
 txtPage'
-  rootPath theHeadTitle theDate
+  theHeadTitle theDate
   theDuration thisHref thisPos
   theNextHref thePrevHref theParentHref
   theImgGeoDir nextImgRef prevImgRef
   blogContents
   = txtPage
-    rootPath
     theHeadTitle
     theDate
     ( jsCode
@@ -256,14 +250,14 @@ txtPage'
 
 -- ----------------------------------------
 
-picPage :: Text -> Text -> Text ->
+picPage :: Text -> Text ->
            Geo  ->
            Html -> Html -> Html -> Html -> Html ->
            Html
-picPage rootPath theHeadTitle theDate theImgGeo
+picPage theHeadTitle theDate theImgGeo
         jsCode picImg picTitle picNav picInfo
   = htmlPage
-    ( headPage rootPath theHeadTitle theDate jsCode ) $ do
+    ( headPage theHeadTitle theDate jsCode ) $ do
   body ! onload "initAlbum();"
     ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
     picImg
@@ -273,22 +267,22 @@ picPage rootPath theHeadTitle theDate theImgGeo
 
 -- ----------------------------------------
 
-txtPage :: Text -> Text -> Text -> Html -> Text -> Html
-txtPage rootPath theHeadTitle theDate jsCode blogContents
+txtPage :: Text -> Text -> Html -> Text -> Html
+txtPage theHeadTitle theDate jsCode blogContents
   = htmlPage
-    ( headPage rootPath theHeadTitle theDate jsCode ) $ do
+    ( headPage theHeadTitle theDate jsCode ) $ do
   body ! onload "initPicture();"
     ! class_ "text" $ preEscapedText blogContents
 
 -- ----------------------------------------
 
-colPage :: Text -> Text -> Text -> Geo ->
+colPage :: Text -> Text -> Geo ->
            Html -> Html -> Html -> Html -> Html -> Html ->
            Html
-colPage rootPath theHeadTitle theDate theImgGeo
+colPage theHeadTitle theDate theImgGeo
         jsCode colImg colTitle colNav colBlog colContents
   = htmlPage
-    ( headPage rootPath theHeadTitle theDate jsCode ) $ do
+    ( headPage theHeadTitle theDate jsCode ) $ do
   body ! onload "initAlbum();"
     ! class_ (toValue $ "album album-" <> theImgGeo ^. isoText)
     ! A.id   "theAlbumBody"
@@ -310,10 +304,9 @@ colPage rootPath theHeadTitle theDate theImgGeo
 
 -- ----------------------------------------
 
-headPage :: Text -> Text -> Text -> Html -> Html
-headPage rootPath theHeadTitle theDate theJS
+headPage :: Text -> Text -> Html -> Html
+headPage theHeadTitle theDate theJS
   = H.head $ do
-  base ! href (toValue rootPath)
   title $ toHtml theHeadTitle
   meta ! name "description" ! content "Web Photo Album"
   meta ! name "author"      ! content "Uwe Schmidt"

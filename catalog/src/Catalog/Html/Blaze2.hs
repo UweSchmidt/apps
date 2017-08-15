@@ -288,18 +288,18 @@ genBlazeHtmlPage' p = do
   child1'href <- colHref pageConf   `bmb` child1'cr
   child1'img  <- colImgPath         `bmb` child1'cr
   child1'meta <- colImgMeta0        `bmb` child1'cr
-
+{-
   let noTxtRef ty ref
         | ty == IMGtxt = mempty
         | otherwise    = ref
   let next'href'    = noTxtRef next'type next'href
   let prev'href'    = noTxtRef prev'type prev'href
-
-  let getMD md n    = md ^. metaDataAt n . isoString
+-}
+  let getMD md n    = md ^. metaDataAt n
   let getTitle md   = getMD md descrTitle
 
   let this'title    = take1st [ getTitle this'meta
-                              , this'fname
+                              , this'fname ^. isoText
                               ]
   let this'subtitle = getMD this'meta descrSubtitle
   let this'comment  = getMD this'meta descrComment
@@ -326,12 +326,11 @@ genBlazeHtmlPage' p = do
                         children'titles
                         [(0::Int)..]
 
-  let rootPath       = ""
   theDate           <- ((^. isoText) . show) <$> atThisMoment
-  let theTitle       = this'title    ^. isoText
-  let theSubTitle    = this'subtitle ^. isoText
-  let theComment     = this'comment  ^. isoText
-  let theDuration    = this'duration ^. isoText
+  let theTitle       = this'title
+  let theSubTitle    = this'subtitle
+  let theComment     = this'comment
+  let theDuration    = this'duration
   let thisHref       = p             ^. isoText
   let thisPos        = this'ix       ^. isoText
   let theNextHref    = next'href     ^. isoText
@@ -339,7 +338,7 @@ genBlazeHtmlPage' p = do
   let theParentHref  = parent'href   ^. isoText
   let theChild1Href  = child1'href   ^. isoText
   let theImgGeo      = geo1 ^. theGeo
-  let theIconGeo     = geo2 ^. theGeo
+  -- let theIconGeo     = geo2 ^. theGeo
   let theImgGeoDir   = geo1 ^. isoString ^. isoText
   let theIconGeoDir  = geo2 ^. isoString ^. isoText
   thisImgRef        <- (^. isoText) <$> blankIcon (Just this'cr) this'img
@@ -361,9 +360,9 @@ genBlazeHtmlPage' p = do
         return ( href ^. isoText
                , iref ^. isoText
                , ( if isempty title
-                   then (show (pno + 1) ++ ".Bild")
+                   then (show (pno + 1) ++ ".Bild") ^. isoText
                    else title
-                 ) ^. isoText
+                 )
                , pno ^. isoPicNo ^. isoText
                )
   theChildren      <- mapM toImgDescr children'5
@@ -372,7 +371,7 @@ genBlazeHtmlPage' p = do
         -- no position there: its a collection
         | isNothing pos
           = colPage'
-            rootPath theTitle theDate
+            theTitle theDate
             theTitle theSubTitle theComment
             theImgGeo
             theDuration thisHref thisPos
@@ -386,7 +385,7 @@ genBlazeHtmlPage' p = do
         -- type is IMGtxt, so its a blog page
         | this'type == IMGtxt
           = txtPage'
-            rootPath theTitle theDate
+            theTitle theDate
             theDuration thisHref thisPos
             theNextHref thePrevHref theParentHref
             theImgGeoDir nextImgRef prevImgRef
@@ -395,7 +394,7 @@ genBlazeHtmlPage' p = do
         -- its a picture page
         | otherwise
           = picPage'
-            rootPath theTitle theDate
+            theTitle theDate
             theTitle theSubTitle theComment
             theImgGeo
             theDuration thisHref thisPos
