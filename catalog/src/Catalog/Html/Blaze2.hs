@@ -241,6 +241,8 @@ genBlazeHtmlPage :: FilePath -> Cmd Text
 genBlazeHtmlPage p =
   renderPage <$> genBlazeHtmlPage' p
 
+data PageType = IsCol | IsPic | IsTxt
+
 genBlazeHtmlPage' :: FilePath -> Cmd Html
 genBlazeHtmlPage' p = do
   ( pageConf,
@@ -250,6 +252,7 @@ genBlazeHtmlPage' p = do
     ("can't find config for " ++ show pageConf)
     (lookup pageConf thePageConfigs)
 
+  theDate <- ((^. isoText) . show) <$> atThisMoment
 
   -- pnp@(config, this'ref@(this'path, mno)) <- url2confPathNo p
 
@@ -259,150 +262,136 @@ genBlazeHtmlPage' p = do
   this'fname  <- ((^. from isoMaybe) . fmap (^. isoString)) <$>
                  colImgName               this'cr
 
+  let pageType
+        | isNothing pos       = IsCol
+        | this'type == IMGtxt = IsTxt
+        | otherwise           = IsPic
+
   -- for a col: get the entries, for an img: empty
   this'cs     <- getImgVals this'i theColEntries
   this'meta   <- colImgMeta               this'cr
   this'ix     <- maybe "" (^. isoPicNo)
                              <$> ixColRef this'cr
-  this'blog   <- colBlogCont this'type    this'cr
-  this'cblog  <- colImgBlog               this'cr
 
   parent'cr   <- parentColRef             this'cr
   parent'href <- colHref pageConf   `bmb` parent'cr
-  parent'img  <- colImgPath         `bmb` parent'cr
-  parent'meta <- colImgMeta0        `bmb` parent'cr
 
   prev'cr     <- prevColRef               this'cr
   prev'href   <- colHref pageConf   `bmb` prev'cr
   prev'img    <- colImgPath         `bmb` prev'cr
   prev'meta   <- colImgMeta0        `bmb` prev'cr
-  prev'type   <- colImgType         `bmb` prev'cr
 
   next'cr     <- nextColRef               this'cr
   next'href   <- colHref pageConf   `bmb` next'cr
   next'img    <- colImgPath         `bmb` next'cr
   next'meta   <- colImgMeta0        `bmb` next'cr
-  next'type   <- colImgType         `bmb` next'cr
 
-  child1'cr   <- childColRef 0            this'cr
-  child1'href <- colHref pageConf   `bmb` child1'cr
-  child1'img  <- colImgPath         `bmb` child1'cr
-  child1'meta <- colImgMeta0        `bmb` child1'cr
-{-
-  let noTxtRef ty ref
-        | ty == IMGtxt = mempty
-        | otherwise    = ref
-  let next'href'    = noTxtRef next'type next'href
-  let prev'href'    = noTxtRef prev'type prev'href
--}
   let getMD md n    = md ^. metaDataAt n
   let getTitle md   = getMD md descrTitle
 
-  let this'title    = take1st [ getTitle this'meta
-                              , this'fname ^. isoText
-                              ]
-  let this'subtitle = getMD this'meta descrSubtitle
-  let this'comment  = getMD this'meta descrComment
-  let this'duration = take1st [ getMD this'meta descrDuration
-                              , "1.0"
-                              ]
-
-  let parent'title  = getTitle parent'meta
-  let prev'title    = getTitle prev'meta
-  let next'title    = getTitle next'meta
-  let child1'title  = getTitle child1'meta
-
-  children'crs    <- mapM (flip childColRef this'cr) $
-                     [0 .. length this'cs - 1]
-  children'hrefs  <- mapM (colHref pageConf `bmb`) children'crs
-  children'imgs   <- mapM (colImgPath       `bmb`) children'crs
-  children'meta   <- mapM (colImgMeta0      `bmb`) children'crs
-
-  let children'titles = map getTitle children'meta
-  let children'5      = zip5
-                        children'crs
-                        children'hrefs
-                        children'imgs
-                        children'titles
-                        [(0::Int)..]
-
-  theDate           <- ((^. isoText) . show) <$> atThisMoment
-  let theTitle       = this'title
-  let theSubTitle    = this'subtitle
-  let theComment     = this'comment
-  let theDuration    = this'duration
+  let theTitle       = take1st [ getTitle this'meta
+                               , this'fname ^. isoText
+                               ]
+  let theSubTitle    = getMD this'meta descrSubtitle
+  let theComment     = getMD this'meta descrComment
+  let theDuration    = take1st [ getMD this'meta descrDuration
+                               , "1.0"
+                               ]
   let thisHref       = p             ^. isoText
   let thisPos        = this'ix       ^. isoText
   let theNextHref    = next'href     ^. isoText
   let thePrevHref    = prev'href     ^. isoText
   let theParentHref  = parent'href   ^. isoText
-  let theChild1Href  = child1'href   ^. isoText
   let theImgGeo      = geo1 ^. theGeo
-  -- let theIconGeo     = geo2 ^. theGeo
   let theImgGeoDir   = geo1 ^. isoString ^. isoText
-  let theIconGeoDir  = geo2 ^. isoString ^. isoText
+
   thisImgRef        <- (^. isoText) <$> blankIcon (Just this'cr) this'img
-  parentImgRef      <- (^. isoText) <$> blankIcon parent'cr      parent'img
   nextImgRef        <- (^. isoText) <$> blankIcon next'cr        next'img
   prevImgRef        <- (^. isoText) <$> blankIcon prev'cr        prev'img
-  child1ImgRef      <- (^. isoText) <$> blankIcon child1'cr      child1'img
-  let cBlogContents  = this'cblog    ^. isoText
-  let blogContents   = this'blog     ^. isoText
-  let theParentTitle = parent'title  ^. isoText
-  let theNextTitle   = next'title    ^. isoText
-  let thePrevTitle   = prev'title    ^. isoText
-  let theChild1Title = child1'title  ^. isoText
-  let metaData       = this'meta -- add jpg filename
-                       & metaDataAt "File:RefJpg" .~ (this'fname ^. isoText)
 
-  let toImgDescr (cr, href, img, title, pno) = do
-        iref <- blankIcon cr img
-        return ( href ^. isoText
-               , iref ^. isoText
-               , ( if isempty title
-                   then (show (pno + 1) ++ ".Bild") ^. isoText
-                   else title
-                 )
-               , pno ^. isoPicNo ^. isoText
-               )
-  theChildren      <- mapM toImgDescr children'5
+  let theNextTitle   = getTitle next'meta
+  let thePrevTitle   = getTitle prev'meta
 
-  let page
-        -- no position there: its a collection
-        | isNothing pos
-          = colPage'
-            theTitle theDate
-            theTitle theSubTitle theComment
-            theImgGeo
-            theDuration thisHref thisPos
-            theNextHref thePrevHref theParentHref theChild1Href
-            theImgGeoDir theIconGeoDir thisImgRef nextImgRef prevImgRef child1ImgRef
-            cBlogContents
-            theParentTitle parentImgRef
-            theNextTitle thePrevTitle theChild1Title
-            no'cols theChildren
+  case pageType of
+    IsCol -> do
+      let theIconGeoDir  = geo2 ^. isoString ^. isoText
 
-        -- type is IMGtxt, so its a blog page
-        | this'type == IMGtxt
-          = txtPage'
-            theTitle theDate
-            theDuration thisHref thisPos
-            theNextHref thePrevHref theParentHref
-            theImgGeoDir nextImgRef prevImgRef
-            blogContents
+      theParentTitle <- getTitle <$> (colImgMeta0 `bmb` parent'cr)
+      parent'img     <- colImgPath `bmb` parent'cr
+      parentImgRef   <- (^. isoText) <$> blankIcon parent'cr parent'img
 
-        -- its a picture page
-        | otherwise
-          = picPage'
-            theTitle theDate
-            theTitle theSubTitle theComment
-            theImgGeo
-            theDuration thisHref thisPos
-            theNextHref thePrevHref theParentHref
-            theImgGeoDir thisImgRef nextImgRef prevImgRef
-            metaData
+      child1'cr      <- childColRef 0            this'cr
+      child1'img     <- colImgPath         `bmb` child1'cr
 
-  return page
+      child1ImgRef   <- (^. isoText) <$> blankIcon child1'cr child1'img
+      theChild1Href  <- (^. isoText) <$> (colHref pageConf `bmb` child1'cr)
+      theChild1Title <- getTitle     <$> (colImgMeta0      `bmb` child1'cr)
+
+      cBlogContents  <- (^. isoText) <$> colImgBlog this'cr
+
+      children'crs   <- mapM (flip childColRef this'cr) $
+                         [0 .. length this'cs - 1]
+      children'hrefs <- mapM (colHref pageConf `bmb`) children'crs
+      children'imgs  <- mapM (colImgPath       `bmb`) children'crs
+      children'meta  <- mapM (colImgMeta0      `bmb`) children'crs
+
+      let children'titles = map getTitle children'meta
+      let children'5      = zip5
+                            children'crs
+                            children'hrefs
+                            children'imgs
+                            children'titles
+                            [(0::Int)..]
+
+      let toImgDescr (cr, href, img, title, pno) = do
+            iref <- blankIcon cr img
+            return ( href ^. isoText
+                   , iref ^. isoText
+                   , ( if isempty title
+                       then (show (pno + 1) ++ ".Bild") ^. isoText
+                       else title
+                     )
+                   , pno ^. isoPicNo ^. isoText
+                   )
+      theChildren <- mapM toImgDescr children'5
+
+      return $
+        colPage'
+        theTitle theDate
+        theTitle theSubTitle theComment
+        theImgGeo
+        theDuration thisHref thisPos
+        theNextHref thePrevHref theParentHref theChild1Href
+        theImgGeoDir theIconGeoDir thisImgRef nextImgRef prevImgRef child1ImgRef
+        cBlogContents
+        theParentTitle parentImgRef
+        theNextTitle thePrevTitle theChild1Title
+        no'cols theChildren
+
+    IsTxt -> do
+      blogContents <- (^. isoText) <$> colBlogCont this'type this'cr
+
+      return $
+        txtPage'
+        theTitle theDate
+        theDuration thisHref thisPos
+        theNextHref thePrevHref theParentHref
+        theImgGeoDir nextImgRef prevImgRef
+        blogContents
+
+    IsPic -> do
+      let metaData = this'meta -- add jpg filename
+                     & metaDataAt "File:RefJpg" .~ (this'fname ^. isoText)
+
+      return $
+        picPage'
+        theTitle theDate
+        theTitle theSubTitle theComment
+        theImgGeo
+        theDuration thisHref thisPos
+        theNextHref thePrevHref theParentHref
+        theImgGeoDir thisImgRef nextImgRef prevImgRef
+        metaData
 
 -- ----------------------------------------
 --
