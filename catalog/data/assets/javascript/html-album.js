@@ -220,11 +220,11 @@ function keyPressed (KeyEvent) {
 
   if ( KeyEvent.keyCode == 39 ||    /* right arrow */
        ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-	 &&
+         &&
          ( KeyEvent.which == 32 ||   /* space bar */
            KeyEvent.which == 62 ||   /* ">" */
-	   KeyEvent.which == 110     /* n */
-	 )
+           KeyEvent.which == 110     /* n */
+         )
        )
      ) {
     trc(0, "weiter");
@@ -236,10 +236,10 @@ function keyPressed (KeyEvent) {
   if ( KeyEvent.keyCode   == 37 ||    /* left arrow */
        KeyEvent.keyCode   == 8  ||    /* backspace */
        ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-	 &&
+         &&
          ( KeyEvent.which == 60 ||    /* or "<" */
-	   KeyEvent.which == 112      /* or "p" */
-	 )
+           KeyEvent.which == 112      /* or "p" */
+         )
        )
      ) {
     trc(0, "zurück");
@@ -250,10 +250,10 @@ function keyPressed (KeyEvent) {
 
   if ( KeyEvent.keyCode   == 38 ||    /* up arrow */
        ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-	 &&
+         &&
          ( KeyEvent.which  == 94 ||     /* or "^" */
-	   KeyEvent.which  == 117       /* or "u" */
-	 )
+           KeyEvent.which  == 117       /* or "u" */
+         )
        )
      ) {
     trc(0, "nach oben");
@@ -264,10 +264,10 @@ function keyPressed (KeyEvent) {
 
   if ( KeyEvent.keyCode   == 40 ||    /* down arrow */
        ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-	 &&
+         &&
          ( KeyEvent.which == 118 ||  /* or "v" */
-	   KeyEvent.which == 100     /* or "d" */
-	 )
+           KeyEvent.which == 100     /* or "d" */
+         )
        )
      ) {
     trc(0, "nach unten");

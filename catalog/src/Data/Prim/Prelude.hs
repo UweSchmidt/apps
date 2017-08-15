@@ -212,6 +212,10 @@ instance IsoText String where
   isoText = from isoString
   {-# INLINE isoText #-}
 
+instance IsoText Int where
+  isoText = isoString . isoText
+  {-# INLINE isoText #-}
+
 -- ----------------------------------------
 
 class IsoInteger a where

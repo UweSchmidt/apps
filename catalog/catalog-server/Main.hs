@@ -4,6 +4,7 @@ module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
+import           Catalog.Html.Blaze2 (genBlazeHtmlPage)
 import           Catalog.Json (jsonRPC)
 import           Catalog.Options (mainWithArgs)
 import           Catalog.System.Convert (genImage, genImageFromTxt)
@@ -93,7 +94,17 @@ matchHTML :: RoutePattern
 matchHTML = matchPath $ ps'html ^. isoText
   where
     ps'html =
-      "/[a-zA-Z]+-[0-9]+x[0-9]+"
+      "/html-[0-9]+x[0-9]+"
+      ++
+      ps'collections
+      ++
+      "(/.*)?[.]html"
+
+matchBlazeHTML :: RoutePattern
+matchBlazeHTML = matchPath $ ps'html ^. isoText
+  where
+    ps'html =
+      "/blaze-[0-9]+x[0-9]+"
       ++
       ps'collections
       ++
@@ -222,6 +233,11 @@ main' env state = do
       res <- runRead $ genHtmlPage p
       html (res ^. lazy)
 
+    -- HTML page for collections and images generated with Blaze
+    get matchBlazeHTML $ do
+      p <- param "path"
+      res <- runRead $ genBlazeHtmlPage p
+      html (res ^. lazy)
     -- ----------------------------------------
     -- routes for images
 

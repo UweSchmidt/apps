@@ -1,5 +1,5 @@
 name:                catalog
-version:             0.1.1.0
+version:             0.1.2.0
 synopsis:            Image catalog
 description:         Please see README.md
 homepage:            http://github.com/UweSchmidt/apps/catalog#readme
@@ -43,8 +43,10 @@ library
                      Catalog.Cmd.List
                      Catalog.Cmd.Types
                      Catalog.Html.Basic
+                     Catalog.Html.Blaze2
                      Catalog.Html.Cache
                      Catalog.Html.Photo2
+                     Catalog.Html.Templates.Blaze2
                      Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.Json
                      Catalog.Journal
@@ -59,6 +61,7 @@ library
   
   -- Other library packages from which modules are imported.
   build-depends:     base                 >= 4.5
+                   , blaze-html
                    , aeson                >= 0.8
                    , aeson-pretty         >= 0.8
                    , bytestring           >= 0.9

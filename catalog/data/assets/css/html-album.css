@@ -369,6 +369,7 @@ table.nav {
   background-color: transparent;
   border-spacing:           0px;
   border-collapse:     collapse;
+  float:                  right;
 }
 
 table.nav tr td {
