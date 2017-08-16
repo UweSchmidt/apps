@@ -11,6 +11,7 @@ module Data.Prim.Prelude
        , Map
        , Set
        , Text
+       , LazyText
        , Vector
        , IsEmpty(..)
        , IsString(..)

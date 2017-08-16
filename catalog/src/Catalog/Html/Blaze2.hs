@@ -237,7 +237,7 @@ nextColRef = neighborColRef   1
 
 -- the main entry for a HTML page
 
-genBlazeHtmlPage :: FilePath -> Cmd Text
+genBlazeHtmlPage :: FilePath -> Cmd LazyText
 genBlazeHtmlPage p =
   renderPage <$> genBlazeHtmlPage' p
 

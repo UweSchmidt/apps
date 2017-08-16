@@ -22,9 +22,13 @@ import           Text.Blaze.Html5.Attributes hiding (title, rows, accept)
 import qualified Text.Blaze.Html5.Attributes as A
 import           Text.Blaze.Html.Renderer.Pretty
 import qualified Text.Blaze.Html.Renderer.Pretty as R
+import qualified Text.Blaze.Html.Renderer.Text   as T
 
-renderPage :: Html -> Text
-renderPage p = R.renderHtml p ^. isoText
+renderPage' :: Html -> LazyText
+renderPage' p = R.renderHtml p ^. isoText . lazy
+
+renderPage :: Html -> LazyText
+renderPage p = T.renderHtml p
 
 t1 :: IO ()
 t1 = putStr $ renderHtml $ p1

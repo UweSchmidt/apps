@@ -237,7 +237,7 @@ main' env state = do
     get matchBlazeHTML $ do
       p <- param "path"
       res <- runRead $ genBlazeHtmlPage p
-      html (res ^. lazy)
+      html res
     -- ----------------------------------------
     -- routes for images
 
