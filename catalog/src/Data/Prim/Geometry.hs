@@ -19,11 +19,17 @@ instance IsoString Geo where
   {-# INLINE isoString #-}
 
 instance IsoText Geo where
-  isoText = isoString . from isoString
+  isoText = isoString . isoText
   {-# INLINE isoText #-}
 
 geo2pair :: Iso' Geo (Int, Int)
 geo2pair = iso (\ (Geo w h) -> (w, h)) (uncurry Geo)
+
+theW :: Lens' Geo Int
+theW = geo2pair . _1
+
+theH :: Lens' Geo Int
+theH = geo2pair . _2
 
 showGeo :: Geo -> String
 showGeo (Geo w h) = show w ++ "x" ++ show h
@@ -60,7 +66,7 @@ geoRegex'' =        "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
 
 -- ----------------------------------------
 
-data AspectRatio = Fix | Pad | Crop
+data AspectRatio = Fix | Pad | Crop | Pano
                  deriving (Eq, Ord, Enum, Bounded, Show, Read)
 
 instance IsoString AspectRatio where
@@ -68,6 +74,9 @@ instance IsoString AspectRatio where
     where
       toS = (\ (x : xs) -> toLower x : xs) . show
       frS = read . (\ (x : xs) -> toUpper x : xs)
+
+instance IsoText AspectRatio where
+  isoText = isoString . isoText
 
 arRegex :: Regex
 arRegex = parseRegexExt arRegex'
@@ -104,6 +113,9 @@ instance IsoString GeoAR where
                ) ^. from geoar2pair
         where
           (ar, '-' : g) = break (== '-') s
+
+instance IsoText GeoAR where
+  isoText = isoString . isoText
 
 geoarRegex :: Regex
 geoarRegex = parseRegexExt geoarRegex'

@@ -26,6 +26,7 @@ import Catalog.Html.Basic ( ColRef
                           )
 import Catalog.Html.Templates.Blaze2
 import Catalog.System.ExifTool (getMetaData)
+import Catalog.System.Convert  (getColImgSize, scaleWidth)
 
 -- ----------------------------------------
 
@@ -303,7 +304,7 @@ genBlazeHtmlPage' p = do
   let thePrevHref    = prev'href     ^. isoText
   let theParentHref  = parent'href   ^. isoText
   let theImgGeo      = geo1 ^. theGeo
-  let theImgGeoDir   = geo1 ^. isoString ^. isoText
+  let theImgGeoDir   = geo1 ^. isoText
 
   thisImgRef        <- (^. isoText) <$> blankIcon (Just this'cr) this'img
   nextImgRef        <- (^. isoText) <$> blankIcon next'cr        next'img
@@ -383,6 +384,18 @@ genBlazeHtmlPage' p = do
       let metaData = this'meta -- add jpg filename
                      & metaDataAt "File:RefJpg" .~ (this'fname ^. isoText)
 
+      orgImgGeo <- maybe (return $ Geo 0 0) getColImgSize $ this'img
+      let isPano = isPanorama theImgGeo orgImgGeo
+      let pano
+            | isPano    = Just $
+                          ( scaleWidth (theImgGeo ^. theH) orgImgGeo
+                          , (geo1 & theAR .~ Pano) ^. isoText
+                          )
+            | otherwise = Nothing
+
+      verbose $ "Geo: " ++ show this'img ++ "=" ++ show orgImgGeo ++
+                ", " ++ show theImgGeo ++ ", pano=" ++ show pano
+
       return $
         picPage'
         theTitle theDate
@@ -392,6 +405,15 @@ genBlazeHtmlPage' p = do
         theNextHref thePrevHref theParentHref
         theImgGeoDir thisImgRef nextImgRef prevImgRef
         metaData
+        pano
+
+-- test: display picture as panorama
+
+isPanorama :: Geo -> Geo -> Bool
+isPanorama (Geo dw dh) (Geo iw ih) =
+  ih >= dh        -- height of original >= display height
+  &&
+  iw >= 2 * ih    -- iw / ih >= 2.0
 
 -- ----------------------------------------
 --

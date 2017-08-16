@@ -13,7 +13,8 @@ module Catalog.System.Convert
        , genBlogHtml
        , writeBlogText
        , selectFont
-       ) -}
+       , scaleWidth
+) -}
 where
 
 import           Catalog.Cmd
@@ -98,9 +99,9 @@ genImageFromTxt =
 -- from the archive or assets
 -- geometry is specified by the the first part of the url2
 --
--- example:             "/fix-160x120/archive/photo/pic-30.jpg"
+-- example:             "/fix-160x120/archive/photos/pic-30.jpg"
 --
--- dst img is           "mountPath/fix-160x120/photo/pic-30.jpg"
+-- dst img is           "mountPath/fix-160x120/photos/pic-30.jpg"
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
@@ -116,7 +117,7 @@ genImage' createImageC imgPath2Geo imgSrc url = do
       notThere =
         runDry msg (abort msg) >> return url
         where
-          msg = "image not found: " ++ show url
+          msg = "image not found: " ++ show (imgPath2Geo url)
 
       doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
               (GeoAR, FilePath) -> Cmd FilePath
@@ -184,6 +185,21 @@ parseGeo s =
   maybe (abort $ "parseGeo: no parse: " ++ s) return $
   readGeo' s
 
+-- get the geo from an absolut path in catalog
+--
+-- imgRef:   /archive/photos/pic-30.jpg
+-- fs path:  "mountPath/photos/pic-30.jpg"
+
+getColImgSize :: FilePath -> Cmd Geo
+getColImgSize imgRef = do
+  mp <- view envMountPath
+  getImageSize $ mp ++ drop (length ps'archive) imgRef
+
+scaleWidth :: Int -> Geo -> Geo
+scaleWidth h' (Geo w h) = Geo w' h'
+  where
+    w' = (w * h' + (h - 1)) `div` h
+
 -- ----------------------------------------
 
 -- try to create an icon from some text found in the file path
@@ -225,16 +241,32 @@ createImageCopy rot d'geo d s =
         execProcess "bash" [] shellCmd >> return ()
       return d
       where
-        shellCmd = resizeShellCmd rot d'geo s'geo d s
+        shellCmd = buildCmd rot d'geo s'geo d s
 
-resizeShellCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
-resizeShellCmd rot d'g s'geo0 d s =
+buildCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd rot d'g s'geo d s
+  | rot' /= 0 = buildCmd2 ["-rotate", show (rot' * 90)]
+                d'g s'geo' d s
+  | otherwise = buildCmd2 []
+                d'g s'geo  d s
+  where
+    s'geo'
+      | odd rot   = flipGeo s'geo
+      | otherwise =         s'geo
+    rot' = rot `mod` 4
+
+buildCmd2 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd2 opts d'g s'geo d s
+  | d'g ^. theAR == Pano = buildCmd3 opts d'g'new s'geo d s
+  | otherwise            = buildCmd3 opts d'g     s'geo d s
+  where
+    d'g'new = d'g & theAR  .~ Pad
+                  & theGeo .~ scaleWidth (d'g ^. theGeo . theH) s'geo
+
+buildCmd3 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd3 rotate d'g s'geo d s =
   shellCmd
   where
-    s'geo
-      | even rot  =         s'geo0
-      | otherwise = flipGeo s'geo0
-
     d'geo       = d'g ^. theGeo
     aspect      = d'g ^. theAR
     (Geo cw ch, Geo xoff yoff)
@@ -247,28 +279,22 @@ resizeShellCmd rot d'g s'geo0 d s =
     crGeo Fix   = cropGeo s'geo d'geo
     crGeo Pad   = (s'geo, Geo (-1) (-1))
     crGeo Crop  = (s'geo, Geo 0 0)
+    crGeo Pano  = (s'geo, Geo (-1) (-1)) -- redundant, Pano is transformed into Fix
 
-    unsharp     = [] -- ["-unsharp", "0.7x0.7+1.0+0.05"] -- sharpen option removed
     resize      = ["-thumbnail", geo ++ "!"]
-    -- resize1     = ["-geometry", geo, "-thumbnail", geo]
     resize1     = ( if isThumbnail
                     then "-thumbnail"
                     else "-geometry"
                   ) : [d'geo ^. isoString]
     quality     = "-quality" : [ if isThumbnail
                                  then "75"
-                                 else "95"
+                                 else "90"
                                ]
     interlace   = [ "-interlace", "Plane" ]
 
-    rotate
-      | rot == 0  = []
-      | otherwise = [ "-rotate", show ((rot `mod` 4) * 90) ]
-
     isPad       = (xoff == (-1) && yoff == (-1))
     isCrop      = (xoff > 0     || yoff > 0)
-    isThumbnail = let Geo dw dh = d'geo
-                  in dw <= 300 && dh <= 300
+    isThumbnail = d'geo ^. theW <= 300 && d'geo ^. theH <= 300
     geo         = r ^. isoString
 
     cmdName
@@ -285,9 +311,9 @@ resizeShellCmd rot d'g s'geo0 d s =
                           , "|"
                           , "convert"
                           ]
-                          ++ resize ++ unsharp ++ quality
+                          ++ resize ++ quality
                           ++ ["miff:-", d ]
-        | otherwise     = resize ++ unsharp ++ [s, d]
+        | otherwise     = resize ++ [s, d]
 
     shellCmd    = unwords $
                   cmdName

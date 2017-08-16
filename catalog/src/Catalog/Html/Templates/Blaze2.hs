@@ -58,6 +58,7 @@ p1 = picPage'
   "/next/img.jpg"
   "/prev/img.jpg"
   mempty
+  Nothing
 
 p2 :: Html
 p2 = colPage'
@@ -184,6 +185,7 @@ picPage' :: Text -> Text ->
             Text -> Text -> Text ->
             Text -> Text -> Text -> Text ->
             MetaData ->
+            Maybe (Geo, Text) ->
             Html
 picPage'
   theHeadTitle theDate
@@ -193,6 +195,7 @@ picPage'
   theNextHref thePrevHref theParentHref
   theImgGeoDir thisImgRef nextImgRef prevImgRef
   metaData
+  pano
   = picPage
     theHeadTitle
     theDate
@@ -209,8 +212,10 @@ picPage'
       ( imgRef theImgGeoDir prevImgRef )
     )
     ( picImg
+      theImgGeo
       theImgGeoDir
       thisImgRef
+      pano
     )
     ( picTitle
       theImgGeo
@@ -458,8 +463,8 @@ colIcon theIconGeoDir (theChildHref, theChildImgRef, theChildTitle, theChildId) 
 
 -- ----------------------------------------
 
-picImg :: Text -> Text -> Html
-picImg theImgGeoDir thisImgRef =
+picImg :: Geo -> Text -> Text -> Maybe (Geo, Text) -> Html
+picImg _theImgGeo theImgGeoDir thisImgRef Nothing =
   H.div ! class_ "picture" $
     table ! class_ "picture" $
       tr $
@@ -467,6 +472,20 @@ picImg theImgGeoDir thisImgRef =
           img ! src (toValue $ imgRef theImgGeoDir thisImgRef)
               ! class_ (toValue $ "img-" <> theImgGeoDir)
 
+picImg theImgGeo _theImgGeoDir thisImgRef (Just (pano'geo, theImgGeoDir)) =
+  H.div ! A.style (  toValue $
+                     "width: "  <> theImgGeo ^. theW . isoText <> "px;"
+                  <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
+                  <> "overflow-x: scroll;"
+                  ) $
+    img ! src    (toValue $ imgRef theImgGeoDir thisImgRef)
+        ! class_ (toValue $ "img-" <> theImgGeoDir)
+{-
+  class_ "panopic" $ toHtml $
+  "panorama not yet implemented, thisImgRef=" <> thisImgRef <>
+  ", theImgGeoDir=" <> theImgGeoDir <>
+  ", pano=" <> pano'geo ^. isoText <> ", diplay geo=" <> theImgGeo ^. isoText
+-}
 picTitle :: Geo -> Text -> Text -> Text -> Html
 picTitle theImgGeo theTitle theSubTitle theComment =
   H.div ! class_ "title-area"

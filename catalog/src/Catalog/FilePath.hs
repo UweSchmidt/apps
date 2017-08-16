@@ -123,8 +123,12 @@ txtPathExpr =
 
 imgPathExpr :: Regex
 imgPathExpr =
-  parseRegexExt
-  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
+  parseRegexExt $
+  "/({geoar}(" ++ pxe ++ ")-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
+  where
+    pxe = intercalate "|" $ map (^. isoString) $ ars
+    ars :: [AspectRatio]
+    ars = [minBound..maxBound]
 
 -- extract the path component from a file path
 

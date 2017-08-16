@@ -65,7 +65,8 @@ p'photos       = p'collections `snocPath` n'photos
 p'clipboard    = p'collections `snocPath` n'clipboard
 p'trash        = p'collections `snocPath` n'trash
 
-ps'collections
+ps'archive
+  , ps'collections
   , ps'bycreatedate
   , ps'cache
   , ps'clipboard
@@ -79,6 +80,7 @@ ps'collections
   , ps'exifcache
   , ps'blank :: FilePath
 
+ps'archive      = p'archive      ^. isoString
 ps'clipboard    = p'clipboard    ^. isoString
 ps'trash        = p'trash        ^. isoString
 ps'cache        = "/cache"
