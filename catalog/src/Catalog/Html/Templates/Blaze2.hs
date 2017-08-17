@@ -472,7 +472,7 @@ picImg _theImgGeo theImgGeoDir thisImgRef Nothing =
           img ! src (toValue $ imgRef theImgGeoDir thisImgRef)
               ! class_ (toValue $ "img-" <> theImgGeoDir)
 
-picImg theImgGeo _theImgGeoDir thisImgRef (Just (pano'geo, theImgGeoDir)) =
+picImg theImgGeo _theImgGeoDir thisImgRef (Just (_pano'geo, theImgGeoDir)) =
   H.div ! A.style (  toValue $
                      "width: "  <> theImgGeo ^. theW . isoText <> "px;"
                   <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
@@ -480,12 +480,7 @@ picImg theImgGeo _theImgGeoDir thisImgRef (Just (pano'geo, theImgGeoDir)) =
                   ) $
     img ! src    (toValue $ imgRef theImgGeoDir thisImgRef)
         ! class_ (toValue $ "img-" <> theImgGeoDir)
-{-
-  class_ "panopic" $ toHtml $
-  "panorama not yet implemented, thisImgRef=" <> thisImgRef <>
-  ", theImgGeoDir=" <> theImgGeoDir <>
-  ", pano=" <> pano'geo ^. isoText <> ", diplay geo=" <> theImgGeo ^. isoText
--}
+
 picTitle :: Geo -> Text -> Text -> Text -> Html
 picTitle theImgGeo theTitle theSubTitle theComment =
   H.div ! class_ "title-area"

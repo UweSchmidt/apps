@@ -392,10 +392,10 @@ genBlazeHtmlPage' p = do
                           , (geo1 & theAR .~ Pano) ^. isoText
                           )
             | otherwise = Nothing
-
+{-
       verbose $ "Geo: " ++ show this'img ++ "=" ++ show orgImgGeo ++
                 ", " ++ show theImgGeo ++ ", pano=" ++ show pano
-
+-}
       return $
         picPage'
         theTitle theDate
