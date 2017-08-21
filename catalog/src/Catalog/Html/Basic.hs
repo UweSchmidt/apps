@@ -69,22 +69,27 @@ colImgName =
   (\ _i n -> return $ Just n)
   (\ _i   -> return Nothing)
 
-colImgPath :: ColRef -> Cmd (Maybe FilePath)
-colImgPath = colImgOp iop cop
+colImgPath0 :: ColRef -> Cmd (Maybe FilePath)
+colImgPath0 = colImgOp iop cop
   where
     cop i = do -- col ref
       j'img <- getImgVals i theColImg
       case j'img of
         -- collection has a front page image
         Just (k, n) ->
-          Just <$> buildImgPath k n
+          Just <$> buildImgPath0 k n
         _ ->
           return Nothing
 
-    iop j n = Just <$> buildImgPath j n
+    iop j n = Just <$> buildImgPath0 j n
+
+colImgPath :: ColRef -> Cmd (Maybe FilePath)
+colImgPath cr = do
+  f <- colImgPath0 cr
+  return (addJpg <$> f)
 
 -- compute the image ref of a collection
--- if collection has an front page image, take that
+-- if collection has a front page image, take that
 -- otherwise take the ref to a generated image
 
 colImgRef :: ObjId -> Cmd FilePath
@@ -94,14 +99,19 @@ colImgRef i = do
 
 -- ----------------------------------------
 
-buildImgPath :: ObjId -> Name -> Cmd FilePath
-buildImgPath i n = do
+buildImgPath0 :: ObjId -> Name -> Cmd FilePath
+buildImgPath0 i n = do
   p <- objid2path i
-  return $ substPathName n' p ^. isoString
- where
+  return $ substPathName n p ^. isoString
+
+buildImgPath :: ObjId -> Name -> Cmd FilePath
+buildImgPath i n = addJpg <$> buildImgPath0 i n
+
+addJpg :: FilePath -> FilePath
+addJpg f
+  | ".jpg" `isSuffixOf` f = f
+  | otherwise             = f ++ ".jpg"
     -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
-    n' | ".jpg" `isNameSuffix` n = n
-       | otherwise               = substNameSuffix "" ".jpg" n
 
 -- ----------------------------------------
 

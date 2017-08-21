@@ -18,7 +18,9 @@ import Catalog.Html.Basic ( ColRef
                           , colImgName
                           , colImgOp
                           , colImgPath
+                          , colImgPath0
                           , colImgType
+                          , addJpg
                           , iconRef
                           , maybeColRef
                           , mkColRefC
@@ -259,7 +261,8 @@ genBlazeHtmlPage' p = do
 
   -- this entry
   this'type   <- colImgType               this'cr
-  this'img    <- colImgPath               this'cr
+  this'img0   <- colImgPath0              this'cr
+  let this'img = addJpg <$> this'img0
   this'fname  <- ((^. from isoMaybe) . fmap (^. isoString)) <$>
                  colImgName               this'cr
 
@@ -381,21 +384,24 @@ genBlazeHtmlPage' p = do
         blogContents
 
     IsPic -> do
+      let star     = '\9733'
+      let rating   = (\ r -> replicate r star ^. isoText) $
+                     getRating this'meta
+
       let metaData = this'meta -- add jpg filename
                      & metaDataAt "File:RefJpg" .~ (this'fname ^. isoText)
+                     & metaDataAt "Img:Rating"  .~ rating
 
-      orgImgGeo <- maybe (return $ Geo 0 0) getColImgSize $ this'img
-      let isPano = isPanorama theImgGeo orgImgGeo
+      orgImgGeo   <- maybe (return mempty) getColImgSize $ this'img0
+
+      let isPano   = isPanorama theImgGeo orgImgGeo
       let pano
             | isPano    = Just $
                           ( scaleWidth (theImgGeo ^. theH) orgImgGeo
                           , (geo1 & theAR .~ Pano) ^. isoText
                           )
             | otherwise = Nothing
-{-
-      verbose $ "Geo: " ++ show this'img ++ "=" ++ show orgImgGeo ++
-                ", " ++ show theImgGeo ++ ", pano=" ++ show pano
--}
+
       return $
         picPage'
         theTitle theDate

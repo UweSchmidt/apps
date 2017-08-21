@@ -70,8 +70,10 @@ readMetaData f = do
           return m
 
 getMetaData :: ObjId -> Cmd MetaData
-getMetaData i =
-  objid2path i >>= exifPath >>= readMetaData
+getMetaData i = do
+  md1 <- getImgVals i theMetaData
+  md2 <- objid2path i >>= exifPath >>= readMetaData
+  return $ md1 `mergeMD` md2
 
 -- ----------------------------------------
 

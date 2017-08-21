@@ -547,11 +547,14 @@ picMeta md = mconcat $ map toMarkup mdTab
         th $ toHtml descr
         td $ val
 
+    mdv :: Text -> Html
     mdv v = toHtml v
 
+    mdWeb :: Text -> Html
     mdWeb v =
       H.a ! href (toValue v) $ toHtml v
 
+    mdWiki :: Text -> Html
     mdWiki v =
       H.a ! href (toValue v) $ "--> Wikipedia"
 
@@ -563,16 +566,22 @@ picMeta md = mconcat $ map toMarkup mdTab
         gmhref = "https://maps.google.de/maps/@" <> gmloc <> ",17z"
         gmloc = loc2googleMapsUrl (pos ^. isoString) ^. from isoMaybe . isoText
 
+    mdRating :: Text -> Html
+    mdRating r =
+      H.span ! A.style "color: red" $ toHtml r
+
+    mdFile :: Text -> Html
+    mdFile v =
+      toHtml $ d <> "/" <> v
+      where
+        d = md ^. metaDataAt "File:Directory"
+
+    mdLoc :: Text -> Html
     mdLoc v = toHtml $ formatDegree v
 
     -- subst " deg" by degree char '\176'
     formatDegree :: Text -> Text
     formatDegree = sed (const "\176") " deg"
-
-    mdFile v =
-      toHtml $ d <> "/" <> v
-      where
-        d = md ^. metaDataAt "File:Directory"
 
     mdTab :: [(Text, Name, Text -> Html)]
     mdTab =
@@ -608,6 +617,7 @@ picMeta md = mconcat $ map toMarkup mdTab
       , ("Raw-Datei",            "File:FileName",                mdFile)
       , ("Bild-Datei",           "File:RefJpg",                  mdv)
       , ("Bearbeitet",           "File:FileModifyDate",          mdv)
+      , ("Bewertung",            "Img:Rating",                   mdRating)
       ]
 
 -- ----------------------------------------

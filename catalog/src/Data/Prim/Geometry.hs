@@ -22,6 +22,14 @@ instance IsoText Geo where
   isoText = isoString . isoText
   {-# INLINE isoText #-}
 
+instance Monoid Geo where
+  mempty = Geo 0 0
+  Geo 0 0 `mappend` geo2 = geo2
+  geo1    `mappend` _    = geo1
+
+instance IsEmpty Geo where
+  isempty g = g == mempty
+
 geo2pair :: Iso' Geo (Int, Int)
 geo2pair = iso (\ (Geo w h) -> (w, h)) (uncurry Geo)
 
