@@ -32,7 +32,8 @@ getExifTool f = do
           warn $ "exiftool failed for " ++ show f ++ ", error: " ++ show e
           return mempty
       )
-    else
+    else do
+      warn $ "exiftool: file not there: " ++ show f
       return mempty
 
 execExifTool :: [String] -> FilePath -> Cmd String

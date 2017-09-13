@@ -1,25 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Catalog.System.Convert
-{- }
   ( getImageSize
-       , createImageCopy
-       , genImage
-       , createImageFromTxt
-       , genImageFromTxt
-       , genIcon
-       , genAssetIcon
-       , genBlogText
-       , genBlogHtml
-       , writeBlogText
-       , selectFont
-       , scaleWidth
-) -}
+  , getColImgSize
+  , createImageCopy
+  , genImage
+  , createImageFromTxt
+  , genImageFromTxt
+  , genIcon
+  , genAssetIcon
+  , genBlogText
+  , genBlogHtml
+  , writeBlogText
+  , selectFont
+  , scaleWidth
+  )
 where
 
 import           Catalog.Cmd
 import           Catalog.FilePath
+import           Catalog.System.ExifTool (getExifTool)
 import           Data.Prim
+import           Data.MetaData
 import qualified Data.Text as T
 -- import Debug.Trace
 
@@ -105,7 +107,7 @@ genImageFromTxt =
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
-genImage = genImage' (createImageCopy 0) (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
+genImage = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
 
 genImage' :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
              (FilePath -> Maybe (GeoAR, FilePath)) ->
@@ -146,7 +148,7 @@ genImage' createImageC imgPath2Geo imgSrc url = do
                         fromMaybe ps'blank <$>
                         genAssetIcon "brokenImage" "broken\nimage"
                       warn $ "generate a substitute: " ++ show broken
-                      doit (createImageCopy 0) (geo, broken)
+                      doit createImageCopy (geo, broken)
                   )
               else
                 return dst
@@ -232,8 +234,13 @@ createImageFromTxt d'geo d s =
 -- rot == 2: 180 degrees clockwise
 -- rot == 3: 270 degrees clockwise
 
-createImageCopy :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageCopy rot d'geo d s =
+createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
+createImageCopy d'geo d s = do
+  ori <- getOrientation <$> getExifTool s
+  createImageCopy' ori d'geo d s
+
+createImageCopy' :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
+createImageCopy' rot d'geo d s =
   getImageSize s >>= go
   where
     go s'geo = do

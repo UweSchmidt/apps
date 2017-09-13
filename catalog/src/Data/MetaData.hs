@@ -232,6 +232,18 @@ getFileName md =
   md ^. metaDataAt "File:Filename" . isoMaybe
 {-# INLINE getFileName #-}
 
+getOrientation :: MetaData -> Int
+getOrientation md =
+  md ^. metaDataAt "EXIF:Orientation" . to toOri
+  where
+    toOri :: Text -> Int
+    toOri t
+      | t == "Rotate 90 CW"  = 1
+      | t == "Rotate 180 CW" = 2
+      | t == "Rotate 90 CCW" = 3
+      | t == "Rotate 270 CW" = 3
+      | otherwise            = 0
+
 type Rating = Int -- 0 .. 5
 
 ratingMax :: Rating
