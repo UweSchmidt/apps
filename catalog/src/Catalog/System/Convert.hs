@@ -251,24 +251,18 @@ createImageCopy' rot d'geo d s =
         shellCmd = buildCmd rot d'geo s'geo d s
 
 buildCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
-buildCmd rot d'g s'geo d s
-  | rot' /= 0 = buildCmd2 ["-rotate", show (rot' * 90)]
-                d'g s'geo' d s
-  | otherwise = buildCmd2 []
-                d'g s'geo  d s
+buildCmd rot d'g s'geo d s =
+  buildCmd3 os d'g s'geo d s
   where
+    os
+      | rot' /= 0 = ["-rotate", show (rot' * 90)]
+      | otherwise = []
+
     s'geo'
       | odd rot   = flipGeo s'geo
       | otherwise =         s'geo
-    rot' = rot `mod` 4
 
-buildCmd2 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
-buildCmd2 opts d'g s'geo d s
-  | d'g ^. theAR == Pano = buildCmd3 opts d'g'new s'geo d s
-  | otherwise            = buildCmd3 opts d'g     s'geo d s
-  where
-    d'g'new = d'g & theAR  .~ Pad
-                  & theGeo .~ scaleWidth (d'g ^. theGeo . theH) s'geo
+    rot' = rot `mod` 4
 
 buildCmd3 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
 buildCmd3 rotate d'g s'geo d s =
@@ -286,7 +280,6 @@ buildCmd3 rotate d'g s'geo d s =
     crGeo Fix   = cropGeo s'geo d'geo
     crGeo Pad   = (s'geo, Geo (-1) (-1))
     crGeo Crop  = (s'geo, Geo 0 0)
-    crGeo Pano  = (s'geo, Geo (-1) (-1)) -- redundant, Pano is transformed into Fix
 
     resize      = ["-thumbnail", geo ++ "!"]
     resize1     = ( if isThumbnail

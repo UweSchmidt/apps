@@ -74,7 +74,7 @@ geoRegex'' =        "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
 
 -- ----------------------------------------
 
-data AspectRatio = Fix | Pad | Crop | Pano
+data AspectRatio = Fix | Pad | Crop
                  deriving (Eq, Ord, Enum, Bounded, Show, Read)
 
 instance IsoString AspectRatio where

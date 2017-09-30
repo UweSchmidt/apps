@@ -58,7 +58,6 @@ p1 = picPage'
   "/next/img.jpg"
   "/prev/img.jpg"
   mempty
-  Nothing
 
 p2 :: Html
 p2 = colPage'
@@ -185,7 +184,6 @@ picPage' :: Text -> Text ->
             Text -> Text -> Text ->
             Text -> Text -> Text -> Text ->
             MetaData ->
-            Maybe (Geo, Text) ->
             Html
 picPage'
   theHeadTitle theDate
@@ -195,7 +193,6 @@ picPage'
   theNextHref thePrevHref theParentHref
   theImgGeoDir thisImgRef nextImgRef prevImgRef
   metaData
-  pano
   = picPage
     theHeadTitle
     theDate
@@ -215,7 +212,6 @@ picPage'
       theImgGeo
       theImgGeoDir
       thisImgRef
-      pano
     )
     ( picTitle
       theImgGeo
@@ -463,15 +459,15 @@ colIcon theIconGeoDir (theChildHref, theChildImgRef, theChildTitle, theChildId) 
 
 -- ----------------------------------------
 
-picImg :: Geo -> Text -> Text -> Maybe (Geo, Text) -> Html
-picImg _theImgGeo theImgGeoDir thisImgRef Nothing =
+picImg :: Geo -> Text -> Text -> Html
+picImg _theImgGeo theImgGeoDir thisImgRef =
   H.div ! class_ "picture" $
     table ! class_ "picture" $
       tr $
         td ! class_ "picture" $
           img ! src (toValue $ imgRef theImgGeoDir thisImgRef)
               ! class_ (toValue $ "img-" <> theImgGeoDir)
-
+{-
 picImg theImgGeo _theImgGeoDir thisImgRef (Just (_pano'geo, theImgGeoDir)) =
   H.div ! A.style (  toValue $
                      "width: "  <> theImgGeo ^. theW . isoText <> "px;"
@@ -480,6 +476,7 @@ picImg theImgGeo _theImgGeoDir thisImgRef (Just (_pano'geo, theImgGeoDir)) =
                   ) $
     img ! src    (toValue $ imgRef theImgGeoDir thisImgRef)
         ! class_ (toValue $ "img-" <> theImgGeoDir)
+-}
 
 picTitle :: Geo -> Text -> Text -> Text -> Html
 picTitle theImgGeo theTitle theSubTitle theComment =

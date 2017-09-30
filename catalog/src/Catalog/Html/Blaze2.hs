@@ -394,14 +394,6 @@ genBlazeHtmlPage' p = do
 
       orgImgGeo   <- maybe (return mempty) getColImgSize $ this'img0
 
-      let isPano   = isPanorama theImgGeo orgImgGeo
-      let pano
-            | isPano    = Just $
-                          ( scaleWidth (theImgGeo ^. theH) orgImgGeo
-                          , (geo1 & theAR .~ Pano) ^. isoText
-                          )
-            | otherwise = Nothing
-
       return $
         picPage'
         theTitle theDate
@@ -411,15 +403,6 @@ genBlazeHtmlPage' p = do
         theNextHref thePrevHref theParentHref
         theImgGeoDir thisImgRef nextImgRef prevImgRef
         metaData
-        pano
-
--- test: display picture as panorama
-
-isPanorama :: Geo -> Geo -> Bool
-isPanorama (Geo dw dh) (Geo iw ih) =
-  ih >= dh        -- height of original >= display height
-  &&
-  iw >= 2 * ih    -- iw / ih >= 2.0
 
 -- ----------------------------------------
 --

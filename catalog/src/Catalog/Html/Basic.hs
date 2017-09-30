@@ -140,6 +140,19 @@ iconRef i = do
             (x, y) = splitAt 2 s
 
 -- ----------------------------------------
+-- test: is picture a panorama
+
+isPanorama' :: Geo -> Bool
+isPanorama' (Geo w h) =
+  w >= 2 * h    -- w / h >= 2.0
+
+isPanorama :: Geo -> Geo -> Bool
+isPanorama (Geo _dw dh) img@(Geo _iw ih) =
+  ih >= dh        -- height of original >= height of destination image
+  &&
+  isPanorama' img
+
+-- ----------------------------------------
 
 path2img :: FilePath -> Cmd (Maybe FilePath)
 path2img f
