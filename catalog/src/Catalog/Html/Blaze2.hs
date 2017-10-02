@@ -22,6 +22,7 @@ import Catalog.Html.Basic ( ColRef
                           , colImgType
                           , addJpg
                           , iconRef
+                          , isPanorama
                           , maybeColRef
                           , mkColRefC
                           , mkColRefI
@@ -393,12 +394,14 @@ genBlazeHtmlPage' p = do
                      & metaDataAt "Img:Rating"  .~ rating
 
       orgImgGeo   <- maybe (return mempty) getColImgSize $ this'img0
+      let thePanoGeoDir
+                  = (^. isoText) <$> isPanorama theImgGeo orgImgGeo
 
       return $
         picPage'
         theTitle theDate
         theTitle theSubTitle theComment
-        theImgGeo
+        theImgGeo thePanoGeoDir
         theDuration thisHref thisPos
         theNextHref thePrevHref theParentHref
         theImgGeoDir thisImgRef nextImgRef prevImgRef

@@ -146,11 +146,16 @@ isPanorama' :: Geo -> Bool
 isPanorama' (Geo w h) =
   w >= 2 * h    -- w / h >= 2.0
 
-isPanorama :: Geo -> Geo -> Bool
-isPanorama (Geo _dw dh) img@(Geo _iw ih) =
-  ih >= dh        -- height of original >= height of destination image
-  &&
-  isPanorama' img
+isPanorama :: Geo -> Geo -> Maybe GeoAR
+isPanorama (Geo _w' h') img@(Geo w h)
+  | h >= h'        -- height of original >= height of destination image
+    &&
+    isPanorama' img = Just $ mkGeoAR g Pad
+  | otherwise       = Nothing
+  where
+    g  = Geo w2 h'
+    w1 = (h' * w + h' - 1) `div` h
+    w2 = (w1 + h' - 1) `div` h' * h'
 
 -- ----------------------------------------
 

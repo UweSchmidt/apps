@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,6 +10,7 @@ module Catalog.Html.Templates.Blaze2
   , colPage'
   , txtPage'
   , renderPage
+  , renderPage'
   )
 where
 
@@ -20,15 +22,17 @@ import           Text.Blaze.Html5 hiding (map, head)
 import qualified Text.Blaze.Html5 as H
 import           Text.Blaze.Html5.Attributes hiding (title, rows, accept)
 import qualified Text.Blaze.Html5.Attributes as A
-import           Text.Blaze.Html.Renderer.Pretty
 import qualified Text.Blaze.Html.Renderer.Pretty as R
 import qualified Text.Blaze.Html.Renderer.Text   as T
 
+renderPage :: Html -> LazyText
+renderPage p = T.renderHtml p
+
+-- indent HTML
 renderPage' :: Html -> LazyText
 renderPage' p = R.renderHtml p ^. isoText . lazy
 
-renderPage :: Html -> LazyText
-renderPage p = T.renderHtml p
+{- just a test
 
 t1 :: IO ()
 t1 = putStr $ renderHtml $ p1
@@ -46,7 +50,7 @@ p1 = picPage'
   "The Pic Title"
   "The Pic Subtitle"
   "A pic comment"
-  (readGeo "1920x1200")
+  (readGeo "1920x1200") Nothing
   "1.5"
   "/this/ref"
   "42"
@@ -110,6 +114,7 @@ p3 = txtPage'
   "/next/img.jpg"
   "/prev/img.jpg"
   "The blog entry"
+-- -}
 
 -- ----------------------------------------
 
@@ -152,6 +157,9 @@ colPage'
       theChild1Href
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      mempty
+      mempty
+      mempty
     )
     ( colImg
       theIconGeoDir
@@ -179,7 +187,7 @@ colPage'
 
 picPage' :: Text -> Text ->
             Text -> Text -> Text ->
-            Geo  ->
+            Geo  -> Maybe Text   ->
             Text -> Text -> Text ->
             Text -> Text -> Text ->
             Text -> Text -> Text -> Text ->
@@ -188,7 +196,7 @@ picPage' :: Text -> Text ->
 picPage'
   theHeadTitle theDate
   theTitle theSubTitle theComment
-  theImgGeo
+  theImgGeo thePanoGeoDir
   theDuration thisHref thisPos
   theNextHref thePrevHref theParentHref
   theImgGeoDir thisImgRef nextImgRef prevImgRef
@@ -207,6 +215,9 @@ picPage'
       ""
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      ( imgRef theImgGeoDir thisImgRef )
+      ( imgRef orgGeoDir    thisImgRef )
+      ( maybe mempty (flip imgRef thisImgRef) thePanoGeoDir )
     )
     ( picImg
       theImgGeo
@@ -250,6 +261,7 @@ txtPage'
       mempty
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      mempty mempty mempty
     )
     blogContents
 
@@ -325,8 +337,10 @@ headPage theHeadTitle theDate theJS
     ! href  "/assets/css/html-album.css"
   theJS
   script ! type_   "text/javascript"
+    ! src     "/bootstrap/js/jquery/1.12.4/jquery.min.js"
+    $ mempty
+  script ! type_   "text/javascript"
     ! src     "/assets/javascript/html-album.js"
-    ! charset "ISO-8859-1"
     $ mempty
 
 htmlPage :: Html -> Html -> Html
@@ -345,11 +359,15 @@ colBlog cBlogContents
       H.div ! class_ "ruler" $ mempty
       H.div ! class_ "blog-contents" $ preEscapedText cBlogContents
 
-jsCode :: Text -> Text -> Text -> Text -> Text -> Text -> Text -> Text -> Text ->
+jsCode :: Text -> Text -> Text ->
+          Text -> Text -> Text ->
+          Text -> Text -> Text ->
+          Text -> Text -> Text ->
           Html
 jsCode theDuration thisHref thisPos
       theNextHref thePrevHref theParentHref
       theChild1Href theNextImgRef thePrevImgRef
+      thisImgRef thisOrgRef thisPanoRef
   = do
   script ! type_ "text/javascript" $ preEscapedText $ T.unlines $
     [ ""
@@ -363,6 +381,9 @@ jsCode theDuration thisHref thisPos
     , "var childp   = '" <> theChild1Href <> "';"
     , "var nextimg  = '" <> theNextImgRef <> "';"
     , "var previmg  = '" <> thePrevImgRef <> "';"
+    , "var thisimg  = '" <> thisImgRef    <> "';"
+    , "var orgimg   = '" <> thisOrgRef    <> "';"
+    , "var panoimg  = '" <> thisPanoRef   <> "';"
     , "-->"
     ]
 
@@ -621,6 +642,9 @@ picMeta md = mconcat $ map toMarkup mdTab
 
 imgRef :: Text -> Text -> Text
 imgRef theImgGeoDir theImgRef = "/" <> theImgGeoDir <> theImgRef
+
+orgGeoDir :: Text
+orgGeoDir = geoar'org ^. isoText
 
 infixr 6 <:>
 

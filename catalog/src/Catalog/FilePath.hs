@@ -112,7 +112,7 @@ filePathConfig = map (first parseRegexExt) $
 
 txtSrcExpr :: Regex
 txtSrcExpr =
-  parseRegexExt "({path}/.*[.](txt|md)"
+  parseRegexExt txtpathRE
 
 imgSrcExpr :: Regex
 imgSrcExpr =
@@ -120,17 +120,31 @@ imgSrcExpr =
 
 txtPathExpr :: Regex
 txtPathExpr =
-  parseRegexExt
-  "/({geoar}(fix|pad|crop)-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.](txt|md))"
+  parseRegexExt $
+  geoarRE ++ topdirRE ++ txtpathRE
 
 imgPathExpr :: Regex
 imgPathExpr =
   parseRegexExt $
-  "/({geoar}(" ++ pxe ++ ")-[0-9]+x[0-9]+)({topdir}/[^/]+)({path}/.*[.]jpg)"
+  geoarRE ++ topdirRE ++ "({path}/.*[.]jpg)"
+
+geoarRE :: String
+geoarRE =
+  "/({geoar}" ++ ar ++ "-" ++ ge ++ ")"
   where
-    pxe = intercalate "|" $ map (^. isoString) $ ars
+    ar  = "(" ++ ar' ++ ")"
+    ar' = intercalate "|" $ map (^. isoString) $ ars
+
+    ge  = "([0-9]+x[0-9]+|org)"
+
     ars :: [AspectRatio]
     ars = [minBound..maxBound]
+
+topdirRE :: String
+topdirRE = "({topdir}/[^/]+)"
+
+txtpathRE :: String
+txtpathRE = "({path}/.*[.](txt|md))"
 
 -- extract the path component from a file path
 

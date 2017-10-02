@@ -30,6 +30,12 @@ instance Monoid Geo where
 instance IsEmpty Geo where
   isempty g = g == mempty
 
+geo'org :: Geo
+geo'org = Geo 1 1
+
+orgGeo :: String
+orgGeo = "org"
+
 geo2pair :: Iso' Geo (Int, Int)
 geo2pair = iso (\ (Geo w h) -> (w, h)) (uncurry Geo)
 
@@ -49,19 +55,19 @@ readGeo s =
 
 readGeo' :: String -> Maybe Geo
 readGeo' s =
-  build $
-  matchSubexRE geoRegex s
+  build $ matchSubexRE geoRegex s
   where
     build [("w",w),("h",h)]
       = Just $ Geo (read w) (read h)
     build _
-      = Nothing
+      | s == orgGeo = Just geo'org
+      | otherwise   = Nothing
 
 flipGeo :: Geo -> Geo
 flipGeo (Geo w h) = Geo h w
 
--- the r.e. is a more general, the geo spec maybe surrounded
--- by arbitrary other stuff (used in parsing exit data)
+-- the r.e. is more general, the geo spec maybe surrounded
+-- by arbitrary other stuff (used in parsing exif data)
 
 geoRegex :: Regex
 geoRegex = parseRegexExt geoRegex'
@@ -69,8 +75,11 @@ geoRegex = parseRegexExt geoRegex'
 geoRegex'
   , geoRegex'' :: String
 
-geoRegex'  = "[^1-9]*({w}[1-9][0-9]*)x({h}[1-9][0-9]*)[^0-9]*"
-geoRegex'' =        "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
+geoRegex'  = "[^1-9]*" ++ geoXY ++ "[^0-9]*"
+geoRegex'' = "([1-9][0-9]*)x([1-9][0-9]*)" ++ "|" ++ orgGeo
+
+geoXY :: String
+geoXY = "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
 
 -- ----------------------------------------
 
@@ -99,6 +108,12 @@ arRegex' =
 data GeoAR = GeoAR !Int !Int !AspectRatio
 
 deriving instance Show GeoAR
+
+mkGeoAR :: Geo -> AspectRatio -> GeoAR
+mkGeoAR (Geo w h) = GeoAR w h
+
+geoar'org :: GeoAR
+geoar'org = (geo'org, Pad) ^. from geoar2pair
 
 geoar2pair :: Iso' GeoAR (Geo, AspectRatio)
 geoar2pair = iso (\ (GeoAR w h ar) -> (Geo w h, ar))
@@ -129,13 +144,18 @@ geoarRegex :: Regex
 geoarRegex = parseRegexExt geoarRegex'
 
 geoarRegex' :: String
-geoarRegex' = "({ar}" ++ arRegex' ++ ")-" ++ geoRegex''
+geoarRegex' = "(({ar}" ++ arRegex' ++ ")-)?({geo}" ++ geoRegex'' ++ ")"
 
 readGeoAR :: String -> Maybe GeoAR
 readGeoAR = build . matchSubexRE geoarRegex
   where
-    build [("ar", ar), ("w", w), ("h", h)] =
-      Just $ GeoAR (read w) (read h) (ar ^. from isoString)
+    build [("ar", ar'), ("geo", geo')] =
+      let ar  = ar'  ^. from isoString
+          geo = geo' ^. from isoString
+      in
+        Just $ (geo, ar) ^. from geoar2pair
+    build [("geo", geo')] =
+        Just $ (geo' ^. from isoString, Pad) ^. from geoar2pair
     build _ =
       Nothing
 

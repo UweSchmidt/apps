@@ -243,16 +243,30 @@ createImageCopy' :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
 createImageCopy' rot d'geo d s =
   getImageSize s >>= go
   where
-    go s'geo = do
-      runDry ("create image copy: " ++ show shellCmd) $ do
-        execProcess "bash" [] shellCmd >> return ()
-      return d
+    go s'geo
+      | "#" `isPrefixOf` shellCmd = do
+          trc $ "createImageCopy: " ++ shellCmd
+          return s
+      | otherwise = do
+          runDry ("create image copy: " ++ show shellCmd) $
+            execProcess "bash" [] shellCmd >> return ()
+          return d
       where
         shellCmd = buildCmd rot d'geo s'geo d s
 
 buildCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
 buildCmd rot d'g s'geo d s =
-  buildCmd3 os d'g s'geo d s
+  buildCmd2 rot d'g' s'geo d s
+  where
+    d'geo = d'g ^. theGeo
+    d'g'
+      | d'geo == geo'org = d'g & theGeo .~ s'geo  -- orgiginal size demaned
+                               & theAR  .~ Pad
+      | otherwise        = d'g
+
+buildCmd2 :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd2 rot d'g s'geo d s =
+  buildCmd3 os d'g s'geo' d s
   where
     os
       | rot' /= 0 = ["-rotate", show (rot' * 90)]
@@ -265,8 +279,13 @@ buildCmd rot d'g s'geo d s =
     rot' = rot `mod` 4
 
 buildCmd3 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
-buildCmd3 rotate d'g s'geo d s =
-  shellCmd
+buildCmd3 rotate d'g s'geo d s
+  | d'geo == s'geo
+    &&
+    null rotate
+    &&
+    ".jpg" `isSuffixOf` s = "# nothing to do for " ++ show s
+  | otherwise = shellCmd
   where
     d'geo       = d'g ^. theGeo
     aspect      = d'g ^. theAR
