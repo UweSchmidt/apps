@@ -2,7 +2,8 @@
 
 function trc (t, Text) {
   if ( t > 0 ) {
-    alert(Text);
+      console.log(Text);
+      //    alert(Text);
     /* nice try
        if (window.statusbar && window.statusbar.visible == true) {
        window.status = Text;
@@ -14,7 +15,9 @@ function trc (t, Text) {
   }
 }
 
-/* global state: will be threaded through URL search string */
+// ----------------------------------------
+
+/* global state, these variables will be threaded through URL search string */
 
 var isPicture = true;
 var slideShow = 0;
@@ -45,6 +48,8 @@ function stateToString () {
   return res;
 }
 
+// ----------------------------------------
+
 var theNextPage = '';
 var theNextPic  = new Image();
 
@@ -69,6 +74,103 @@ function changePage(url) {
     window.location.href = url + stateToString();
   }
 }
+
+// ----------------------------------------
+
+// variable take one of "pic-org", "pic-scaled", "pic-pano"
+// pic-scaled indicates the image scaled down to display size is shown
+
+var picstate = "pic-scaled";
+
+function toggleOriginalPicture() {
+    // no ref to full size picture
+    if (orgimg === "") {
+        return;
+    }
+
+    // turn off full size view
+    if (picstate === "pic-org") {
+        switchToScaledPicture();
+        return;
+    }
+
+    // turn off other views (pano)
+    if (picstate !== "pic-scaled") {
+        switchToScaledPicture();
+    }
+
+    // load full size and switch to full size view
+    var dv  = $('#pic-org');
+    var img = $('#pic-org img');
+    if (! img.attr('src') ) {
+        // load image on demand
+        img.attr('src', orgimg);
+        console.log(img.attr('src'));
+        img.load(function(){
+            // image ready: make it visible
+            toggleOriginalPicture();
+        });
+    } else {
+        // make image visible
+        console.log( "make org picture visible");
+        hideDiv('#' + picstate);
+        showDiv('#pic-org');
+        picstate="pic-org";
+    }
+}
+
+function togglePanoramaPicture() {
+    // no ref to panorama picture
+    if (panoimg === "") {
+        return;
+    }
+
+    // turn off panrama view
+    if (picstate === "pic-pano") {
+        switchToScaledPicture();
+        return;
+    }
+
+    // turn off other views
+    if (picstate !== "pic-scaled") {
+        switchToScaledPicture();
+    }
+
+    // load pano and switch to pano view
+    var dv  = $('#pic-pano');
+    var img = $('#pic-pano img');
+    if (! img.attr('src') ) {
+        // load image on demand
+        img.attr('src', panoimg);
+        console.log(img.attr('src'));
+        img.load(function(){
+            // image ready: make it visible
+            togglePanoramaPicture();
+        });
+    } else {
+        // make image visible
+        console.log( "make pano picture visible");
+        hideDiv('#' + picstate);
+        showDiv('#pic-pano');
+        picstate="pic-pano";
+    }
+}
+function hideDiv(s) {
+    $(s).css('display', 'none');
+}
+
+function showDiv(s) {
+    $(s).css('display', 'block');
+}
+
+function switchToScaledPicture() {
+    if (picstate === "pic-scaled") {return;}
+    hideDiv('#' + picstate);
+    showDiv('#pic-scaled');
+    picstate="pic-scaled";
+}
+
+// ----------------------------------------
 
 var slideShowTimer;
 
@@ -212,112 +314,111 @@ function hideInfoElement() {
   }
 }
 
-function keyPressed (KeyEvent) {
-  if (! KeyEvent)
-    KeyEvent = window.event;
-
-  trc(0, "KeyCode=" + KeyEvent.keyCode + " which=" + KeyEvent.which);
-
-  if ( KeyEvent.keyCode == 39 ||    /* right arrow */
-       ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-         &&
-         ( KeyEvent.which == 32 ||   /* space bar */
-           KeyEvent.which == 62 ||   /* ">" */
-           KeyEvent.which == 110     /* n */
-         )
-       )
-     ) {
-    trc(0, "weiter");
-    stopSlideShow();
-    nextPage();
+function isKey(e, c, s) {
+    if ((e.keyCode == 0
+         ||
+         e.keyCode == e.which
+        )
+        &&
+        e.which == c
+       ) { return true;}
     return false;
-  }
+}
 
-  if ( KeyEvent.keyCode   == 37 ||    /* left arrow */
-       KeyEvent.keyCode   == 8  ||    /* backspace */
-       ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-         &&
-         ( KeyEvent.which == 60 ||    /* or "<" */
-           KeyEvent.which == 112      /* or "p" */
-         )
-       )
-     ) {
-    trc(0, "zurück");
-    stopSlideShow();
-    prevPage();
-    return false;
-  }
+function keyPressed (e) {
+    if (! e)
+        e = window.event;
 
-  if ( KeyEvent.keyCode   == 38 ||    /* up arrow */
-       ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-         &&
-         ( KeyEvent.which  == 94 ||     /* or "^" */
-           KeyEvent.which  == 117       /* or "u" */
-         )
-       )
-     ) {
-    trc(0, "nach oben");
-    stopSlideShow();
-    parentPage();
-    return false;
-  }
+    console.log("KeyCode=" + e.keyCode + " which=" + e.which);
 
-  if ( KeyEvent.keyCode   == 40 ||    /* down arrow */
-       ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which )
-         &&
-         ( KeyEvent.which == 118 ||  /* or "v" */
-           KeyEvent.which == 100     /* or "d" */
-         )
-       )
-     ) {
-    trc(0, "nach unten");
-    child1Page();
-    return false;
-  }
+    if ( e.keyCode == 39    /* right arrow */
+         ||
+         isKey(e, 32, " ")
+         ||
+         isKey(e, 62, ">")
+         ||
+         isKey(e, 110, "n")
+       ) {
+        stopSlideShow();
+        nextPage();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "s" */
-       KeyEvent.which   == 115
-     ) {
-    startStopSlideShow();
-    return false;
-  }
+    if ( e.keyCode   == 37    /* left arrow */
+         ||
+         e.keyCode   == 8
+         ||    /* backspace */
+         isKey(e, 60, "<")
+         ||
+         isKey(e, 112, "p")
+       ) {
+        stopSlideShow();
+        prevPage();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "t" */
-       KeyEvent.which   == 116
-     ) {
-    toggleTitle();
-    return false;
-  }
+    if ( e.keyCode   == 38    /* up arrow */
+         ||
+         isKey(e, 94, "^")
+         ||
+         isKey(e, 117, "u")
+       ) {
+        stopSlideShow();
+        parentPage();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "i" */
-       KeyEvent.which   == 105
-     ) {
-    toggleInfo();
-    return false;
-  }
+    if ( e.keyCode   == 40     /* down arrow */
+         ||
+         isKey(e, 118, "v")
+         ||
+         isKey(e, 100, "d")
+       ) {
+        child1Page();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "+" */
-       KeyEvent.which   == 43
-     ) {
-    speedUpSlideShow();
-    return false;
-  }
+    if ( isKey(e, 115, "s") ) {
+        startStopSlideShow();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "-" */
-       KeyEvent.which   == 45
-     ) {
-    slowDownSlideShow();
-    return false;
-  }
+    if ( isKey(e, 116, "t") ) {
+        toggleTitle();
+        return false;
+    }
 
-  if ( ( KeyEvent.keyCode == 0 || KeyEvent.keyCode == KeyEvent.which ) &&    /* "0" */
-       KeyEvent.which   == 48
-     ) {
-    initSpeedSlideShow();
-    return false;
-  }
+    if ( isKey(e, 105, "i") ) {
+        toggleInfo();
+        return false;
+    }
 
-  return true;
+    if ( isKey(e, 43, "+") ) {
+        speedUpSlideShow();
+        return false;
+    }
+
+    if ( isKey(e, 45, "-") ) {
+        slowDownSlideShow();
+        return false;
+    }
+
+    if ( isKey(e, 48, "0") ) {
+        initSpeedSlideShow();
+        return false;
+    }
+
+    if ( isKey(e, 102, "f") ) {
+        toggleOriginalPicture();
+        return false;
+    }
+
+    if ( isKey(e, 97, "a") ) {
+        togglePanoramaPicture();
+        return false;
+    }
+
+    return true;
 }
 
 function nextPage() {

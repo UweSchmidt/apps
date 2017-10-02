@@ -25,12 +25,12 @@ import qualified Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Pretty as R
 import qualified Text.Blaze.Html.Renderer.Text   as T
 
-renderPage :: Html -> LazyText
-renderPage p = T.renderHtml p
+renderPage' :: Html -> LazyText
+renderPage' p = T.renderHtml p
 
 -- indent HTML
-renderPage' :: Html -> LazyText
-renderPage' p = R.renderHtml p ^. isoText . lazy
+renderPage :: Html -> LazyText
+renderPage p = R.renderHtml p ^. isoText . lazy
 
 {- just a test
 
@@ -481,23 +481,32 @@ colIcon theIconGeoDir (theChildHref, theChildImgRef, theChildTitle, theChildId) 
 -- ----------------------------------------
 
 picImg :: Geo -> Text -> Text -> Html
-picImg _theImgGeo theImgGeoDir thisImgRef =
-  H.div ! class_ "picture" $
+picImg theImgGeo theImgGeoDir thisImgRef = do
+  -- the scaled picture fitting on the dispay
+  H.div ! class_   "picture"
+        ! A.id     "pic-scaled" $
     table ! class_ "picture" $
       tr $
         td ! class_ "picture" $
           img ! src (toValue $ imgRef theImgGeoDir thisImgRef)
-              ! class_ (toValue $ "img-" <> theImgGeoDir)
-{-
-picImg theImgGeo _theImgGeoDir thisImgRef (Just (_pano'geo, theImgGeoDir)) =
-  H.div ! A.style (  toValue $
-                     "width: "  <> theImgGeo ^. theW . isoText <> "px;"
-                  <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
-                  <> "overflow-x: scroll;"
-                  ) $
-    img ! src    (toValue $ imgRef theImgGeoDir thisImgRef)
-        ! class_ (toValue $ "img-" <> theImgGeoDir)
--}
+
+  -- the panorama picture, fitting the screen height
+  H.div ! scroll
+        ! A.id   "pic-pano" $
+    img ! src    ""
+
+  -- the picture in original size
+  H.div ! scroll
+        ! A.id    "pic-org" $
+    img ! src    ""
+  where
+    scroll =
+      A.style ( toValue $
+                   "overflow: scroll;"
+                <> "display:  none;"
+                <> "width: "  <> theImgGeo ^. theW . isoText <> "px;"
+                <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
+              )
 
 picTitle :: Geo -> Text -> Text -> Text -> Html
 picTitle theImgGeo theTitle theSubTitle theComment =
