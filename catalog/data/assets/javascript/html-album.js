@@ -175,28 +175,28 @@ function switchToScaledPicture() {
 var slideShowTimer;
 
 function advanceSlideShow() {
-  trc(0, "advance SlideShow");
+  trc(1, "advance SlideShow");
   nextPage();
 }
 
 function stopSlideShow () {
   if (typeof slideShowTimer != "undefined") {
     window.clearTimeout(slideShowTimer);
-    trc(0, "timer cleared");
+    trc(1, "timer cleared");
   }
   slideShow = 0;
-  trc(0, "slideShow stopped");
+  trc(1, "slideShow stopped");
 }
 
 function startSlideShow () {
-  var d = 5000;
-  if ( typeof duration == "number" ) {
-    d = duration;
-  }
-  d = (d * speed) / 1000;
-  slideShowTimer = window.setTimeout("advanceSlideShow();", d);
-  slideShow = 1;
-  trc(0, "SlideShow started with msec: " + d);
+    var d = 5000;
+    if ( typeof duration == "number" ) {
+        d = duration;
+    }
+    d = (d * speed) / 1000;
+    slideShowTimer = window.setTimeout(advanceSlideShow, d);
+    slideShow = 1;
+    trc(1, "SlideShow started with msec: " + d);
 }
 
 function startStopSlideShow() {

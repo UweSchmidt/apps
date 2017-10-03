@@ -275,7 +275,7 @@ picPage theHeadTitle theDate theImgGeo
         jsCode picImg picTitle picNav picInfo
   = htmlPage
     ( headPage theHeadTitle theDate jsCode ) $ do
-  body ! onload "initAlbum();"
+  body ! onload "initPicture();"
     ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
     picImg
     picTitle
