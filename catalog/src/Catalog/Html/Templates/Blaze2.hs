@@ -491,18 +491,18 @@ picImg theImgGeo theImgGeoDir thisImgRef = do
           img ! src (toValue $ imgRef theImgGeoDir thisImgRef)
 
   -- the panorama picture, fitting the screen height
-  H.div ! scroll
+  H.div ! scroll "-x"
         ! A.id   "pic-pano" $
     img ! src    ""
 
   -- the picture in original size
-  H.div ! scroll
-        ! A.id    "pic-org" $
+  H.div ! scroll ""
+        ! A.id   "pic-org" $
     img ! src    ""
   where
-    scroll =
+    scroll x =
       A.style ( toValue $
-                   "overflow: scroll;"
+                   "overflow: scroll" <> x <> ";"
                 <> "display:  none;"
                 <> "width: "  <> theImgGeo ^. theW . isoText <> "px;"
                 <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
