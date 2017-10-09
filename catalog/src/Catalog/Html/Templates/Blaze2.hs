@@ -492,8 +492,10 @@ picImg theImgGeo theImgGeoDir thisImgRef = do
 
   -- the panorama picture, fitting the screen height
   H.div ! scroll "-x"
+        ! class_ "panorama"
         ! A.id   "pic-pano" $
     img ! src    ""
+        ! class_ "panorama"
 
   -- the picture in original size
   H.div ! scroll ""

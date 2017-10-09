@@ -119,13 +119,43 @@ function toggleOriginalPicture() {
     }
 }
 
+function cssKeyFrames(leftPos) {
+    $("<style>")
+        .prop("type", "text/css")
+        .html("@keyframes moveToLeft {\
+               from {left: 0px);}\
+               to   {left: " + leftPos + "px;}\
+               }"
+             )
+        .appendTo("head");
+}
+
+function togglePanoAnimation() {
+    // no ref to panorama picture
+    if (panoimg === ""
+        ||
+        picstate !== "pic-pano"
+       ) {
+        return;
+    }
+    var img = $('#pic-pano img');
+    var as  = img.css('animation-play-state');
+    console.log("animation-play-state=" + as);
+    if (as === 'running') {
+        as = 'paused';
+    } else {
+        as = 'running';
+    }
+    img.css('animation-play-state', as);
+}
+
 function togglePanoramaPicture() {
     // no ref to panorama picture
     if (panoimg === "") {
         return;
     }
 
-    // turn off panrama view
+    // turn off panorama view
     if (picstate === "pic-pano") {
         switchToScaledPicture();
         return;
@@ -144,15 +174,23 @@ function togglePanoramaPicture() {
         img.attr('src', panoimg);
         console.log(img.attr('src'));
         img.load(function(){
+            // add @keyframes for animation
+            var pw = img[0].naturalWidth;
+            var sw = dv.width();
+            console.log("PanoWidth=" + pw);
+            console.log("DisplayWidth=" + sw);
+            cssKeyFrames(sw - pw);
             // image ready: make it visible
             togglePanoramaPicture();
         });
     } else {
         // make image visible
-        console.log( "make pano picture visible");
+        console.log("make pano picture visible");
         hideDiv('#' + picstate);
         showDiv('#pic-pano');
         picstate="pic-pano";
+        console.log("start animation");
+        img.css('animation-play-state', 'running');
     }
 }
 function hideDiv(s) {
@@ -243,75 +281,83 @@ var titleVisible = false;
 var infoVisible  = false;
 
 function toggleTitle() {
-  if (titleVisible) {
-    hideTitleElement();
-  } else {
-    showTitleElement();
-  }
+    if (titleVisible) {
+        hideTitleElement();
+    } else {
+        showTitleElement();
+    }
 }
 
 function showTitle() {
-  /* showTitleElement(); /* disable mouse over effects */
+    /* showTitleElement(); /* disable mouse over effects */
 }
 
 function hideTitle() {
-  /* hideTitleElement(); /* disable mouse over effects */
+    /* hideTitleElement(); /* disable mouse over effects */
 }
 
 function showTitleElement() {
-  if (! titleVisible) {
-    stopSlideShow();
-    hideInfoElement();
-    document.getElementById("title-area-line").style.visibility      = "visible";
-    document.getElementById("title-area-line").style.opacity         = opacity;
-    document.getElementById("title-area-line").style.backgroundColor = backgroundColor;
-    titleVisible = true;
-  }
+    if (! titleVisible) {
+        stopSlideShow();
+        hideInfoElement();
+        $('#title-area-line')
+            .css('visibility',      "visible")
+            .css('opacity',         opacity)
+            .css('backgroundColor', backgroundColor);
+
+        titleVisible = true;
+    }
 }
 
 function hideTitleElement() {
-  if (titleVisible) {
-    document.getElementById("title-area-line").style.visibility      = "";
-    document.getElementById("title-area-line").style.opacity         = "";
-    document.getElementById("title-area-line").style.backgroundColor = "";
-    titleVisible = false;
-  }
+    if (titleVisible) {
+        $('#title-area-line')
+            .css('visibility',      '')
+            .css('opacity',         '')
+            .css('backgroundColor', '');
+
+        titleVisible = false;
+    }
 }
 
 function toggleInfo() {
-  if (infoVisible) {
-    hideInfoElement();
-  } else {
-    showInfoElement();
-  }
+    if (infoVisible) {
+        hideInfoElement();
+    } else {
+        showInfoElement();
+    }
 }
 
 function showInfo() {
-  /* showInfoElement(); /* disable mouse over effects */
+    /* showInfoElement(); /* disable mouse over effects */
 }
 
 function hideInfo() {
-  /* hideInfoElement(); /* disable mouse over effects */
+    /* hideInfoElement(); /* disable mouse over effects */
 }
 
 function showInfoElement() {
-  if (! infoVisible) {
-    stopSlideShow();
-    hideTitleElement();
-    document.getElementById("info-area-content").style.visibility      = "visible";
-    document.getElementById("info-area-content").style.opacity         = opacity;
-    document.getElementById("info-area-content").style.backgroundColor = backgroundColor;
-    infoVisible = true;
-  }
+    if (! infoVisible) {
+        stopSlideShow();
+        hideTitleElement();
+        $('#info-area-content')
+            .css('visibility',      "visible")
+            .css('opacity',         opacity)
+            .css('backgroundColor', backgroundColor);
+
+        infoVisible = true;
+    }
 }
 
 function hideInfoElement() {
-  if (infoVisible) {
-    document.getElementById("info-area-content").style.visibility      = "";
-    document.getElementById("info-area-content").style.opacity         = "";
-    document.getElementById("info-area-content").style.backgroundColor = "";
-    infoVisible = false;
-  }
+    if (infoVisible) {
+        $('#info-area-content')
+            .css('visibility',      '')
+            .css('opacity',         '')
+            .css('backgroundColor', '');
+
+        infoVisible = false;
+    }
 }
 
 function isKey(e, c, s) {
@@ -418,52 +464,57 @@ function keyPressed (e) {
         return false;
     }
 
+    if ( isKey(e, 113, "q") ) {
+        togglePanoAnimation();
+        return false;
+    }
+
     return true;
 }
 
 function nextPage() {
-  if ( nextp != '' ) {
-    changePicPage(nextp,nextimg);
-  } else {
-    parentPage();
-  }
+    if ( nextp != '' ) {
+        changePicPage(nextp,nextimg);
+    } else {
+        parentPage();
+    }
 }
 
 function prevPage() {
-  if ( prevp != '' ) {
-    changePicPage(prevp,previmg);
-  } else {
-    parentPage();
-  }
+    if ( prevp != '' ) {
+        changePicPage(prevp,previmg);
+    } else {
+        parentPage();
+    }
 }
 
 function parentPage() {
-  if ( parentp != '' ) {
-    changePage(parentp);
-  }
+    if ( parentp != '' ) {
+        changePage(parentp);
+    }
 }
 
 function thisPage() {
-  changePage(thisp);
+    changePage(thisp);
 }
 
 function child1Page() {
-  changePage(childp);
+    changePage(childp);
 }
 
 function childPage(ref) {
-  changePage(ref);
+    changePage(ref);
 }
 
 function initPicture () {
-  isPicture = true;
-  initState();
-  initSlideShow();
+    isPicture = true;
+    initState();
+    initSlideShow();
 }
 
 function initAlbum () {
-  isPicture = false;
-  initState();
+    isPicture = false;
+    initState();
 }
 
 document.onkeypress = keyPressed;

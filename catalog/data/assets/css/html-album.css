@@ -446,3 +446,37 @@ div.blog-contents h2 {
 
 
 /* ------------------------------------------------------------ */
+/*
+animation of panorama images
+
+the @keyframes moveToLeft rule must be generated
+with javascript when loading the panorama.
+
+@keyframes moveToLeft {
+  from {left: 0px);}
+  to   {left: calc(<screenWidth> - <panoWidth>);}
+}
+
+shift pic to the left by <panoWidth> - <screenWidth> pixel
+*/
+
+div.panorama {
+  position: relative;
+  overflow: hidden;
+}
+
+img.panorama {
+  position: absolute;
+  left:     0px;
+  top:      0px;
+
+  animation-name:            moveToLeft;
+  animation-duration:        20s;  /* must be set by js to start animation */
+  animation-delay:           2s;
+  animation-iteration-count: infinite;
+  animation-direction:       alternate;
+  animation-timing-function: ease-in-out;
+  animation-play-state:      paused;
+}
+
+/* ------------------------------------------------------------ */

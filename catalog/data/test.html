@@ -1,0 +1,39 @@
+<html>
+  <head>
+    <title>Test Page</title>
+    <style>
+      .canvas {
+      position: relative;
+width: 400px;
+height: 200px;
+      border: 2px solid blue;
+      overflow: hidden;
+}
+
+.anim {
+position: absolute;
+left: 0px;
+top: 0px;
+
+      background-color: red;
+      animation: moveToLeft 10s linear;
+      animation-delay: 2s;
+      animation-iteration-count: 2;
+      animation-direction: alternate;
+      animation-timing-function: ease-in-out;
+}
+
+@keyframes moveToLeft {
+from {left: 0px);}
+to   {left: calc(400px - 1400px);}
+}
+</style>
+  </head>
+  <body>
+    A Test Page
+    <div class="canvas">
+      <img src="/pad-1400x1050/photos/themen/Reisen/Skandinavien-2017/2017-07-20/srgb/uwe_1589.jpg"
+           class="anim">
+    </div>
+  </body>
+</html>

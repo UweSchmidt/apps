@@ -259,6 +259,10 @@ main' env state = do
 
     -- ----------------------------------------
 
+    -- the test page
+    get "/test.html" $
+      mimeFile "text/html" "/test.html"
+
     -- not found route
     get (matchPath ".*") $ do
       p <- param "path"
