@@ -176,10 +176,15 @@ function togglePanoramaPicture() {
         img.load(function(){
             // add @keyframes for animation
             var pw = img[0].naturalWidth;
+            var ph = img[0].naturalHeight;
+            var du = 5.0 * (pw / ph);
             var sw = dv.width();
-            console.log("PanoWidth=" + pw);
+            console.log("PanoGeo=" + pw + "x" + ph);
             console.log("DisplayWidth=" + sw);
+            console.log("AnimDuration=" + du);
             cssKeyFrames(sw - pw);
+            // set anim duration relative to aspect ratio
+            img.css('animation-duration', "" + du + "s");
             // image ready: make it visible
             togglePanoramaPicture();
         });
