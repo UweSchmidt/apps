@@ -533,7 +533,7 @@ setMeta1 :: MetaData -> Int -> ImgNode -> Cmd ()
 setMeta1 md i n =
   setMeta md ixs n
   where
-    ixs = replicate (i-1) (0-1) ++ [1]
+    ixs = replicate i (0-1) ++ [1]
 
 setRating :: Rating -> [Int] -> ImgNode -> Cmd ()
 setRating r = setMeta (mkRating r)

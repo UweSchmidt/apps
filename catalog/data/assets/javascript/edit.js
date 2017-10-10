@@ -2100,13 +2100,22 @@ function buildImgCarousel(args, colVal) {
             if ( charCode == 109 ) {  // 'm': mark
                 console.log('keypress: toggle image mark');
                 $('#CarouselModalBody div.carousel-inner div.item.active a.carousel-image-mark').click();
-            } else if ( charCode == 110 ) { // 'n': next image
-                console.log('keypres: next image');
-                $("#CarouselModalBody .carousel-control.right").click();
-            } else if ( charCode == 112 ) { // 'p': prev image
-                console.log('keypres: prev image');
-                $("#CarouselModalBody .carousel-control.left").click();
-            } else if ( charCode >= 48 && charCode <= 53) { // '0'..'5' set rating
+            }
+            else if ( charCode == 110
+                      ||
+                      charCode == 62  // nice try: only with keyup or keydown event
+                    ) { // 'n' or '>': next image
+                    console.log('keypres: next image');
+                    $("#CarouselModalBody .carousel-control.right").click();
+                    }
+            else if ( charCode == 112
+                      ||
+                      charCode == 60
+                    ) { // 'p'or '<': prev image
+                        console.log('keypres: prev image');
+                        $("#CarouselModalBody .carousel-control.left").click();
+                    }
+            else if ( charCode >= 48 && charCode <= 53) { // '0'..'5' set rating
                 var rating = charCode - 48;
                 var sel = '[data-star="' + rating + '"]';
                 console.log('keypress: set rating to ' + rating);
@@ -2768,12 +2777,16 @@ function idTrash()       { return path2id(pathTrash()); }
 
 function iconSize()    { return "pad-160x160"; }
 
+// one of 1600x1200, 1400x1050, 1280x800, 900x60
+// else edit.css must be extended
+// .modal-preview, .modal-carousel, .img-box
+
 function previewGeo() {
     var g = window.screen;
     if (g.width === 2560 && g.height === 1440) {
-        return previewGeoXY(1400, 1050);
+        return previewGeoXY(1600, 1200);
     }
-    return previewGeoXY(900,600);
+    return previewGeoXY(1280,800);
 }
 
 function previewGeoXY(x, y) {
