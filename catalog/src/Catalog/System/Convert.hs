@@ -99,7 +99,7 @@ genImageFromTxt =
 
 -- generate an image of a given geometry from an original image
 -- from the archive or assets
--- geometry is specified by the the first part of the url2
+-- geometry is specified by the the first part of the url
 --
 -- example:             "/fix-160x120/archive/photos/pic-30.jpg"
 --

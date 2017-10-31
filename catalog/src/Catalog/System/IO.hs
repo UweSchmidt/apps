@@ -55,8 +55,19 @@ removeFile = io . D.removeFile
 renameFile :: FilePath -> FilePath -> Cmd ()
 renameFile old new = io $ X.rename old new
 
+-- try to make a hard link, if that fails copy file
+
+linkFile :: FilePath -> FilePath -> Cmd ()
+linkFile old new =
+  (io $ X.createLink old new)
+  `catchError`
+  (\ _e -> io $ D.copyFile old new)
+
 createDir :: FilePath -> Cmd ()
 createDir = io . D.createDirectoryIfMissing True
+
+removeDir :: FilePath -> Cmd ()
+removeDir = io . D.removeDirectoryRecursive
 
 getWorkingDirectory :: Cmd FilePath
 getWorkingDirectory = io X.getWorkingDirectory
