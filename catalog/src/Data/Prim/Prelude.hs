@@ -197,13 +197,16 @@ instance IsoString LazyByteString where
   {-# INLINE isoString #-}
 
 instance IsoString Int
-
 instance IsoString Integer
 
 -- ----------------------------------------
 
 class IsoText a where
   isoText :: Iso' a Text
+
+  default isoText :: (IsoString a) => Iso' a Text
+  isoText = isoString . isoText
+  {-# INLINE isoText #-}
 
 instance IsoText Text where
   isoText = iso id id
@@ -213,9 +216,8 @@ instance IsoText String where
   isoText = from isoString
   {-# INLINE isoText #-}
 
-instance IsoText Int where
-  isoText = isoString . isoText
-  {-# INLINE isoText #-}
+instance IsoText Int
+instance IsoText Integer
 
 -- ----------------------------------------
 

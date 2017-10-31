@@ -78,6 +78,7 @@ ps'archive
   , ps'javascript
   , ps'css
   , ps'exifcache
+  , ps'zipcache
   , ps'blank :: FilePath
 
 ps'archive      = p'archive      ^. isoString
@@ -94,6 +95,7 @@ ps'blank        = ps'icons  </> "blank.jpg"
 ps'javascript   = ps'assets </> "javascript"
 ps'css          = ps'assets </> "css"
 ps'exifcache    = ps'cache  </> "exif-meta"
+ps'zipcache     = ps'cache  </> "zip-cache"
 
 -- ----------------------------------------
 

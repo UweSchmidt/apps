@@ -175,6 +175,8 @@ instance IsoString Path where
   isoString = iso showPath readPath
   {-# INLINE isoString #-}
 
+instance IsoText Path
+
 instance (Eq n, Monoid n, Show n) => Show (Path' n) where
   show = showPath
   {-# INLINE show #-}

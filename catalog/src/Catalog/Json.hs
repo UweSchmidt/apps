@@ -19,6 +19,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      )
 import           Catalog.Sync            (syncDirP, syncNewDirs)
 import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
+import           Catalog.Zip         ( zipCollection )
 import           Control.Lens
 import           Data.Prim           ()
 import           Data.ImgNode
@@ -67,7 +68,7 @@ jsonRPC jv =
     J.Error e ->
       mkER $ "illegal JSON RPC call: " <> e ^. isoText
     J.Success (fct, (path, args)) -> do
-      let path' = path ^. isoString . from isoString
+      let path' = path ^. from isoText
       v <- lookupByPath path'
       case v of
         Nothing ->
@@ -100,7 +101,7 @@ jsonCall fct i n args =
       jl $ \ () -> return (isRemovable $ n ^. theColMetaData)
 
     "isSortable" ->
-      jl $ \ () -> return (isSortable $ n ^. theColMetaData)
+      jl $ \ () -> return (isSortable  $ n ^. theColMetaData)
 
     -- existence check of a collection
     -- the 1. half of the check is done in jsonRPC in the Nothing case
@@ -249,6 +250,10 @@ jsonCall fct i n args =
     "newSubCols" ->
       jl $ \ () ->
              newSubCols i
+
+    "zipcollection" ->
+      jl $ \ () ->
+             zipCollection i
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
