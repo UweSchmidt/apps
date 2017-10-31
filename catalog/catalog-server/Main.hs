@@ -116,6 +116,9 @@ matchJPG = matchPath "/.*[.]jpg"
 matchTXT :: RoutePattern
 matchTXT = matchPath "/.*[.](txt|md)[.]jpg"
 
+matchZIP :: RoutePattern
+matchZIP = matchPath "/.*[.]zip"
+
 matchBootstrap :: Text -> RoutePattern
 matchBootstrap ext = matchPath ("/bootstrap/.*[.]" `T.append` ext)
 
@@ -226,6 +229,9 @@ main' env state = do
 
     get matchJS $ do
       param "path" >>= mimeFile "text/javascript"
+
+    get matchZIP $ do
+      param "path" >>= mimeFile "application/zip"
 
     -- HTML page for collections and images
     get matchHTML $ do

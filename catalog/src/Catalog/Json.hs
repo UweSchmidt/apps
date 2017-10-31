@@ -253,7 +253,7 @@ jsonCall fct i n args =
 
     "zipcollection" ->
       jl $ \ () ->
-             zipCollection i
+             zipCollection i n
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct

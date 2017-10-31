@@ -486,7 +486,7 @@
                   <a id="SaveImgStore0"
                      data-toggle="modal"
                      data-target="#saveImgStoreModal">
-                    <span class="glyphicon glyphicon-download-alt"
+                    <span class="glyphicon glyphicon-save"
                           aria-hidden="true"></span>
                     Save Archive
                   </a>
@@ -526,6 +526,13 @@
                     <span class="glyphicon glyphicon-repeat"
                           aria-hidden="true"></span>
                     Refresh open collections
+                  </a>
+                </li>
+                <li>
+                  <a id="ExportCollection">
+                    <span class="glyphicon glyphicon-download-alt"
+                          aria-hidden="true"></span>
+                    Export current collection into zip archive
                   </a>
                 </li>
                 <li>
@@ -1294,6 +1301,9 @@
         </a>
       </div>
     </div>
+
+    <!-- the download iframe -->
+    <iframe id="download" style="visibility:hidden;display:none"></iframe>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->

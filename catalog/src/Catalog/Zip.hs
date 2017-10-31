@@ -17,26 +17,24 @@ zipCollection' p = do
   mbi <- lookupByPath p
   maybe
     (abort $ "zipCollection: illegal path " ++ p ^. isoString)
-    (zipCollection . fst) mbi
+    (uncurry zipCollection) mbi
 
-zipCollection :: ObjId -> Cmd FilePath
-zipCollection i = getImgVal i >>= go
-  where
-    go e
-      | isDIR e = do
-          trcObj i "zipColl: create zip archive"
-          p <- objid2path i
-          f <- toFilePath p
-          let abf = ps'zipcache <> p ^. isoString
-          let azf = abf <> ".zip"
-          trcObj i $ "zipColl: create zip archive " ++ azf ++ " for collection " ++ show p
-          return $ ps'zipcache </> "test.zip"
-          -- a lot to do
-          -- return azf
+zipCollection :: ObjId -> ImgNode -> Cmd FilePath
+zipCollection i e
+  | isCOL e = do
+      trcObj i "zipColl: create zip archive"
+      p <- objid2path i
+      f <- toFilePath p
+      let abf = ps'zipcache <> p ^. isoString
+      let azf = abf <> ".zip"
+      trcObj i $ "zipColl: create zip archive " ++ azf ++ " for collection " ++ show p
+      return $ ps'zipcache </> "test.zip"
+      -- a lot to do
+      -- return azf
 
-      | otherwise = do
-          trcObj i "zipCollection: not a collection "
-          abort $  "zipCollection: not a collection"
+  | otherwise = do
+      trcObj i "zipCollection: not a collection "
+      abort $  "zipCollection: not a collection"
 
 
 -- ----------------------------------------

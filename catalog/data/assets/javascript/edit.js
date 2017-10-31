@@ -1018,6 +1018,20 @@ function exifCollectionWithFilesystem(path) {
                 });
 }
 
+function zipActiveCollection() {
+    var cid  = activeCollectionId();
+    var path = collectionPath(cid);
+    console.log("zipActiveCollection: " + path);
+    readServer('zipcollection', path,
+               function(url) {
+                   statusMsg('zip archive created, starting download');
+                   console.log(url);
+                   // start download by writing url into an iframe
+                   $('#download').attr('src', url);
+               }
+              );
+}
+
 function checkArchiveConsistency() {
     console.log("checkArchiveConsistency");
     statusMsg('checking/repairing archive consistency');
@@ -2749,6 +2763,13 @@ $(document).ready(function () {
             statusClear();
             // statusMsg('refreshing all open collections');
             checkAllColAreThere(true, true);
+        });
+
+    $('#ExportCollection')
+        .on('click', function () {
+            statusClear();
+            statusMsg('preparing zip archive for export of current collection');
+            zipActiveCollection();
         });
 
     $('#ConsistencyCheck')
