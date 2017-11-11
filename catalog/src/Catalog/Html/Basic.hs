@@ -10,6 +10,7 @@ import Data.MetaData
 import Data.Prim
 
 import Catalog.Cmd
+import Catalog.FilePath       ( jpgPath )
 import Catalog.Journal        ( Journal'(SaveBlogText) )
 import Catalog.System.Convert ( genAssetIcon
                               , genBlogText
@@ -109,9 +110,11 @@ buildImgPath i n = addJpg <$> buildImgPath0 i n
 
 addJpg :: FilePath -> FilePath
 addJpg f
-  | ".jpg" `isSuffixOf` f = f
-  | otherwise             = f ++ ".jpg"
+  | isJPG f   = f
+  | otherwise = f ++ ".jpg"
     -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
+  where
+    isJPG = match jpgPath
 
 -- ----------------------------------------
 

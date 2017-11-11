@@ -889,7 +889,7 @@ function newEntry(colId, colPath, entry, i) {
 
     // check whether src ref has extension .jpg
     var scref = splitPath(sc);
-    if (scref.ext !== "jpg") {
+    if (scref.ext !== "jpg" && scref.ext !== "JPG") {
         sc = sc + ".jpg";
     }
     // set img/col mark

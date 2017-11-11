@@ -119,7 +119,7 @@ genImage' createImageC imgPath2Geo imgSrc url = do
       notThere =
         runDry msg (abort msg) >> return url
         where
-          msg = "image not found: " ++ show (imgPath2Geo url)
+          msg = "image not found: " ++ show (imgPath2Geo url) ++ "(" ++ url ++ ")"
 
       doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
               (GeoAR, FilePath) -> Cmd FilePath

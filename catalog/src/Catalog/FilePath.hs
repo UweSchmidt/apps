@@ -70,7 +70,6 @@ filePathConfig = map (first parseRegexExt) $
     ptoExt    = "[.]pto"
     jsonExt   = "[.]json"
     dngExt    = "[.](dng|DNG)"
-    jpgExt    = "[.](jpg|JPG)"
     geoExt    = "[.]([0-9]+x[0-9]+)"
     txtExt    = "[.](md|txt)"
 
@@ -104,6 +103,12 @@ filePathConfig = map (first parseRegexExt) $
       , ".*[.](bak|old|tiff|dng)"
       ]
 
+jpgExt :: String
+jpgExt = "[.](jpg|JPG)"
+
+jpgPath :: String
+jpgPath = "/.*" ++ jpgExt
+
 -- ----------------------------------------
 --
 -- these regex must match the filePathConfig expressions
@@ -116,7 +121,7 @@ txtSrcExpr =
 
 imgSrcExpr :: Regex
 imgSrcExpr =
-  parseRegexExt "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
+  parseRegexExt $ "({path}/.*[.](gif|png|tiff?)|ppm|pgm|pbm)[.]jpg"
 
 txtPathExpr :: Regex
 txtPathExpr =
@@ -126,7 +131,7 @@ txtPathExpr =
 imgPathExpr :: Regex
 imgPathExpr =
   parseRegexExt $
-  geoarRE ++ topdirRE ++ "({path}/.*[.]jpg)"
+  geoarRE ++ topdirRE ++ "({path}" ++ jpgPath ++ ")"
 
 geoarRE :: String
 geoarRE =

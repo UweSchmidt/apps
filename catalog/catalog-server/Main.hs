@@ -3,6 +3,7 @@
 module Main where
 
 import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
+import           Catalog.FilePath (jpgPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
 import           Catalog.Html.Blaze2 (genBlazeHtmlPage)
 import           Catalog.Json (jsonRPC)
@@ -111,7 +112,7 @@ matchBlazeHTML = matchPath $ ps'html ^. isoText
       "(/.*)?[.]html"
 
 matchJPG :: RoutePattern
-matchJPG = matchPath "/.*[.]jpg"
+matchJPG = matchPath $ jpgPath ^. isoText
 
 matchTXT :: RoutePattern
 matchTXT = matchPath "/.*[.](txt|md)[.]jpg"
@@ -248,6 +249,7 @@ main' env state = do
     -- routes for images
 
     -- icon preview for text files
+    -- must be checked before matchJPG
     get matchTXT $ do
       p <- param "path"
       f <- runRead $ genImageFromTxt (dropExtension p)
