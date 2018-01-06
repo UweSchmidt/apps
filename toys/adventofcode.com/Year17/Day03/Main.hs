@@ -1,12 +1,15 @@
 module Main where
 
-import Data.List (foldl')
+import Util.Main1 (main1)
+import Data.List  (foldl')
 
 main :: IO ()
-main = do
-  ms <- fromString <$> getContents
-  print $ process ms
-  return ()
+main = main1 day03 process'
+
+process' :: String -> String
+process' = show . process . fromString
+
+-- ----------------------------------------
 
 data Pos = P !Int !Int
   deriving (Eq, Ord, Show)
@@ -48,8 +51,8 @@ process n =
 fromString :: String -> Int
 fromString = read
 
-res :: Int
-res = process . fromString $ day03
+res :: String
+res = process' day03
 
 day03 :: String
 day03 = "361527"

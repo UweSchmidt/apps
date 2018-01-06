@@ -4,3 +4,4 @@ cabal.sandbox.config
 /fgs2/TAGS
 
 /catalog/TAGS
+.stack-work/

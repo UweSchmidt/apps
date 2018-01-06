@@ -1,13 +1,14 @@
 module Main where
 
-import Data.Char (isDigit)
-import Control.Arrow((&&&))
+import Util.Main1    (main1)
+import Data.Char     (isDigit)
+import Control.Arrow ((&&&))
 
 main :: IO ()
-main = do
-  ms <- fromString <$> getContents
-  print $ process ms
-  return ()
+main = main1 day02 process'
+
+process' :: String -> String
+process' = show . process . fromString
 
 process :: [[Int]] -> Int
 process =
@@ -17,10 +18,10 @@ fromString :: String -> [[Int]]
 fromString =
   map (map read) . map words . lines
 
-res :: Int
-res = process . fromString $ day02
+res, day02 :: String
 
-day02 :: String
+res = process' day02
+
 day02 = unlines
   [ "157        564     120     495     194     520     510     618     244     443     471     473     612     149     506     138"
   , "1469       670     47      604     1500    238     1304    1426    54      749     1218    1409    60      51      1436    598"

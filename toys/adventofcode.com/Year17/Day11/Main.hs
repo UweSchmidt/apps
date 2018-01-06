@@ -1,7 +1,21 @@
 module Main where
 
-import Data.Char (toLower, toUpper)
-import Data.List (foldl', unfoldr, intercalate)
+import Util.Main1 (main1)
+import Data.Char  (toLower, toUpper)
+import Data.List  (foldl', unfoldr, intercalate)
+
+main :: IO ()
+main = main1 day11 process'
+
+-- ----------------------------------------
+
+process' :: String -> String
+process' = show . process . fromString
+
+process :: Moves -> Int
+process = length . toWalk . flip walk org
+
+-- ----------------------------------------
 
 data Move = N | NE | SE | S | SW | NW
   deriving (Eq, Ord, Enum, Read, Show)
@@ -82,16 +96,9 @@ toMove p0 = fmap (\ m -> (m, p0 `sub` toPos m)) $ nextMove p0
       | x <  0                     = fmap flipY . nextMove . flipY $ p
       | otherwise {- y <  0 -}     = fmap flipX . nextMove . flipX $ p
 
-main :: IO ()
-main = do
-  ms <- fromString <$> getContents
-  putStrLn $ show $ length $ toWalk $ walk ms org
-  return ()
-
-
 -- result of input day11
-res :: Int
-res = length $ toWalk $ walk (fromString day11) org
+res :: String
+res = process' day11
 
 -- test input from adventofcode
 day11 :: String
