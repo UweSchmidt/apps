@@ -1,3 +1,6 @@
+-- solution for
+-- http://adventofcode.com/2017/day/3
+
 module Main where
 
 import Util.Main1 (main1)

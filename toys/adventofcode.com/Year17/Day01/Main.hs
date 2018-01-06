@@ -1,3 +1,6 @@
+-- solution for
+-- http://adventofcode.com/2017/day/1
+
 module Main where
 
 import Data.Char (isDigit)

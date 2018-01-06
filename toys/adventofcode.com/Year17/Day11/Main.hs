@@ -1,3 +1,6 @@
+-- solution for
+-- http://adventofcode.com/2017/day/11
+
 module Main where
 
 import Util.Main1 (main1)
@@ -20,7 +23,13 @@ process = length . toWalk . flip walk org
 data Move = N | NE | SE | S | SW | NW
   deriving (Eq, Ord, Enum, Read, Show)
 
+instance Flip Move where
+  flipX = fromPos . flipX . toPos
+  flipY = fromPos . flipY . toPos
+
 type Moves = [Move]
+
+-- ----------------------------------------
 
 data Pos = P !Int !Int
   deriving (Eq, Ord, Show)
@@ -30,21 +39,6 @@ class Flip a where
   flipY  :: a -> a
   flipXY :: a -> a
   flipXY = flipY . flipX
-
-instance Flip Move where
-  flipX N  = S
-  flipX NE = SE
-  flipX SE = NE
-  flipX S  = N
-  flipX SW = NW
-  flipX NW = SW
-
-  flipY N  = S
-  flipY NE = SE
-  flipY SE = NE
-  flipY S  = N
-  flipY SW = NW
-  flipY NW = SW
 
 instance Flip Pos where
   flipX (P x y) = P x (-y)
@@ -73,14 +67,21 @@ toPos S  = P 0 (-2)
 toPos SW = P (-1) (-1)
 toPos NW = P (-1) 1
 
+fromPos :: Pos -> Move
+fromPos (P 0      2 ) = N
+fromPos (P 1      1 ) = NE
+fromPos (P 1    (-1)) = SE
+fromPos (P 0    (-2)) = S
+fromPos (P (-1) (-1)) = SW
+fromPos (P (-1)    1) = NW
+fromPos p  = error ("fromPos: illegal argument: " ++ show p)
+
+-- ----------------------------------------
+--
+-- the essence of the solution
+
 walk :: Moves -> Pos -> Pos
 walk = flip $ foldl' (flip move)
-
-fromString :: String -> Moves
-fromString xs = read $ "[" ++ map toUpper xs ++ "]"
-
-toString :: Moves -> String
-toString = map toLower . intercalate "," . map show
 
 toWalk :: Pos -> Moves
 toWalk = unfoldr toMove
@@ -95,6 +96,18 @@ toMove p0 = fmap (\ m -> (m, p0 `sub` toPos m)) $ nextMove p0
       | x >  0 && y >= 0           = Just NE
       | x <  0                     = fmap flipY . nextMove . flipY $ p
       | otherwise {- y <  0 -}     = fmap flipX . nextMove . flipX $ p
+
+-- ----------------------------------------
+--
+-- parsing and printing
+
+fromString :: String -> Moves
+fromString xs = read $ "[" ++ map toUpper xs ++ "]"
+
+toString :: Moves -> String
+toString = map toLower . intercalate "," . map show
+
+-- ----------------------------------------
 
 -- result of input day11
 res :: String

@@ -1,7 +1,9 @@
+-- solution for
+-- http://adventofcode.com/2017/day/2
+
 module Main where
 
 import Util.Main1    (main1)
-import Data.Char     (isDigit)
 import Control.Arrow ((&&&))
 
 main :: IO ()
