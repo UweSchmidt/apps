@@ -35,14 +35,14 @@ addS = foldl' add org
 sub :: Pos -> Pos -> Pos
 sub (P x1 y1) (P x2 y2) = P (x1-x2) (y1-y2)
 
-seq1 :: [Pos]
-seq1 = cycle [r, u, l, d]
-
-seq2 :: [Int]
-seq2 = foldr (\x xs -> x : x : xs) [] [1..]
-
 spiral :: [Pos]
 spiral = org : (concat $ zipWith replicate seq2 seq1)
+  where
+    seq1 :: [Pos]
+    seq1 = cycle [r, u, l, d]
+
+    seq2 :: [Int]
+    seq2 = foldr (\x xs -> x : x : xs) [] [1..]
 
 manhattan :: Pos -> Int
 manhattan (P x y) = abs x + abs y

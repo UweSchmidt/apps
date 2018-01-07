@@ -6,7 +6,6 @@ module Main where
 import Util.Main1    (main1)
 import Data.Char     (isDigit, isSpace)
 import Data.List     (foldl')
-import Control.Arrow (second)
 
 -- ----------------------------------------
 
@@ -35,8 +34,8 @@ toSeq n = cycle xs
 -- ----------------------------------------
 
 fromString :: String -> [(Int, Int)]
-fromString = id
-  . map (\(x1:x2:_) -> (x1, x2))
+fromString =
+    map (\(x1 : x2 : _) -> (x1, x2))
   . map (map read . words)
   . map (filter (\c -> isDigit c || isSpace c ))
   . lines
