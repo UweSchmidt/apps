@@ -3,14 +3,15 @@
 
 module Main where
 
-import Util.Main1    (main1)
-import Data.Char     (isDigit, isSpace)
-import Data.List     (foldl')
+import Util.Main1    (main12)
+import Data.List     (foldl', unfoldr)
+import Data.Bits     (xor)
+import Text.Printf   (printf)
 
 -- ----------------------------------------
 
 main :: IO ()
-main = main1 day10 process'
+main = main12 day10 process' day10 process2'
 
 -- ----------------------------------------
 
@@ -45,19 +46,20 @@ reversePrefix n0 r@(Ring rot len val)
     (xs, ys) = splitAt n val
 
 -- ----------------------------------------
+--
+-- part 1
 
 process' :: String -> String
-process' = show . process 256 . fromString
+process' = show . toRes . shuffle . fromString
 
-process :: Int -> [Int] -> Int
-process len =
-    product
-  . take 2
-  . _vals
-  . shuffle len
+toRes :: Ring Int -> Int
+toRes = product . take 2 . _vals
 
-shuffle :: Int -> [Int] -> Ring Int
-shuffle len =
+shuffle :: [Int] -> Ring Int
+shuffle = shuffle' 256
+
+shuffle' :: Int -> [Int] -> Ring Int
+shuffle' len =
     normalRing
   . foldl' tieKnot (mkRing [0 .. len-1])
   . zip [0..]
@@ -72,7 +74,7 @@ fromString :: String -> [Int]
 fromString s = read $ "[" ++ s ++ "]"
 
 ex :: Int
-ex = process 5 [3, 4, 1, 5]
+ex = toRes . shuffle' 5 $ [3, 4, 1, 5]
 
 -- result of input day11
 res :: String
@@ -81,5 +83,44 @@ res = process' day10
 -- test input from adventofcode
 day10 :: String
 day10 = "197,97,204,108,1,29,5,71,0,50,2,255,248,78,254,63"
+
+-- ----------------------------------------
+
+process2' :: String -> String
+process2' = toRes2 . toDense . _vals . shuffle . prepSeq . fromString2
+
+prepSeq :: [Int] -> [Int]
+prepSeq xs =
+      concat
+    . replicate 64
+    $ (xs ++ [17, 31, 73, 47, 23])
+
+toDense :: [Int] -> [Int]
+toDense = map xors . part 16
+
+xors :: [Int] -> Int
+xors = foldl' xor 0
+
+part :: Int -> [a] -> [[a]]
+part n = unfoldr pick
+  where
+    pick :: [a] -> Maybe ([a], [a])
+    pick [] = Nothing
+    pick xs = Just $ splitAt n xs
+
+toRes2 :: [Int] -> String
+toRes2 = concatMap (printf "%02x")
+
+fromString2 :: String -> [Int]
+fromString2 = map fromEnum
+
+-- ----------------------------------------
+
+{-
+The empty string becomes a2582a3a0e66e6e86e3812dcb672a272.
+AoC 2017 becomes 33efeb34ea91902bb2f59c9920caa6cd.
+1,2,3 becomes 3efbe78a8d82f29979031a4aa0b16a9d.
+1,2,4 becomes 63960835bcdc130f0b66d7ff4f6a5a8e.
+-}
 
 -- ----------------------------------------

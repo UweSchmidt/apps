@@ -1,10 +1,11 @@
-module Util.Main1 (main1) where
+module Util.Main1 (main1, main12) where
 
 import Options.Applicative
 import Data.Monoid         ((<>))
 
 data Args = Args
-  { _clinp :: Maybe String
+  { _part2 :: Bool
+  , _clinp :: Maybe String
   , _input :: Maybe InpArg
   }
 
@@ -17,6 +18,12 @@ argsParser :: Parser Args
 argsParser =
   Args
   <$>
+  flag False True
+  ( long "part2"
+    <> short '2'
+    <> help ( "exec part 2 of problem")
+  )
+  <*>
   ( optional $ strOption
     ( long "input"
       <> short 'i'
@@ -41,8 +48,18 @@ inpParser =
     fromFile fn  = FromFile fn
 
 main1 :: String -> (String -> String) -> IO ()
-main1 defInput process = do
-  inp <- execParser opts >>= getInput defInput
+main1 x1 x2 = main12 x1 x2 x1 x2
+
+main12 :: String -> (String -> String) ->
+          String -> (String -> String) ->
+          IO ()
+main12 defInput1 process1 defInput2 process2 = do
+  args <- execParser opts
+  let (defInput, process)
+        | _part2 args = (defInput2, process2)
+        | otherwise   = (defInput1, process1)
+
+  inp  <- getInput defInput args
   putStrLn . process $ inp
   where
     opts = info (argsParser <**> helper)
@@ -61,3 +78,5 @@ getInput defInp args
   | Just (FromFile fn) <- _input args = readFile fn
   | Just FromStdin     <- _input args = getContents
   | otherwise                         = return defInp
+
+-- ----------------------------------------
