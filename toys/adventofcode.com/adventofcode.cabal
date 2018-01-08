@@ -82,6 +82,7 @@ executable 2017-10
   hs-source-dirs:      .
   
   other-modules:       Util.Main1
+                     , Year17.Day10.TyingTheKnot
 
   build-depends:       base >= 4.7 && < 5
                      , adventofcode
