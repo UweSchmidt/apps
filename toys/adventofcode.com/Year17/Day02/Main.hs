@@ -7,7 +7,7 @@ import Util.Main1    (main1)
 import Control.Arrow ((&&&))
 
 main :: IO ()
-main = main1 day02 process'
+main = main1 "2017-02" day02 process'
 
 process' :: String -> String
 process' = show . process . fromString

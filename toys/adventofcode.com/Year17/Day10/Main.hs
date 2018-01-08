@@ -11,7 +11,7 @@ import Year17.Day10.TyingTheKnot
 -- ----------------------------------------
 
 main :: IO ()
-main = main12
+main = main12 "2017-10"
        day10 tieKnots
        day10 knotHash  -- 2. part
 

@@ -7,7 +7,7 @@ import Util.Main1 (main1)
 import Data.List  (foldl')
 
 main :: IO ()
-main = main1 day03 process'
+main = main1 "2017-03" day03 process'
 
 process' :: String -> String
 process' = show . process . fromString

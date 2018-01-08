@@ -7,7 +7,8 @@ import Util.Main1 (main1)
 import Text.Parsec
 
 main :: IO ()
-main = main1 day09 process'
+main = main1 "2017-09"
+       day09 process'
 
 process' :: String -> String
 process' = show . process

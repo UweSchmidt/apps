@@ -47,13 +47,15 @@ inpParser =
     fromFile "-" = FromStdin
     fromFile fn  = FromFile fn
 
-main1 :: String -> (String -> String) -> IO ()
-main1 x1 x2 = main12 x1 x2 x1 x2
+main1 :: String ->
+         String -> (String -> String) -> IO ()
+main1 pno x1 x2 = main12 pno x1 x2 x1 x2
 
-main12 :: String -> (String -> String) ->
+main12 :: String ->
+          String -> (String -> String) ->
           String -> (String -> String) ->
           IO ()
-main12 defInput1 process1 defInput2 process2 = do
+main12 pno defInput1 process1 defInput2 process2 = do
   args <- execParser opts
   let (defInput, process)
         | _part2 args = (defInput2, process2)
@@ -62,14 +64,21 @@ main12 defInput1 process1 defInput2 process2 = do
   inp  <- getInput defInput args
   putStrLn . process $ inp
   where
+    (year, day') = span (/= '-') pno
+    day          = dropWhile (`notElem` "123456789") day'
+
     opts = info (argsParser <**> helper)
       ( fullDesc
         <> ( progDesc $
              unlines
-             [ "Solve a problem of adventofcode.com"
+             [ "Solve problem \"Day " ++ day ++
+               "\" of Advent of Code " ++ year ++
+               " (http://www.adventofcode.com/" ++
+               year ++ "/day/" ++ day ++ ")."
              ]
            )
-        <> header "<year>-<day> - solve a problem of adventofcode.com"
+        <> header
+           ( pno ++ " - solve a problem of adventofcode.com")
       )
 
 getInput :: String -> Args -> IO String

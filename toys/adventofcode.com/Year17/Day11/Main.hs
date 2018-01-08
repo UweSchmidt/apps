@@ -8,7 +8,8 @@ import Data.Char  (toLower, toUpper)
 import Data.List  (foldl', unfoldr, intercalate)
 
 main :: IO ()
-main = main1 day11 process'
+main = main1 "2017-11"
+       day11 process'
 
 -- ----------------------------------------
 

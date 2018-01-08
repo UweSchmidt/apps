@@ -12,7 +12,8 @@ import qualified Data.Set      as S
 import qualified Data.Relation as R
 
 main :: IO ()
-main = main1 day12 process'
+main = main1 "2017-12"
+       day12 process'
 
 -- ----------------------------------------
 

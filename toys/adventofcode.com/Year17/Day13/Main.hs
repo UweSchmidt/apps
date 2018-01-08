@@ -12,7 +12,7 @@ import Data.List     (foldl')
 
 
 main :: IO ()
-main = main12
+main = main12 "2017-13"
        day13 firewall1
        day13 firewall2
 
