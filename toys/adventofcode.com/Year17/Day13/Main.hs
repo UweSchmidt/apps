@@ -54,6 +54,8 @@ firewall2 :: String -> String
 firewall2 = show . process2 (10^7) . fromString
 
 -- without mx this might not terminate
+-- now it can terminate with head of empty list
+-- which is slightly better
 
 process2 :: Int -> [(Int, Int)] -> Int
 process2 mx cf =
@@ -77,8 +79,9 @@ isNotCaught delay =
 -- ----------------------------------------
 --
 -- result of input day11
-res :: String
-res = firewall1 day13
+exp1, res1 :: String
+exp1 = "3360"
+res1 = firewall1 day13
 
 ex :: String
 ex = "0: 3\n1: 2\n4: 4\n6: 4"
