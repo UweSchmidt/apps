@@ -25,19 +25,19 @@ process :: [(Int, Int)] -> Int
 process =
   foldl' severe 0 . toWall
   where
-    severe acc ((i, d), xs)
-      | xs !! i == 0 = acc + i * d
-      | otherwise    = acc
+    severe acc ((i, d2), xs)
+      | xs !! (i `mod` d2) == 0 = acc + i * d2
+      | otherwise               = acc
 
 type Firewall = [((Int, Int), [Int])]
 
 toWall :: [(Int, Int)] -> [((Int, Int), [Int])]
-toWall = map (\w -> (w , toSeq $ snd w))
+toWall = map (\(i, d) -> ((i, 2 * (d-1)), toSeq d))
 
 toSeq :: Int -> [Int]
-toSeq n = cycle xs
-      where
-        xs = [0 .. n-1] ++ reverse [1 .. n-2]
+toSeq n
+  | n >= 2 = [0 .. n-1] ++ reverse [1 .. n-2]
+  | otherwise = error "firewall: filter size < 2"
 
 -- ----------------------------------------
 
@@ -69,14 +69,10 @@ isNotCaught delay =
   not . foldr caught False
   where
     caught :: ((Int, Int), [Int]) -> Bool -> Bool
-    caught ((i, d), xs) acc =
+    caught ((i, d2), xs) acc =
       xs !! i' == 0 || acc
       where
-        i' | d <= 2    = (i + delay) `mod` d
-           | otherwise = (i + delay) `mod` (2 * (d-1))
-        -- @!!@ is too slow, but the sequences are periodic
-        -- with length @d + (d-2)@ except for d=1 or d=2
-        -- and delay becomes pretty large, see res2
+        i' = (i + delay) `mod` d2
 
 -- ----------------------------------------
 --
