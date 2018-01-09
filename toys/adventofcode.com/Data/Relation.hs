@@ -3,7 +3,7 @@
 
 module Data.Relation where
 
-import           Prelude hiding (foldr)
+import           Prelude hiding (foldr, null)
 import qualified Prelude as P
 import           Data.Maybe (fromMaybe)
 import           Data.Set (Set)
@@ -42,6 +42,17 @@ member x y r =
 lookupS :: (Ord a) => a -> Rel a b -> Set b
 lookupS x (Rel m) = fromMaybe S.empty $ M.lookup x m
 
+findMin ::  (Ord a, Ord b) => Rel a b -> (a, b)
+findMin r =
+  (x, S.findMin s)
+  where
+    (x, s) = findMinS r
+
+findMinS :: (Ord a) => Rel a b -> (a, Set b)
+findMinS r@(Rel m)
+  | M.null m  = error "findMinS: empty relation"
+  | otherwise = M.findMin m
+
 singleton :: a -> b -> Rel a b
 singleton x y =
   Rel $ M.singleton x (S.singleton y)
@@ -71,6 +82,11 @@ difference (Rel m1) (Rel m2) =
       where
         s' = s1 `S.difference` s2
 
+differenceS :: (Ord a) => Rel a b -> Set a -> Rel a b
+differenceS (Rel m1) s =
+  Rel $ S.foldl' (flip M.delete) m1 s
+
+
 {-# INLINE empty      #-}
 {-# INLINE null       #-}
 {-# INLINE member     #-}
@@ -81,6 +97,9 @@ difference (Rel m1) (Rel m2) =
 {-# INLINE insertS    #-}
 {-# INLINE union      #-}
 {-# INLINE difference #-}
+
+unions :: (Ord a, Ord b) => [Rel a b] -> Rel a b
+unions = foldl' union empty
 
 -- ----------------------------------------
 
@@ -152,6 +171,19 @@ reflex r = S.foldl' (\ acc x -> insert x x acc) empty $ dom r `S.union` rng r
 {-# INLINE invert    #-}
 {-# INLINE trClosure #-}
 {-# INLINE reflex    #-}
+
+connectedComponents :: Ord a => Rel' a -> [Set a]
+connectedComponents r0 = part [] r1
+  where
+    r1 = trClosure $ invert r0 `union` r0 `union` reflex r0
+
+    part :: Ord a => [Set a] -> Rel' a -> [Set a]
+    part s r
+      | null r = s
+      | otherwise = part (p : s) r'
+      where
+        (_x, p) = findMinS r
+        r'      = differenceS r p
 
 -- ----------------------------------------
 --
