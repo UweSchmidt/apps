@@ -5,14 +5,8 @@ module Main where
 
 import Util.Main1    (main12)
 
--- TyingTheKnot is used in Year17.Day14
-import Year17.Day10.TyingTheKnot(knotHash)
 import Text.Printf (printf)
 import Numeric (readHex)
-import Data.Relation (Rel')
-import qualified Data.Relation as R
-import Data.Word(Word32)
-import Data.Int(Int32)
 import Data.Bits(Bits(..))
 import Debug.Trace
 
@@ -21,44 +15,49 @@ import Debug.Trace
 main :: IO ()
 main = main12 "2017-15"
        day15 randSeq
-       day15 randSeq
+       day15 randSeq -- not yet done
 
 -- ----------------------------------------
-
-type IntXX = Int
 
 randSeq :: String -> String
-randSeq = show . process . fromString
+randSeq = show . process 40000000 . fromString
 
-process :: (IntXX, IntXX, IntXX, IntXX) -> Int
-process (factor1, factor2, seed1, seed2) =
+process :: Int -> (Int, Int, Int, Int) -> Int
+process rep (factorA, factorB, seedA, seedB) =
   sum
-  . take 40
-  . map (\p@(x, y) -> tr p $ fromEnum $ x .&. 0xFFFF == y .&. 0xFFFF)
-  $ zip seq1 seq2
+  . take rep
+  $ zipWith eq16 seq1 seq2
   where
-    seq1 = tail $ iterate (rand factor1) seed1
-    seq2 = tail $ iterate (rand factor2) seed2
+    seq1 = tail $ iterate (rand factorA) seedA
+    seq2 = tail $ iterate (rand factorB) seedB
 
-tr p@(x,y) = trace pp . trace (show p)
+    eq16 :: Int -> Int -> Int
+    eq16 x y = fromEnum $ x .&. 0xFFFF == y .&. 0xFFFF
+
+rand :: Int -> Int -> Int
+rand factor prev =
+  (prev * factor) `rem` 0x7fffffff
+
+fromString :: String -> (Int, Int, Int, Int)
+fromString s = (factorA, factorB, seedA, seedB)
   where
-    pp = "(" ++ printf "%032b" x ++ "," ++ printf "%032b" y ++ ")"
-
-rand :: IntXX -> IntXX -> IntXX
-rand factor prev = (prev * factor) `rem` 0x7fffffff
-
-fromString :: String -> (IntXX, IntXX, IntXX, IntXX)
-fromString s = read $ "(" ++ s ++ ")"
+    (seedA : seedB : _) = map read . map last . map words . lines $ s
+    factorA = 16807
+    factorB = 48271
 
 -- ----------------------------------------
 
-exKey, exRes :: String
-exKey  = "16807,48271,65,8921"
-exRes  = "8108"
+exInp, exRes, exRes' :: String
+exInp = "Generator A starts with 65\nGenerator B starts with 8921"
+exRes = "588"
+
+-- test case
+exRes' = show . process 5 $ fromString exInp -- "1"
 
 
 day15, res15 :: String
-day15 = ""
-res15 = ""
+day15 = "Generator A starts with 512\nGenerator B starts with 191"
+res15 = "567"
+
 
 -- ----------------------------------------
