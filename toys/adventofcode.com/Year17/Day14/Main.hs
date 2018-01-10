@@ -57,50 +57,48 @@ connected sq =
   length
   . R.connectedComponents
   . R.trClosure
-  $ conH `R.union` conV `R.union` conS
+  $ conH `R.union` conV
   where
     conH = connectedH rows cols sq
     conV = connectedV rows cols sq
-    conS = singles    rows cols sq
 
     cols = length (head sq)
     rows = length sq
 
-singles, connectedH, connectedV :: Int -> Int -> [[Bool]] -> Connected
+connectedH, connectedV :: Int -> Int -> [[Bool]] -> Connected
 
--- connect all to itself
-singles rows cols =
+connectedH rows cols =
   R.unions . zipWith toCon [0.. rows - 1]
   where
     toCon :: Int -> [Bool] -> Connected
-    toCon rcnt row = R.unions $ zipWith pair [0..] row
+    toCon rcnt row =
+      (R.unions $ zipWith  pair1 [0..] row)
+      `R.union`
+      (R.unions $ zipWith3 pair2 [0..] row (tail row))
       where
-        pair i x0
+
+        -- connect all to itself
+        pair1 i x0
           | x0        = R.singleton ix ix
           | otherwise = R.empty
           where
             ix = rcnt * cols + i
 
--- connect all neighbours in a row
-connectedH rows cols =
-  R.unions . zipWith toCon [0.. rows - 1]
-  where
-    toCon :: Int -> [Bool] -> Connected
-    toCon rcnt row = R.unions $ zipWith3 pair [0..] row (tail row)
-      where
-        pair i x0 x1
+        -- connect all neighbours in a row
+        pair2 i x0 x1
           | x0 && x1  = R.singleton ix (ix + 1)
           | otherwise = R.empty
           where
             ix = rcnt * cols + i
 
--- connect al neighbours in a column
 connectedV rows cols sq =
   R.unions . map toCon $ zip3 [0.. rows - 1] sq (tail sq)
   where
     toCon :: (Int, [Bool], [Bool]) -> R.Rel Int Int
     toCon (rcnt, r0, r1) = R.unions $ zipWith3 pair [0.. cols - 1] r0 r1
       where
+
+        -- connect al neighbours in a column
         pair j y0 y1
           | y0 && y1 = R.singleton ix (ix + cols)
           | otherwise = R.empty
