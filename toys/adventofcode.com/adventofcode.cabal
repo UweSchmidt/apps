@@ -138,7 +138,7 @@ executable 2017-14
   
   other-modules:       Util.Main1
                      , Data.Relation
-                     , Year17.Day10.Tyingtheknot
+                     , Year17.Day10.TyingTheKnot
 
   build-depends:       base >= 4.7 && < 5
                      , adventofcode
