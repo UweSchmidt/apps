@@ -5,10 +5,7 @@ module Main where
 
 import Util.Main1    (main12)
 
-import Text.Printf (printf)
-import Numeric (readHex)
 import Data.Bits(Bits(..))
-import Debug.Trace
 
 -- ----------------------------------------
 
