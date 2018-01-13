@@ -5,10 +5,6 @@ module Main where
 
 import Util.Main1    (main12)
 
-import Text.Printf (printf)
-import Numeric (readHex)
-import Data.Bits(Bits(..))
-import Debug.Trace
 import Data.List (foldl')
 import Data.List.Split (splitOn)
 
@@ -17,7 +13,7 @@ import Data.List.Split (splitOn)
 main :: IO ()
 main = main12 "2017-16"
        day16 dance
-       day16 dance
+       day16 dance2
 
 -- ----------------------------------------
 
@@ -29,8 +25,10 @@ data Dance = Spin Int
            | Partner Prog Prog
            deriving (Show)
 
+-- ----------------------------------------
+
 dance :: String -> String
-dance = show . flip process ps1 . fromString
+dance = id . flip process ps1 . fromString
 
 process :: [Dance] -> Progs -> Progs
 process ds ps = foldl' (flip $ step l) ps ds
@@ -74,8 +72,36 @@ fromString = map toDance . splitOn ","
         (s1 : rs) = splitOn "/" xs
         (s2 : _ ) = rs
 
+genProgs :: Int -> Progs
+genProgs n = take n $ ['a' ..]
+
 ps1 :: Progs
-ps1 = take 16 $ ['a' ..]
+ps1 = genProgs 16
+
+-- ----------------------------------------
+--
+-- the naive way which will never give us a result
+-- even for 10^6 we can wait and wait,
+-- 10^4 iterations are done in 1.5sec
+
+dance2 :: String -> String
+dance2 = flip (dances (10^4) process) ps1 . fromString
+
+dances :: Int -> ([Dance] -> Progs -> Progs) ->
+          [Dance] -> Progs -> Progs
+dances n process' ds ps
+  = iterate (process' ds) ps !! n
+
+-- ----------------------------------------
+
+exps :: Progs
+exps = genProgs 5
+
+exdance :: String
+exdance = "s1,x3/4,pe/b"
+
+exres :: String
+exres = flip process exps . fromString $ exdance
 
 -- ----------------------------------------
 
