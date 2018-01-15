@@ -85,7 +85,7 @@ ps1 = genProgs 16
 -- 10^4 iterations are done in 1.5sec
 
 dance2 :: String -> String
-dance2 = flip (dances (10^2) process) ps1 . fromString
+dance2 = flip (dances (10^4) process) ps1 . fromString
 
 dances :: Int -> ([Dance] -> Progs -> Progs) ->
           [Dance] -> Progs -> Progs

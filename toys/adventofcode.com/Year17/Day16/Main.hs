@@ -166,20 +166,6 @@ ps1 :: Progs
 ps1 = genProgs 16
 
 -- ----------------------------------------
---
--- the naive way which will never give us a result
--- even for 10^6 we can wait and wait,
--- 10^4 iterations are done in 1.5sec
-{-
-dance2 :: String -> String
-dance2 = flip (dances (10^4) process) ps1 . fromString
-
-dances :: Int -> ([Dance] -> Progs -> Progs) ->
-          [Dance] -> Progs -> Progs
-dances n process' ds ps
-  = iterate (process' ds) ps !! n
--}
--- ----------------------------------------
 
 exps :: Progs
 exps = genProgs 5
