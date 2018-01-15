@@ -5,8 +5,11 @@ module Main where
 
 import Util.Main1    (main12)
 
-import Data.List (foldl')
+import Data.List (foldl', unfoldr)
 import Data.List.Split (splitOn)
+import qualified Data.Vector.Unboxed as V
+import Data.Vector.Unboxed ((!))
+import Control.Arrow (first, second)
 
 -- ----------------------------------------
 
@@ -25,41 +28,125 @@ data Dance = Spin Int
            | Partner Prog Prog
            deriving (Show)
 
+type Perm   = V.Vector Int
+
+type Progs' = Perm
+
+type Subst  = V.Vector Int
+
 -- ----------------------------------------
 
+fromLetter :: Char -> Int
+fromLetter c = fromEnum c - fromEnum 'a'
+
+toLetter :: Int -> Char
+toLetter i = toEnum $ i + fromEnum 'a'
+
+toProgs' :: Progs -> Progs'
+toProgs' = V.fromList . map fromLetter
+
+fromProgs' :: Progs' -> Progs
+fromProgs' = map toLetter . V.toList
+
+mkPerm :: Int -> (Int -> Int) -> Perm
+mkPerm = V.generate
+
+mkUnit :: Int -> Perm
+mkUnit l = mkPerm l id
+
+mkSpin :: Int -> Int -> Perm
+mkSpin l pos = mkPerm l f
+  where
+    f i = (i - pos) `mod` l
+
+mkExchange :: Int -> Int -> Int -> Perm
+mkExchange l i j = mkPerm l f
+  where
+    f x
+      | x == i    = j
+      | x == j    = i
+      | otherwise = x
+
+-- --------------------
+--
+-- substitutions
+
+
+emptySubst :: Int -> Subst
+emptySubst n = V.generate n id
+
+lookupSubst :: Int -> Subst -> Int
+lookupSubst = flip (!)
+
+partnerSubst :: Int -> Int -> Subst -> Subst
+partnerSubst x y = V.map p
+  where
+    p v
+      | v == x    = y
+      | v == y    = x
+      | otherwise = v
+
+applySubst :: Subst -> Progs' -> Progs'
+applySubst s = V.map (s !)
+
+compSubst :: Subst -> Subst -> Subst
+compSubst s2 s1 = V.map (s2 !) s1
+
+-- --------------------
+--
+-- apply is the same as flip compPerm
+
+apply :: Perm -> Progs' -> Progs'
+apply = flip compPerm
+
+compPerm :: Perm -> Perm -> Perm
+compPerm p1 p2 =
+  V.generate (V.length p1) f
+  where
+    f i = p1 ! (p2 ! i)
+
 dance :: String -> String
-dance = id . flip process ps1 . fromString
+dance = toString . dance' 1 16
 
-process :: [Dance] -> Progs -> Progs
-process ds ps = foldl' (flip $ step l) ps ds
+dance2 :: String -> String
+dance2 = toString . dance' 1000000000 16
+
+dance' :: Int -> Int -> String -> Progs'
+dance' n l inp =
+  applySubst s . apply p $ mkUnit l
   where
-    l = length ps
+    round1 = danceToPermSubst l . fromString $ inp
+    (p, s) = multRounds round1 $ toBits n
 
-step :: Int -> Dance -> Progs -> Progs
-step l (Spin i)       = spin (l - i)
-step _ (Exchange i j) = exchange i j
-step _ (Partner  p q) = partner p q
+    multRounds :: (Perm, Subst) -> [Bool] -> (Perm, Subst)
+    multRounds acc [True] = acc
+    multRounds acc (b : bs)
+      | b         = res `compPS` acc
+      | otherwise = res
+      where
+        res   = multRounds acc'2 bs
+        acc'2 = acc `compPS` acc
+        (p2, s2) `compPS` (p1, s1)
+              = (p2 `compPerm` p1, s2 `compSubst` s1)
 
-spin :: Int -> Progs -> Progs
-spin i ps = rs ++ qs
+danceToPermSubst :: Int -> [Dance] -> (Perm, Subst)
+danceToPermSubst l = foldl' (flip toPs) (mkUnit l, emptySubst l)
   where
-    (qs, rs) = splitAt i ps
+    toPs :: Dance -> (Perm, Subst) -> (Perm, Subst)
+    toPs (Spin i)       = first  (`compPerm` mkSpin l i)
+    toPs (Exchange i j) = first  (`compPerm` mkExchange l i j)
+    toPs (Partner p q)  = second (partnerSubst (fromLetter p) (fromLetter q))
 
-exchange :: Int -> Int -> Progs -> Progs
-exchange i j ps
-  | i < j     = xs ++ [p2] ++ ys ++ [p1] ++ zs
-  | otherwise = exchange j i ps
+toBits :: Int -> [Bool]
+toBits = unfoldr toBit
   where
-    (xs, (p1 : rs)) = splitAt i ps
-    (ys, (p2 : zs)) = splitAt (j - i -1) rs
+    toBit 0 = Nothing
+    toBit i = Just (odd i, i `div` 2)
 
-partner :: Prog -> Prog -> Progs -> Progs
-partner p q ps = xs ++ [p2] ++ ys ++ [p1] ++ zs
-  where
-    neq x = x /= p && x /= q
+-- --------------------
 
-    (xs, (p1 : rs)) = span neq ps
-    (ys, (p2 : zs)) = span neq rs
+toString :: Progs' -> String
+toString = fromProgs'
 
 fromString :: String -> [Dance]
 fromString = map toDance . splitOn ","
@@ -83,15 +170,15 @@ ps1 = genProgs 16
 -- the naive way which will never give us a result
 -- even for 10^6 we can wait and wait,
 -- 10^4 iterations are done in 1.5sec
-
+{-
 dance2 :: String -> String
-dance2 = flip (dances (10^2) process) ps1 . fromString
+dance2 = flip (dances (10^4) process) ps1 . fromString
 
 dances :: Int -> ([Dance] -> Progs -> Progs) ->
           [Dance] -> Progs -> Progs
 dances n process' ds ps
   = iterate (process' ds) ps !! n
-
+-}
 -- ----------------------------------------
 
 exps :: Progs
@@ -101,7 +188,7 @@ exdance :: String
 exdance = "s1,x3/4,pe/b"
 
 exres :: String
-exres = flip process exps . fromString $ exdance
+exres = toString $ dance' 1 5 exdance
 
 -- ----------------------------------------
 
