@@ -34,4 +34,4 @@ executable catalog-server
 
 source-repository head
   type:     git
-  location: https://github.com/UweSchmidt/apps
+  location: https://github.com/UweSchmidt/apps/catalog

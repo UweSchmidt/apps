@@ -10,9 +10,8 @@ import           Catalog.Json (jsonRPC)
 import           Catalog.Options (mainWithArgs)
 import           Catalog.System.Convert (genImage, genImageFromTxt)
 import           Control.Concurrent.MVar
-import           Control.Exception (SomeException, try, catch, toException)
+import           Control.Exception (SomeException, catch) -- , try, toException)
 import           Control.Monad.Except
-import           Control.Monad.IO.Class
 import qualified Control.Monad.RWSErrorIO as RWS
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))

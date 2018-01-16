@@ -5,19 +5,13 @@ module Catalog.System.ImportPhoto2
 where
 
 import           Catalog.Cmd
-import           Catalog.Cmd.Basic
-import           Catalog.Cmd.Types
-import           Catalog.System.IO
 import           Catalog.FilePath
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
 import           System.FilePath (dropExtension, (</>))
-import           Data.Map (Map)
-import qualified Data.Map  as M
 import qualified Data.Text as T
 import           Text.Read(readMaybe)
 
@@ -119,18 +113,18 @@ insertImportPhoto2 ipd = go ipd
 
               jpgN        = remCommonPathPrefix (toPath raw) (toPath jpg) ^. _2
               jpgP        = jpgN ^. isoString . to (drop 1) . from isoString
-              (jpgPath,
-               jpgName)   = toPath jpg ^. viewBase
+              (jpgPath1,
+               jpgName1)   = toPath jpg ^. viewBase
               (jpgDir,
-               jpgBase)   = jpgPath    ^. viewBase
-              name        = jpgName & isoString %~ dropExtension
-              jpgBaseName = jpgBase ^. isoString </> jpgName ^. isoString
+               jpgBase)   = jpgPath1    ^. viewBase
+              name        = jpgName1 & isoString %~ dropExtension
+              jpgBaseName = jpgBase ^. isoString </> jpgName1 ^. isoString
               jpgType     = filePathToImgType jpgBaseName ^. _2
               jpgPath'
-                | jpgType == IMGother = jpgPath `snocPath` name
-                | otherwise           = jpgDir  `snocPath` name
+                | jpgType == IMGother = jpgPath1 `snocPath` name
+                | otherwise           = jpgDir   `snocPath` name
               jpgPart
-                | jpgType == IMGother = jpgName
+                | jpgType == IMGother = jpgName1
                 | otherwise           = jpgBaseName ^. from isoString
 
           path           = concPath ppx . tailPath . toPath $ pt0
@@ -163,11 +157,12 @@ insertImportPhoto2 ipd = go ipd
             adjustColImg (const $ Just (iin, imgName)) cid
 
 -- run in data subdir
+ttt :: IO (Either Msg (), ImgStore, Log)
 ttt = runCmd $
       local (& envVerbose .~ True) $
       (do
-          mp' <- view envMountPath
-          jp' <- view envJsonArchive
+          mp'  <- view envMountPath
+          _jp' <- view envJsonArchive
           initImgStore n'archive n'collections
             (mp' </> s'photos)) >>
       loadImgStore "catalog/photos.pathid.json" >>

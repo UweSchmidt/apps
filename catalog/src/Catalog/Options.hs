@@ -28,7 +28,7 @@ appInfo pname =
   info (envp <**> helper)
   ( fullDesc
     <> progDesc "organize your photos"
-    <> header ("catalog-" ++ pname ++ " - 0.1.1.0")
+    <> header ("catalog-" ++ pname ++ " - 0.1.2.0")
   )
 
 envp :: Parser Env

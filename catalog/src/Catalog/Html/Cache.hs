@@ -10,7 +10,6 @@ import Catalog.Html.Basic
 import Catalog.System.Convert (genImage)
 
 import Data.ImgTree
-import Data.MetaData
 import Data.Prim
 
 fillImgCache :: Path -> Cmd ()

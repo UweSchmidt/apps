@@ -29,7 +29,7 @@ import Catalog.Html.Basic ( ColRef
                           )
 import Catalog.Html.Templates.Blaze2
 import Catalog.System.ExifTool (getMetaData)
-import Catalog.System.Convert  (getColImgSize, scaleWidth)
+import Catalog.System.Convert  (getColImgSize)
 
 -- ----------------------------------------
 
@@ -123,10 +123,6 @@ url2confPathNo f =
              )
     _ -> abort $ "can't process document ref " ++ show f
 
--- TODO : remove it
-url2pathNo :: FilePath -> Cmd ColRefPath
-url2pathNo f = snd <$> url2confPathNo f
-
 -- ----------------------------------------
 
 url2confObjId :: FilePath -> Cmd (String, ColRef)
@@ -136,8 +132,10 @@ url2confObjId f = do
   i      <- fromJustCmd ("no entry found for href " ++ show f) mi
   return (c, i)
 
+{-
 url2objId :: FilePath -> Cmd ColRef
 url2objId f = snd <$> url2confObjId f
+-}
 
 -- convert a path ref into an object ref
 crPath2crObjId :: ColRefPath -> Cmd (Maybe ColRef)
@@ -461,9 +459,8 @@ path2href c p = "/" ++ c ++ p ++ ".html"
 
 -- ----------------------------------------
 
-blankImg :: Maybe FilePath -> FilePath
-blankImg f =
-  fromMaybe ps'blank f
+-- blankImg :: Maybe FilePath -> FilePath
+-- blankImg f = fromMaybe ps'blank f
 
 blankIcon :: Maybe ColRef -> Maybe FilePath -> Cmd FilePath
 blankIcon _ (Just f) =
@@ -476,9 +473,5 @@ blankIcon (Just (i, Nothing)) _ =
 
 blankIcon _ Nothing =
   return ""
-
-blankIcon _ _ =
-  -- image not there
-  return ps'blank
 
 -- ----------------------------------------
