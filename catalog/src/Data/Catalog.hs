@@ -35,7 +35,7 @@ instance CatalogKey Int where
   lookupCat k   (CatMapInt m)   = IM.lookup k m
   insertCat k v (CatMapInt m)   = CatMapInt (IM.insert k v m)
   deleteCat k   (CatMapInt m)   = CatMapInt (IM.delete k   m)
-  foldCat f acc (CatMapInt m)   = IM.foldWithKey f acc m
+  foldCat f acc (CatMapInt m)   = IM.foldrWithKey f acc m
   toListCat     (CatMapInt m)   = IM.toList m
   fromListCat                   = CatMapInt . IM.fromList
 
@@ -46,7 +46,7 @@ instance CatalogKey ObjId where
   lookupCat k   (CatMapObjId m) = IM.lookup (k ^. objId2Int) m
   insertCat k v (CatMapObjId m) = CatMapObjId (IM.insert (k ^. objId2Int) v m)
   deleteCat k   (CatMapObjId m) = CatMapObjId (IM.delete (k ^. objId2Int)   m)
-  foldCat f acc (CatMapObjId m) = IM.foldWithKey f' acc m
+  foldCat f acc (CatMapObjId m) = IM.foldrWithKey f' acc m
                                   where
                                     f' k = f (k ^. from objId2Int)
   toListCat     (CatMapObjId m) = map (first (^. from objId2Int)) $ IM.toList m
