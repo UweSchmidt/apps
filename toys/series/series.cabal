@@ -1,0 +1,21 @@
+name:                series
+version:             0.1.0.0
+-- synopsis:
+-- description:
+author:              Uwe Schmidt
+maintainer:          Uwe Schmidt <uwe@fh-wedel.de>
+copyright:           Copyright (c) 2017- Uwe Schmidt
+category:            Compiler
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable series
+  main-is:             Main.hs
+  hs-source-dirs:      .
+  
+  other-modules:
+
+  build-depends:       base >= 4.7 && < 5
+                            
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  default-language:   Haskell2010
