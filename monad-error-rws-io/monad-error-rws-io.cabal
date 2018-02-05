@@ -25,14 +25,3 @@ Library
                      , mtl           >= 2.2
                      , transformers  >= 0.4
 
-test-suite rws-e-io
-  main-is:             RWSTest.hs
-  type:                exitcode-stdio-1.0
-
-  build-depends:       base
-                     , monad-error-rws-io
-                     , process
-                     , mtl
-                     , transformers
-  hs-source-dirs:      .
-  ghc-options:         -Wall  -fwarn-tabs

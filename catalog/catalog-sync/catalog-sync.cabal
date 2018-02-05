@@ -16,7 +16,7 @@ executable catalog-sync
   main-is:             Main.hs
   build-depends:       base
                      , catalog
-                     , monad-error-rws-io
+                     , monad-reader-state-err-io
                      , mtl
                      , text
                      , transformers

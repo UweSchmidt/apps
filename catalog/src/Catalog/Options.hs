@@ -19,7 +19,7 @@ mainWithArgs theAppName theAppMain = do
 
 fontForConvert :: Env -> IO Env
 fontForConvert env = do
-  (res, _, _) <- runCmd selectFont
+  (res, _) <- runCmd selectFont
   let fn = either (const mempty) id res
   return (env & envFontName .~ fn)
 
@@ -50,7 +50,6 @@ envp = Env
         <> short 'j'
         <> help "Turn on journaling archive changes"
       )
-  <*> pure (defaultEnv ^. envStdErrOn)
   <*> switch
       ( long "dry-run-jpg"
         <> short 'y'

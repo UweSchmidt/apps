@@ -18,7 +18,7 @@ executable catalog-server
                      , catalog
                      , filepath
                      , http-types            >= 0.9
-                     , monad-error-rws-io
+                     , monad-reader-state-err-io
                      , mtl
                      , scotty                >= 0.1.10
                      , text

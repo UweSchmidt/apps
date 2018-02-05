@@ -157,7 +157,7 @@ insertImportPhoto2 ipd = go ipd
             adjustColImg (const $ Just (iin, imgName)) cid
 
 -- run in data subdir
-ttt :: IO (Either Msg (), ImgStore, Log)
+ttt :: IO (Either Msg (), ImgStore)
 ttt = runCmd $
       local (& envVerbose .~ True) $
       (do

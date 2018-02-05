@@ -72,7 +72,7 @@ library
                    , hxt-regex-xmlschema  >= 9.2
                    , hxt-unicode          >= 9.0
                    , lens                 >= 4.12
-                   , monad-error-rws-io   >= 0.0.2
+                   , monad-reader-state-err-io
                    , mtl                  >= 2.2
                    , murmur-hash          >= 0.1
                    , optparse-applicative

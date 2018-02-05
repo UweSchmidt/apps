@@ -6,7 +6,6 @@ module Data.MetaData
 where
 
 import           Data.Prim
-import           Data.Monoid
 import qualified Data.Aeson          as J
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List           as L

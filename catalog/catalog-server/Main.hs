@@ -2,28 +2,43 @@
 
 module Main where
 
-import           Catalog.Cmd (Env, Cmd, runAction, initState, envPort, envVerbose, envMountPath)
+import           Catalog.Cmd (Env, Cmd
+                             , runAction
+                             , initState
+                             , envPort
+                             , envVerbose
+                             , envMountPath
+                             , envLogOp
+                             )
 import           Catalog.FilePath (jpgPath)
 import           Catalog.Html.Photo2 (genHtmlPage)
 import           Catalog.Html.Blaze2 (genBlazeHtmlPage)
 import           Catalog.Json (jsonRPC)
 import           Catalog.Options (mainWithArgs)
 import           Catalog.System.Convert (genImage, genImageFromTxt)
+
+import           Control.Concurrent.QSem
+import           Control.Exception.Base (bracket_)
 import           Control.Concurrent.MVar
 import           Control.Exception (SomeException, catch) -- , try, toException)
 import           Control.Monad.Except
-import qualified Control.Monad.RWSErrorIO as RWS
+import qualified Control.Monad.ReaderStateErrIO as RSE
+
 import           Data.ImageStore (ImgStore)
 import           Data.Monoid ((<>))
 import           Data.Prim.Constants
 import           Data.Prim.Prelude
 import qualified Data.Text as T
+
 import           Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
 import           Network.Wai
 import qualified Network.Wai.Handler.Warp as W
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
+
+import           System.IO (hPutStrLn, hFlush, stderr)
 import           System.Exit (die)
 import           System.FilePath (dropExtension)
+
 import           Web.Scotty --                           (middleware, scotty)
 import           Web.Scotty.Internal.Types
 
@@ -51,7 +66,7 @@ runReadCmd env mvs cmd = do
         ((^. _1) <$> runAction cmd env store)
         `catch`
         -- TODO this still does not catch: error "some error"
-        (\ e -> return (Left . RWS.Msg . show $ (e :: SomeException)))
+        (\ e -> return (Left . RSE.Msg . show $ (e :: SomeException)))
       return res
 
 runModyCmd :: Env -> MVar ImgStore -> MVar ImgStore -> Cmd a -> ActionM a
@@ -61,7 +76,7 @@ runModyCmd env mvr mvm cmd = do
   where
     runc = do
       store <- takeMVar mvm
-      (res, new'store, _log) <- runAction cmd env store
+      (res, new'store) <- runAction cmd env store
 
       -- TODO try to catch: error "some error" like in runReadCmd
 
@@ -147,8 +162,20 @@ fileWithMime px mt fp = do
 
 main :: IO ()
 main = mainWithArgs "server" $ \ env -> do
-  est  <- initState env
-  either die (main' env) est
+  -- create a semaphore for syncing log output
+  sem  <- newQSem 0
+  let env' = env & envLogOp .~ logCmd sem
+
+  est  <- initState env'
+  either die (main' env') est
+  where
+    logCmd :: QSem -> (String -> IO ())
+    logCmd sem s =
+      bracket_ (waitQSem sem) (signalQSem sem)
+      ( do hPutStrLn stderr s
+           hFlush    stderr
+      )
+
 
 main' :: Env -> ImgStore -> IO ()
 main' env state = do

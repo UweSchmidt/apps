@@ -58,6 +58,7 @@ module Data.Prim.Prelude
          -- Data.Char
        , module Data.Char
        , module Data.Foldable
+       , module Data.Monoid
          -- Data.Function
        , on
          -- System.FilePath
@@ -116,6 +117,7 @@ import           Data.List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
+import           Data.Monoid
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.String (IsString(..))

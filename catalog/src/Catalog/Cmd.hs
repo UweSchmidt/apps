@@ -17,8 +17,7 @@ module Catalog.Cmd
        , module Catalog.Cmd.ArchiveCollection
        , module Catalog.System.CatalogIO
        , module Catalog.System.IO
-       , module Control.Monad.RWSErrorIO
-       , module Control.Monad.Except
+       , module Control.Monad.ReaderStateErrIO
        )
 where
 
@@ -34,8 +33,7 @@ import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import           Catalog.System.CatalogIO
 import           Control.Lens
-import           Control.Monad.Except
-import           Control.Monad.RWSErrorIO
+import           Control.Monad.ReaderStateErrIO
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.Prim
@@ -70,7 +68,7 @@ initEnv =
 
 initState :: Env -> IO (Either String ImgStore)
 initState env = do
-  (res, store, _log) <- runCmd' env $ do
+  (res, store) <- runCmd' env $ do
     mp' <- view envMountPath
     jp' <- view envJsonArchive
     initImgStore n'archive n'collections
