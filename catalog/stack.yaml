@@ -8,6 +8,7 @@ resolver: lts-10.3
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- './catalog-servant'
 - './catalog-server'
 - './catalog-sync'
 

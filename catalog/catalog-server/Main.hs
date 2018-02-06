@@ -271,6 +271,7 @@ main' env state = do
       p <- param "path"
       res <- runRead $ genBlazeHtmlPage p
       html res
+
     -- ----------------------------------------
     -- routes for images
 

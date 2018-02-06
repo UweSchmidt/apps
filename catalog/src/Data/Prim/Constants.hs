@@ -73,6 +73,7 @@ ps'archive
   , ps'trash
   , ps'photos
   , ps'assets
+  , ps'bootstrap
   , ps'icons
   , ps'iconsgen
   , ps'javascript
@@ -82,6 +83,7 @@ ps'archive
   , ps'blank :: FilePath
 
 ps'archive      = p'archive      ^. isoString
+ps'bootstrap    = "/bootstrap"
 ps'clipboard    = p'clipboard    ^. isoString
 ps'trash        = p'trash        ^. isoString
 ps'cache        = "/cache"
