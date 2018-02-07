@@ -23,6 +23,8 @@ module Data.Prim.Path
        , viewTop
        , viewBase
        , quotePath
+       , listToPath
+       , checkExtPath
        )
 where
 
@@ -30,6 +32,7 @@ import Data.Digest.Murmur64 (Hashable64(..))
 import Data.Prim.Name
 import Data.Prim.Prelude
 import Text.Regex.XMLSchema.Generic (tokenize)
+import qualified Data.Text as T
 
 -- ----------------------------------------
 
@@ -52,7 +55,7 @@ readPath ""
   = emptyPath
 
 readPath xs
-  = error $ "readPath: no path: " ++ show xs
+  = readPath ('/' : xs)
 
 mkPath :: n -> Path' n
 mkPath = BN
@@ -61,6 +64,9 @@ mkPath = BN
 emptyPath :: Monoid n => Path' n
 emptyPath = mkPath mempty
 {-# INLINE emptyPath #-}
+
+listToPath :: [Text] -> Path
+listToPath = foldr (\ t -> consPath  (t ^. from isoText)) emptyPath
 
 nullPath :: (Monoid n, Eq n) => Path' n -> Bool
 nullPath (BN n)
@@ -75,7 +81,7 @@ consPath :: (Monoid n, Eq n) =>
             n -> Path' n -> Path' n
 consPath n p
   | n == mempty = p
-  | isempty p  = mkPath n
+  | isempty p   = mkPath n
   | otherwise   = DN n p
 
 snocPath :: (Monoid n, Eq n) => Path' n -> n -> Path' n
@@ -157,6 +163,13 @@ showPath (DN n p) = "/" ++ show n ++ showPath p
 
 quotePath :: (Monoid n, Eq n, Show n) => Path' n -> String
 quotePath = show . showPath
+
+checkExtPath :: Text -> Path -> Bool
+checkExtPath ext p
+  = ext == ext'
+  where
+    bn   = (p ^. viewBase . _2) ^. isoText
+    ext' = T.toLower . T.takeEnd (T.length ext) $ bn
 
 deriving instance Eq n  => Eq  (Path' n)
 deriving instance Ord n => Ord (Path' n)

@@ -63,12 +63,21 @@ instance FromHttpApiData BlazeHTML where
 -- | Default parsing error.
 defaultParseError :: Text -> Either Text a
 defaultParseError input = Left ("could not parse: `" <> input <> "'")
-
+{-
 checkExtension :: Text -> [Text] -> Bool
 checkExtension _   [] = False
 checkExtension ext ps =  ext == ext'
   where
     ext' = T.toLower . T.takeEnd (T.length ext) . last $ ps
+-}
+
+-- conversions of [Text] to Path
+
+ttp :: (Path -> a) -> ([Text] -> a)
+ttp f xs = f (listToPath xs)
+
+ttp2 :: (a -> Path -> b) -> (a -> [Text] -> b)
+ttp2 = flip . ttp . flip
 
 -- ----------------------------------------
 
@@ -104,6 +113,45 @@ type ImgCopyAPI
       CaptureAll "path"  Text  :> Get '[PlainText] String
     )
 
+type JsonAPI
+  = JsonGetAPI :<|> JsonModifyAPI
+
+-- simple op with a single path argument
+-- and without request body
+-- and a JSON result
+
+type SimplePost r
+  = CaptureAll "path" Text :> Post '[JSON] r
+
+type ParamPost a r
+  = CaptureAll "path" Text :> ReqBody '[JSON] a :> Post '[JSON] r
+
+type JsonGetAPI
+  = "get-json" :>
+    ( "isCollection" :> SimplePost Bool
+      :<|>
+      "iconref"      :> ParamPost GeoAR (GeoAR, Path)
+      :<|>
+      "blogcontents" :> ParamPost Int (Int, Path)
+      :<|>
+      "blogsource"   :> ParamPost Int (Int, Path)
+      :<|>
+      "previewref"   :> ParamPost (Int, GeoAR) (Path, Int, GeoAR)
+      :<|>
+      "metadata"     :> ParamPost Int (Path, Int)
+      :<|>
+      "rating"       :> ParamPost Int (Path, Int)
+      :<|>
+      "ratings"      :> SimplePost Path
+    )
+
+type JsonModifyAPI
+  = "modify-json" :>
+    ( "syncCol" :> SimplePost Path
+      :<|>
+      "saveblogsource" :> ParamPost (Int, Text) (Path, Int, Text)
+    )
+
 -- ----------------------------------------
 -- the complete API
 
@@ -119,6 +167,8 @@ type CatalogAPI
       :<|>
       ImgCopyAPI
     )
+    :<|>
+    JsonAPI
 
 -- ----------------------------------------
 -- the server
@@ -137,9 +187,14 @@ catalogServer mp =
     edit
   )
   :<|>
-  ( blaze
+  ( ttp2 blaze
     :<|>
     imgcopy
+  )
+  :<|>
+  ( json'read
+    :<|>
+    json'modify
   )
   where
     static p = serveDirectoryWebApp (mp ++ p)
@@ -150,23 +205,75 @@ catalogServer mp =
     assets'javascript = static ps'javascript
     edit              = static "/edit.html"
 
-    blaze :: BlazeHTML -> [Text] -> Handler String
+    blaze :: BlazeHTML -> Path -> Handler String
     blaze (BlazeHTML geo) path
-      | checkExtension ".html" path = return $ show (geo,path)
-      | otherwise                   = throwError err404
+      | checkExtPath ".html" path = return $ show (geo,path)
+      | otherwise                 = throwError err404
 
     imgcopy geo =
       imgcopy'archive geo
       :<|>
       imgcopy'others  geo
       where
-        imgcopy'archive = imgcopy'
-        imgcopy'others  = imgcopy'
+        imgcopy'archive = ttp2 imgcopy'
+        imgcopy'others  = ttp2 imgcopy'
 
-    imgcopy' :: GeoAR -> [Text] -> Handler String
+    imgcopy' :: GeoAR -> Path -> Handler String
     imgcopy' geo path
-      | checkExtension ".jpg" path  = return $ show (geo,path)
-      | otherwise                   = throwError err404
+      | checkExtPath ".jpg" path  = return $ show (geo,path)
+      | otherwise                 = throwError err404
+
+    json'read =
+      ttp read'isCollection
+      :<|>
+      ttp read'iconref
+      :<|>
+      ttp read'blogcontents
+      :<|>
+      ttp read'blogsource
+      :<|>
+      ttp read'previewref
+      :<|>
+      ttp read'metadata
+      :<|>
+      ttp read'rating
+      :<|>
+      ttp read'ratings
+      where
+        read'isCollection :: Path -> Handler Bool
+        read'isCollection path = return True
+
+        read'iconref :: Path -> GeoAR -> Handler (GeoAR, Path)
+        read'iconref path geo = return (geo, path)
+
+        read'blogcontents :: Path -> Int -> Handler (Int, Path)
+        read'blogcontents path pos = return (pos, path)
+
+        read'blogsource :: Path -> Int -> Handler (Int, Path)
+        read'blogsource path pos = return (pos, path)
+
+        read'previewref :: Path -> (Int, GeoAR) -> Handler (Path, Int, GeoAR)
+        read'previewref path (pos, geo) = return (path, pos, geo)
+
+        read'metadata :: Path -> Int -> Handler (Path, Int)
+        read'metadata path pos = return (path, pos)
+
+        read'rating :: Path -> Int -> Handler (Path, Int)
+        read'rating path pos = return (path, pos)
+
+        read'ratings :: Path -> Handler Path
+        read'ratings path = return path
+
+    json'modify =
+      ttp modify'syncCol
+      :<|>
+      ttp modify'saveblogsource
+      where
+        modify'syncCol :: Path -> Handler Path
+        modify'syncCol path = return path
+
+        modify'saveblogsource :: Path -> (Int, Text) -> Handler (Path, Int, Text)
+        modify'saveblogsource path (pos, val) = return (path, pos, val)
 
 catmain :: IO ()
 catmain =

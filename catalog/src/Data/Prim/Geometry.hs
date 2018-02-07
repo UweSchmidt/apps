@@ -14,6 +14,14 @@ deriving instance Show Geo
 deriving instance Eq Geo
 deriving instance Ord Geo
 
+instance FromJSON Geo where
+  parseJSON v = do
+    Just geo <- readGeo' <$> parseJSON v
+    return geo
+
+instance ToJSON   Geo where
+  toJSON geo = toJSON (geo ^. isoText)
+
 instance IsoString Geo where
   isoString = iso showGeo readGeo
   {-# INLINE isoString #-}
@@ -109,6 +117,30 @@ data GeoAR = GeoAR !Int !Int !AspectRatio
 
 deriving instance Show GeoAR
 
+instance IsoString GeoAR where
+  isoString = iso toS frS
+    where
+      toS x = (x ^. geoar2pair . _2 . isoString) ++ "-" ++
+              (x ^. geoar2pair . _1 . isoString)
+
+      frS s =  ( g  ^. from isoString
+               , ar ^. from isoString
+               ) ^. from geoar2pair
+        where
+          (ar, '-' : g) = break (== '-') s
+
+instance IsoText GeoAR where
+  isoText = isoString . isoText
+
+instance FromJSON GeoAR where
+  parseJSON v = do
+    Just geo <- readGeoAR <$> parseJSON v
+    return geo
+
+instance ToJSON GeoAR where
+  toJSON geo = toJSON (geo ^. isoText)
+
+
 mkGeoAR :: Geo -> AspectRatio -> GeoAR
 mkGeoAR (Geo w h) = GeoAR w h
 
@@ -124,21 +156,6 @@ theGeo = geoar2pair . _1
 
 theAR :: Lens' GeoAR AspectRatio
 theAR  = geoar2pair . _2
-
-instance IsoString GeoAR where
-  isoString = iso toS frS
-    where
-      toS x = (x ^. geoar2pair . _2 . isoString) ++ "-" ++
-              (x ^. geoar2pair . _1 . isoString)
-
-      frS s =  ( g  ^. from isoString
-               , ar ^. from isoString
-               ) ^. from geoar2pair
-        where
-          (ar, '-' : g) = break (== '-') s
-
-instance IsoText GeoAR where
-  isoText = isoString . isoText
 
 geoarRegex :: Regex
 geoarRegex = parseRegexExt geoarRegex'
