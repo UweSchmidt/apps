@@ -13,7 +13,8 @@ cabal-version:       >=1.10
 executable catalog-servant
   hs-source-dirs:      app
   main-is:             Server.hs
-  other-modules:       Client
+  other-modules:       API
+                     , Client
                      -- , ApiType
   build-depends:       base >= 4.7
                      , catalog
