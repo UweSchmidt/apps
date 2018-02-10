@@ -21,7 +21,6 @@ import           Catalog.Sync            (syncDirP, syncNewDirs)
 import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
 import           Catalog.Zip         ( zipCollection )
 import           Control.Lens
-import           Data.Prim           ()
 import           Data.ImgNode
 import           Data.ImgTree
 import           Data.MetaData

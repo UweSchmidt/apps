@@ -142,9 +142,9 @@ objid2contNames i = getImgVal i >>= go
 
 -- replace an ObjId by a Path in an arbitrary functor, e.g. ImgNode'
 -- ObjId, the internal key type, can be implemented more efficiently
--- than taking the whole path as key, e..g. by a hash. But the path variant
+-- than taking the whole path as key, e.g. by a hash. But the path variant
 -- is more readable, and it's needed by clients, cilents can't handle
--- internal keys, like hashes ore similar data
+-- internal keys, like hashes or similar data
 
 mapObjId2Path :: Functor f => f ObjId -> Cmd (f Path)
 mapObjId2Path x =

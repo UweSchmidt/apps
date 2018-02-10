@@ -34,8 +34,9 @@ import Servant
 -- import qualified Data.Aeson.Parser
 -- import qualified Text.Blaze.Html
 
--- import System.FilePath (FilePath)
+import System.FilePath (FilePath)
 import Data.Prim
+import Data.ImgTree (ImgNodeP)
 import Web.HttpApiData (parseUrlPieceWithPrefix)
 -- import qualified Data.Text as T
 
@@ -131,15 +132,21 @@ type ParamPost a r
 
 type JsonGetAPI
   = "get-json" :>
-    ( "isSortable"   :> SimplePost Bool
+    ( "collection"   :> SimplePost ImgNodeP
+      :<|>
+      "isWritable"   :> SimplePost Bool
+      :<|>
+      "isRemovable"  :> SimplePost Bool
+      :<|>
+      "isSortable"   :> SimplePost Bool
       :<|>
       "isCollection" :> SimplePost Bool
       :<|>
-      "iconref"      :> ParamPost GeoAR (GeoAR, Path)
+      "iconref"      :> ParamPost GeoAR FilePath
       :<|>
-      "blogcontents" :> ParamPost Int (Int, Path)
+      "blogcontents" :> ParamPost Int Text
       :<|>
-      "blogsource"   :> ParamPost Int (Int, Path)
+      "blogsource"   :> ParamPost Int Text
       :<|>
       "previewref"   :> ParamPost (Int, GeoAR) (Path, Int, GeoAR)
       :<|>

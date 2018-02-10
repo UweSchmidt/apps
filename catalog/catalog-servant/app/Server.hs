@@ -46,7 +46,7 @@ import System.FilePath (FilePath)
 import System.IO (hPutStrLn, stderr, hFlush)
 
 import Data.Prim
--- import Data.ImgNode
+import Data.ImgNode
 import Data.ImgTree
 import Data.MetaData
 import Data.ImageStore (ImgStore)
@@ -63,6 +63,12 @@ import Catalog.Cmd
                    )
 -}
 import Catalog.Options (mainWithArgs)
+import Catalog.Html.Basic ( buildImgPath
+                          , colImgRef
+                          , getColBlogSource
+                          , putColBlogSource
+                          , getColBlogCont
+                          )
 
 -- import Web.HttpApiData (parseUrlPieceWithPrefix)
 -- import qualified Data.Text as T
@@ -90,6 +96,12 @@ pin cmd path = do
     Just (i, n) ->
       cmd path i n
 
+mkcmd0 :: (Cmd r -> Handler r) ->
+          (Path -> Cmd r) ->
+          ([Text] -> Handler r)
+mkcmd0 toHandler pcmd =
+  toHandler . pcmd . listToPath
+
 mkcmd1 :: (Cmd r -> Handler r) ->
           (Path -> ObjId -> ImgNode -> Cmd r) ->
           ([Text] -> Handler r)
@@ -102,7 +114,7 @@ mkcmd2 :: (Cmd r -> Handler r) ->
 mkcmd2 toHandler pcmd path args =
   toHandler . (pin $ pcmd args) . listToPath $ path
 
-type PathCmd r = Path -> ObjId -> ImgNode -> Cmd r
+type ObjCmd r = Path -> ObjId -> ImgNode -> Cmd r
 
 -- ----------------------------------------
 -- the server
@@ -160,13 +172,20 @@ catalogServer mp runR runM =
       | checkExtPath ".jpg" path  = return $ show (geo, path)
       | otherwise                 = throwError err404
 
+    mkR0 = mkcmd0 runR
     mkR1 = mkcmd1 runR
     mkR2 = mkcmd2 runR
 
     json'read =
+      mkR1 read'collection
+      :<|>
+      mkR1 read'isWriteable
+      :<|>
+      mkR1 read'isRemovable
+      :<|>
       mkR1 read'isSortable
       :<|>
-      ttp read'isCollection
+      mkR0 read'isCollection
       :<|>
       mkR2 read'iconref
       :<|>
@@ -182,31 +201,49 @@ catalogServer mp runR runM =
       :<|>
       mkR1 read'ratings
       where
-        read'isSortable :: PathCmd Bool
+        read'collection :: ObjCmd ImgNodeP
+        read'collection _p _i n = mapObjId2Path n
+
+        read'isWriteable :: ObjCmd Bool
+        read'isWriteable _p _i n = return (isWriteable  $ n ^. theColMetaData)
+
+        read'isRemovable :: ObjCmd Bool
+        read'isRemovable _p _i n = return (isRemovable  $ n ^. theColMetaData)
+
+        read'isSortable :: ObjCmd Bool
         read'isSortable _p _i n = return (isSortable  $ n ^. theColMetaData)
 
-        read'isCollection :: Path -> Handler Bool
-        read'isCollection _path = return True
+        read'isCollection :: Path -> Cmd Bool
+        read'isCollection p = do
+          v <- lookupByPath p
+          case v of
+            Nothing ->
+              return False
+            Just (_i, n) ->
+              return $ isCOL n
 
-        read'iconref :: GeoAR -> PathCmd (GeoAR, Path)
-        read'iconref geo p _i _n = return (geo, p)
+        read'iconref :: GeoAR -> ObjCmd FilePath
+        read'iconref geo _p i _n = do
+          (("/" ++ geo ^. isoString) ++) <$> colImgRef i
 
-        read'blogcontents :: Int -> PathCmd (Int, Path)
-        read'blogcontents pos p _i _n = return (pos, p)
+        read'blogcontents :: Int -> ObjCmd Text
+        read'blogcontents pos _p _i n =
+          getBlogContHtml pos n
 
-        read'blogsource :: Int -> PathCmd (Int, Path)
-        read'blogsource pos p _i _n = return (pos, p)
+        read'blogsource :: Int -> ObjCmd Text
+        read'blogsource pos _p _i n =
+          getBlogCont pos n
 
-        read'previewref :: (Int, GeoAR) -> PathCmd (Path, Int, GeoAR)
+        read'previewref :: (Int, GeoAR) -> ObjCmd (Path, Int, GeoAR)
         read'previewref (pos, geo) p _i _n = return (p, pos, geo)
 
-        read'metadata :: Int -> PathCmd (Path, Int)
+        read'metadata :: Int -> ObjCmd (Path, Int)
         read'metadata pos p _i _n = return (p, pos)
 
-        read'rating :: Int -> PathCmd (Path, Int)
+        read'rating :: Int -> ObjCmd (Path, Int)
         read'rating pos p _i _n = return (p, pos)
 
-        read'ratings :: PathCmd Path
+        read'ratings :: ObjCmd Path
         read'ratings p _i _n = return p
 
     mkM1 = mkcmd1 runM
@@ -313,5 +350,36 @@ raise500 msg =
   throwError $ err500 { errBody = msg' }
   where
     msg' = show msg ^. from isoString
+
+-- ----------------------------------------
+--
+-- helper for blog entry ops
+
+getBlogContHtml :: Int -> ImgNode -> Cmd Text
+getBlogContHtml =
+  processColEntryAt
+    (\ i nm -> getColBlogCont i nm)       -- ImgRef: entry is a blog text
+    (\ i    -> do                         -- ColRef: lookup the col blog ref
+        be <- getImgVals i theColBlog
+        maybe (return mempty)             -- return nothing, when not there
+              (uncurry getColBlogCont)    -- else generate the HTML
+              be
+    )
+
+getBlogCont :: Int -> ImgNode -> Cmd Text
+getBlogCont =
+  processColEntryAt
+    (\ i nm -> getColBlogSource i nm)
+    (\ i    -> do
+        be        <- getImgVals i theColBlog
+        (bi, bn)  <- maybe
+                     ( do p <- objid2path i
+                          abort ("getBlogCont: no blog entry set in collection: "
+                                 ++ p ^. isoString)
+                     )
+                     return
+                     be
+        getColBlogSource bi bn
+    )
 
 -- ----------------------------------------
