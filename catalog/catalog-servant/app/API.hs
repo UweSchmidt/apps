@@ -162,9 +162,43 @@ type JsonGetAPI
 
 type JsonModifyAPI
   = "modify-json" :>
-    ( "syncCol" :> SimplePost Path
+    ( "saveblogsource"       :> ParamPost (Int, Text) ()
       :<|>
-      "saveblogsource" :> ParamPost (Int, Text) (Path, Int, Text)
+      "changeWriteProtected" :> ParamPost ([Int], Bool) ()
+      :<|>
+      "sort"                 :> ParamPost [Int] ()
+      :<|>
+      "removeFromCollection" :> ParamPost [Int] ()
+      :<|>
+      "copyToCollection"     :> ParamPost ([Int], Path) ()
+      :<|>
+      "moveToCollection"     :> ParamPost ([Int], Path) ()
+      :<|>
+      "colimg"               :> ParamPost (Path, Int) ()
+      :<|>
+      "colblog"              :> ParamPost (Path, Int) ()
+      :<|>
+      "newcol"               :> ParamPost Name ()
+      :<|>
+      "renamecol"            :> ParamPost Name ()
+      :<|>
+      "setMetaData"          :> ParamPost ([Int], MetaData) ()
+      :<|>
+      "setMetaData1"         :> ParamPost (Int, MetaData) ()
+      :<|>
+      "setRating"            :> ParamPost ([Int], Rating) ()
+      :<|>
+      "setRating1"           :> ParamPost (Int, Rating) ()
+      :<|>
+      "snapshot"             :> ParamPost Text ()
+      :<|>
+      "syncCol"              :> SimplePost ()
+      :<|>
+      "syncExif"             :> SimplePost ()
+      :<|>
+      "newSubCols"           :> SimplePost ()
+      :<|>
+      "zipcollection"        :> SimplePost FilePath
     )
 
 -- ----------------------------------------

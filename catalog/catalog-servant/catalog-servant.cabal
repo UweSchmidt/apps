@@ -14,33 +14,36 @@ executable catalog-servant
   hs-source-dirs:      app
   main-is:             Server.hs
   other-modules:       API
-                     , Client
+--                     , Client
                      -- , ApiType
   build-depends:       base >= 4.7
+--                     , aeson
+--                     , aeson-compat
+--                     , attoparsec
+                     , base-compat
+                     , blaze-html
+--                     , blaze-markup
+                     , bytestring
                      , catalog
+--                     , directory
+                     , filepath
+                     , ghc-prim
+                     , http-api-data
+--                     , http-client
+--                     , http-media
+--                     , lucid
+                     , monad-reader-state-err-io
+                     , mtl
                      , servant
+--                     , servant-client
                      , servant-server
-                     , servant-client
+--                     , string-conversions
+                     , text
+--                     , time
                      , wai
                      , wai-logger
                      , warp
-                     , text
-                     , time
-                     , ghc-prim
-                     , base-compat
-                     , mtl
-                     , aeson
-                     , directory
-                     , http-api-data
-                     , http-media
-                     , http-client
-                     , bytestring
-                     , string-conversions
-                     , attoparsec
-                     , aeson-compat
-                     , lucid
-                     , blaze-html
-                     , blaze-markup
+
   default-language:    Haskell2010
 
 source-repository head

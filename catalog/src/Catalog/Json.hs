@@ -17,7 +17,7 @@ import           Catalog.Html.Basic  ( buildImgPath
                                      , putColBlogSource
                                      , getColBlogCont
                                      )
-import           Catalog.Sync            (syncDirP, syncNewDirs)
+import           Catalog.Sync        (syncDirP, syncNewDirs)
 import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
 import           Catalog.Zip         ( zipCollection )
 import           Control.Lens
