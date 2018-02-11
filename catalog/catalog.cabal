@@ -49,6 +49,7 @@ library
                      Catalog.Html.Templates.Blaze2
                      Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.Json
+                     Catalog.JsonCommands
                      Catalog.Journal
                      Catalog.Options
                      Catalog.Sync
