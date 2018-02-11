@@ -37,6 +37,7 @@ import Servant
 import System.FilePath (FilePath)
 import Data.Prim
 import Data.ImgTree (ImgNodeP)
+import Data.MetaData
 import Web.HttpApiData (parseUrlPieceWithPrefix)
 -- import qualified Data.Text as T
 
@@ -134,7 +135,7 @@ type JsonGetAPI
   = "get-json" :>
     ( "collection"   :> SimplePost ImgNodeP
       :<|>
-      "isWritable"   :> SimplePost Bool
+      "isWriteable"  :> SimplePost Bool
       :<|>
       "isRemovable"  :> SimplePost Bool
       :<|>
@@ -148,13 +149,13 @@ type JsonGetAPI
       :<|>
       "blogsource"   :> ParamPost Int Text
       :<|>
-      "previewref"   :> ParamPost (Int, GeoAR) (Path, Int, GeoAR)
+      "previewref"   :> ParamPost (Int, GeoAR) FilePath
       :<|>
-      "metadata"     :> ParamPost Int (Path, Int)
+      "metadata"     :> ParamPost Int MetaData
       :<|>
-      "rating"       :> ParamPost Int (Path, Int)
+      "rating"       :> ParamPost Int Rating
       :<|>
-      "ratings"      :> SimplePost Path
+      "ratings"      :> SimplePost [Rating]
     )
 
 -- the modifying ops

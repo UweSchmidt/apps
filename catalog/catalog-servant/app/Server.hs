@@ -26,8 +26,9 @@ import Control.Monad.Except
 -- import GHC.Generics
 -- import Lucid
 -- import Network.HTTP.Media ((//), (/:))
--- import Network.Wai
+import Network.Wai
 import Network.Wai.Handler.Warp
+import Network.Wai.Logger       (withStdoutLogger)
 import Servant
 -- import System.Directory
 -- import Text.Blaze
@@ -69,6 +70,7 @@ import Catalog.Html.Basic ( buildImgPath
                           , putColBlogSource
                           , getColBlogCont
                           )
+import Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
 
 -- import Web.HttpApiData (parseUrlPieceWithPrefix)
 -- import qualified Data.Text as T
@@ -86,15 +88,20 @@ ttp2 :: (a -> Path -> b) -> (a -> [Text] -> b)
 ttp2 = flip . ttp . flip
 
 
-pin :: (Path -> ObjId -> ImgNode -> Cmd r) ->
+-- ----------------------------------------
+--
+-- adapter for catalog commands to handler
+
+pin :: ((ObjId, ImgNode) -> a) ->
+       (a -> Cmd r) ->
        (Path -> Cmd r)
-pin cmd path = do
+pin sel cmd path = do
   v <- lookupByPath path
   case v of
     Nothing ->
       abort $ "entry not found: " <> path ^. isoString
-    Just (i, n) ->
-      cmd path i n
+    Just i'n ->
+      cmd $ sel i'n
 
 mkcmd0 :: (Cmd r -> Handler r) ->
           (Path -> Cmd r) ->
@@ -102,19 +109,29 @@ mkcmd0 :: (Cmd r -> Handler r) ->
 mkcmd0 toHandler pcmd =
   toHandler . pcmd . listToPath
 
-mkcmd1 :: (Cmd r -> Handler r) ->
-          (Path -> ObjId -> ImgNode -> Cmd r) ->
-          ([Text] -> Handler r)
-mkcmd1 toHandler pcmd =
-  toHandler . pin pcmd . listToPath
+mkcmd1i :: (Cmd r -> Handler r) ->
+           (ObjId -> Cmd r) ->
+           ([Text] -> Handler r)
+mkcmd1i toHandler pcmd =
+  toHandler . pin fst pcmd . listToPath
 
-mkcmd2 :: (Cmd r -> Handler r) ->
-          (a -> Path -> ObjId -> ImgNode -> Cmd r) ->
-          ([Text] -> a -> Handler r)
-mkcmd2 toHandler pcmd path args =
-  toHandler . (pin $ pcmd args) . listToPath $ path
+mkcmd1n :: (Cmd r -> Handler r) ->
+           (ImgNode -> Cmd r) ->
+           ([Text] -> Handler r)
+mkcmd1n toHandler pcmd =
+  toHandler . pin snd pcmd . listToPath
 
-type ObjCmd r = Path -> ObjId -> ImgNode -> Cmd r
+mkcmd2i :: (Cmd r -> Handler r) ->
+           (a -> ObjId -> Cmd r) ->
+           ([Text] -> a -> Handler r)
+mkcmd2i toHandler pcmd path args =
+  toHandler . (pin fst $ pcmd args) . listToPath $ path
+
+mkcmd2n :: (Cmd r -> Handler r) ->
+           (a -> ImgNode -> Cmd r) ->
+           ([Text] -> a -> Handler r)
+mkcmd2n toHandler pcmd path args =
+  toHandler . (pin snd $ pcmd args) . listToPath $ path
 
 -- ----------------------------------------
 -- the server
@@ -172,81 +189,39 @@ catalogServer mp runR runM =
       | checkExtPath ".jpg" path  = return $ show (geo, path)
       | otherwise                 = throwError err404
 
-    mkR0 = mkcmd0 runR
-    mkR1 = mkcmd1 runR
-    mkR2 = mkcmd2 runR
+    mkR0  = mkcmd0  runR
+    mkR1i = mkcmd1i runR
+    mkR1n = mkcmd1n runR
+    mkR2i = mkcmd2i runR
+    mkR2n = mkcmd2n runR
 
     json'read =
-      mkR1 read'collection
+      mkR1n read'collection
       :<|>
-      mkR1 read'isWriteable
+      mkR1n read'isWriteable
       :<|>
-      mkR1 read'isRemovable
+      mkR1n read'isRemovable
       :<|>
-      mkR1 read'isSortable
+      mkR1n read'isSortable
       :<|>
-      mkR0 read'isCollection
+      mkR0  read'isCollection
       :<|>
-      mkR2 read'iconref
+      mkR2i read'iconref
       :<|>
-      mkR2 read'blogcontents
+      mkR2n read'blogcontents
       :<|>
-      mkR2 read'blogsource
+      mkR2n read'blogsource
       :<|>
-      mkR2 read'previewref
+      mkR2n read'previewref
       :<|>
-      mkR2 read'metadata
+      mkR2n read'metadata
       :<|>
-      mkR2 read'rating
+      mkR2n read'rating
       :<|>
-      mkR1 read'ratings
+      mkR1n read'ratings
       where
-        read'collection :: ObjCmd ImgNodeP
-        read'collection _p _i n = mapObjId2Path n
 
-        read'isWriteable :: ObjCmd Bool
-        read'isWriteable _p _i n = return (isWriteable  $ n ^. theColMetaData)
-
-        read'isRemovable :: ObjCmd Bool
-        read'isRemovable _p _i n = return (isRemovable  $ n ^. theColMetaData)
-
-        read'isSortable :: ObjCmd Bool
-        read'isSortable _p _i n = return (isSortable  $ n ^. theColMetaData)
-
-        read'isCollection :: Path -> Cmd Bool
-        read'isCollection p = do
-          v <- lookupByPath p
-          case v of
-            Nothing ->
-              return False
-            Just (_i, n) ->
-              return $ isCOL n
-
-        read'iconref :: GeoAR -> ObjCmd FilePath
-        read'iconref geo _p i _n = do
-          (("/" ++ geo ^. isoString) ++) <$> colImgRef i
-
-        read'blogcontents :: Int -> ObjCmd Text
-        read'blogcontents pos _p _i n =
-          getBlogContHtml pos n
-
-        read'blogsource :: Int -> ObjCmd Text
-        read'blogsource pos _p _i n =
-          getBlogCont pos n
-
-        read'previewref :: (Int, GeoAR) -> ObjCmd (Path, Int, GeoAR)
-        read'previewref (pos, geo) p _i _n = return (p, pos, geo)
-
-        read'metadata :: Int -> ObjCmd (Path, Int)
-        read'metadata pos p _i _n = return (p, pos)
-
-        read'rating :: Int -> ObjCmd (Path, Int)
-        read'rating pos p _i _n = return (p, pos)
-
-        read'ratings :: ObjCmd Path
-        read'ratings p _i _n = return p
-
-    mkM1 = mkcmd1 runM
+    mkM1 = mkcmd1n runM
 
     json'modify =
       ttp modify'syncCol
@@ -270,6 +245,9 @@ main = mainWithArgs "servant" $ \ env -> do
   -- create a semaphore for syncing log output
   sem  <- newQSem 0
   let env' = env & envLogOp .~ logCmd sem
+                 & envMountPath .~ "/Users/uwe/haskell/apps/catalog/data"
+                 & envJsonArchive .~ "catalog/photos.hashid.json"
+                 & envPort .~ 8081
 
   est  <- initState env'
   either die (main' env') est
@@ -290,14 +268,11 @@ main' env st = do
   let runRead  = runReadCmd env mvRead
   let runMody  = runModyCmd env mvRead mvMody
 
-  run (env ^. envPort) $
-    serve (Proxy :: Proxy CatalogAPI) $
-    catalogServer mountPoint runRead runMody
-  where
-    mountPoint :: String
-    mountPoint = "/Users/uwe/haskell/apps/catalog/data"
---  mountPoint = env ^. envMountPath
-
+  withStdoutLogger $ \logger -> do
+    let settings = setPort (env ^. envPort) $ setLogger logger defaultSettings
+    runSettings settings $
+      serve (Proxy :: Proxy CatalogAPI) $
+      catalogServer (env ^. envMountPath) runRead runMody
 
 -- curl -v http://localhost:8081/bootstrap/dist/css/bootstrap-theme.css
 -- curl -v http://localhost:8081/assets/javascript/html-album.js
@@ -346,19 +321,44 @@ runModyCmd env mvr mvm cmd = do
       return res
 
 raise500 :: RSE.Msg -> Handler a
-raise500 msg =
+raise500 (RSE.Msg msg) =
   throwError $ err500 { errBody = msg' }
   where
     msg' = show msg ^. from isoString
 
 -- ----------------------------------------
 --
--- helper for blog entry ops
+-- command for quering the catalog
 
-getBlogContHtml :: Int -> ImgNode -> Cmd Text
-getBlogContHtml =
+read'collection :: ImgNode -> Cmd ImgNodeP
+read'collection n = mapObjId2Path n
+
+read'isWriteable :: ImgNode -> Cmd Bool
+read'isWriteable n = return (isWriteable  $ n ^. theColMetaData)
+
+read'isRemovable :: ImgNode -> Cmd Bool
+read'isRemovable n = return (isRemovable  $ n ^. theColMetaData)
+
+read'isSortable :: ImgNode -> Cmd Bool
+read'isSortable n = return (isSortable  $ n ^. theColMetaData)
+
+read'isCollection :: Path -> Cmd Bool
+read'isCollection p = do
+  v <- lookupByPath p
+  case v of
+    Nothing ->
+      return False
+    Just (_i, n) ->
+      return $ isCOL n
+
+read'iconref :: GeoAR -> ObjId -> Cmd FilePath
+read'iconref geo i =
+  (("/" ++ geo ^. isoString) ++) <$> colImgRef i
+
+read'blogcontents :: Int -> ImgNode -> Cmd Text
+read'blogcontents =
   processColEntryAt
-    (\ i nm -> getColBlogCont i nm)       -- ImgRef: entry is a blog text
+    getColBlogCont                        -- ImgRef: entry is a blog text
     (\ i    -> do                         -- ColRef: lookup the col blog ref
         be <- getImgVals i theColBlog
         maybe (return mempty)             -- return nothing, when not there
@@ -366,10 +366,10 @@ getBlogContHtml =
               be
     )
 
-getBlogCont :: Int -> ImgNode -> Cmd Text
-getBlogCont =
+read'blogsource :: Int -> ImgNode -> Cmd Text
+read'blogsource =
   processColEntryAt
-    (\ i nm -> getColBlogSource i nm)
+    getColBlogSource
     (\ i    -> do
         be        <- getImgVals i theColBlog
         (bi, bn)  <- maybe
@@ -381,5 +381,37 @@ getBlogCont =
                      be
         getColBlogSource bi bn
     )
+
+read'previewref :: (Int, GeoAR) -> ImgNode -> Cmd FilePath
+read'previewref (pos, geo) n =
+  (("/" ++ geo ^. isoString) ++) <$>
+  processColEntryAt
+    buildImgPath
+    colImgRef
+    pos n
+
+read'metadata :: Int -> ImgNode -> Cmd MetaData
+read'metadata =
+  processColEntryAt
+    (\ i _ -> do exifMD <- getMetaData i               -- exif meta data
+                 imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
+                 return $ imgMD <> exifMD
+    )
+    (\ i   -> getImgVals i theMetaData)
+
+read'rating :: Int -> ImgNode -> Cmd Rating
+read'rating pos n =
+  getRating <$>
+  processColEntryAt (\ i' _ -> getM i') getM pos n
+  where
+    getM i' = getImgVals i' theMetaData
+
+read'ratings :: ImgNode -> Cmd [Rating]
+read'ratings n =
+  traverse f (n ^. theColEntries)
+  where
+    f = colEntry (\ i' _ -> getR i') getR
+      where
+        getR i' = getRating <$> getImgVals i' theMetaData
 
 -- ----------------------------------------

@@ -22,6 +22,7 @@ executable catalog-servant
                      , servant-server
                      , servant-client
                      , wai
+                     , wai-logger
                      , warp
                      , text
                      , time
