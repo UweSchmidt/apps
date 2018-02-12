@@ -1,6 +1,39 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Catalog.JsonCommands where
+module Catalog.JsonCommands
+  ( modify'changeWriteProtected
+  , modify'colblog
+  , modify'colimg
+  , modify'copyToCollection
+  , modify'moveToCollection
+  , modify'newSubCols
+  , modify'newcol
+  , modify'removeFromCollection
+  , modify'renamecol
+  , modify'saveblogsource
+  , modify'setMetaData
+  , modify'setMetaData1
+  , modify'setRating
+  , modify'setRating1
+  , modify'snapshot
+  , modify'sort
+  , modify'syncCol
+  , modify'syncExif
+  , modify'zipcollection
+  , read'blogcontents
+  , read'blogsource
+  , read'collection
+  , read'iconref
+  , read'isCollection
+  , read'isRemovable
+  , read'isSortable
+  , read'isWriteable
+  , read'metadata
+  , read'previewref
+  , read'rating
+  , read'ratings
+  )
+where
 
 import Data.Prim
 import Data.ImgNode
@@ -441,8 +474,8 @@ read'blogsource =
 -- compute the image ref of a collection entry
 -- for previewing the image
 
-read'previewref :: (Int, GeoAR) -> ImgNode -> Cmd FilePath
-read'previewref (pos, geo) n =
+read'previewref :: Int -> GeoAR -> ImgNode -> Cmd FilePath
+read'previewref pos geo n =
   (("/" ++ geo ^. isoString) ++) <$>
   processColEntryAt
     buildImgPath

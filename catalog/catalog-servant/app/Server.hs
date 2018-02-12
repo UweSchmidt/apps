@@ -177,7 +177,7 @@ catalogServer mp runR runM =
       :<|>
       mkR2n read'blogsource
       :<|>
-      mkR2n read'previewref
+      mkR2n (uncurry read'previewref)
       :<|>
       mkR2n read'metadata
       :<|>

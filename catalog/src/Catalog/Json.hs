@@ -1,30 +1,16 @@
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 
-module Catalog.Json
-       ( jsonRPC
-       )
+module Catalog.Json (jsonRPC)
 where
 
-import           Catalog.Cmd
-import           Catalog.Html.Basic  ( buildImgPath
-                                     , colImgRef
-                                     , getColBlogSource
-                                     , putColBlogSource
-                                     , getColBlogCont
-                                     )
-import           Catalog.Sync        (syncDirP, syncNewDirs)
-import           Catalog.System.ExifTool (getMetaData, forceSyncAllMetaData)
-import           Catalog.Zip         ( zipCollection )
-import           Control.Lens
-import           Data.ImgNode
-import           Data.ImgTree
-import           Data.MetaData
-import           Data.Prim
+import Catalog.JsonCommands
+import Catalog.Cmd
+import Control.Lens
+import Data.ImgNode
+import Data.ImgTree
+import Data.Prim
+
 import qualified Data.Aeson as J
 
 -- ----------------------------------------
@@ -90,17 +76,17 @@ jsonCall fct i n args =
 
     -- read a whole collection
     "collection" ->
-      jl $ \ () -> mapObjId2Path n  -- return n
+      jl $ \ () -> read'collection n
 
     -- access restrictions on a collection
     "isWriteable" ->
-      jl $ \ () -> return (isWriteable $ n ^. theColMetaData)
+      jl $ \ () -> read'isWriteable n
 
     "isRemovable" ->
-      jl $ \ () -> return (isRemovable $ n ^. theColMetaData)
+      jl $ \ () -> read'isRemovable n
 
     "isSortable" ->
-      jl $ \ () -> return (isSortable  $ n ^. theColMetaData)
+      jl $ \ () -> read'isSortable n
 
     -- existence check of a collection
     -- the 1. half of the check is done in jsonRPC in the Nothing case
@@ -111,75 +97,79 @@ jsonCall fct i n args =
     -- result is an url pointing to the icon src
     "iconref" ->
       jl $ \ fmt ->
-             (^. isoText) <$> iconImgRef (fmt ^. isoGeoAR) i
+             case fmt ^. isoGeoAR of
+               Nothing ->
+                 abort $ "iconref: wrong image geometry value: " <> show fmt
+               Just geo ->
+                 (^. isoText) <$> read'iconref geo i
+
 
     -- get the contents of a blog entry, already converted to HTML
     "blogcontents" ->
       jl $ \ pos ->
-             getBlogContHtml pos n
+             read'blogcontents pos n
 
     -- get the contents of a blog entry, already converted to HTML
     "blogsource" ->
       jl $ \ pos ->
-             getBlogCont pos n
+             read'blogsource pos n
 
     "saveblogsource" ->
       jl $ \ (pos, val) ->
-             putBlogCont val pos n
+             modify'saveblogsource pos val n
 
     -- compute the image ref of a collection entry
     -- for previewing the image
     "previewref" ->
       jl $ \ (pos, fmt) ->
-             (^. isoText) <$> previewImgRef pos (fmt ^. isoGeoAR) n
+             case fmt ^. isoGeoAR of
+               Nothing ->
+                 abort $ "previewref: wrong image geometry value: " <> show fmt
+               Just geo ->
+                 (^. isoText) <$> read'previewref pos geo n
 
     -- get the meta data of a collection entry
     "metadata" ->
       jl $ \ pos ->
-             getMeta1 pos n
+             read'metadata pos n
 
     -- get the rating field of a collection entry
     "rating" ->
       jl $ \ pos ->
-             getRating1 pos n
+             read'rating pos n
 
     -- get the rating field of all entries in a collection
     "ratings" ->
       jl $ \ () ->
-             getRatings n
+             read'ratings n
 
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->
       jl $ \ (ixs, ro) ->
-             changeColWriteProtectedByIxList ixs ro n
+             modify'changeWriteProtected ixs ro n
 
     -- sort a collection by sequence of positions
     -- result is the new collection
     "sort" ->
       jl $ \ ixs ->
-             sortColByIxList ixs i
+             modify'sort ixs i
 
     -- remove all marked images and sub-collection from a collection
     "removeFromCollection" ->
       jl $ \ ixs ->
-             removeFrCol ixs i n
+             modify'removeFromCollection ixs i n
 
     -- copy marked images and collections to another collection
     "copyToCollection" ->
       jl $ \ (ixs, dPath) ->
-             do
-               di <- checkWriteableCol dPath
-               copyToCol ixs di n
+             modify'copyToCollection ixs dPath n
 
     -- move marked images and collections in a source col
     -- to a dest col
     -- this is implemented as a sequence of copy and remove
     "moveToCollection" ->
       jl $ \ (ixs, dPath) ->
-             do
-               di <- checkWriteableCol dPath
-               copyToCol   ixs di   n
-               removeFrCol ixs    i n
+             modify'moveToCollection ixs dPath i n
 
     -- set or unset the collection image
     -- i must reference a collection, not an image
@@ -187,7 +177,7 @@ jsonCall fct i n args =
     -- nothing is returned
     "colimg" ->
       jl $ \ (sPath, pos) ->
-             void $ setColImg sPath pos i
+             modify'colimg sPath pos i
 
     -- set or unset the collection blog text
     -- i must reference a collection, not an image
@@ -195,64 +185,64 @@ jsonCall fct i n args =
     -- nothing is returned
     "colblog" ->
       jl $ \ (sPath, pos) ->
-             void $ setColBlog sPath pos i
+             modify'colblog sPath pos i
 
     -- create a new collection with name nm in
     -- collection i
     "newcol" ->
       jl $ \ nm ->
-             createCol nm i
+             modify'newcol nm i
 
     -- rename a sub-collection in a given collection
     "renamecol" ->
       jl $ \ new ->
-             renameCol new i
+             modify'renamecol new i
 
     -- set meta data fields for a list of selected collection entries
     "setMetaData" ->
       jl $ \ (ixs, md) ->
-             setMeta md ixs n
+             modify'setMetaData ixs md n
 
     -- set meta data fields for a single collection entry
     "setMetaData1" ->
       jl $ \ (i', md) ->
-             setMeta1 md i' n
+             modify'setMetaData1 i' md n
 
     -- set the rating field for a list of selected collection entries
     "setRating" ->
       jl $ \ (ixs, r) ->
-             setRating r ixs n
+             modify'setRating ixs r n
 
     -- set the rating field for a single collection entry
     "setRating1" ->
       jl $ \ (i', r) ->
-             setRating1 r i' n
+             modify'setRating1 i' r n
 
     -- save a snapshot of the current image store
     -- on client side, the 1. arg must be a path to an existing node
     -- simply take p'archive ("/archive"), the root node
     "snapshot" ->
       jl $ \ cmt ->
-             snapshotImgStore cmt
+             modify'snapshot cmt
 
     -- sync a subcollection of /archive/photo with filesystem
     "syncCol" ->
       jl $ \ () ->
-             syncCol i
+             modify'syncCol i
 
     -- sync a subcollection of /archive/photo with filesystem
     "syncExif" ->
       jl $ \ () ->
-             forceSyncAllMetaData i
+             modify'syncExif i
 
     -- import new subcollection of a collection in /archive/photo
     "newSubCols" ->
       jl $ \ () ->
-             newSubCols i
+             modify'newSubCols i
 
     "zipcollection" ->
       jl $ \ () ->
-             zipCollection i n
+             modify'zipcollection i n
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct
@@ -274,386 +264,5 @@ jsonLift cmd jv =
       mkER $ "illegal JSON post arg: " <> e ^. isoText
     J.Success v ->
       cmd v >>= mkOK
-
-checkWriteableCol :: Path -> Cmd ObjId
-checkWriteableCol dPath = do
-  (di, dn) <- getIdNode' dPath
-  unless (isCOL dn) $
-    abort ("jsonCall: not a collection: " ++ show dPath)
-  unless (isWriteable $ dn ^. theColMetaData) $
-    abort ("jsonCall: collection is write protected: " ++ show dPath)
-  return di
-
--- ----------------------------------------
-
-newSubCols :: ObjId -> Cmd ()
-newSubCols = syncCol' syncNewDirs
-
-syncCol :: ObjId -> Cmd ()
-syncCol = syncCol' syncDirP
-
-syncCol' :: (Path -> Cmd ()) -> ObjId -> Cmd ()
-syncCol' sync i = do
-  path <- objid2path i
-  unless (isPathPrefix p'photos path) $
-    abort ("syncCol': collection does not have path prefix "
-           ++ quotePath p'photos ++ ": "
-           ++ quotePath path)
-  let path'dir = substPathPrefix p'photos p'arch'photos path
-  verbose $ "syncCol': directory " ++ quotePath path'dir
-  sync path'dir
-
-removeFrCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
-removeFrCol ixs i n = do
-
-  -- check whether collection is readonly
-  unless (isWriteable $ n ^. theColMetaData) $ do
-    path <- objid2path i
-    abort ("removeFrCol: collection is write protected: " ++ show path)
-
-  traverse_ (uncurry (removeEntryFrCol i)) toBeRemoved
-  where
-    -- elements are removed from the end to the front
-    -- else the positions had to be adjusted after each remove
-    toBeRemoved :: [(Int, ColEntry)]
-    toBeRemoved =
-      reverse
-      . map snd
-      . filter ((>= 0) . fst)
-      . zip ixs
-      . zip [0..]
-      $ n ^. theColEntries
-
-removeEntryFrCol :: ObjId -> Int -> ColEntry -> Cmd ()
-removeEntryFrCol i pos =
-  colEntry
-  (\ _ _ -> adjustColEntries (removeAt pos) i)
-  rmRec
-
-{- -- avoid case over constructors
-removeEntryFrCol i pos (ImgRef{}) =
-  adjustColEntries (removeAt pos) i
-removeEntryFrCol _i _pos (ColRef ci) =
-  rmRec ci
--- -}
-
--- ----------------------------------------
---
--- copy entries to a collection
-
-copyToCol :: [Int] -> ObjId -> ImgNode -> Cmd ()
-copyToCol ixs di n =
-  traverse_ (copyEntryToCol di) toBeCopied
-  where
-    toBeCopied :: [ColEntry]
-    toBeCopied =
-      map snd
-      . sortBy (compare `on` fst)
-      . filter ((>= 0) . fst)
-      . zip ixs
-      $ n ^. theColEntries
-
-copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
-copyEntryToCol di ce =
-  colEntry
-  (\ _ _ -> adjustColEntries (++ [ce]) di)
-  copyColToCol
-  ce
-  where
-    copyColToCol si = do
-      dp <- objid2path di
-      sp <- objid2path si
-      copyCollection sp dp
-
-      -- remove the access restrictions in copied collection
-      -- in a copied collection there aren't any access restrictions
-      --
-      -- the path of the copied collection
-      let tp = dp `snocPath` (sp ^. viewBase . _2)
-      modifyMetaDataRec clearAccess tp
-
-{-
-copyEntryToCol di e@(ImgRef{}) = do
-  adjustColEntries (++ [e]) di
-copyEntryToCol di (ColRef si) = do
-  dp <- objid2path di
-  sp <- objid2path si
-  copyCollection sp dp
-
-  -- remove the access restrictions in copied collection
-  -- in a copied collection there aren't any access restrictions
-  --
-  -- the path of the copied collection
-  let tp = dp `snocPath` (sp ^. viewBase . _2)
-  modifyMetaDataRec clearAccess tp
--- -}
-
-{- not yet in use
-modifyMetaData :: (MetaData -> MetaData) -> Path -> Cmd ()
-modifyMetaData mf path = do
-  i <- fst <$> getIdNode "modifyMetaData: entry not found" path
-  adjustMetaData mf i
--- -}
-
-modifyMetaDataRec :: (MetaData -> MetaData) -> Path -> Cmd ()
-modifyMetaDataRec mf path = do
-  i <- fst <$> getIdNode "modifyMetaDataRec: entry not found" path
-  foldCollections
-    ( \ go i' _md _im _be cs -> do
-        adjustMetaData mf i'
-        mapM_ go (cs ^.. traverse . theColColRef)
-    ) i
-
--- ----------------------------------------
-
--- sort a collection by a list of positions
---
--- 1. all entries with "-1" mark and pos less than last marked entry
--- 2. last marked entry
--- 3. all other marked entries ordered by mark count
--- 4. all entries with "-1" mark and pos greater than largest mark index
-
-sortColByIxList :: [Int] -> ObjId -> Cmd ()
-sortColByIxList ixs oid
-  | null ixs =
-      return ()
-  | otherwise =
-    adjustColEntries (reorderCol ixs) oid
-
-reorderCol :: [Int] -> [a] -> [a]
-reorderCol ixs cs =
-  map snd . sortBy (cmp mx `on` fst) $ zip ixs' cs
-  where
-    ixs' :: [(Int, Int)]
-    ixs' = zip ixs [0..]
-
-    mx :: (Int, Int)
-    mx = maximum ixs'
-
-cmp :: (Int, Int) -> (Int, Int) -> (Int, Int) -> Ordering
-cmp (mi, mx) (i, x) (j, y)
-      | i == -1 && j == -1 =
-        compare x y
-      | i == -1 && j >= 0 =
-        compare x mx
-      | i >= 0  && j == -1 =
-        compare mx y
-      | i == mi && j >= 0 =
-        LT
-      | i >= 0  && j == mi =
-        GT
-      | i >= 0  && j >= 0 =
-        compare i j
-      | otherwise =
-        EQ
-
--- ----------------------------------------
---
--- set or unset the "front page" image of a collection
--- to one of the images in the collection
--- The pos param specifies the position or, if -1, the unset op
-
-setColImg :: Path -> Int -> ObjId -> Cmd ()
-setColImg sPath pos oid
-  | pos < 0 =
-      adjustColImg (const Nothing) oid
-  | otherwise = do
-      scn <- jsonPath2ColNode sPath
-      processColImgEntryAt
-        (\ iid inm -> adjustColImg (const $ Just (iid, inm)) oid)
-        pos scn
-
--- set or unset the "blog text" of a collection
--- to one of the blog texts in the collection
--- The pos param specifies the position or, if -1, the unset op
-
-setColBlog :: Path -> Int -> ObjId -> Cmd ()
-setColBlog sPath pos oid
-  | pos < 0 =
-      adjustColBlog (const Nothing) oid
-  | otherwise = do
-      scn <- jsonPath2ColNode sPath
-      processColImgEntryAt
-        (\ iid inm -> adjustColBlog (const $ Just (iid, inm)) oid)
-        pos scn
-
-jsonPath2ColNode :: Path -> Cmd ImgNode
-jsonPath2ColNode path = do
-  v <- lookupByPath path
-  case v of
-    Nothing ->
-      abort $ "jsonPath2Id: entry not found: " <> show path
-    Just idn ->
-      return $ snd idn
-
--- ----------------------------------------
-
-createCol :: Name -> ObjId -> Cmd ()
-createCol nm i = do
-  path  <- objid2path i
-  _newi <- mkCollection (path `snocPath` nm)
-  return ()
-
--- ----------------------------------------
-
-renameCol :: Name -> ObjId -> Cmd ()
-renameCol newName i = do
-  iParent <- getImgParent i
-
-  -- duplicate collection in parent collection
-  dupColRec i iParent newName
-
-  -- find position of objid i in parent collection
-  ps <- flip findFstColEntry iParent $
-        \ ce -> return (i == ce ^. theColObjId)
-  let pos = maybe (-1) fst ps
-
-  -- remove i in parent collection
-  rmRec i
-
-  -- move duplicated col from the end of the col entry list to the pos of i
-  adjustColEntries
-    (\ cs -> let i' = last cs
-             in
-               insertAt pos i' $ init cs
-    ) iParent
-
--- ----------------------------------------
-
-setMeta :: MetaData -> [Int] -> ImgNode -> Cmd ()
-setMeta md ixs n =
-  sequence_ $ zipWith setMeta' ixs (n ^. theColEntries)
-  where
-    setMeta' mark ce
-      | mark < 0 =
-          return ()
-      | otherwise =
-          colEntry
-          (\ ii _ -> adjustMetaData (md <>) ii)
-          (          adjustMetaData (md <>)   )
-          ce
-
-setMeta1 :: MetaData -> Int -> ImgNode -> Cmd ()
-setMeta1 md i n =
-  setMeta md ixs n
-  where
-    ixs = replicate i (0-1) ++ [1]
-
-setRating :: Rating -> [Int] -> ImgNode -> Cmd ()
-setRating r = setMeta (mkRating r)
-
-setRating1 :: Rating -> Int -> ImgNode -> Cmd ()
-setRating1 r = setMeta1 (mkRating r)
-
--- ----------------------------------------
-
-getMeta1 :: Int -> ImgNode -> Cmd MetaData
-getMeta1 =
-  processColEntryAt
-    (\ i _ -> do exifMD <- getMetaData i               -- exif meta data
-                 imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
-                 return $ imgMD <> exifMD
-    )
-    (\ i   -> getImgVals i theMetaData)
-
--- read only the internal meta data, not the exif stuff
-getMeta0 :: Int -> ImgNode -> Cmd MetaData
-getMeta0 =
-  processColEntryAt (\ i' _ -> getM i') getM
-  where
-    getM i' = getImgVals i' theMetaData
-
-getRating1 :: Int -> ImgNode -> Cmd Rating
-getRating1 pos n = getRating <$> getMeta0 pos n
-
-getRatings :: ImgNode -> Cmd [Rating]
-getRatings n = traverse f (n ^. theColEntries)
-  where
-    f = colEntry (\ i' _ -> getR i') getR
-      where
-        getR i' = getRating <$> getImgVals i' theMetaData
-
--- ----------------------------------------
-
-addGeoToPath :: Maybe GeoAR -> Cmd FilePath -> Cmd FilePath
-addGeoToPath Nothing _ =
-  abort "addGeoToPath: wrong image geometry value"
-addGeoToPath (Just g) cmd =
-  (ppx ++) <$> cmd
-  where
-    ppx = "/" ++ g ^. isoString
-
-
-iconImgRef :: Maybe GeoAR -> ObjId -> Cmd FilePath
-iconImgRef g i =
-  addGeoToPath g $ colImgRef i
-
-previewImgRef :: Int -> Maybe GeoAR -> ImgNode -> Cmd FilePath
-previewImgRef pos g n =
-  addGeoToPath g $
-  processColEntryAt
-    (\ ii nm -> buildImgPath ii nm)
-    colImgRef
-    pos n
-
-getBlogContHtml :: Int -> ImgNode -> Cmd Text
-getBlogContHtml =
-  processColEntryAt
-    (\ i nm -> getColBlogCont i nm)       -- ImgRef: entry is a blog text
-    (\ i    -> do                         -- ColRef: lookup the col blog ref
-        be <- getImgVals i theColBlog
-        maybe (return mempty)             -- return nothing, when not there
-              (uncurry getColBlogCont)    -- else generate the HTML
-              be
-    )
-
-getBlogCont :: Int -> ImgNode -> Cmd Text
-getBlogCont =
-  processColEntryAt
-    (\ i nm -> getColBlogSource i nm)
-    (\ i    -> do
-        be        <- getImgVals i theColBlog
-        (bi, bn)  <- maybe
-                     ( do p <- objid2path i
-                          abort ("getBlogCont: no blog entry set in collection: "
-                                 ++ p ^. isoString)
-                     )
-                     return
-                     be
-        getColBlogSource bi bn
-    )
-
-putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
-putBlogCont val =
-  processColEntryAt
-    (\ i nm -> putColBlogSource val i nm)
-    (\ i    -> do
-        be        <- getImgVals i theColBlog
-        (bi, bn)  <- maybe
-                     ( do p <- objid2path i
-                          abort ("putBlogCont: no blog entry set in collection: "
-                                 ++ p ^. isoString)
-                     )
-                     return
-                     be
-        putColBlogSource val bi bn
-    )
-
--- ----------------------------------------
-
-changeColWriteProtectedByIxList :: [Int] -> Bool -> ImgNode -> Cmd ()
-changeColWriteProtectedByIxList ixs ro n =
-  zipWithM_ markRO ixs (n ^. theColEntries)
-  where
-    cf | ro        = addNoWriteAccess
-       | otherwise = subNoWriteAccess
-    markRO mark ce
-      | mark < 0 =
-          return ()
-      | otherwise =
-          colEntry
-          (\ _ _ -> return ())            -- ignore ImgRef's
-          (adjustMetaData cf)
-          ce
 
 -- ----------------------------------------
