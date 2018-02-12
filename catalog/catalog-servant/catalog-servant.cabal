@@ -14,15 +14,10 @@ executable catalog-servant
   hs-source-dirs:      app
   main-is:             Server.hs
   other-modules:       API
---                     , Client
-                     -- , ApiType
+
   build-depends:       base >= 4.7
---                     , aeson
---                     , aeson-compat
---                     , attoparsec
                      , base-compat
                      , blaze-html
---                     , blaze-markup
                      , bytestring
                      , catalog
 --                     , directory
@@ -31,16 +26,13 @@ executable catalog-servant
                      , http-api-data
 --                     , http-client
 --                     , http-media
---                     , lucid
                      , monad-reader-state-err-io
                      , mtl
                      , servant
---                     , servant-client
                      , servant-server
---                     , string-conversions
                      , text
---                     , time
                      , wai
+                     , wai-app-static
                      , wai-logger
                      , warp
 

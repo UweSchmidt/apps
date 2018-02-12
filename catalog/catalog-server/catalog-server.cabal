@@ -14,10 +14,14 @@ cabal-version:       >=1.10
 executable catalog-server
   hs-source-dirs:      .
   main-is:             Main.hs
+  other-modules:       Json
+
   build-depends:       base
+                     , aeson                 >= 0.8
                      , catalog
                      , filepath
                      , http-types            >= 0.9
+                     , lens
                      , monad-reader-state-err-io
                      , mtl
                      , scotty                >= 0.1.10

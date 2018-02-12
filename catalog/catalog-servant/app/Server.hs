@@ -7,7 +7,6 @@ import Prelude ()
 import Prelude.Compat
 
 import Control.Monad.Except
--- import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger       (withStdoutLogger)
 import Servant

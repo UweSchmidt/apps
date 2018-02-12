@@ -2,45 +2,46 @@
 
 module Main where
 
-import           Catalog.Cmd (Env, Cmd
-                             , runAction
-                             , initState
-                             , envPort
-                             , envVerbose
-                             , envMountPath
-                             , envLogOp
-                             )
-import           Catalog.FilePath (jpgPath)
-import           Catalog.Html.Photo2 (genHtmlPage)
-import           Catalog.Html.Blaze2 (genBlazeHtmlPage)
-import           Catalog.Json (jsonRPC)
-import           Catalog.Options (mainWithArgs)
-import           Catalog.System.Convert (genImage, genImageFromTxt)
+import Catalog.Cmd (Env, Cmd
+                   , runAction
+                   , initState
+                   , envPort
+                   , envVerbose
+                   , envMountPath
+                   , envLogOp
+                   )
+import Catalog.FilePath (jpgPath)
+import Catalog.Html.Photo2 (genHtmlPage)
+import Catalog.Html.Blaze2 (genBlazeHtmlPage)
+import Catalog.Options (mainWithArgs)
+import Catalog.System.Convert (genImage, genImageFromTxt)
 
-import           Control.Concurrent.QSem
-import           Control.Exception.Base (bracket_)
-import           Control.Concurrent.MVar
-import           Control.Exception (SomeException, catch) -- , try, toException)
-import           Control.Monad.Except
+import Control.Concurrent.QSem
+import Control.Exception.Base (bracket_)
+import Control.Concurrent.MVar
+import Control.Exception (SomeException, catch) -- , try, toException)
+import Control.Monad.Except
 import qualified Control.Monad.ReaderStateErrIO as RSE
 
-import           Data.ImageStore (ImgStore)
-import           Data.Monoid ((<>))
-import           Data.Prim.Constants
-import           Data.Prim.Prelude
+import Data.ImageStore (ImgStore)
+import Data.Monoid ((<>))
+import Data.Prim.Constants
+import Data.Prim.Prelude
 import qualified Data.Text as T
 
-import           Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
-import           Network.Wai
+import Network.HTTP.Types.Status -- (internalServerError500, Status, notFound404, ok200, status403)
+import Network.Wai
 import qualified Network.Wai.Handler.Warp as W
-import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
-import           System.IO (hPutStrLn, hFlush, stderr)
-import           System.Exit (die)
-import           System.FilePath (dropExtension)
+import System.IO (hPutStrLn, hFlush, stderr)
+import System.Exit (die)
+import System.FilePath (dropExtension)
 
-import           Web.Scotty --                           (middleware, scotty)
-import           Web.Scotty.Internal.Types
+import Web.Scotty --                           (middleware, scotty)
+import Web.Scotty.Internal.Types
+
+import Json (jsonRPC)
 
 -- import           Network.Wai.Middleware.Static        (addBase, noDots,
 --                                                       staticPolicy, (>->))

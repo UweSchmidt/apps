@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Catalog.Json (jsonRPC)
+module Json (jsonRPC)
 where
 
 import Catalog.JsonCommands
