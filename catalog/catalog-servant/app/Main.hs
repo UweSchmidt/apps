@@ -21,7 +21,7 @@ import Control.Monad.ReaderStateErrIO (Msg(..))
 
 import System.Directory (doesFileExist)
 import System.Exit (die)
-import System.FilePath (FilePath, (</>))
+-- import System.FilePath (FilePath, (</>))
 import System.IO (hPutStrLn, stderr, hFlush)
 
 import qualified Data.ByteString.Lazy as LBS
@@ -33,7 +33,7 @@ import Data.ImageStore (ImgStore)
 import Catalog.Cmd
 import Catalog.Options (mainWithArgs)
 import Catalog.JsonCommands
-import Catalog.System.Convert (genImageGeo)
+import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
 
 import API
 
@@ -106,11 +106,11 @@ mkcmd2n toHandler pcmd path args =
 -- ----------------------------------------
 -- the server
 
-catalogServer :: FilePath ->
+catalogServer :: Env ->
                  (forall a . Cmd a -> Handler a) ->
                  (forall a . Cmd a -> Handler a) ->
                  Server CatalogAPI
-catalogServer mp runR runM =
+catalogServer env runR runM =
   ( bootstrap
     :<|>
     ( assets'css
@@ -133,7 +133,8 @@ catalogServer mp runR runM =
     json'modify
   )
   where
-    static p = serveDirectoryWebApp (mp ++ p)
+    mountPath = env ^. envMountPath
+    static p = serveDirectoryWebApp (mountPath ++ p)
 
     bootstrap         = static "/bootstrap"
     assets'css        = static ps'css
@@ -156,26 +157,25 @@ catalogServer mp runR runM =
 
     imgcopy' :: GeoAR -> Path -> Handler LazyByteString
     imgcopy' geo path = do
-      mfp <- checkFilePath fp
-      case mfp of
-        Nothing ->
+      let fp = path ^. isoString
+      let isJpg = checkExtPath     ".jpg" path
+      let isTxt = checkExtPath ".txt.jpg" path
+                  ||
+                  checkExtPath  ".md.jpg" path
+      ex <- liftIO $
+            doesFileExist $ mountPath ++ fp
+      case ex && isJpg of
+        False ->
           throwError $
           err404 { errBody = ("image not found: " ++ fp) ^. from isoString }
-        Just fp' -> do
-          imgPath <- runR (genImageGeo geo fp)
+        True -> do
+          imgPath <- runR
+                     ( ( if isTxt
+                         then genImageFromTxtGeo
+                         else genImageGeo
+                       ) geo fp
+                     )
           liftIO (LBS.readFile imgPath)
-      where
-        fp = path ^. isoString
-
-        checkFilePath :: FilePath -> Handler (Maybe FilePath)
-        checkFilePath p = do
-          ex <- liftIO (doesFileExist p')
-          return ( if ex
-                   then Just p'
-                   else Nothing
-                 )
-          where
-            p' = mp </> p
 
     mkR0  = mkcmd0  runR
     mkR1n = mkcmd1n runR
@@ -291,7 +291,7 @@ main' env st = do
     let settings = setPort (env ^. envPort) $ setLogger logger defaultSettings
     runSettings settings $
       serve (Proxy :: Proxy CatalogAPI) $
-      catalogServer (env ^. envMountPath) runRead runMody
+      catalogServer env runRead runMody
 
 -- curl -v http://localhost:8081/bootstrap/dist/css/bootstrap-theme.css
 -- curl -v http://localhost:8081/assets/javascript/html-album.js

@@ -167,9 +167,12 @@ quotePath = show . showPath
 checkExtPath :: Text -> Path -> Bool
 checkExtPath ext p
   = ext == ext'
+    &&
+    T.length bn > ln
   where
+    ln   = T.length ext
     bn   = (p ^. viewBase . _2) ^. isoText
-    ext' = T.toLower . T.takeEnd (T.length ext) $ bn
+    ext' = T.toLower . T.takeEnd ln $ bn
 
 deriving instance Eq n  => Eq  (Path' n)
 deriving instance Ord n => Ord (Path' n)

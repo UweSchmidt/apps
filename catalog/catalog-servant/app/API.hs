@@ -39,7 +39,7 @@ import Data.Prim
 import Data.ImgTree (ImgNodeP)
 import Data.MetaData
 import Web.HttpApiData (parseUrlPieceWithPrefix)
--- import qualified Data.Text as T
+import qualified Data.Text as T
 
 
 -- ----------------------------------------
@@ -237,5 +237,34 @@ instance Accept JPEG where
 
 instance MimeRender JPEG LazyByteString where
   mimeRender _ = id
+
+instance HasExt JPEG where
+  theExt _ = ".jpg"
+
+-- ----------------------------------------
+
+class HasExt a where
+  theExt :: Proxy a -> Text
+
+  hasExt :: Proxy a -> Text -> Bool
+  hasExt px t =
+    T.length t > lx
+    &&
+    T.toLower (T.takeEnd lx t) == ex
+    where
+      ex = theExt px
+      lx = T.length ex
+
+-- ----------------------------------------
+
+newtype BaseName a = BaseName {unBaseName :: Text}
+
+instance HasExt a => FromHttpApiData (BaseName a) where
+  parseUrlPiece s
+    | hasExt px s = Right $ BaseName s
+    | otherwise   = defaultParseError s
+    where
+      px :: Proxy a
+      px = Proxy
 
 -- ----------------------------------------
