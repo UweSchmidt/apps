@@ -10,7 +10,7 @@ import Control.Monad.Except
 import Network.Wai.Handler.Warp
 import Network.Wai.Logger       (withStdoutLogger)
 import Servant
--- import System.Directory
+
 -- import Text.Blaze.Html.Renderer.Utf8
 
 import Control.Concurrent.QSem
@@ -18,9 +18,13 @@ import Control.Exception.Base (bracket_)
 import Control.Exception (SomeException, catch) -- , try, toException)
 import Control.Concurrent.MVar
 import Control.Monad.ReaderStateErrIO (Msg(..))
+
+import System.Directory (doesFileExist)
 import System.Exit (die)
-import System.FilePath (FilePath)
+import System.FilePath (FilePath, (</>))
 import System.IO (hPutStrLn, stderr, hFlush)
+
+import qualified Data.ByteString.Lazy as LBS
 
 import Data.Prim
 import Data.ImgTree
@@ -29,6 +33,7 @@ import Data.ImageStore (ImgStore)
 import Catalog.Cmd
 import Catalog.Options (mainWithArgs)
 import Catalog.JsonCommands
+import Catalog.System.Convert (genImageGeo)
 
 import API
 
@@ -149,10 +154,28 @@ catalogServer mp runR runM =
         imgcopy'archive = ttp2 imgcopy'
         imgcopy'others  = ttp2 imgcopy'
 
-    imgcopy' :: GeoAR -> Path -> Handler String
-    imgcopy' geo path
-      | checkExtPath ".jpg" path  = return $ show (geo, path)
-      | otherwise                 = throwError err404
+    imgcopy' :: GeoAR -> Path -> Handler LazyByteString
+    imgcopy' geo path = do
+      mfp <- checkFilePath fp
+      case mfp of
+        Nothing ->
+          throwError $
+          err404 { errBody = ("image not found: " ++ fp) ^. from isoString }
+        Just fp' -> do
+          imgPath <- runR (genImageGeo geo fp)
+          liftIO (LBS.readFile imgPath)
+      where
+        fp = path ^. isoString
+
+        checkFilePath :: FilePath -> Handler (Maybe FilePath)
+        checkFilePath p = do
+          ex <- liftIO (doesFileExist p')
+          return ( if ex
+                   then Just p'
+                   else Nothing
+                 )
+          where
+            p' = mp </> p
 
     mkR0  = mkcmd0  runR
     mkR1n = mkcmd1n runR

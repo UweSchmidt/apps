@@ -20,12 +20,12 @@ executable catalog-servant
                      , blaze-html
                      , bytestring
                      , catalog
---                     , directory
+                     , directory
                      , filepath
                      , ghc-prim
                      , http-api-data
 --                     , http-client
---                     , http-media
+                     , http-media
                      , monad-reader-state-err-io
                      , mtl
                      , servant

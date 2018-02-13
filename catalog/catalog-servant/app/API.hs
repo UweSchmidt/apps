@@ -17,14 +17,14 @@ import Prelude.Compat
 -- import Data.Aeson.Compat
 -- import Data.Aeson.Types
 -- import Data.Attoparsec.ByteString
--- import Data.ByteString (ByteString)
+-- import Data.ByteString.Lazy (ByteString)
 -- import Data.List
 -- import Data.Maybe
 -- import Data.String.Conversions
 -- import Data.Time.Calendar
 -- import GHC.Generics
 -- import Lucid
--- import Network.HTTP.Media ((//), (/:))
+import Network.HTTP.Media ((//)) -- , (/:))
 -- import Network.Wai
 -- import Network.Wai.Handler.Warp
 import Servant
@@ -102,9 +102,9 @@ type BlazeAPI
 type ImgCopyAPI
   = Capture    "geoar" GeoAR' :>
     ( "archive" :>
-      CaptureAll "path"  Text  :> Get '[PlainText] String
+      CaptureAll "path"  Text  :> Get '[JPEG] LazyByteString
       :<|>
-      CaptureAll "path"  Text  :> Get '[PlainText] String
+      CaptureAll "path"  Text  :> Get '[JPEG] LazyByteString
     )
 
 -- ----------------------------------------
@@ -225,5 +225,17 @@ instance FromHttpApiData BlazeHTML where
 -- | Default parsing error.
 defaultParseError :: Text -> Either Text a
 defaultParseError input = Left ("could not parse: `" <> input <> "'")
+
+-- ----------------------------------------
+--
+-- JPEG handler
+
+data JPEG
+
+instance Accept JPEG where
+  contentType _ = "image" // "jpeg"
+
+instance MimeRender JPEG LazyByteString where
+  mimeRender _ = id
 
 -- ----------------------------------------

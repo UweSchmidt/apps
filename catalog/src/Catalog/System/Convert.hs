@@ -1,12 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Catalog.System.Convert
+-- {-
   ( getImageSize
   , getColImgSize
   , createImageCopy
   , genImage
+  , genImageGeo
   , createImageFromTxt
   , genImageFromTxt
+  , genImageFromTxtGeo
   , genIcon
   , genAssetIcon
   , genBlogText
@@ -15,6 +18,7 @@ module Catalog.System.Convert
   , selectFont
   , scaleWidth
   )
+-- -}
 where
 
 import           Catalog.Cmd
@@ -90,11 +94,12 @@ genIcon path t = do
         (s2, s3) = splitAt len3 r2
 
 -- ----------------------------------------
+{- old stuff
 
-genImageFromTxt :: FilePath -> Cmd FilePath
-genImageFromTxt =
+genImageFromTxt' :: FilePath -> Cmd FilePath
+genImageFromTxt' =
   genImage' createImageFromTxt (objPath2Geo txtPathExpr) (objSrc txtSrcExpr)
-
+-}
 -- ----------------------------------------
 
 -- generate an image of a given geometry from an original image
@@ -103,27 +108,106 @@ genImageFromTxt =
 --
 -- example:             "/fix-160x120/archive/photos/pic-30.jpg"
 --
--- dst img is           "mountPath/fix-160x120/photos/pic-30.jpg"
+-- dst img is           "mountPath/cache/fix-160x120/photos/pic-30.jpg"
 -- org img is           "mountPath/photo/pic-30.jpg"
 
 genImage :: FilePath -> Cmd FilePath
-genImage = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
+genImage url = step1 imgPathExpr url k1
+  where
+    k1 geo path = step2 imgSrcExpr geo path createImageCopy
+
+genImageGeo :: GeoAR -> FilePath -> Cmd FilePath
+genImageGeo geo path = step2 imgSrcExpr geo path createImageCopy
+
+-- example:              "/fix-160x120/archive/photos/index.md.jpg"
+--
+-- dst img is            "mountPath/cache/fix-160x120/photos/index.md.jpg"
+-- org txt is            "mountPath/photos/index.md"
+
+genImageFromTxt :: FilePath -> Cmd FilePath
+genImageFromTxt url = step1 txtPathExpr url k1
+  where
+    k1 geo path = step2 txtSrcExpr geo path createImageFromTxt
+
+genImageFromTxtGeo :: GeoAR -> FilePath -> Cmd FilePath
+genImageFromTxtGeo geo path = step2 txtSrcExpr geo path createImageFromTxt
+
+-- --------------------
+--
+-- parse the geometry part of an url
+
+step1 :: Regex -> FilePath
+      -> (GeoAR -> FilePath -> Cmd FilePath)
+      -> Cmd FilePath
+step1 rex url k
+  | Just (geo, path) <- objPath2Geo rex url =
+      k geo path
+  | otherwise = notThere url
+
+-- compute absolut paths for source image
+-- and cached image, check whether cache is
+-- up to date or generate new copy by param k
+
+step2 :: Regex -> GeoAR -> FilePath
+      -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
+      -> Cmd FilePath
+step2 rex geo path k = do
+  mp <- view envMountPath
+  let src = mp ++ objSrc rex path
+  let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
+  sx <- fileExist src
+  if sx
+    then do
+    dx <- fileExist dst
+    dw <- if dx
+          then getModiTime dst
+          else return mempty
+    sw <- getModiTime src
+    if dw <= sw
+      then
+      ( do
+          createDir $ takeDirectory dst
+          k geo dst src
+      )
+      `catchError`      -- if the org image is broken
+      ( const $ do      -- a "broken image" icon is generated
+          warn $ "image couldn't be converted or resized: " ++ show path
+          broken <-
+            fromMaybe ps'blank <$>
+            genAssetIcon "brokenImage" "broken\nimage"
+          warn $ "generate a substitute: " ++ show broken
+          step2 rex geo broken createImageCopy
+      )
+      else
+      return dst
+    else
+    notThere path
+
+notThere :: FilePath -> Cmd FilePath
+notThere url =
+  runDry msg (abort msg) >> return url
+  where
+    msg = "image not found: " ++ url
+
+-- --------------------
+{-
+genImage'' :: FilePath -> Cmd FilePath
+genImage'' = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
 
 genImage' :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
              (FilePath -> Maybe (GeoAR, FilePath)) ->
              (FilePath -> FilePath) ->
              FilePath -> Cmd FilePath
 genImage' createImageC imgPath2Geo imgSrc url = do
-  maybe notThere (doit createImageC) $ imgPath2Geo url
-    where
-      notThere =
-        runDry msg (abort msg) >> return url
-        where
-          msg = "image not found: " ++ show (imgPath2Geo url) ++ "(" ++ url ++ ")"
+  maybe (notThere url)
+        (doit createImageC imgSrc url)
+        (imgPath2Geo url)
 
-      doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
-              (GeoAR, FilePath) -> Cmd FilePath
-      doit createImg (geo, path) = do
+doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
+        (FilePath -> FilePath) ->
+        FilePath ->
+        (GeoAR, FilePath) -> Cmd FilePath
+doit createImg imgSrc url (geo, path) = do
         mp <- view envMountPath
         let src = mp ++ imgSrc path
         let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
@@ -148,13 +232,13 @@ genImage' createImageC imgPath2Geo imgSrc url = do
                         fromMaybe ps'blank <$>
                         genAssetIcon "brokenImage" "broken\nimage"
                       warn $ "generate a substitute: " ++ show broken
-                      doit createImageCopy (geo, broken)
+                      doit createImageCopy imgSrc url (geo, broken)
                   )
               else
                 return dst
           else
-            notThere
-
+            notThere url
+-}
 -- ----------------------------------------
 
 objPath2Geo :: Regex -> FilePath -> Maybe (GeoAR, FilePath)
