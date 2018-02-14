@@ -28,11 +28,12 @@ import Network.HTTP.Media ((//)) -- , (/:))
 -- import Network.Wai
 -- import Network.Wai.Handler.Warp
 import Servant
+import Servant.HTML.Blaze
 -- import System.Directory
 -- import Text.Blaze
 -- import Text.Blaze.Html.Renderer.Utf8
 -- import qualified Data.Aeson.Parser
--- import qualified Text.Blaze.Html
+import qualified Text.Blaze.Html as Blaze
 
 import System.FilePath (FilePath)
 import Data.Prim
@@ -96,7 +97,7 @@ type BlazeAPI
   = Capture    "blaze" BlazeHTML :>
     "archive"                    :>
     "collections"                :>
-    CaptureAll "path"  Text      :> Get '[PlainText] String
+    CaptureAll "path"  Text      :> Get '[HTML] Blaze.Html
 
 -- generate image copies (fix-123x456, pad-123x456, ...)
 type ImgCopyAPI

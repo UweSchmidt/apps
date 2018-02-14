@@ -3,8 +3,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Catalog.Html.Blaze2
-  ( genBlazeHtmlPage )
+  ( PageConfig
+  , genBlazeHtmlPage
+  , genBlazeHtmlPage'
+  , parseImgGeoPath
+  )
 where
+
+import Data.Maybe
+import System.FilePath
 
 import Catalog.Cmd
 import Data.ImgTree
@@ -39,7 +46,7 @@ import Catalog.System.Convert  (getColImgSize)
 -- a geo for the icons,
 -- and the # icons per row
 
-type PageConfig = (String, (GeoAR, GeoAR, Int))
+type PageConfig     = (GeoAR, GeoAR, Int)
 
 -- an entry in a collection is identified by an ObjId, Path, Filepath, ...
 -- and, an index into the list of collection entries, or it's a reference
@@ -51,45 +58,81 @@ type PageConfig = (String, (GeoAR, GeoAR, Int))
 
 thePageConfigs :: [PageConfig]
 thePageConfigs =
-  [ ("blaze-2560x1440", ( GeoAR 2560 1440 Pad
-                        , GeoAR  160  120 Fix
-                        , 14
-                        )
+  [ ( GeoAR 2560 1440 Pad
+    , GeoAR  160  120 Fix
+    , 14
     )
-  , ("blaze-1920x1200", ( GeoAR 1920 1200 Pad
-                        , GeoAR  160  120 Fix
-                        , 11
-                        )
+  , ( GeoAR 1920 1200 Pad
+    , GeoAR  160  120 Fix
+    , 11
     )
-  , ("blaze-1600x1200", ( GeoAR 1600 1200 Pad
-                        , GeoAR  160  120 Fix
-                        , 9
-                        )
+  , ( GeoAR 1600 1200 Pad
+    , GeoAR  160  120 Fix
+    , 9
     )
-  , ("blaze-1400x1050", ( GeoAR 1400 1050 Pad
-                        , GeoAR  140  105 Fix
-                        , 9
-                        )
+  , ( GeoAR 1400 1050 Pad
+    , GeoAR  140  105 Fix
+    , 9
     )
-  , ("blaze-1280x800",  ( GeoAR 1280  800 Pad
-                        , GeoAR  120   90 Fix
-                        , 9
-                        )
+  , ( GeoAR 1280  800 Pad
+    , GeoAR  120   90 Fix
+    , 9
     )
   ]
 
+lookupPageConfigs :: Geo -> Maybe PageConfig
+lookupPageConfigs (Geo w h) =
+  listToMaybe $
+  filter (\(GeoAR w1 h1 _, _, _) -> w == w1 && h == h1) thePageConfigs
+
 -- ----------------------------------------
+--
+-- url parsing
 
-pagePathExpr :: Regex
-pagePathExpr =
+parseGeoPath :: FilePath -> Maybe (Geo, FilePath)
+parseGeoPath f =
+  case matchSubexRE geoPathRE f of
+    [("geo", geo), ("path", path)] ->
+      return ( geo ^. from isoString, path)
+    _ -> mzero
+
+geoPathRE :: Regex
+geoPathRE =
   parseRegexExt $
-  "/({config}[a-z]+-[0-9]+x[0-9]+)" ++
-  "(" ++
-  "(({path}/archive/collections/.*)(/pic-({no}[0-9]+))[.]html)" ++
-  "{|}" ++
-  "(({path}/archive/collections(/.*)?)[.]html)" ++
-  ")"
+  "/blaze-({geo}[0-9]+x[0-9]+)({path}/.*)"
 
+-- --------------------
+
+parseImgPath :: FilePath -> Maybe (Path, Maybe Int)
+parseImgPath fp0
+  | not isHtml   = mzero
+  | isJust picNo = return (readPath dp, picNo)
+  | otherwise    = return (readPath fp, picNo)
+  where
+    (fp, ex) = splitExtension fp0
+    isHtml   = ex == ".html"
+    (dp, bn) = takeDirectory &&& takeFileName $ fp
+    picNo    = (\ i -> if i >= 0 then Just i else Nothing) $
+               bn ^. from isoPicNo
+
+-- --------------------
+
+parseImgGeoPath :: Geo -> FilePath -> Maybe (PageConfig, (Path, Maybe Int))
+parseImgGeoPath geo fp = do
+  p'i    <- parseImgPath fp
+  pconf <- lookupPageConfigs geo
+  return (pconf, p'i)
+
+-- --------------------
+--
+-- scotty url parser
+
+parseImgGeoPathPic :: FilePath -> Maybe (PageConfig, (Path, Maybe Int))
+parseImgGeoPathPic fp = do
+  (geo, fp1) <- parseGeoPath fp
+  parseImgGeoPath geo fp1
+
+-- --------------------
 
 isoPicNo :: Iso' Int String
 isoPicNo = iso toS frS
@@ -103,48 +146,7 @@ isoPicNo = iso toS frS
         _ -> -1
 
 -- ----------------------------------------
-
--- parse a .html url
-
-url2confPathNo :: FilePath -> Cmd (String, ColRefPath)
-url2confPathNo f =
-  case matchSubexRE pagePathExpr f of
-    [("config", config), ("path", path), ("no", no)] ->
-      return ( config
-             , ( path ^. from isoString
-               , Just $ read no
-               )
-             )
-    [("config", config), ("path", path)] ->
-      return ( config
-             , ( path ^. from isoString
-               , Nothing
-               )
-             )
-    _ -> abort $ "can't process document ref " ++ show f
-
--- ----------------------------------------
-
-url2confObjId :: FilePath -> Cmd (String, ColRef)
-url2confObjId f = do
-  (c, p) <- url2confPathNo f
-  mi     <- crPath2crObjId p
-  i      <- fromJustCmd ("no entry found for href " ++ show f) mi
-  return (c, i)
-
-{-
-url2objId :: FilePath -> Cmd ColRef
-url2objId f = snd <$> url2confObjId f
--}
-
--- convert a path ref into an object ref
-crPath2crObjId :: ColRefPath -> Cmd (Maybe ColRef)
-crPath2crObjId (p, cix) = do
-  i <- fst <$> getIdNode' p
-  normColRef (i, cix)
-
--- ----------------------------------------
-
+--
 -- normalize a colref
 -- if the result sub index is Nothing, the ref points to a collection
 -- else the ref points to an image
@@ -237,26 +239,36 @@ nextColRef = neighborColRef   1
 
 -- ----------------------------------------
 
--- the main entry for a HTML page
-
-genBlazeHtmlPage :: FilePath -> Cmd LazyText
-genBlazeHtmlPage p =
-  renderPage <$> genBlazeHtmlPage' p
-
 data PageType = IsCol | IsPic | IsTxt
 
-genBlazeHtmlPage' :: FilePath -> Cmd Html
-genBlazeHtmlPage' p = do
-  ( pageConf,
-    this'cr@(this'i, pos)) <- url2confObjId p
+-- ----------------------------------------
+--
+-- the main entry for a HTML page scotty variant
 
-  (geo1, geo2, no'cols) <- fromJustCmd
-    ("can't find config for " ++ show pageConf)
-    (lookup pageConf thePageConfigs)
+genBlazeHtmlPage :: FilePath -> Cmd LazyText
+genBlazeHtmlPage f
+  | Just (pconf, colref) <- parseImgGeoPathPic f =
+      renderPage <$> genBlazeHtmlPage' pconf colref
+  | otherwise =
+      abort $ "genBlazeHtmlPage: not found: " ++ show f
+
+-- ----------------------------------------
+--
+-- the main entry for the servant variant
+
+genBlazeHtmlPage' :: PageConfig -> ColRefPath -> Cmd Html
+genBlazeHtmlPage' (geo1, geo2, no'cols)
+                   (this'path, pos) = do
+  this'i <- fst <$> getIdNode' this'path
+
+  let this'cr = (this'i, pos)
+  let pageConf = "blaze-" ++ geo1 ^. theGeo . isoString
+  let p = "/" ++ pageConf ++
+          this'path ^. isoString ++
+          maybe "" (\ pos' -> "/" ++ pos' ^. isoPicNo) pos ++
+          ".html"
 
   theDate <- ((^. isoText) . show) <$> atThisMoment
-
-  -- pnp@(config, this'ref@(this'path, mno)) <- url2confPathNo p
 
   -- this entry
   this'type   <- colImgType               this'cr

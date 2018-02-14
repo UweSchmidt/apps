@@ -19,11 +19,14 @@ import Control.Exception (SomeException, catch) -- , try, toException)
 import Control.Concurrent.MVar
 import Control.Monad.ReaderStateErrIO (Msg(..))
 
+import Data.Maybe
 import System.Directory (doesFileExist)
 import System.Exit (die)
--- import System.FilePath (FilePath, (</>))
+-- import System.FilePath -- (FilePath, (</>))
 import System.IO (hPutStrLn, stderr, hFlush)
 
+import qualified Data.Text            as T
+import qualified Text.Blaze.Html      as Blaze
 import qualified Data.ByteString.Lazy as LBS
 
 import Data.Prim
@@ -31,8 +34,9 @@ import Data.ImgTree
 import Data.ImageStore (ImgStore)
 
 import Catalog.Cmd
-import Catalog.Options (mainWithArgs)
+import Catalog.Html.Blaze2
 import Catalog.JsonCommands
+import Catalog.Options (mainWithArgs)
 import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
 
 import API
@@ -123,7 +127,7 @@ catalogServer env runR runM =
     edit
   )
   :<|>
-  ( ttp2 blaze
+  ( blaze
     :<|>
     imgcopy
   )
@@ -134,7 +138,7 @@ catalogServer env runR runM =
   )
   where
     mountPath = env ^. envMountPath
-    static p = serveDirectoryWebApp (mountPath ++ p)
+    static p  = serveDirectoryWebApp (mountPath ++ p)
 
     bootstrap         = static "/bootstrap"
     assets'css        = static ps'css
@@ -142,10 +146,15 @@ catalogServer env runR runM =
     assets'javascript = static ps'javascript
     edit              = static "/edit.html"
 
-    blaze :: BlazeHTML -> Path -> Handler String
-    blaze (BlazeHTML (Geo' geo)) path
-      | checkExtPath ".html" path = return $ show (geo, path)
-      | otherwise                 = throwError err404
+    blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
+    blaze (BlazeHTML (Geo' geo)) ts =
+      case parseImgGeoPath geo fp of
+        Nothing ->
+          throwError err404
+        Just (pconf, colref) ->
+          runR $ genBlazeHtmlPage' pconf colref
+      where
+        fp = concatMap (('/' :) . (^. isoString)) ts
 
     imgcopy (GeoAR' geo) =
       imgcopy'archive geo

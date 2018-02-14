@@ -115,6 +115,8 @@ arRegex' =
 
 data GeoAR = GeoAR !Int !Int !AspectRatio
 
+deriving instance Eq   GeoAR
+deriving instance Ord  GeoAR
 deriving instance Show GeoAR
 
 instance IsoString GeoAR where

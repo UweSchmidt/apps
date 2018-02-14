@@ -29,6 +29,7 @@ executable catalog-servant
                      , monad-reader-state-err-io
                      , mtl
                      , servant
+                     , servant-blaze
                      , servant-server
                      , text
                      , wai
