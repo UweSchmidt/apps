@@ -6,29 +6,25 @@ module Main where
 import Prelude ()
 import Prelude.Compat
 
-import Control.Monad.Except
-import Network.Wai.Handler.Warp
-import Network.Wai.Logger       (withStdoutLogger)
-import Servant
-
--- import Text.Blaze.Html.Renderer.Utf8
-
-import Control.Concurrent.QSem
-import Control.Exception.Base (bracket_)
-import Control.Exception (SomeException, catch) -- , try, toException)
 import Control.Concurrent.MVar
+import Control.Concurrent.QSem
+import Control.Exception      (SomeException, catch) -- , try, toException)
+import Control.Exception.Base (bracket_)
+import Control.Monad.Except
 import Control.Monad.ReaderStateErrIO (Msg(..))
 
-import Data.Maybe
-import System.Directory (doesFileExist)
-import System.Exit (die)
--- import System.FilePath -- (FilePath, (</>))
-import System.IO (hPutStrLn, stderr, hFlush)
+import Network.Wai.Handler.Warp
+import Network.Wai.Logger     (withStdoutLogger)
 
-import qualified Data.Text            as T
+import Servant
+import System.Directory       (doesFileExist)
+import System.Exit            (die)
+import System.IO              (hPutStrLn, stderr, hFlush)
+
 import qualified Text.Blaze.Html      as Blaze
 import qualified Data.ByteString.Lazy as LBS
 
+-- catalog modules
 import Data.Prim
 import Data.ImgTree
 import Data.ImageStore (ImgStore)
@@ -36,9 +32,10 @@ import Data.ImageStore (ImgStore)
 import Catalog.Cmd
 import Catalog.Html.Blaze2
 import Catalog.JsonCommands
-import Catalog.Options (mainWithArgs)
+import Catalog.Options        (mainWithArgs)
 import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
 
+-- servant interface
 import API
 
 -- ----------------------------------------
@@ -162,10 +159,11 @@ catalogServer env runR runM =
         fp = mountPath ++ dirPath ++ "/" ++ n ^. isoString
 
     blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
-    blaze (BlazeHTML (Geo' geo)) ts =
+    blaze (BlazeHTML (Geo' geo)) ts = do
       case parseImgGeoPath geo fp of
         Nothing ->
-          throwError err404
+          throwError $
+          err404 { errBody = ("album page not found: " ++ fp) ^. from isoString }
         Just (pconf, colref) ->
           runR $ genBlazeHtmlPage' pconf colref
 
@@ -290,13 +288,12 @@ main = mainWithArgs "servant" $ \ env -> do
   -- create a semaphore for syncing log output
   sem  <- newQSem 0
   let env' = env & envLogOp .~ logCmd sem
-                 & envMountPath .~ "/Users/uwe/haskell/apps/catalog/data"
-                 & envJsonArchive .~ "catalog/photos.hashid.json"
-                 & envPort .~ 8081
 
   est  <- initState env'
   either die (main' env') est
   where
+    -- a log command that syncronizes
+    -- output of messages to stderr
     logCmd :: QSem -> (String -> IO ())
     logCmd sem s =
       bracket_ (waitQSem sem) (signalQSem sem)
@@ -343,11 +340,10 @@ runReadCmd env mvs cmd = do
   where
     runc = do
       store <- readMVar mvs
-      res <-
-        ((^. _1) <$> runAction cmd env store)
-        `catch`
-        -- TODO this still does not catch: error "some error"
-        (\ e -> return (Left . Msg . show $ (e :: SomeException)))
+      res <- ( (^. _1) <$> runAction cmd env store )
+             `catch`
+             -- TODO this still does not catch: error "some error"
+             (\ e -> return (Left . Msg . show $ (e :: SomeException)))
       return res
 
 runModyCmd :: Env -> MVar ImgStore -> MVar ImgStore -> Cmd a -> Handler a
@@ -357,12 +353,14 @@ runModyCmd env mvr mvm cmd = do
   where
     runc = do
       store <- takeMVar mvm
-      (res, new'store) <- runAction cmd env store
-
-      -- TODO try to catch: error "some error" like in runReadCmd
-
-      _old <- swapMVar mvr new'store
-      putMVar mvm new'store
+      res <- ( do
+                 (res', new'store) <- runAction cmd env store
+                 _old <- swapMVar mvr new'store
+                 putMVar mvm new'store
+                 return res'
+             )
+             `catch`
+             (\ e -> return (Left . Msg . show $ (e :: SomeException)))
       return res
 
 raise500 :: Msg -> Handler a

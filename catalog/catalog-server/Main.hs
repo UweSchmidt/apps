@@ -220,6 +220,10 @@ main' env state = do
       res <- runMody $ jsonRPC d
       json res
 
+    get "/server.json" $
+      mimeFile "application/json" $
+      ps'javascript ++ "/catalog-server.json"
+
     -- ----------------------------------------
     -- bootstrap routes
 

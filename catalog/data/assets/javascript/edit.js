@@ -4,6 +4,27 @@
 
 var openCollections = {};
 
+// ----------------------------------------
+//
+// server version is initialised in document ready event handler
+//
+// communication with scotty server and servant server differ
+// in the basic data transfer,
+
+var serverVersion = { "server"  : "unknown",
+                      "version" : "0.0.0.0",
+                      "date"    : "2000-00-00"
+                    };
+
+function getServerVersion () {
+    $.getJSON( "/server.json", function( data ) {
+        serverVersion = data;
+        console.log(JSON.stringify(serverVersion));
+    });
+}
+
+// ----------------------------------------
+
 // remove a collection
 function remCol(path) {
     console.log('remCol: ' + path);
@@ -2546,13 +2567,14 @@ function ignoreRes(res) {}
 
 function noop() {}
 
-
 // ----------------------------------------
 //
 // the "main" program
 // set the event handlers
 
 $(document).ready(function () {
+    getServerVersion();
+
     $('#collectionTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');

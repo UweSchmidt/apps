@@ -93,10 +93,9 @@ newtype BlazeHTML = BlazeHTML Geo'
 newtype Geo'      = Geo'      Geo
 newtype GeoAR'    = GeoAR'    GeoAR
 
+-- gen page for paths like "/blaze-1920x1200/archive/collections/photos.html""
 type BlazeAPI
   = Capture    "blaze" BlazeHTML :>
-    "archive"                    :>
-    "collections"                :>
     CaptureAll "path"  Text      :> Get '[HTML] Blaze.Html
 
 -- generate image copies (fix-123x456, pad-123x456, ...)
