@@ -107,9 +107,9 @@ matchCSS :: RoutePattern
 matchCSS = matchPath $ (ps'css ++ "/.*[.]css") ^. isoText
 
 matchHTML :: RoutePattern
-matchHTML = matchPath $ ps'html ^. isoText
+matchHTML = matchPath $ pshtml ^. isoText
   where
-    ps'html =
+    pshtml =
       "/html-[0-9]+x[0-9]+"
       ++
       ps'collections
@@ -117,9 +117,9 @@ matchHTML = matchPath $ ps'html ^. isoText
       "(/.*)?[.]html"
 
 matchBlazeHTML :: RoutePattern
-matchBlazeHTML = matchPath $ ps'html ^. isoText
+matchBlazeHTML = matchPath $ pshtml ^. isoText
   where
-    ps'html =
+    pshtml =
       "/blaze-[0-9]+x[0-9]+"
       ++
       ps'collections
@@ -200,11 +200,11 @@ main' env state = do
     -- default route
 
     get "/" $
-      mimeFile "text/html" "/edit.html"
+      mimeFile "text/html" $ ps'html ++ "/edit.html"
 
     -- the main page
     get "/edit.html" $
-      mimeFile "text/html" "/edit.html"
+      mimeFile "text/html" $ ps'html ++ "/edit.html"
 
     post "/get.json" $ do
       d   <- jsonData

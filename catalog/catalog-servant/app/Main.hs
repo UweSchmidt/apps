@@ -124,7 +124,7 @@ catalogServer env runR runM =
       assets'javascript
     )
     :<|>
-    edit
+    root'html
   )
   :<|>
   ( blaze
@@ -144,7 +144,22 @@ catalogServer env runR runM =
     assets'css        = static ps'css
     assets'icons      = static ps'icons
     assets'javascript = static ps'javascript
-    edit              = static "/edit.html"
+
+    -- root html files are located under /assets/html
+
+    root'html :: BaseName HTMLStatic -> Handler LazyByteString
+    root'html bn = staticFile ps'html bn
+
+    staticFile :: FilePath -> BaseName a -> Handler LazyByteString
+    staticFile dirPath (BaseName n) = do
+      ex <- liftIO $ doesFileExist fp
+      case ex of
+        False ->
+          throwError err404
+        True ->
+          liftIO (LBS.readFile fp)
+      where
+        fp = mountPath ++ dirPath ++ "/" ++ n ^. isoString
 
     blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
     blaze (BlazeHTML (Geo' geo)) ts =
@@ -153,6 +168,7 @@ catalogServer env runR runM =
           throwError err404
         Just (pconf, colref) ->
           runR $ genBlazeHtmlPage' pconf colref
+
       where
         fp = concatMap (('/' :) . (^. isoString)) ts
 
@@ -166,6 +182,7 @@ catalogServer env runR runM =
 
     imgcopy' :: GeoAR -> Path -> Handler LazyByteString
     imgcopy' geo path = do
+      -- TODO: write an url parser like in blaze handler
       let fp = path ^. isoString
       let isJpg = checkExtPath     ".jpg" path
       let isTxt = checkExtPath ".txt.jpg" path

@@ -73,6 +73,7 @@ ps'archive
   , ps'trash
   , ps'photos
   , ps'assets
+  , ps'html
   , ps'bootstrap
   , ps'icons
   , ps'iconsgen
@@ -91,6 +92,7 @@ ps'collections  = p'collections  ^. isoString
 ps'bycreatedate = p'bycreatedate ^. isoString
 ps'photos       = p'photos       ^. isoString
 ps'assets       = "/assets"
+ps'html         = ps'assets </> "html"
 ps'icons        = ps'assets </> "icons"
 ps'iconsgen     = ps'cache ++ ps'icons  </> "generated"
 ps'blank        = ps'icons  </> "blank.jpg"

@@ -24,7 +24,7 @@ import Prelude.Compat
 -- import Data.Time.Calendar
 -- import GHC.Generics
 -- import Lucid
-import Network.HTTP.Media ((//)) -- , (/:))
+import Network.HTTP.Media ((//), (/:))
 -- import Network.Wai
 -- import Network.Wai.Handler.Warp
 import Servant
@@ -51,7 +51,7 @@ type CatalogAPI
       :<|>
       AssetsAPI
       :<|>
-      EditAPI
+      RootAPI
     )
     :<|>
     ( BlazeAPI
@@ -79,9 +79,9 @@ type AssetsAPI
       "javascript" :> Raw
     )
 
--- main page for catalog edit
-type EditAPI
-  = "edit.html" :> Raw
+-- root HTML pages (edit.html, index.html)
+type RootAPI
+  = Capture "root" (BaseName HTMLStatic) :> Get '[HTMLStatic] LazyByteString
 
 -- ----------------------------------------
 --
@@ -241,6 +241,20 @@ instance MimeRender JPEG LazyByteString where
 
 instance HasExt JPEG where
   theExt _ = ".jpg"
+
+-- --------------------
+
+data HTMLStatic
+
+instance Accept HTMLStatic where
+  contentType _ = "text" // "html" /: ("charset", "utf-8")
+
+instance MimeRender HTMLStatic LazyByteString where
+  mimeRender _ = id
+
+instance HasExt HTMLStatic where
+  theExt _ = ".html"
+
 
 -- ----------------------------------------
 
