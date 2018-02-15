@@ -80,8 +80,12 @@ type AssetsAPI
     )
 
 -- root HTML pages (edit.html, index.html)
+-- and server version
+
 type RootAPI
   = Capture "root" (BaseName HTMLStatic) :> Get '[HTMLStatic] LazyByteString
+    :<|>
+    "rpc.js" :> Get '[JSStatic] LazyByteString
 
 -- ----------------------------------------
 --
@@ -132,7 +136,7 @@ type ParamPost a r
 -- the query ops
 
 type JsonGetAPI
-  = "get-json" :>
+  = "get" :>
     ( "collection"   :> SimplePost ImgNodeP
       :<|>
       "isWriteable"  :> SimplePost Bool
@@ -161,7 +165,7 @@ type JsonGetAPI
 -- the modifying ops
 
 type JsonModifyAPI
-  = "modify-json" :>
+  = "modify" :>
     ( "saveblogsource"       :> ParamPost (Int, Text) ()
       :<|>
       "changeWriteProtected" :> ParamPost ([Int], Bool) ()
@@ -240,6 +244,21 @@ instance MimeRender JPEG LazyByteString where
 
 instance HasExt JPEG where
   theExt _ = ".jpg"
+
+-- ----------------------------------------
+--
+-- JSON static handler
+
+data JSStatic
+
+instance Accept JSStatic where
+  contentType _ = "application" // "json"
+
+instance MimeRender JSStatic LazyByteString where
+  mimeRender _ = id
+
+instance HasExt JSStatic where
+  theExt _ = ".js"
 
 -- --------------------
 

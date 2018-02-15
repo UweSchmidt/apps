@@ -39,6 +39,12 @@ import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
 import API
 
 -- ----------------------------------------
+
+serverVersion :: LazyByteString
+serverVersion =
+  "{ \"server\" : \"catalog-servant\", \"version\" : \"0.1.2.0\", \"date\" : \"2018-02-15\" }"
+
+-- ----------------------------------------
 --
 -- conversions of [Text] to Path
 
@@ -121,7 +127,10 @@ catalogServer env runR runM =
       assets'javascript
     )
     :<|>
-    root'html
+    ( root'html
+      :<|>
+      rpc'js
+    )
   )
   :<|>
   ( blaze
@@ -146,6 +155,12 @@ catalogServer env runR runM =
 
     root'html :: BaseName HTMLStatic -> Handler LazyByteString
     root'html bn = staticFile ps'html bn
+
+    rpc'js :: Handler LazyByteString
+    rpc'js = staticFile ps'javascript bn
+      where
+        bn :: BaseName JSStatic
+        bn = BaseName "rpc-servant.js"
 
     staticFile :: FilePath -> BaseName a -> Handler LazyByteString
     staticFile dirPath (BaseName n) = do

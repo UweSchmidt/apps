@@ -4,6 +4,7 @@
 
 var openCollections = {};
 
+/*
 // ----------------------------------------
 //
 // server version is initialised in document ready event handler
@@ -16,13 +17,18 @@ var serverVersion = { "server"  : "unknown",
                       "date"    : "2000-00-00"
                     };
 
-function getServerVersion () {
+function getServerVersion (cont) {
     $.getJSON( "/server.json", function( data ) {
         serverVersion = data;
         console.log(JSON.stringify(serverVersion));
+        cont();
     });
 }
 
+function initSystemCollections() {
+    getServerVersion(openSystemCollections());
+}
+*/
 // ----------------------------------------
 
 // remove a collection
@@ -2513,12 +2519,42 @@ function saveImgStore(text) {
 }
 
 // ----------------------------------------
-
+/*
 // http communication
 
 function callServer(getOrModify, fct, args, processRes, processNext) {
+    if (serverVersion.server === "catalog-servant") {
+        callServantServer(getOrModify, fct, args, processRes, processNext);
+    } else {
+        callScottyServer(getOrModify, fct, args, processRes, processNext);
+    }
+}
+
+// --------------------
+
+function callServantServer(getOrModify, fct, args, processRes, processNext) {
     var rpc = [fct, args];
-    console.log('callServer: ' + getOrModify);
+    console.log('callServantServer: ' + getOrModify);
+    console.log(rpc);
+    console.log(JSON.stringify(rpc));
+
+    $.ajax({
+        type: "POST",
+        url: "/" + getOrModify + '/' + fct,
+        data: JSON.stringify(args),
+        dataType: 'json'
+    }).done(function (res) {
+            processRes(res);
+    }).fail(function (err){
+        statusError(err.resposeText);
+    }).always(processNext);
+}
+
+// --------------------
+
+function callScottyServer(getOrModify, fct, args, processRes, processNext) {
+    var rpc = [fct, args];
+    console.log('callScottyServer: ' + getOrModify);
     console.log(rpc);
     console.log(JSON.stringify(rpc));
 
@@ -2537,6 +2573,9 @@ function callServer(getOrModify, fct, args, processRes, processNext) {
         statusError(err.resposeText);
     }).always(processNext);
 }
+ */
+
+// ----------------------------------------
 
 // make a query call to server
 
@@ -2573,8 +2612,6 @@ function noop() {}
 // set the event handlers
 
 $(document).ready(function () {
-    getServerVersion();
-
     $('#collectionTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
