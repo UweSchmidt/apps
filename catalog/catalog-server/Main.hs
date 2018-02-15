@@ -187,7 +187,8 @@ main' env state = do
   let runRead  = runReadCmd env mvRead
   let runMody  = runModyCmd env mvRead mvMody
 
-  let mimeFile = fileWithMime (env ^. envMountPath)
+  let mimeFile  = fileWithMime (env ^. envMountPath)
+  let text'html = "text/html;charset=utf-8"
 
   -- start scotty
   opts <- getOptions env
@@ -200,11 +201,14 @@ main' env state = do
     -- default route
 
     get "/" $
-      mimeFile "text/html" $ ps'html ++ "/edit.html"
+      mimeFile text'html $ ps'html ++ "/index.html"
 
-    -- the main page
+    get "/index.html" $
+      mimeFile text'html $ ps'html ++ "/index.html"
+
+    -- the edit page
     get "/edit.html" $
-      mimeFile "text/html" $ ps'html ++ "/edit.html"
+      mimeFile text'html $ ps'html ++ "/edit.html"
 
     post "/get.json" $ do
       d   <- jsonData
@@ -225,7 +229,7 @@ main' env state = do
             param "path" >>= mimeFile mty
           )
       [ ("js",           "text/javascript")
-      , ("html",         "text/html")
+      , ("html",         text'html)
       , ("css([.]map)?", "text/css")
       , ("svg",          "image/svg+xml")
       , ("ttf",          "application/x-font-ttf")
@@ -243,7 +247,7 @@ main' env state = do
             param "path" >>= mimeFile mty
           )
       [ ("js",   "text/javascript")
-      , ("html", "text/html")
+      , ("html", text'html)
       , ("css",  "text/css")
       , ("jpg",  "image/jpg")
       ]
@@ -297,7 +301,7 @@ main' env state = do
 
     -- the test page
     get "/test.html" $
-      mimeFile "text/html" "/test.html"
+      mimeFile text'html "/test.html"
 
     -- not found route
     get (matchPath ".*") $ do
