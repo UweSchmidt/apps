@@ -60,6 +60,8 @@ type CatalogAPI
     )
     :<|>
     JsonAPI
+    :<|>
+    ZipAPI
 
 -- ----------------------------------------
 --
@@ -86,6 +88,9 @@ type RootAPI
   = Capture "root" (BaseName HTMLStatic) :> Get '[HTMLStatic] LazyByteString
     :<|>
     "rpc.js" :> Get '[JSStatic] LazyByteString
+
+type ZipAPI
+  = "cache" :> "zip-cache" :> Raw
 
 -- ----------------------------------------
 --
@@ -137,29 +142,31 @@ type ParamPost a r
 
 type JsonGetAPI
   = "get" :>
-    ( "collection"   :> SimplePost ImgNodeP
+    ( "collection"    :> SimplePost ImgNodeP
       :<|>
-      "isWriteable"  :> SimplePost Bool
+      "isWriteable"   :> SimplePost Bool
       :<|>
-      "isRemovable"  :> SimplePost Bool
+      "isRemovable"   :> SimplePost Bool
       :<|>
-      "isSortable"   :> SimplePost Bool
+      "isSortable"    :> SimplePost Bool
       :<|>
-      "isCollection" :> SimplePost Bool
+      "isCollection"  :> SimplePost Bool
       :<|>
-      "iconref"      :> ParamPost GeoAR FilePath
+      "iconref"       :> ParamPost GeoAR FilePath
       :<|>
-      "blogcontents" :> ParamPost Int Text
+      "blogcontents"  :> ParamPost Int Text
       :<|>
-      "blogsource"   :> ParamPost Int Text
+      "blogsource"    :> ParamPost Int Text
       :<|>
-      "previewref"   :> ParamPost (Int, GeoAR) FilePath
+      "previewref"    :> ParamPost (Int, GeoAR) FilePath
       :<|>
-      "metadata"     :> ParamPost Int MetaData
+      "metadata"      :> ParamPost Int MetaData
       :<|>
-      "rating"       :> ParamPost Int Rating
+      "rating"        :> ParamPost Int Rating
       :<|>
-      "ratings"      :> SimplePost [Rating]
+      "ratings"       :> SimplePost [Rating]
+      :<|>
+      "zipcollection" :> SimplePost FilePath
     )
 
 -- the modifying ops
@@ -201,8 +208,6 @@ type JsonModifyAPI
       "syncExif"             :> SimplePost ()
       :<|>
       "newSubCols"           :> SimplePost ()
-      :<|>
-      "zipcollection"        :> SimplePost FilePath
     )
 
 -- ----------------------------------------

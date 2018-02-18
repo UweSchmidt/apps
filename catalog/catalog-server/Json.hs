@@ -143,6 +143,10 @@ jsonCall fct i n args =
       jl $ \ () ->
              read'ratings n
 
+    "zipcollection" ->
+      jl $ \ () ->
+             read'zipcollection i n
+
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->
       jl $ \ (ixs, ro) ->
@@ -239,10 +243,6 @@ jsonCall fct i n args =
     "newSubCols" ->
       jl $ \ () ->
              modify'newSubCols i
-
-    "zipcollection" ->
-      jl $ \ () ->
-             modify'zipcollection i n
 
     -- unimplemented operations
     _ -> mkER $ "illegal JSON RPC function: " <> fct

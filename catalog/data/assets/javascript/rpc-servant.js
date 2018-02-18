@@ -9,7 +9,7 @@ var serverVersion = { "server"  : "servant",
 
 // --------------------
 
-function callServer(getOrModify, fct, args, processRes, processNext) {
+function callServer(getOrModify, fct, args, processRes, processErr, processNext) {
     var rpc = [fct, args];
     var arg0 = args[0];
     var arg1 = args[1];
@@ -29,7 +29,22 @@ function callServer(getOrModify, fct, args, processRes, processNext) {
     }).done(function (res) {
         processRes(res);
     }).fail(function (err){
-        statusError(err.resposeText);
+        console.log("got server error");
+        console.log(err);
+        console.log(err.status);
+        if (err.status == 500) {
+            // internal server error
+            // remove name of the function raising the error
+            var msg = err.responseJSON || err.responseText;
+            console.log(msg);
+            processErr(msg.replace(/[^:]*: /, ""));
+        } else
+            if (err.status == 404) {
+                processErr("unimplemented server operation: " + fct);
+            } else {
+                processErr("server error: " + err.status +
+                           " when processing operation " + fct);
+            }
     }).always(processNext);
 }
 

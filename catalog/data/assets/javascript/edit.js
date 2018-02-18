@@ -1014,7 +1014,7 @@ function syncCollectionWithFilesystem(sync, path) {
     statusMsg('synchronizing collection with filesystem: ' + path);
     modifyServer1(sync, path, [],
                   function(log) {
-                      statusMsg('synchronizing on server side done');
+                      statusMsg('synchronizing collections on server side done');
                       // TODO: show log file in modal box
                       console.log(log);
                       checkAllColAreThere(true, false);
@@ -1038,9 +1038,9 @@ function exifCollectionWithFilesystem(path) {
 
     // start syncing on server side
     statusMsg('recomputing exif data for: ' + path);
-    readServer('syncExif', path,
+    modifyServer('syncExif', path, [],
                 function(log) {
-                    statusMsg('exif update done');
+                    statusMsg('recomputing exif data done');
                     console.log(log);
                 });
 }
@@ -2585,7 +2585,7 @@ function readServer(fct, path, processRes) {
 }
 
 function readServer1(fct, path, args, processRes) {
-    callServer("get", fct, [path, args], processRes, noop);
+    callServer("get", fct, [path, args], processRes, showError, noop);
 }
 
 // make a modifying call to server
@@ -2594,17 +2594,21 @@ function readServer1(fct, path, args, processRes) {
 // so most modifying ops are procedures, not functions
 
 function modifyServer(fct, path, args, processNext) {
-    callServer("modify", fct, [path, args], ignoreRes, processNext);
+    callServer("modify", fct, [path, args], ignoreRes, showError, processNext);
 }
 
 // a modify with a result, e.g. a log file of the operation
 function modifyServer1(fct, path, args, processRes) {
-    callServer("modify", fct, [path, args], processRes, noop);
+    callServer("modify", fct, [path, args], processRes, showError, noop);
 }
 
 function ignoreRes(res) {}
 
 function noop() {}
+
+function showError(err) {
+    statusError(err);
+}
 
 // ----------------------------------------
 //

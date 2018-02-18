@@ -9,7 +9,7 @@ var serverVersion = { "server"  : "scotty",
 
 // --------------------
 
-function callServer(getOrModify, fct, args, processRes, processNext) {
+function callServer(getOrModify, fct, args, processRes, processErr, processNext) {
     var rpc = [fct, args];
     console.log('callScottyServer: ' + getOrModify);
     console.log(rpc);
@@ -22,12 +22,12 @@ function callServer(getOrModify, fct, args, processRes, processNext) {
         dataType: 'json'
     }).done(function (res) {
         if (res.err) {
-            statusError(res.err);
+            processErr(res.err);
         } else {
             processRes(res);
         }
     }).fail(function (err){
-        statusError(err.resposeText);
+        processErr(err.resposeText);
     }).always(processNext);
 }
 

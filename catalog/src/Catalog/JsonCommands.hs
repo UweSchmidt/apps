@@ -19,7 +19,6 @@ module Catalog.JsonCommands
   , modify'sort
   , modify'syncCol
   , modify'syncExif
-  , modify'zipcollection
   , read'blogcontents
   , read'blogsource
   , read'collection
@@ -32,6 +31,7 @@ module Catalog.JsonCommands
   , read'previewref
   , read'rating
   , read'ratings
+  , read'zipcollection
   )
 where
 
@@ -388,12 +388,6 @@ modify'syncExif = forceSyncAllMetaData
 modify'newSubCols :: ObjId -> Cmd ()
 modify'newSubCols = syncCol' syncNewDirs
 
--- zip all .jpg images of a collection into a zip archive
--- and return the archive path
-
-modify'zipcollection :: ObjId -> ImgNode -> Cmd FilePath
-modify'zipcollection = zipCollection
-
 -- ----------------------------------------
 --
 -- command for quering the catalog
@@ -513,5 +507,11 @@ read'ratings n =
     f = colEntry (\ i' _ -> getR i') getR
       where
         getR i' = getRating <$> getImgVals i' theMetaData
+
+-- zip all .jpg images of a collection into a zip archive
+-- and return the archive path
+
+read'zipcollection :: ObjId -> ImgNode -> Cmd FilePath
+read'zipcollection = zipCollection
 
 -- ----------------------------------------

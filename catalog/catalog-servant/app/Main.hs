@@ -39,12 +39,6 @@ import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
 import API
 
 -- ----------------------------------------
-
-serverVersion :: LazyByteString
-serverVersion =
-  "{ \"server\" : \"catalog-servant\", \"version\" : \"0.1.2.0\", \"date\" : \"2018-02-15\" }"
-
--- ----------------------------------------
 --
 -- conversions of [Text] to Path
 
@@ -142,6 +136,9 @@ catalogServer env runR runM =
     :<|>
     json'modify
   )
+  :<|>
+  ziparchive
+
   where
     mountPath = env ^. envMountPath
     static p  = serveDirectoryWebApp (mountPath ++ p)
@@ -150,6 +147,7 @@ catalogServer env runR runM =
     assets'css        = static ps'css
     assets'icons      = static ps'icons
     assets'javascript = static ps'javascript
+    ziparchive        = static "/cache/zip-cache"
 
     -- root html files are located under /assets/html
 
@@ -245,6 +243,8 @@ catalogServer env runR runM =
       mkR2n read'rating
       :<|>
       mkR1n read'ratings
+      :<|>
+      mkM1  read'zipcollection
       where
 
     mkM1  = mkcmd1  runM
@@ -289,8 +289,6 @@ catalogServer env runR runM =
       mkM1i modify'syncExif
       :<|>
       mkM1i modify'newSubCols
-      :<|>
-      mkM1  modify'zipcollection
 
 -- ----------------------------------------
 --
