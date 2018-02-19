@@ -215,7 +215,9 @@ catalogServer env runR runM =
           liftIO (LBS.readFile imgPath)
 
     mkR0  = mkcmd0  runR
+--  mkR1  = mkcmd1  runR
     mkR1n = mkcmd1n runR
+    mkR2  = mkcmd2  runR
     mkR2i = mkcmd2i runR
     mkR2n = mkcmd2n runR
 
@@ -244,10 +246,10 @@ catalogServer env runR runM =
       :<|>
       mkR1n read'ratings
       :<|>
-      mkM1  read'zipcollection
+      mkR2  read'zipcollection
       where
 
-    mkM1  = mkcmd1  runM
+--  mkM1  = mkcmd1  runM
     mkM1i = mkcmd1i runM
     mkM2  = mkcmd2  runM
     mkM2i = mkcmd2i runM

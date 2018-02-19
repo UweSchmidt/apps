@@ -54,7 +54,7 @@ import Catalog.System.ExifTool
                           ( getMetaData
                           , forceSyncAllMetaData
                           )
-import Catalog.Zip        ( zipCollection )
+import Catalog.Zip        ( zipCollection1 )
 
 -- ----------------------------------------
 --
@@ -511,7 +511,7 @@ read'ratings n =
 -- zip all .jpg images of a collection into a zip archive
 -- and return the archive path
 
-read'zipcollection :: ObjId -> ImgNode -> Cmd FilePath
-read'zipcollection = zipCollection
+read'zipcollection :: GeoAR -> ObjId -> ImgNode -> Cmd FilePath
+read'zipcollection = zipCollection1
 
 -- ----------------------------------------

@@ -22,7 +22,10 @@ zipCollection' p = do
     (uncurry zipCollection) mbi
 
 zipCollection :: ObjId -> ImgNode -> Cmd FilePath
-zipCollection i e
+zipCollection = zipCollection1 geoar'org
+
+zipCollection1 :: GeoAR -> ObjId -> ImgNode -> Cmd FilePath
+zipCollection1 geo i e
   | isCOL e = do
       trcObj i "zipColl: create zip archive"
       p  <- objid2path i
@@ -43,7 +46,7 @@ zipCollection i e
 
       -- recursive traversal of the collection to create image copies
       trc $ "zipCollection: zip entries"
-      zipEntries archDir e
+      zipEntries geo archDir e
 
       -- create archive
       trc $ "zipCollection: zip archive " ++ archDir
@@ -59,8 +62,8 @@ zipCollection i e
       abort $  "zipCollection: not a collection"
 
 
-zipEntries :: FilePath -> ImgNode -> Cmd ()
-zipEntries px e =
+zipEntries :: GeoAR -> FilePath -> ImgNode -> Cmd ()
+zipEntries geoar px e =
   mapM_ (uncurry zipE) $ zip cs [0..]
   where
     cs :: [ColEntry]
@@ -78,13 +81,13 @@ zipEntries px e =
           trc $ "zipEntries: ln " ++ cpyPath ++ " " ++ lnk
           linkFile cpyPath lnk
             where
-              geo = geoar'org ^. isoString
+              geo = geoar ^. isoString
               lnk = px </> i' ++ ".jpg"
 
         zipC :: ObjId -> Cmd ()
         zipC oid = do
           createDir px'
-          getImgVal oid >>= zipEntries px'
+          getImgVal oid >>= zipEntries geoar px'
             where
               px' = px </> i'
 

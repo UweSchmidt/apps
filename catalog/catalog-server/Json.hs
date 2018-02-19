@@ -144,8 +144,12 @@ jsonCall fct i n args =
              read'ratings n
 
     "zipcollection" ->
-      jl $ \ () ->
-             read'zipcollection i n
+      jl $ \ fmt ->
+             case fmt ^. isoGeoAR of
+               Nothing ->
+                 abort $ "zipcollection: wrong image geometry value: " <> show fmt
+               Just geo ->
+                 read'zipcollection geo i n
 
     -- change the write protection for a list of collection entries
     "changeWriteProtected" ->

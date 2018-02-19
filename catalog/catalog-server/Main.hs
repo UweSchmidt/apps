@@ -219,11 +219,11 @@ main' env state = do
       d   <- jsonData
       res <- runMody $ jsonRPC d
       json res
-
+{-
     get "/rpc.js" $
       mimeFile "application/json" $
       ps'javascript ++ "/rpc-scotty.js"
-
+-}
     -- ----------------------------------------
     -- bootstrap routes
 

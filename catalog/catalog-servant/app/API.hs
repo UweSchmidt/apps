@@ -166,7 +166,7 @@ type JsonGetAPI
       :<|>
       "ratings"       :> SimplePost [Rating]
       :<|>
-      "zipcollection" :> SimplePost FilePath
+      "zipcollection" :> ParamPost GeoAR FilePath
     )
 
 -- the modifying ops
