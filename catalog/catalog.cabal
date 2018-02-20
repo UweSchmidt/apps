@@ -76,6 +76,7 @@ library
                    , mtl                  >= 2.2
                    , murmur-hash          >= 0.1
                    , optparse-applicative
+                   , megaparsec
                    , pureMD5              >= 2
                    , process
                    , scientific           >= 0.3

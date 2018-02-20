@@ -3,7 +3,9 @@
 module Catalog.FilePath where
 
 import Control.Applicative
-import Data.Prim
+import Data.Prim hiding (noneOf)
+import Text.Megaparsec
+import Text.Megaparsec.Char
 
 -- ----------------------------------------
 
@@ -21,9 +23,9 @@ fpToImgType :: FilePathConfig -> FilePath -> (NameImgType, Name)
 fpToImgType conf path =
   fromMaybe ((mkName path, IMGother), mempty) $
   foldr1 (<|>) $
-  map parse conf
+  map parse' conf
   where
-    parse (e, ty) =
+    parse' (e, ty) =
       partRes $  matchSubexRE e path
       where
 
@@ -169,5 +171,79 @@ imgExtExpr =
 
 pathToBreadCrump :: String -> String
 pathToBreadCrump = sed (const " \8594 ") "/" . drop 1
+
+-- ----------------------------------------
+
+type SP = Parsec () String
+
+pp :: SP a -> String -> Maybe a
+pp = parseMaybe
+
+-- parse a none empty path and return the reversed path
+-- so the head ist the file name, last is the top directory
+--
+-- fails for empty parses, e.g. for "/"
+
+pPath :: SP [String]
+pPath = do
+  ps <- filter (not . null) <$> many piece
+  case ps of
+    [] -> mzero
+    _  -> return $ reverse ps
+
+piece :: SP String
+piece = do
+  char '/' >> many (noneOf "/")
+
+-- split a file name into .-separated pieces
+-- return the reversed list of parts
+
+pExt :: SP [String]
+pExt = reverse <$> sepBy1 (some $ noneOf ".") (char '.')
+
+-- --------------------
+--
+-- split a path into dirPath, filename without extension and extension
+--
+-- pp (pPathExt (== "jpg")) "/xxx/yyy/abc.def.jpg"
+--    => Just ("/xxx/yyy","abc.def","jpg")
+
+pPathExt :: (String -> Bool) -> SP (String, String, String)
+pPathExt extPred = do
+  (fn : dp) <- pPath
+  case parseMaybe pExt fn of
+    Just (ex : n@(_ : _))
+      | extPred ex
+        -> return (revConcPath dp, revConcExt n, ex)
+    _   -> mzero
+
+-- split a path into dirPath, filename without last 2 extensions
+-- and the last 2 extension
+--
+-- pp (pPathExt2 (== "jpg") (== "def")) "/xxx/yyy/abc.def.jpg"
+--    => Just ("/yyy/xxx"],"abc","jpg","def")
+
+pPathExt2 :: (String -> Bool)
+          -> (String -> Bool)
+          -> SP (String, String, String, String)
+pPathExt2 extPred extPred2 = do
+  (fn : dp) <- pPath
+  case parseMaybe pExt fn of
+    Just (ex : (ex2 : n@(_ : _)))
+      | extPred  ex
+        &&
+        extPred2 ex2
+        -> return (revConcPath dp, revConcExt n, ex, ex2)
+    _   -> mzero
+
+
+-- --------------------
+
+revConcPath :: [String] -> String
+revConcPath = foldl (\ r p -> "/" ++ p ++ r) ""
+
+revConcExt :: [String] -> String
+revConcExt [] = ""
+revConcExt xs = foldl1 (\ r e -> e ++ "." ++ r) xs
 
 -- ----------------------------------------
