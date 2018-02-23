@@ -13,6 +13,8 @@ type FnameParser = FilePath -> Maybe (NameImgType, Name)
 
 type FilePathConfig' = [FnameParser]
 
+-- substitute for old config with regex parsers
+
 fpToImgType' :: (ImgType -> Bool)
              -> FilePathConfig'
              -> FilePath -> (NameImgType, Name)
@@ -22,6 +24,18 @@ fpToImgType' tp conf path =
   where
     defRes = ((mkName path, IMGother), mempty)
     parse' p = p path >>= matchPred (tp . snd . fst)
+
+filePathToImgType' :: FilePath -> NameImgType
+filePathToImgType' =
+  fst . fpToImgType' (const True) (toFilePathConfig' filePathConfig)
+
+filePathToExt' :: ImgType -> FilePath -> Name
+filePathToExt' ty =
+  snd . fpToImgType' (== ty) (toFilePathConfig' filePathConfig)
+
+-- --------------------
+--
+-- conversion of old FilePathConfig into new format
 
 toFilePathConfig' :: FilePathConfig -> FilePathConfig'
 toFilePathConfig' =
@@ -39,14 +53,6 @@ toFilePathConfig' =
               Just ((mkName base, ty), mkName ext)
             partRes _ =
               Nothing
-
-filePathToImgType' :: FilePath -> NameImgType
-filePathToImgType' =
-  fst . fpToImgType' (const True) (toFilePathConfig' filePathConfig)
-
-filePathToExt' :: ImgType -> FilePath -> Name
-filePathToExt' ty =
-  snd . fpToImgType' (== ty) (toFilePathConfig' filePathConfig)
 
 -- --------------------
 
@@ -229,8 +235,8 @@ joinLast xs x = xs ++ [x]
 
 -- --------------------
 
-splitPath :: String -> Maybe [String]
-splitPath = parseMaybe pPath
+splitAbsPath :: String -> Maybe [String]
+splitAbsPath = parseMaybe pPath
   where
     pPath :: SP [String]
     pPath = do
@@ -241,8 +247,8 @@ splitPath = parseMaybe pPath
 
     piece = char '/' >> many (noneOf "/")
 
-joinPath :: [String] -> String
-joinPath = concatMap ('/' :)
+joinAbsPath :: [String] -> String
+joinAbsPath = concatMap ('/' :)
 
 -- --------------------
 
@@ -276,8 +282,8 @@ joinExt = concat
 
 splitDirFileExt :: String -> Maybe (String, String, String)
 splitDirFileExt xs = do
-  (dp, fn) <- first joinPath <$> (splitPath xs >>= splitLast)
-  (bn, ex) <- first joinExt  <$> (splitExt  fn >>= splitLast)
+  (dp, fn) <- first joinAbsPath <$> (splitAbsPath xs >>= splitLast)
+  (bn, ex) <- first joinExt     <$> (splitExt     fn >>= splitLast)
   return (dp, bn, ex)
 
 
