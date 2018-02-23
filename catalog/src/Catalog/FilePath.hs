@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 -- | classify file names and compute a file type for a file name/path
 
 module Catalog.FilePath where
@@ -6,6 +7,7 @@ import Control.Applicative
 import Data.Prim hiding (noneOf)
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import Data.Void
 
 -- ----------------------------------------
 
@@ -32,6 +34,162 @@ filePathToImgType' =
 filePathToExt' :: ImgType -> FilePath -> Name
 filePathToExt' ty =
   snd . fpToImgType' (== ty) (toFilePathConfig' filePathConfig)
+
+filePathConfig' :: FilePathConfig'
+filePathConfig' =
+  map (uncurry toFC) conf
+  where
+    toFC ty sp fp =
+      toNIT <$> parseMaybe sp fp
+      where
+        toNIT (base, ext) = ((base, ty), ext)
+
+    mk1 :: SP String -> SP (Name, Name)
+    mk1 p = do
+      x1 <- p
+      return (mkName x1, mempty)
+
+    mk2 :: SP String -> SP String -> SP (Name, Name)
+    mk2 p1 p2 = do
+      (x1, x2) <- nameWithSuffix p1 p2
+      return (mkName x1, mkName x2)
+
+    bn = mk2 baseName
+
+    conf :: [(ImgType, SP (Name, Name))]
+    conf =
+      [ (IMGraw,    bn rawExt)
+      , (IMGimg,    bn imgExt)
+      , (IMGmeta,   bn xmpExt)
+      , (IMGdxo,    bn dxoExt)
+      , (IMGhugin,  bn ptoExt)
+      , (IMGjson,   bn jsonExt)
+      , (IMGdng,    bn dngExt)
+      , (IMGtxt,    bn txtExt)
+      , (IMGjpgdir, mk1 jpgdirName)
+      , (IMGimgdir, mk1 imgdirName)
+
+      , (IMGboring, mk1 boringName)
+      ]
+
+withExt :: SP String -> SP String -> SP (String, String)
+withExt = undefined
+
+parseExt :: [String] -> SP String
+parseExt = foldl1 (<|>) . map (\ s -> try $ string' s)
+
+rawExt, imgExt, xmpExt, dxoExt, ptoExt, jsonExt, dngExt, txtExt :: SP String
+
+rawExt  = parseExt [".nef", ".rw2"]
+imgExt  = parseExt [".png", ".tif", ".tiff", ".gif", ".ppm", ".pgm", ".pbm"]
+xmpExt  = parseExt [".xmp"]
+dxoExt  = parseExt $ map (++ ".dxo") [".nef", ".rw2", ".jpg"]
+ptoExt  = parseExt [".pto"]
+jsonExt = parseExt [".json"]
+dngExt  = parseExt [".dng"]
+txtExt  = parseExt [".txt", ".md"]
+
+geoExt :: SP String
+geoExt = ('.' :) <$> p'geo
+
+p'geo :: SP String
+p'geo =
+  (\ x y -> x ++ "x" ++ y) <$>
+  some digitChar <*>
+  (char 'x' *> some digitChar)
+
+
+baseName, imgdirName :: SP String
+
+baseName   = some (oneOf "-+._" <|> alphaNumChar)
+imgdirName = baseName
+
+jpgdirName, jpgdirPre :: SP String
+
+jpgdirName =             jpgdirName' (eof >> return "")
+jpgdirPre  = option "" $ jpgdirName' (string "/")
+
+jpgdirName' :: SP String -> SP String
+jpgdirName' eof' =
+  try ( do x1 <- string "srgb"
+           x2 <- many digitChar
+           x3 <- eof'
+           return (x1 ++ x2 ++ x3)
+      )
+  <|>
+  try ( do x1 <- string "srgb"
+           x2 <- option "" $ string "-bw"
+           x3 <- og
+           x4 <- eof'
+           return (x1 ++ x2 ++ x3 ++ x4)
+      )
+  <|>
+  try ( do x1 <- p'geo
+           x2 <- eof'
+           return (x1 ++ x2)
+      )
+  <|>
+  try ( do x1 <- foldl1 (<|>) $
+                 map (\ s -> try $ string s)
+                 ["small", "web", "bw", "jpg", "tif", "tiff", "dng", "dxo"]
+           x2 <- og
+           x3 <- eof'
+           return (x1 ++ x2 ++ x3)
+      )
+  where
+    og :: SP String
+    og = do x1 <- string "-" <|> return ""
+            x2 <- option "" $ try
+                  ( do x3 <- some digitChar
+                       x4 <- option "" $ try
+                             ( do x5 <- string "x"
+                                  x6 <- some digitChar
+                                  return (x5 ++ x6)
+                             )
+                       return (x3 ++ x4)
+                  )
+            return (x1 ++ x2)
+
+boringName :: SP String
+boringName =
+  ( (:) <$> char '.' <*> many anyChar )
+  <|>
+  ( (++) <$> string "tmp" <*> many anyChar)
+  <|>
+  ( withSuffix ( string "~"
+                 <|>
+                 (try $ string ".bak")
+                 <|>
+                 (try $ string ".old")
+               )
+  )
+
+-- --------------------
+--
+-- file path parsing combinators
+
+nameWithSuffix :: SP String -> SP String -> SP (String, String)
+nameWithSuffix np sp = do
+  (n, s) <- withSuffix' sp
+  case parseMaybe np n of
+    Just n' -> return (n', s)
+    _       -> mzero
+
+withSuffix :: SP String -> SP String
+withSuffix p = uncurry (++) <$> withSuffix' p
+
+withSuffix' :: SP String -> SP (String, String)
+withSuffix' p =
+  try ( do
+          ex <- p <* eof
+          return ("", ex)
+      )
+  <|>
+  ( do
+      c <- anyChar
+      (cs , ex) <- withSuffix' p
+      return (c : cs, ex)
+  )
 
 -- --------------------
 --
@@ -223,7 +381,7 @@ pathToBreadCrump = sed (const " \8594 ") "/" . drop 1
 --
 -- url pasers without regex matching
 
-type SP = Parsec () String
+type SP = Parsec Void String
 
 splitLast :: [a] -> Maybe ([a], a)
 splitLast [x]      = Just ([], x)
@@ -331,6 +489,9 @@ parseGeo' = parseMaybe pg
       return (Geo x y)
 
 -- --------------------
+
+toBool :: Maybe a -> Bool
+toBool = maybe False (const True)
 
 matchPred :: (a -> Bool) -> a -> Maybe a
 matchPred p x
