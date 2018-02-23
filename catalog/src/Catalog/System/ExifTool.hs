@@ -7,7 +7,7 @@ import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Catalog.System.IO
-import           Catalog.FilePath
+-- import           Catalog.FilePath
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImageStore
@@ -22,9 +22,10 @@ getExifTool    :: FilePath -> Cmd MetaData
 getExifTool f = do
   ex <- fileExist f
 
-  if ex && matchRE imgExtExpr f
+  if ex -- really neccesary? -- && matchRE imgExtExpr f
     then
-      ( do md <- (^. from isoString) <$> execExifTool ["-groupNames", "-json"] f
+      ( do md <- (^. from isoString) <$>
+                 execExifTool ["-groupNames", "-json"] f
            buildMetaData md
       )
       `catchError`
@@ -33,7 +34,7 @@ getExifTool f = do
           return mempty
       )
     else do
-      warn $ "exiftool: file not there: " ++ show f
+      warn $ "exiftool: file not found: " ++ show f
       return mempty
 
 execExifTool :: [String] -> FilePath -> Cmd String
@@ -138,14 +139,15 @@ syncMetaData' i ps = do
   when update $ do
     mapM_ (syncMD isRawMeta ip p) ps
 
-    -- if neither raw nor xmp there, collect meta from jpg files
+    -- if neither raw, png, ... nor xmp there, collect meta from jpg files
     unless (has (traverse . isA isRawMeta) ps) $
       mapM_ (syncMD isJpg ip p) ps
 
 syncMD :: (ImgPart -> Bool) ->
           Path -> FilePath -> ImgPart -> Cmd ()
 syncMD p ip fp pt =
-  when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]  -- parts used by exif tool
+  when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
+                        -- parts used by exif tool
     sp <- toFilePath (substPathName tn ip)
     verbose $ "syncMetaData: syncing with " ++ show sp
     m1 <- readMetaData fp
@@ -156,7 +158,7 @@ syncMD p ip fp pt =
     tn = pt ^. theImgName
 
 isRawMeta :: ImgPart -> Bool
-isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGmeta]
+isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGimg, IMGmeta]
 
 isJpg :: ImgPart -> Bool
 isJpg pt = pt ^. theImgType == IMGjpg

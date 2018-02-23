@@ -5,6 +5,7 @@ module Catalog.System.Convert
   ( getImageSize
   , getColImgSize
   , createImageCopy
+  , genImageFrom
   , genImage
   , genImageGeo
   , createImageFromTxt
@@ -94,6 +95,28 @@ genIcon path t = do
         (s2, s3) = splitAt len3 r2
 
 -- ----------------------------------------
+
+genImageFrom :: ImgType -> GeoAR -> String -> String -> Cmd FilePath
+
+genImageFrom IMGjpg geo src path =
+  fillCache geo src path createImageCopy
+
+genImageFrom IMGimg geo src path =
+  fillCache geo src path createImageCopy
+
+genImageFrom IMGtxt geo src path =
+  fillCache geo src path createImageFromTxt
+
+genImageFrom srcType _g  _s path =
+  abort $
+  unwords
+  [ "genImageFrom: unsupported media type"
+  ,  show srcType
+  , "for"
+  , show path
+  ]
+
+-- ----------------------------------------
 {- old stuff
 
 genImageFromTxt' :: FilePath -> Cmd FilePath
@@ -151,9 +174,15 @@ step1 rex url k
 step2 :: Regex -> GeoAR -> FilePath
       -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
       -> Cmd FilePath
-step2 rex geo path k = do
+step2 rex geo path genImg = do
+  genImg geo (objSrc rex path) path
+
+fillCache :: GeoAR -> FilePath -> FilePath
+      -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
+      -> Cmd FilePath
+fillCache geo srcPath path genImg = do
   mp <- view envMountPath
-  let src = mp ++ objSrc rex path
+  let src = mp ++ srcPath
   let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
   sx <- fileExist src
   if sx
@@ -167,7 +196,7 @@ step2 rex geo path k = do
       then
       ( do
           createDir $ takeDirectory dst
-          k geo dst src
+          genImg geo dst src
       )
       `catchError`      -- if the org image is broken
       ( const $ do      -- a "broken image" icon is generated
@@ -176,7 +205,7 @@ step2 rex geo path k = do
             fromMaybe ps'blank <$>
             genAssetIcon "brokenImage" "broken\nimage"
           warn $ "generate a substitute: " ++ show broken
-          step2 rex geo broken createImageCopy
+          fillCache geo broken broken createImageCopy
       )
       else
       return dst
@@ -189,56 +218,6 @@ notThere url =
   where
     msg = "image not found: " ++ url
 
--- --------------------
-{-
-genImage'' :: FilePath -> Cmd FilePath
-genImage'' = genImage' createImageCopy (objPath2Geo imgPathExpr) (objSrc imgSrcExpr)
-
-genImage' :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
-             (FilePath -> Maybe (GeoAR, FilePath)) ->
-             (FilePath -> FilePath) ->
-             FilePath -> Cmd FilePath
-genImage' createImageC imgPath2Geo imgSrc url = do
-  maybe (notThere url)
-        (doit createImageC imgSrc url)
-        (imgPath2Geo url)
-
-doit :: (GeoAR -> FilePath -> FilePath -> Cmd FilePath) ->
-        (FilePath -> FilePath) ->
-        FilePath ->
-        (GeoAR, FilePath) -> Cmd FilePath
-doit createImg imgSrc url (geo, path) = do
-        mp <- view envMountPath
-        let src = mp ++ imgSrc path
-        let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
-        sx <- fileExist src
-        if sx
-          then do
-            dx <- fileExist dst
-            dw <- if dx
-                  then getModiTime dst
-                  else return mempty
-            sw <- getModiTime src
-            if dw <= sw
-              then
-                ( do
-                    createDir $ takeDirectory dst
-                    createImg geo dst src
-                  )
-                  `catchError`      -- if the org image is broken
-                  ( const $ do      -- a "broken image" icon is generated
-                      warn $ "image couldn't be converted or resized: " ++ show url
-                      broken <-
-                        fromMaybe ps'blank <$>
-                        genAssetIcon "brokenImage" "broken\nimage"
-                      warn $ "generate a substitute: " ++ show broken
-                      doit createImageCopy imgSrc url (geo, broken)
-                  )
-              else
-                return dst
-          else
-            notThere url
--}
 -- ----------------------------------------
 
 objPath2Geo :: Regex -> FilePath -> Maybe (GeoAR, FilePath)
@@ -305,8 +284,8 @@ createImageFromTxt d'geo d s =
       trc $ unwords ["createImageFromTxt:", show d'geo, d, s, str]
       icon <-
         fromMaybe ps'blank <$>
-        genAssetIcon (sed (const "_") "[ /$]" s) str
-      genImage $ "/" ++ d'geo ^. isoString ++ icon
+        genAssetIcon (sed (const "_") "[ /$]" $ dropWhile (== '.') s) str
+      genImageFrom IMGjpg d'geo icon icon
 
     cleanup :: Text -> Text
     cleanup = T.dropWhile (not . isAlphaNum)
@@ -407,9 +386,11 @@ buildCmd3 rotate d'g s'geo d s
     cmdArgs
         | isPad         = resize1
                           ++ [ "-background", "'#333333'" ]
-                       -- ++ [ "-size", show (2*w) ++ "x" ++ show (2*h) ] -- this gives too low quality
+                       -- ++ [ "-size", show (2*w) ++ "x" ++ show (2*h) ]
+                       -- this gives too low quality
                           ++ [ s, d ]
-        | isCrop        = [ "-crop", show cw ++ "x" ++ show ch ++ "+" ++ show xoff ++ "+" ++ show yoff
+        | isCrop        = [ "-crop", show cw ++ "x" ++ show ch ++ "+" ++
+                            show xoff ++ "+" ++ show yoff
                           , s, "miff:-"
                           , "|"
                           , "convert"
@@ -450,7 +431,8 @@ cropGeo (Geo sw sh) (Geo dw dh)
     xoff = (sw - sw') `div` 2           -- cut off left and right parts
     sh'  = dh * sw `div` dw
     yoff = (sh - sh') `div` 3           -- cut off 1/3 from top and 2/3 from bottom
-                                        -- else important parts like heads are cut off (Ouch!!)
+                                        -- else important parts like heads
+                                        -- are cut off (Ouch!!)
 
 -- ----------------------------------------
 

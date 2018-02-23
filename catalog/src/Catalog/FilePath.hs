@@ -9,6 +9,47 @@ import Text.Megaparsec.Char
 
 -- ----------------------------------------
 
+type FnameParser = FilePath -> Maybe (NameImgType, Name)
+
+type FilePathConfig' = [FnameParser]
+
+fpToImgType' :: (ImgType -> Bool)
+             -> FilePathConfig'
+             -> FilePath -> (NameImgType, Name)
+fpToImgType' tp conf path =
+  fromMaybe defRes $
+  foldl1 (<|>) $ map parse' conf
+  where
+    defRes = ((mkName path, IMGother), mempty)
+    parse' p = p path >>= matchPred (tp . snd . fst)
+
+toFilePathConfig' :: FilePathConfig -> FilePathConfig'
+toFilePathConfig' =
+  map toCF'
+  where
+    toCF' :: (Regex, ImgType) -> FnameParser
+    toCF' (rex, ty) = parse'
+      where
+        parse' fn' =
+          partRes $  matchSubexRE rex fn'
+          where
+            partRes [("1", base)] =
+              Just ((mkName base, ty), mempty)
+            partRes [("1", base), ("2", ext)] =
+              Just ((mkName base, ty), mkName ext)
+            partRes _ =
+              Nothing
+
+filePathToImgType' :: FilePath -> NameImgType
+filePathToImgType' =
+  fst . fpToImgType' (const True) (toFilePathConfig' filePathConfig)
+
+filePathToExt' :: ImgType -> FilePath -> Name
+filePathToExt' ty =
+  snd . fpToImgType' (== ty) (toFilePathConfig' filePathConfig)
+
+-- --------------------
+
 type FilePathConfig = [(Regex, ImgType)]
 
 filePathToImgType :: FilePath -> NameImgType
@@ -102,7 +143,7 @@ filePathConfig = map (first parseRegexExt) $
       [ "[.].*"
       , ".*~"
       , "tmp.*"
-      , ".*[.](bak|old|tiff|dng)"
+      , ".*[.](bak|old)"
       ]
 
 jpgExt :: String
@@ -165,7 +206,7 @@ objSrc oex p =
 
 imgExtExpr :: Regex
 imgExtExpr =
-  parseRegex ".*[.](nef|NEF||rw2|RW2|dng|DNG|jpg|JPG|xmp|XMP)"
+  parseRegex ".*[.](nef|NEF||rw2|RW2|dng|DNG|png|PNG|jpg|JPG|xmp|XMP)"
 
 -- ----------------------------------------
 
@@ -173,77 +214,124 @@ pathToBreadCrump :: String -> String
 pathToBreadCrump = sed (const " \8594 ") "/" . drop 1
 
 -- ----------------------------------------
+--
+-- url pasers without regex matching
 
 type SP = Parsec () String
 
-pp :: SP a -> String -> Maybe a
-pp = parseMaybe
+splitLast :: [a] -> Maybe ([a], a)
+splitLast [x]      = Just ([], x)
+splitLast (x : xs) = first (x:) <$> splitLast xs
+splitLast []       = Nothing
 
--- parse a none empty path and return the reversed path
--- so the head ist the file name, last is the top directory
---
--- fails for empty parses, e.g. for "/"
-
-pPath :: SP [String]
-pPath = do
-  ps <- filter (not . null) <$> many piece
-  case ps of
-    [] -> mzero
-    _  -> return $ reverse ps
-
-piece :: SP String
-piece = do
-  char '/' >> many (noneOf "/")
-
--- split a file name into .-separated pieces
--- return the reversed list of parts
-
-pExt :: SP [String]
-pExt = reverse <$> sepBy1 (some $ noneOf ".") (char '.')
-
--- --------------------
---
--- split a path into dirPath, filename without extension and extension
---
--- pp (pPathExt (== "jpg")) "/xxx/yyy/abc.def.jpg"
---    => Just ("/xxx/yyy","abc.def","jpg")
-
-pPathExt :: (String -> Bool) -> SP (String, String, String)
-pPathExt extPred = do
-  (fn : dp) <- pPath
-  case parseMaybe pExt fn of
-    Just (ex : n@(_ : _))
-      | extPred ex
-        -> return (revConcPath dp, revConcExt n, ex)
-    _   -> mzero
-
--- split a path into dirPath, filename without last 2 extensions
--- and the last 2 extension
---
--- pp (pPathExt2 (== "jpg") (== "def")) "/xxx/yyy/abc.def.jpg"
---    => Just ("/yyy/xxx"],"abc","jpg","def")
-
-pPathExt2 :: (String -> Bool)
-          -> (String -> Bool)
-          -> SP (String, String, String, String)
-pPathExt2 extPred extPred2 = do
-  (fn : dp) <- pPath
-  case parseMaybe pExt fn of
-    Just (ex : (ex2 : n@(_ : _)))
-      | extPred  ex
-        &&
-        extPred2 ex2
-        -> return (revConcPath dp, revConcExt n, ex, ex2)
-    _   -> mzero
-
+joinLast :: [a] -> a -> [a]
+joinLast xs x = xs ++ [x]
 
 -- --------------------
 
-revConcPath :: [String] -> String
-revConcPath = foldl (\ r p -> "/" ++ p ++ r) ""
+splitPath :: String -> Maybe [String]
+splitPath = parseMaybe pPath
+  where
+    pPath :: SP [String]
+    pPath = do
+      ps <- filter (not . null) <$> many piece
+      case ps of
+        [] -> mzero
+        _  -> return ps
 
-revConcExt :: [String] -> String
-revConcExt [] = ""
-revConcExt xs = foldl1 (\ r e -> e ++ "." ++ r) xs
+    piece = char '/' >> many (noneOf "/")
+
+joinPath :: [String] -> String
+joinPath = concatMap ('/' :)
+
+-- --------------------
+
+-- split a filename into basename and list of extensions
+--
+-- splitExt "abc.def"     -> Just ["abc", ".def"]
+-- splitExt "abc.def.ghi" -> Just ["abc", ".def", ".ghi"]
+-- splitExt "abc"         -> Nothing
+-- splitExt "abc"         -> Nothing
+-- splitExt ".iii"        -> Nothing
+-- splitExt "abc..ii"     -> Nothing
+
+splitExt :: String -> Maybe [String]
+splitExt = parseMaybe pExt
+  where
+    pExt :: SP [String]
+    pExt = do
+      p1 <- part
+      ps <- some ext
+      return (p1 : ps)
+
+    part = some $ noneOf "."
+    ext  = ('.' :) <$> (char '.' >> part)
+
+joinExt :: [String] -> String
+joinExt = concat
+
+-- splitDirFileExt "/xxx/abc.jpg" -> Just ("/xxx","abc",".jpg")
+-- splitDirFileExt "/abc.jpg"     -> Just ("","abc",".jpg")
+-- splitDirFileExt "/abc.txt.jpg" -> Just ("","abc.txt",".jpg")
+
+splitDirFileExt :: String -> Maybe (String, String, String)
+splitDirFileExt xs = do
+  (dp, fn) <- first joinPath <$> (splitPath xs >>= splitLast)
+  (bn, ex) <- first joinExt  <$> (splitExt  fn >>= splitLast)
+  return (dp, bn, ex)
+
+
+-- splitDirFileExt2 "/abc.txt.jpg" -> Just ("","abc",".jpg",".txt")
+-- splitDirFileExt2 "/abc.jpg"     -> Nothing
+
+splitDirFileExt2 :: String -> Maybe (String, String, String, String)
+splitDirFileExt2 xs = do
+  (dp, fn, ex1) <- splitDirFileExt xs
+  (bn, ex2)     <- first joinExt <$> (splitExt fn >>= splitLast)
+  return (dp, bn, ex2, ex1)
+
+matchExt :: ImgType -> String -> String -> Maybe ImgType
+matchExt ty ex xs = matchPred (eqNoCase ex) xs >> return ty
+
+matchExts :: ImgType -> [String] -> String -> Maybe ImgType
+matchExts ty exs xs = matchPred (\ ys -> any (eqNoCase ys) exs) xs >> return ty
+
+extImg, extJpg, extRaw, extDng, extTxt,
+  extXmp, extDxO, extPto,
+  extJson :: String -> Maybe ImgType
+
+extImg  = matchExts IMGimg  [".png", ".gif", ".tif", ".tiff", ".ppm", ".pgm", ".pbm"]
+extJpg  = matchExt  IMGjpg   ".jpg"
+extTxt  = matchExts IMGtxt  [".txt", ".md"]
+extRaw  = matchExts IMGraw  [".nef", ".rw2"]
+extDng  = matchExt  IMGdng   ".dng"
+extXmp  = matchExt  IMGmeta  ".xmp"
+extDxO  = matchExt  IMGdxo   ".dxo"
+extPto  = matchExt  IMGhugin ".pto"
+extJson = matchExt  IMGjson  ".json"
+
+extGeo :: String -> Maybe Geo
+extGeo ('.' : xs') = parseGeo' xs'
+extGeo _           = mzero
+
+parseGeo' :: String -> Maybe Geo
+parseGeo' = parseMaybe pg
+  where
+    pg :: SP Geo
+    pg = do
+      x <- read <$> some digitChar
+      _ <- char 'x'
+      y <- read <$> some digitChar
+      return (Geo x y)
+
+-- --------------------
+
+matchPred :: (a -> Bool) -> a -> Maybe a
+matchPred p x
+  | p x       = Just x
+  | otherwise = Nothing
+
+eqNoCase :: String -> String -> Bool
+eqNoCase = (==) `on` map toLower
 
 -- ----------------------------------------

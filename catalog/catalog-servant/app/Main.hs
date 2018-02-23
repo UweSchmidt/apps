@@ -30,10 +30,11 @@ import Data.ImgTree
 import Data.ImageStore (ImgStore)
 
 import Catalog.Cmd
+import Catalog.FilePath
 import Catalog.Html.Blaze2
 import Catalog.JsonCommands
 import Catalog.Options        (mainWithArgs)
-import Catalog.System.Convert (genImageGeo, genImageFromTxtGeo)
+import Catalog.System.Convert (genImageFrom, genImageGeo, genImageFromTxtGeo)
 
 -- servant interface
 import API
@@ -193,26 +194,45 @@ catalogServer env runR runM =
 
     imgcopy' :: GeoAR -> Path -> Handler LazyByteString
     imgcopy' geo path = do
-      -- TODO: write an url parser like in blaze handler
-      let fp = path ^. isoString
-      let isJpg = checkExtPath     ".jpg" path
-      let isTxt = checkExtPath ".txt.jpg" path
-                  ||
-                  checkExtPath  ".md.jpg" path
+      let fp  = path ^. isoString
+      let parsePath =
+            -- generate an icon for a text file
+            -- "/photos/.../index.md.jpg"
+            --
+            -- or for a none jpg image file, e.g.
+            -- "/photos/.../index.png.jpg"
+            ( do (dn, bn, ex2, ex1) <- splitDirFileExt2 fp
+                 _IMGjpg <- extJpg ex1
+                 let fp' = dn </> bn ++ ex2
+                 ( do srcType <- extTxt ex2
+                      return (srcType, fp')
+                   )
+                   <|>
+                   ( do srcType <- extImg ex2
+                        return (srcType, fp')
+                   )
+            )
+            <|>
+            -- generate a jpg copy from a jpg source
+            -- the usual case
+            ( do (dn, bn, ex) <- splitDirFileExt fp
+                 jpgType <- extJpg ex
+                 return (jpgType, fp)
+            )
+
+      let (srcType, srcPath) =
+            fromMaybe (IMGother, fp) parsePath
       ex <- liftIO $
-            doesFileExist $ mountPath ++ fp
-      case ex && isJpg of
-        False ->
+            doesFileExist $ mountPath ++ srcPath
+
+      if ex && srcType /= IMGother
+        then do
+          imgPath <- runR $
+                     genImageFrom srcType geo srcPath fp
+          liftIO (LBS.readFile imgPath)
+        else
           throwError $
           err404 { errBody = ("image not found: " ++ fp) ^. from isoString }
-        True -> do
-          imgPath <- runR
-                     ( ( if isTxt
-                         then genImageFromTxtGeo
-                         else genImageGeo
-                       ) geo fp
-                     )
-          liftIO (LBS.readFile imgPath)
 
     mkR0  = mkcmd0  runR
 --  mkR1  = mkcmd1  runR

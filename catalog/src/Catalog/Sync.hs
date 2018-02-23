@@ -257,7 +257,7 @@ collectDirCont i = do
   -- trcObj i "collectDirCont: group entries in dir "
   fp <- objid2path i >>= toFilePath
   es <- parseDirCont fp
-  -- trc $ "collectDirCont: entries found " ++ show es
+  trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
         partition (hasImgType (== IMGother)) es
