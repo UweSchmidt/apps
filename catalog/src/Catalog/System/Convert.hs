@@ -9,8 +9,8 @@ module Catalog.System.Convert
   , genImage
   , genImageGeo
   , createImageFromTxt
-  , genImageFromTxt
-  , genImageFromTxtGeo
+  -- , genImageFromTxt
+  -- , genImageFromTxtGeo
   , genIcon
   , genAssetIcon
   , genBlogText
@@ -109,12 +109,11 @@ genImageFrom IMGtxt geo src path =
 
 genImageFrom srcType _g  _s path =
   abort $
-  unwords
-  [ "genImageFrom: unsupported media type"
-  ,  show srcType
-  , "for"
-  , show path
-  ]
+  unwords [ "genImageFrom: unsupported media type"
+          ,  show srcType
+          , "for"
+          , show path
+          ]
 
 -- ----------------------------------------
 {- old stuff
@@ -142,6 +141,9 @@ genImage url = step1 imgPathExpr url k1
 genImageGeo :: GeoAR -> FilePath -> Cmd FilePath
 genImageGeo geo path = step2 imgSrcExpr geo path createImageCopy
 
+-- --------------------
+-- {- used by in catalog-server
+
 -- example:              "/fix-160x120/archive/photos/index.md.jpg"
 --
 -- dst img is            "mountPath/cache/fix-160x120/photos/index.md.jpg"
@@ -155,9 +157,15 @@ genImageFromTxt url = step1 txtPathExpr url k1
 genImageFromTxtGeo :: GeoAR -> FilePath -> Cmd FilePath
 genImageFromTxtGeo geo path = step2 txtSrcExpr geo path createImageFromTxt
 
+-- -}
+-- --------------------
+
 -- --------------------
 --
 -- parse the geometry part of an url
+
+-- --------------------
+-- {- used by in catalog-server
 
 step1 :: Regex -> FilePath
       -> (GeoAR -> FilePath -> Cmd FilePath)
@@ -176,6 +184,9 @@ step2 :: Regex -> GeoAR -> FilePath
       -> Cmd FilePath
 step2 rex geo path genImg = do
   genImg geo (objSrc rex path) path
+
+-- -}
+-- --------------------
 
 fillCache :: GeoAR -> FilePath -> FilePath
       -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)

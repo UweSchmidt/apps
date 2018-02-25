@@ -348,6 +348,8 @@ jpgPath = "/.*" ++ jpgExt
 -- if new IMGimg or IMGtxt extensions are added, these regex
 -- must be updated
 
+-- {- used by in catalog-server
+
 txtSrcExpr :: Regex
 txtSrcExpr =
   parseRegexExt txtpathRE
@@ -383,6 +385,8 @@ topdirRE = "({topdir}/[^/]+)"
 
 txtpathRE :: String
 txtpathRE = "({path}/.*[.](txt|md))"
+
+-- -}
 
 -- extract the path component from a file path
 
