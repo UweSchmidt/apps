@@ -34,7 +34,7 @@ import Catalog.FilePath
 import Catalog.Html.Blaze2
 import Catalog.JsonCommands
 import Catalog.Options        (mainWithArgs)
-import Catalog.System.Convert (genImageFrom, genImageGeo, genImageFromTxtGeo)
+import Catalog.System.Convert (genImageFrom)
 
 -- servant interface
 import API

@@ -10,7 +10,7 @@ import Data.MetaData
 import Data.Prim
 
 import Catalog.Cmd
-import Catalog.FilePath       ( jpgPath )
+import Catalog.FilePath       ( addJpg )
 import Catalog.Journal        ( Journal'(SaveBlogText) )
 import Catalog.System.Convert ( genAssetIcon
                               , genBlogText
@@ -97,24 +97,6 @@ colImgRef :: ObjId -> Cmd FilePath
 colImgRef i = do
   p <- colImgPath (i, Nothing)
   maybe (iconRef i) return p
-
--- ----------------------------------------
-
-buildImgPath0 :: ObjId -> Name -> Cmd FilePath
-buildImgPath0 i n = do
-  p <- objid2path i
-  return $ substPathName n p ^. isoString
-
-buildImgPath :: ObjId -> Name -> Cmd FilePath
-buildImgPath i n = addJpg <$> buildImgPath0 i n
-
-addJpg :: FilePath -> FilePath
-addJpg f
-  | isJPG f   = f
-  | otherwise = f ++ ".jpg"
-    -- if the image isn't a .jpg (.png, .gif, ...) then a .jpg is added
-  where
-    isJPG = match jpgPath
 
 -- ----------------------------------------
 

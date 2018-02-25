@@ -41,8 +41,7 @@ import Data.ImgTree
 import Data.MetaData
 
 import Catalog.Cmd
-import Catalog.Html.Basic ( buildImgPath
-                          , colImgRef
+import Catalog.Html.Basic ( colImgRef
                           , getColBlogSource
                           , putColBlogSource
                           , getColBlogCont

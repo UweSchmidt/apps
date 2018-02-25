@@ -5,8 +5,8 @@ module Catalog.Zip
 where
 
 import Catalog.Cmd
-import Catalog.Html.Basic     ( buildImgPath )
 import Catalog.System.Convert ( genImage )
+
 import Data.ImageStore
 import Data.ImgTree
 import Data.Prim
@@ -76,12 +76,10 @@ zipEntries geoar px e =
 
         zipI :: ObjId -> Name -> Cmd ()
         zipI oid n = do
-          srcPath <- buildImgPath oid n
-          cpyPath <- genImage $ "/" ++ geo ^. isoString ++ srcPath
+          cpyPath  <- genImage geoar oid n
           trc $ "zipEntries: ln " ++ cpyPath ++ " " ++ lnk
           linkFile cpyPath lnk
             where
-              geo = geoar ^. isoString
               lnk = px </> i' ++ ".jpg"
 
         zipC :: ObjId -> Cmd ()

@@ -504,9 +504,16 @@ extDxO  = matchExt  IMGdxo   ".dxo"
 extPto  = matchExt  IMGhugin ".pto"
 extJson = matchExt  IMGjson  ".json"
 
+addJpg :: String -> String
+addJpg fn
+  | toBool (extJpg fn) = fn
+  | otherwise          = fn ++ ".jpg"
+
 extGeo :: String -> Maybe Geo
 extGeo ('.' : xs') = parseGeo' xs'
 extGeo _           = mzero
+
+-- TODO: cleanup too many parseGeo's
 
 parseGeo' :: String -> Maybe Geo
 parseGeo' = parseMaybe pg

@@ -9,6 +9,7 @@ module Catalog.Cmd.Basic
 where
 
 import           Catalog.Cmd.Types
+import           Catalog.FilePath  (addJpg)
 import           Catalog.Journal
 import           Data.ImageStore
 import           Data.ImgTree
@@ -430,5 +431,15 @@ toJournalPath :: Journal -> Cmd (Journal' Path)
 toJournalPath j = dt >>= go
   where
     go t = return ((`refPath` t) <$> j)
+
+-- ----------------------------------------
+
+buildImgPath0 :: ObjId -> Name -> Cmd FilePath
+buildImgPath0 i n = do
+  p <- objid2path i
+  return $ substPathName n p ^. isoString
+
+buildImgPath :: ObjId -> Name -> Cmd FilePath
+buildImgPath i n = addJpg <$> buildImgPath0 i n
 
 -- ----------------------------------------

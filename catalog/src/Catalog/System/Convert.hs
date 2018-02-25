@@ -7,10 +7,7 @@ module Catalog.System.Convert
   , createImageCopy
   , genImageFrom
   , genImage
-  , genImageGeo
   , createImageFromTxt
-  -- , genImageFromTxt
-  -- , genImageFromTxtGeo
   , genIcon
   , genAssetIcon
   , genBlogText
@@ -26,6 +23,7 @@ import           Catalog.Cmd
 import           Catalog.FilePath
 import           Catalog.System.ExifTool (getExifTool)
 import           Data.Prim
+import           Data.ImgNode
 import           Data.MetaData
 import qualified Data.Text as T
 -- import Debug.Trace
@@ -96,6 +94,15 @@ genIcon path t = do
 
 -- ----------------------------------------
 
+genImage :: GeoAR -> ObjId -> Name -> Cmd FilePath
+genImage geo oid nm = do
+  n       <- getImgVal oid
+  let ityp = fromMaybe IMGother $
+             n ^? theParts . isoImgPartsMap . ix nm . theImgType
+  srcPath <- buildImgPath oid nm
+  genImageFrom ityp geo srcPath (addJpg srcPath)
+
+
 genImageFrom :: ImgType -> GeoAR -> String -> String -> Cmd FilePath
 
 genImageFrom IMGjpg geo src path =
@@ -116,77 +123,6 @@ genImageFrom srcType _g  _s path =
           ]
 
 -- ----------------------------------------
-{- old stuff
-
-genImageFromTxt' :: FilePath -> Cmd FilePath
-genImageFromTxt' =
-  genImage' createImageFromTxt (objPath2Geo txtPathExpr) (objSrc txtSrcExpr)
--}
--- ----------------------------------------
-
--- generate an image of a given geometry from an original image
--- from the archive or assets
--- geometry is specified by the the first part of the url
---
--- example:             "/fix-160x120/archive/photos/pic-30.jpg"
---
--- dst img is           "mountPath/cache/fix-160x120/photos/pic-30.jpg"
--- org img is           "mountPath/photo/pic-30.jpg"
-
-genImage :: FilePath -> Cmd FilePath
-genImage url = step1 imgPathExpr url k1
-  where
-    k1 geo path = step2 imgSrcExpr geo path createImageCopy
-
-genImageGeo :: GeoAR -> FilePath -> Cmd FilePath
-genImageGeo geo path = step2 imgSrcExpr geo path createImageCopy
-
--- --------------------
--- {- used by in catalog-server
-
--- example:              "/fix-160x120/archive/photos/index.md.jpg"
---
--- dst img is            "mountPath/cache/fix-160x120/photos/index.md.jpg"
--- org txt is            "mountPath/photos/index.md"
-
-genImageFromTxt :: FilePath -> Cmd FilePath
-genImageFromTxt url = step1 txtPathExpr url k1
-  where
-    k1 geo path = step2 txtSrcExpr geo path createImageFromTxt
-
-genImageFromTxtGeo :: GeoAR -> FilePath -> Cmd FilePath
-genImageFromTxtGeo geo path = step2 txtSrcExpr geo path createImageFromTxt
-
--- -}
--- --------------------
-
--- --------------------
---
--- parse the geometry part of an url
-
--- --------------------
--- {- used by in catalog-server
-
-step1 :: Regex -> FilePath
-      -> (GeoAR -> FilePath -> Cmd FilePath)
-      -> Cmd FilePath
-step1 rex url k
-  | Just (geo, path) <- objPath2Geo rex url =
-      k geo path
-  | otherwise = notThere url
-
--- compute absolut paths for source image
--- and cached image, check whether cache is
--- up to date or generate new copy by param k
-
-step2 :: Regex -> GeoAR -> FilePath
-      -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
-      -> Cmd FilePath
-step2 rex geo path genImg = do
-  genImg geo (objSrc rex path) path
-
--- -}
--- --------------------
 
 fillCache :: GeoAR -> FilePath -> FilePath
       -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
@@ -231,23 +167,6 @@ notThere url =
 
 -- ----------------------------------------
 
-objPath2Geo :: Regex -> FilePath -> Maybe (GeoAR, FilePath)
-objPath2Geo iex p =
-  case matchSubexRE iex p of
-    [("geoar", geoar), ("topdir", topdir), ("path", path)]
-      | topdir == p'archive ^. isoString ->
-          -- remove the redundant "/archive" part for images from the archive
-          Just (geoar ^. from isoString, path)
-
-      | otherwise ->
-          -- remain the top dir part, e.g for "/assets/icons/blank.jpg""
-          Just (geoar ^. from isoString, topdir ++ path)
-
-    _ ->  -- wrong url
-          Nothing
-
--- ----------------------------------------
-
 getImageSize    :: FilePath -> Cmd Geo
 getImageSize f =
   execImageSize f >>= parseGeo
@@ -255,6 +174,8 @@ getImageSize f =
 execImageSize :: FilePath -> Cmd String
 execImageSize f
   = execProcess "exiftool" ["-s", "-ImageSize", f] ""
+
+-- TODO: cleanup too many parseGeo's
 
 parseGeo :: String -> Cmd Geo
 parseGeo s =

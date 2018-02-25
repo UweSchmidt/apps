@@ -13,11 +13,12 @@ where
 import Data.Maybe
 import System.FilePath
 
-import Catalog.Cmd
 import Data.ImgTree
 import Data.MetaData
 import Data.Prim
 
+import Catalog.Cmd
+import Catalog.FilePath   ( addJpg )
 import Catalog.Html.Basic ( ColRef
                           , ColRefPath
                           , colBlogCont
@@ -27,7 +28,6 @@ import Catalog.Html.Basic ( ColRef
                           , colImgPath
                           , colImgPath0
                           , colImgType
-                          , addJpg
                           , iconRef
                           , isPanorama
                           , maybeColRef
