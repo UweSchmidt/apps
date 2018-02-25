@@ -10,6 +10,20 @@ import Text.Megaparsec.Char
 import Data.Void
 
 -- ----------------------------------------
+--
+-- the main entry points to file path classification
+--
+-- used in syncing catalog with file system
+
+filePathToImgType :: FilePath -> NameImgType
+filePathToImgType =
+  fst . fpToImgType' (const True) filePathConfig
+
+filePathToExt :: ImgType -> FilePath -> Name
+filePathToExt ty =
+  snd . fpToImgType' (== ty) filePathConfig
+
+-- ----------------------------------------
 
 type FnameParser = FilePath -> Maybe (NameImgType, Name)
 
@@ -27,16 +41,8 @@ fpToImgType' tp conf path =
     defRes = ((mkName path, IMGother), mempty)
     parse' p = p path >>= matchPred (tp . snd . fst)
 
-filePathToImgType' :: FilePath -> NameImgType
-filePathToImgType' =
-  fst . fpToImgType' (const True) (toFilePathConfig' filePathConfig)
-
-filePathToExt' :: ImgType -> FilePath -> Name
-filePathToExt' ty =
-  snd . fpToImgType' (== ty) (toFilePathConfig' filePathConfig)
-
-filePathConfig' :: FilePathConfig'
-filePathConfig' =
+filePathConfig :: FilePathConfig'
+filePathConfig =
   map (uncurry toFC) conf
   where
     toFC ty sp fp =
@@ -58,7 +64,9 @@ filePathConfig' =
 
     conf :: [(ImgType, SP (Name, Name))]
     conf =
-      [ (IMGraw,    bn rawExt)
+      [ (IMGboring, mk1 boringName) -- must be 1. to filter ".", ".." and others
+
+      , (IMGraw,    bn rawExt)
       , (IMGimg,    bn imgExt)
       , (IMGjpg,    bn jpgExt')
       , (IMGmeta,   bn xmpExt)
@@ -69,11 +77,12 @@ filePathConfig' =
       , (IMGtxt,    bn txtExt)
       , (IMGjpgdir, mk1 jpgdirName)
       , (IMGimgdir, mk1 imgdirName)
-      , (IMGcopy,   mk2 (jpgdirPre <++> baseName) (geoExt <++> jpgExt'))
-      , (IMGjpg,    mk2 (jpgdirPre <++> baseName)              jpgExt' )
-      , (IMGdng,    mk2 (jpgdirPre <++> baseName)              dngExt  )
 
-      , (IMGboring, mk1 boringName)
+      -- ignore the image subdir prefix
+      -- with subdir classification (>> instead of <++>)
+      , (IMGcopy,   mk2 (jpgdirPre >> baseName) (geoExt <++> jpgExt'))
+      , (IMGjpg,    mk2 (jpgdirPre >> baseName)              jpgExt' )
+      , (IMGdng,    mk2 (jpgdirPre >> baseName)              dngExt  )
       ]
 
 withExt :: SP String -> SP String -> SP (String, String)
@@ -88,7 +97,9 @@ jpgExt'
 
 jpgExt' = parseExt [".jpg"]
 rawExt  = parseExt [".nef", ".rw2"]
-imgExt  = parseExt [".png", ".tif", ".tiff", ".gif", ".ppm", ".pgm", ".pbm"]
+-- sort extensions by length: ".tiff" before ".tif"
+-- else backtracking with try does not work properly
+imgExt  = parseExt [".png", ".tiff", ".tif", ".gif", ".ppm", ".pgm", ".pbm"]
 xmpExt  = parseExt [".xmp"]
 dxoExt  = parseExt $ map (++ ".dxo") [".nef", ".rw2", ".jpg"]
 ptoExt  = parseExt [".pto"]
@@ -142,9 +153,9 @@ jpgdirName' eof' =
 
 boringName :: SP String
 boringName =
-  (string "." <++> many anyChar )
+  (string "." <++> anyString )
   <|>
-  (string "tmp" <++> many anyChar)
+  (string "tmp" <++> anyString)
   <|>
   ( withSuffix ( string "~"
                  <|>
@@ -153,6 +164,17 @@ boringName =
                  (try $ string ".old")
                )
   )
+
+-- --------------------
+--
+-- absolute .jpg path
+
+jpgPath' :: SP String
+jpgPath' =
+  uncurry (++) <$> nameWithSuffix (string "/" <++> anyString) jpgExt'
+
+topDir' :: SP String
+topDir' = string "/" <++> some (noneOf "/")
 
 -- --------------------
 --
@@ -190,6 +212,10 @@ p1 <++> p2 = (<>) <$> p1 <*> p2
 
 {-# INLINE (<++>) #-}
 
+anyString :: SP String
+anyString = many anyChar
+
+{-
 -- --------------------
 --
 -- conversion of old FilePathConfig into new format
@@ -308,6 +334,7 @@ filePathConfig = map (first parseRegexExt) $
       , "tmp.*"
       , ".*[.](bak|old)"
       ]
+-}
 
 jpgExt :: String
 jpgExt = "[.](jpg|JPG)"
