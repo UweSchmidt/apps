@@ -60,6 +60,7 @@ filePathConfig' =
     conf =
       [ (IMGraw,    bn rawExt)
       , (IMGimg,    bn imgExt)
+      , (IMGjpg,    bn jpgExt')
       , (IMGmeta,   bn xmpExt)
       , (IMGdxo,    bn dxoExt)
       , (IMGhugin,  bn ptoExt)
@@ -68,6 +69,9 @@ filePathConfig' =
       , (IMGtxt,    bn txtExt)
       , (IMGjpgdir, mk1 jpgdirName)
       , (IMGimgdir, mk1 imgdirName)
+      , (IMGcopy,   mk2 (jpgdirPre <++> baseName) (geoExt <++> jpgExt'))
+      , (IMGjpg,    mk2 (jpgdirPre <++> baseName)              jpgExt' )
+      , (IMGdng,    mk2 (jpgdirPre <++> baseName)              dngExt  )
 
       , (IMGboring, mk1 boringName)
       ]
@@ -78,8 +82,11 @@ withExt = undefined
 parseExt :: [String] -> SP String
 parseExt = foldl1 (<|>) . map (\ s -> try $ string' s)
 
-rawExt, imgExt, xmpExt, dxoExt, ptoExt, jsonExt, dngExt, txtExt :: SP String
+jpgExt'
+  , rawExt, imgExt,  xmpExt, dxoExt
+  , ptoExt, jsonExt, dngExt, txtExt :: SP String
 
+jpgExt' = parseExt [".jpg"]
 rawExt  = parseExt [".nef", ".rw2"]
 imgExt  = parseExt [".png", ".tif", ".tiff", ".gif", ".ppm", ".pgm", ".pbm"]
 xmpExt  = parseExt [".xmp"]
@@ -90,71 +97,54 @@ dngExt  = parseExt [".dng"]
 txtExt  = parseExt [".txt", ".md"]
 
 geoExt :: SP String
-geoExt = ('.' :) <$> p'geo
+geoExt = string "." <++> p'geo
 
 p'geo :: SP String
-p'geo =
-  (\ x y -> x ++ "x" ++ y) <$>
-  some digitChar <*>
-  (char 'x' *> some digitChar)
+p'geo = some digitChar <++> string "x" <++> some digitChar
 
 
-baseName, imgdirName :: SP String
+baseName
+  , imgdirName, imgdirPre
+  , jpgdirName, jpgdirPre :: SP String
 
 baseName   = some (oneOf "-+._" <|> alphaNumChar)
-imgdirName = baseName
 
-jpgdirName, jpgdirPre :: SP String
+imgdirName = baseName
+imgdirPre  = option "" (imgdirName <++> string "/")
 
 jpgdirName =             jpgdirName' (eof >> return "")
 jpgdirPre  = option "" $ jpgdirName' (string "/")
 
 jpgdirName' :: SP String -> SP String
 jpgdirName' eof' =
-  try ( do x1 <- string "srgb"
-           x2 <- many digitChar
-           x3 <- eof'
-           return (x1 ++ x2 ++ x3)
-      )
+  try ( string "srgb" <++> many digitChar <++> eof' )
   <|>
-  try ( do x1 <- string "srgb"
-           x2 <- option "" $ string "-bw"
-           x3 <- og
-           x4 <- eof'
-           return (x1 ++ x2 ++ x3 ++ x4)
-      )
+  try ( string "srgb" <++> (option "" $ string "-bw") <++> og <++> eof' )
   <|>
-  try ( do x1 <- p'geo
-           x2 <- eof'
-           return (x1 ++ x2)
-      )
+  try ( p'geo <++> eof' )
   <|>
-  try ( do x1 <- foldl1 (<|>) $
-                 map (\ s -> try $ string s)
-                 ["small", "web", "bw", "jpg", "tif", "tiff", "dng", "dxo"]
-           x2 <- og
-           x3 <- eof'
-           return (x1 ++ x2 ++ x3)
+  try ( ( foldl1 (<|>) $
+          map (\ s -> try $ string s)
+          ["small", "web", "bw", "jpg", "tif", "tiff", "dng", "dxo"]
+        )
+        <++> og <++> eof'
       )
   where
     og :: SP String
-    og = do x1 <- string "-" <|> return ""
-            x2 <- option "" $ try
-                  ( do x3 <- some digitChar
-                       x4 <- option "" $ try
-                             ( do x5 <- string "x"
-                                  x6 <- some digitChar
-                                  return (x5 ++ x6)
-                             )
-                       return (x3 ++ x4)
-                  )
-            return (x1 ++ x2)
+    og = ( string "-" <|> return "" )
+         <++>
+         ( option "" $ try
+           ( some digitChar
+             <++>
+             ( option "" $ try (string "x" <++> some digitChar) )
+           )
+         )
 
 boringName :: SP String
 boringName =
-  ( (:) <$> char '.' <*> many anyChar )
+  (string "." <++> many anyChar )
   <|>
-  ( (++) <$> string "tmp" <*> many anyChar)
+  (string "tmp" <++> many anyChar)
   <|>
   ( withSuffix ( string "~"
                  <|>
@@ -190,6 +180,15 @@ withSuffix' p =
       (cs , ex) <- withSuffix' p
       return (c : cs, ex)
   )
+
+-- --------------------
+
+infixr 5 <++>
+
+(<++>) :: (Applicative f, Monoid b) => f b -> f b -> f b
+p1 <++> p2 = (<>) <$> p1 <*> p2
+
+{-# INLINE (<++>) #-}
 
 -- --------------------
 --
