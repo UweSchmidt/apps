@@ -9,8 +9,8 @@ resolver: lts-10.3
 packages:
 - '.'
 - './catalog-servant'
-- './catalog-server'
-- './catalog-sync'
+# - './catalog-server'
+# - './catalog-sync'
 
 # - '../../monad-reader-state-err-io'
 
