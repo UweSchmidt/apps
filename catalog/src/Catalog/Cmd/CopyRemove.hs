@@ -233,7 +233,8 @@ cleanupRefs rs i0
         cleanupIm p = maybe (return ())
           (\ (j, n) -> do
               when (removedImg j n) $ do
-                warn $ "cleanupRefs: col img removed: " ++ quotePath p ++ ", " ++ show (i, j, n)
+                warn $ "cleanupRefs: col img removed: " ++
+                       quotePath p ++ ", " ++ show (i, j, n)
                 adjustColImg (const Nothing) i
           ) im
 
@@ -241,7 +242,8 @@ cleanupRefs rs i0
         cleanupBe p = maybe (return ())
           (\ (j, n) -> do
               when (removedImg j n) $ do
-                warn $ "cleanupRefs: col blog removed: " ++ quotePath p ++ ", " ++ show (i, j, n)
+                warn $ "cleanupRefs: col blog removed: " ++
+                       quotePath p ++ ", " ++ show (i, j, n)
                 adjustColBlog (const Nothing) i
           ) be
 
@@ -251,7 +253,8 @@ cleanupRefs rs i0
               -- some refs must be deleted
               -- only rebuild the list es if any refs must be deleted
               let es' = filter (not . (`memberColEntrySet` rs)) es
-              warn $ "cleanupRefs: col entries removed: " ++ quotePath p ++ ", " ++ show (i, es, es')
+              warn $ "cleanupRefs: col entries removed: "
+                     ++ quotePath p ++ ", " ++ show (i, es, es')
               adjustColEntries (const es') i
           | otherwise =
               return ()

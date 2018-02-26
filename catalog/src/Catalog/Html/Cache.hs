@@ -9,7 +9,7 @@ where
 
 import Catalog.Cmd
 import Catalog.Html.Basic
-import Catalog.System.Convert (genImageFrom)
+import Catalog.System.Convert () -- (genImageFrom)
 
 import Data.ImgTree
 import Data.Prim
@@ -31,7 +31,7 @@ fillImgCache =
   where
     fg f geo = "/" ++ geo ^. isoString ++ f
     genImage' f = (genImage f >> return ()) `catchE` (\ _e -> return ())
-    genImage f  = abort "fillCache: not yet implemented"
+    genImage _f  = abort "fillCache: not yet implemented"
 --    genImage' f = local (\ env -> env & envDryRun  .~ True
 --                                      & envVerbose .~ True) (genImage f)
 

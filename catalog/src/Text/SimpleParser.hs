@@ -57,12 +57,13 @@ withSuffix p = uncurry (++) <$> splitSuffix p
 anyString :: SP String
 anyString = many anyChar
 
-
-
 noneOf' :: String -> SP Char
 noneOf' = P.noneOf
 
 -- --------------------
+
+matchP :: SP a -> String -> Bool
+matchP p = toBool . parseMaybe p
 
 toBool :: Maybe a -> Bool
 toBool = maybe False (const True)
