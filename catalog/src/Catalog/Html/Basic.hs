@@ -18,6 +18,8 @@ import Catalog.System.Convert ( genAssetIcon
                               , writeBlogText
                               )
 
+import Text.SimpleParser
+
 -- ----------------------------------------
 
 type ColRef' a   = (a, Maybe Int)
@@ -146,69 +148,55 @@ isPanorama (Geo _w' h') img@(Geo w h)
 
 path2img :: FilePath -> Cmd (Maybe FilePath)
 path2img f
-  | [("year", y)] <- m1 =
+  | Just (y, Nothing) <- ymd =
       genAssetIcon y y
 
-  | [("year", y), ("month", m)] <- m1 =
+  | Just (y, Just (m, Nothing)) <- ymd =
       let s = toN m ++ "." ++ y
       in
         genAssetIcon (y </> s) s
 
-  | [("year", y), ("month", m), ("day", d)] <- m1 =
+  | Just (y, Just (m, Just d)) <- ymd =
       let s = toN d ++ "." ++ toN m ++ "." ++ y
       in
         genAssetIcon (y </> s) s
 
-  | [("name", n)] <- m2 =
+  | Just n <- nm =
       genAssetIcon n n
-
-{-
-  | f == ps'bycreatedate =           -- "/archive/collections/byCreateDate"
-      genAssetIcon s'bycreatedate (tt'bydate ^. isoString)
-
-  | f == ps'clipboard =              -- "/archive/collections/photos/clipboard"
-      genAssetIcon s'clipboard (tt'clipboard ^. isoString)
-
-  | f == ps'trash =              -- "/archive/collections/photos/trash"
-      genAssetIcon s'trash (tt'trash ^. isoString)
-
-  | f == ps'photos =                 -- "/archive/collections/photos"
-      genAssetIcon s'photos (tt'photos ^. isoString)
-
-  | f == ps'collections =            -- "/archive/collections"
-      genAssetIcon s'collections (tt'collections ^. isoString)
--- -}
 
   | otherwise =
       return Nothing
   where
-    m1 = matchSubexRE ymdRE f
-    m2 = matchSubexRE dirRE f
+    ymd = parseMaybe ymdParser f
+    nm  = parseMaybe baseNameParser f
 
     toN :: String -> String
-    toN s = show i
+    toN s = show i   -- remove leading 0's
       where
         i :: Int
         i = read s
 
+-- "/archive/collections/byCreateDate/2000/12/24" -> "2000", "12", "24"
+-- "/archive/collections/byCreateDate/2000/12"    -> "2000", "12"
+-- "/archive/collections/byCreateDate/2000"       -> "2000"
 
-ymdRE :: Regex -- for collections sorted by date
-ymdRE =
-  parseRegexExt $
-  ps'bycreatedate                    -- "/archive/collections/byCreateDate"
-  ++
-  "/({year}[0-9]{4})"
-  ++
-  "(/([-0-9]*({month}[0-9]{2}))(/([-0-9]*({day}[0-9]{2})))?)?"
+ymdParser :: SP (String, Maybe (String, Maybe String))
+ymdParser = do
+  y  <- string ps'bycreatedate *>
+        char '/' *>
+        count 4 digitChar
+  md <- optional $ do
+        m <- char '/' *>
+             count 2 digitChar
+        d <- optional $ char '/' *>
+                        count 2 digitChar
+        return (m, d)
+  return (y, md)
 
-dirRE :: Regex -- for collections for all folders
-dirRE =
-  parseRegexExt $
-  ps'photos                          -- "/archive/collections/photos"
-  ++
-  "(/[^/]+)*"
-  ++
-  "(/({name}[^/]+))"
+-- "/archive/collections/photos" -> "photos"
+baseNameParser :: SP String
+baseNameParser =
+  char '/' *> many (try $ anyStringThen' (char '/')) *> some anyChar
 
 -- ----------------------------------------
 
