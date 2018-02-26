@@ -102,7 +102,7 @@ insertImportPhoto2 ipd = go ipd
           imgName :: Name
           (imgPath, imgName)
             | T.null raw =
-                (toArch jpgPath', jpgPart)
+                (toArch jpgPath2, jpgPart)
             | otherwise =
                 (toArch rawPath,  jpgP)
             where
@@ -120,7 +120,7 @@ insertImportPhoto2 ipd = go ipd
               name        = jpgName1 & isoString %~ dropExtension
               jpgBaseName = jpgBase ^. isoString </> jpgName1 ^. isoString
               jpgType     = filePathToImgType jpgBaseName ^. _2
-              jpgPath'
+              jpgPath2
                 | jpgType == IMGother = jpgPath1 `snocPath` name
                 | otherwise           = jpgDir   `snocPath` name
               jpgPart

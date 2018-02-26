@@ -4,10 +4,8 @@
 module Catalog.FilePath where
 
 import Control.Applicative
-import Data.Prim hiding (noneOf)
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Void
+import Data.Prim
+import Text.SimpleParser
 
 -- ----------------------------------------
 --
@@ -84,9 +82,6 @@ filePathConfig =
       , (IMGjpg,    mk2 (jpgdirPre >> baseName)              jpgExt' )
       , (IMGdng,    mk2 (jpgdirPre >> baseName)              dngExt  )
       ]
-
-withExt :: SP String -> SP String -> SP (String, String)
-withExt = undefined
 
 parseExt :: [String] -> SP String
 parseExt = foldl1 (<|>) . map (\ s -> try $ string' s)
@@ -174,7 +169,7 @@ jpgPath' =
   uncurry (++) <$> nameWithSuffix (string "/" <++> anyString) jpgExt'
 
 topDir' :: SP String
-topDir' = string "/" <++> some (noneOf "/")
+topDir' = string "/" <++> some (noneOf' "/")
 
 -- --------------------
 --
@@ -182,38 +177,10 @@ topDir' = string "/" <++> some (noneOf "/")
 
 nameWithSuffix :: SP String -> SP String -> SP (String, String)
 nameWithSuffix np sp = do
-  (n, s) <- withSuffix' sp
+  (n, s) <- splitSuffix sp
   case parseMaybe np n of
     Just n' -> return (n', s)
     _       -> mzero
-
-withSuffix :: SP String -> SP String
-withSuffix p = uncurry (++) <$> withSuffix' p
-
-withSuffix' :: SP String -> SP (String, String)
-withSuffix' p =
-  try ( do
-          ex <- p <* eof
-          return ("", ex)
-      )
-  <|>
-  ( do
-      c <- anyChar
-      (cs , ex) <- withSuffix' p
-      return (c : cs, ex)
-  )
-
--- --------------------
-
-infixr 5 <++>
-
-(<++>) :: (Applicative f, Monoid b) => f b -> f b -> f b
-p1 <++> p2 = (<>) <$> p1 <*> p2
-
-{-# INLINE (<++>) #-}
-
-anyString :: SP String
-anyString = many anyChar
 
 {-
 -- --------------------
@@ -411,7 +378,7 @@ pathToBreadCrump = sed (const " \8594 ") "/" . drop 1
 --
 -- url pasers without regex matching
 
-type SP = Parsec Void String
+-- type SP = Parsec Void String
 
 splitLast :: [a] -> Maybe ([a], a)
 splitLast [x]      = Just ([], x)
@@ -433,7 +400,7 @@ splitAbsPath = parseMaybe pPath
         [] -> mzero
         _  -> return ps
 
-    piece = char '/' >> many (noneOf "/")
+    piece = char '/' >> many (noneOf' "/")
 
 joinAbsPath :: [String] -> String
 joinAbsPath = concatMap ('/' :)
@@ -458,7 +425,7 @@ splitExt = parseMaybe pExt
       ps <- some ext
       return (p1 : ps)
 
-    part = some $ noneOf "."
+    part = some $ noneOf' "."
     ext  = ('.' :) <$> (char '.' >> part)
 
 joinExt :: [String] -> String
@@ -508,34 +475,5 @@ addJpg :: String -> String
 addJpg fn
   | toBool (extJpg fn) = fn
   | otherwise          = fn ++ ".jpg"
-
-extGeo :: String -> Maybe Geo
-extGeo ('.' : xs') = parseGeo' xs'
-extGeo _           = mzero
-
--- TODO: cleanup too many parseGeo's
-
-parseGeo' :: String -> Maybe Geo
-parseGeo' = parseMaybe pg
-  where
-    pg :: SP Geo
-    pg = do
-      x <- read <$> some digitChar
-      _ <- char 'x'
-      y <- read <$> some digitChar
-      return (Geo x y)
-
--- --------------------
-
-toBool :: Maybe a -> Bool
-toBool = maybe False (const True)
-
-matchPred :: (a -> Bool) -> a -> Maybe a
-matchPred p x
-  | p x       = Just x
-  | otherwise = Nothing
-
-eqNoCase :: String -> String -> Bool
-eqNoCase = (==) `on` map toLower
 
 -- ----------------------------------------

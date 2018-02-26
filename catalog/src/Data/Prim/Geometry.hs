@@ -5,6 +5,7 @@ module Data.Prim.Geometry
 where
 
 import Data.Prim.Prelude
+import Text.SimpleParser
 
 -- ----------------------------------------
 
@@ -62,32 +63,21 @@ readGeo s =
   readGeo' s
 
 readGeo' :: String -> Maybe Geo
-readGeo' s =
-  build $ matchSubexRE geoRegex s
+readGeo' = parseMaybe geoParser
+
+geoParser :: SP Geo
+geoParser = try pg <|> pg'org
   where
-    build [("w",w),("h",h)]
-      = Just $ Geo (read w) (read h)
-    build _
-      | s == orgGeo = Just geo'org
-      | otherwise   = Nothing
+    pg'org = string "org" >> return geo'org
+
+    pg = do
+      x <- read <$> some digitChar
+      _ <- char 'x'
+      y <- read <$> some digitChar
+      return (Geo x y)
 
 flipGeo :: Geo -> Geo
 flipGeo (Geo w h) = Geo h w
-
--- the r.e. is more general, the geo spec maybe surrounded
--- by arbitrary other stuff (used in parsing exif data)
-
-geoRegex :: Regex
-geoRegex = parseRegexExt geoRegex'
-
-geoRegex'
-  , geoRegex'' :: String
-
-geoRegex'  = "[^1-9]*" ++ geoXY ++ "[^0-9]*"
-geoRegex'' = "([1-9][0-9]*)x([1-9][0-9]*)" ++ "|" ++ orgGeo
-
-geoXY :: String
-geoXY = "({w}[1-9][0-9]*)x({h}[1-9][0-9]*)"
 
 -- ----------------------------------------
 
@@ -103,13 +93,12 @@ instance IsoString AspectRatio where
 instance IsoText AspectRatio where
   isoText = isoString . isoText
 
-arRegex :: Regex
-arRegex = parseRegexExt arRegex'
-
-arRegex' :: String
-arRegex' =
-  intercalate "|" $
-  map (^. isoString) [minBound .. maxBound :: AspectRatio]
+arParser :: SP AspectRatio
+arParser =
+  foldr1 (<|>) $ map toAP [minBound .. maxBound]
+  where
+    toAP :: AspectRatio -> SP AspectRatio
+    toAP ar = try (string (ar ^. isoString) >> return ar)
 
 -- ----------------------------------------
 
@@ -159,24 +148,14 @@ theGeo = geoar2pair . _1
 theAR :: Lens' GeoAR AspectRatio
 theAR  = geoar2pair . _2
 
-geoarRegex :: Regex
-geoarRegex = parseRegexExt geoarRegex'
-
-geoarRegex' :: String
-geoarRegex' = "(({ar}" ++ arRegex' ++ ")-)?({geo}" ++ geoRegex'' ++ ")"
-
 readGeoAR :: String -> Maybe GeoAR
-readGeoAR = build . matchSubexRE geoarRegex
-  where
-    build [("ar", ar'), ("geo", geo')] =
-      let ar  = ar'  ^. from isoString
-          geo = geo' ^. from isoString
-      in
-        Just $ (geo, ar) ^. from geoar2pair
-    build [("geo", geo')] =
-        Just $ (geo' ^. from isoString, Pad) ^. from geoar2pair
-    build _ =
-      Nothing
+readGeoAR = parseMaybe geoARParser
+
+geoARParser :: SP GeoAR
+geoARParser = do
+  ar  <- arParser <* char '-'
+  geo <- geoParser
+  return $ (geo, ar) ^. from geoar2pair
 
 isoGeoAR :: Iso' String (Maybe GeoAR)
 isoGeoAR = iso readGeoAR (maybe "" (^. isoString))
