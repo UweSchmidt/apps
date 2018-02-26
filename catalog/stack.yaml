@@ -16,7 +16,6 @@ packages:
 
 # Packages to be pulled from upstream that are not in the resolver
 extra-deps:
-- string-qq-0.0.2
 - git: https://github.com/UweSchmidt/monad-reader-state-err-io.git
   commit: abbf19aac8159a646a6c58f850250287c3e2049d
 

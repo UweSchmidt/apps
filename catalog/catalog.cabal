@@ -45,9 +45,7 @@ library
                      Catalog.Html.Basic
                      Catalog.Html.Blaze2
                      Catalog.Html.Cache
-                     Catalog.Html.Photo2
                      Catalog.Html.Templates.Blaze2
-                     Catalog.Html.Templates.Photo2.AlbumPage
                      Catalog.JsonCommands
                      Catalog.Journal
                      Catalog.Options
@@ -80,7 +78,7 @@ library
                    , pureMD5              >= 2
                    , process
                    , scientific           >= 0.3
-                   , string-qq            >= 0.0.2
+--                   , string-qq            >= 0.0.2
                    , text                 >= 1.0
                    , time                 >= 1.5
                    , transformers         >= 0.4
