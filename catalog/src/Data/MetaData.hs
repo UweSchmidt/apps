@@ -225,8 +225,6 @@ getCreateMeta parse' md =
       ] md
       ^. isoString
 
---    res = matchSubexRE reDateTime $ cd ^. isoString
-
 getFileName :: MetaData -> Maybe Text
 getFileName md =
   md ^. metaDataAt "File:Filename" . isoMaybe
@@ -309,74 +307,11 @@ type HMS = (String, String, String, String)
 type YMD'HMS = (YMD, HMS)
 
 parseDateTime :: String -> Maybe YMD'HMS
-parseDateTime str = do
-  (ymd, hms) <- parseDateTime' str
-  ymd'       <- checkYMD ymd
-  hms'       <- checkHMS hms
-  return (ymd', hms')
-  where
-    checkYMD x@(y', m', d')
-      | y >= 1900 && y < 3001
-        &&
-        m >= 1 && m <= 12
-        &&
-        d >= 1 && d <= 31 =
-          Just x
-      | otherwise =
-          Nothing
-      where
-        y, m, d :: Int
-        y = read y'
-        m = read m'
-        d = read d'
-
-    checkHMS x@(h', m', s', _ms')
-      | h >= 0 && h <= 24
-        &&
-        m >= 0 && m < 60
-        &&
-        s >= 0 && s < 60 =
-          Just x
-      | otherwise =
-          Nothing
-      where
-        h, m, s :: Int
-        h = read h'
-        m = if null m' then 0 else read m'
-        s = if null s' then 0 else read s'
-
-parseDateTime' :: String -> Maybe YMD'HMS
-parseDateTime' str =
-  case res of
-    -- just year, month, day
-    [("Y",y), ("M",m), ("D",d)] ->
-      Just ((y, m, d), ("", "", "", ""))
-
-    -- date and time, without msec
-    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s)] ->
-      Just ((y, m, d), (h, mi, s, ""))
-
-    -- date and time with msec
-    [("Y",y), ("M",m), ("D",d), ("h", h), ("m", mi), ("s", s), ("ms",ms)] ->
-      Just ((y, m, d), (h, mi, s, ms))
-
-    -- no match
-    _ -> Nothing
-  where
-    res = matchSubexRE reDateTime str
-
-reDateTime :: Regex
-reDateTime = parseRegexExt $
-  "({Y}[1-9][0-9]{3})[-:]({M}[0-9]{2})[-:]({D}[0-9]{2})"
-  ++ "("
-  ++ "[ ]+"
-  ++ "({h}[0-9]{2}):({m}[0-9]{2}):({s}[0-9]{2})({ms}[.][0-9]+)?"
-  ++ ")?"
-  ++ "([^0-9].*)?"
+parseDateTime = parseMaybe dateTimeParser
 
 -- take the day part from a date/time input
 parseDate :: String -> Maybe (String, String, String)
-parseDate str = fst <$> parseDateTime str
+parseDate = parseMaybe (fst <$> dateTimeParser)
 {-# INLINE parseDate #-}
 
 isoDateInt :: Iso' (String, String, String) Int
@@ -395,30 +330,90 @@ isoDateInt = iso toInt frInt
 
 -- take the time part of a full date/time input
 parseTime :: String -> Maybe (String, String, String, String)
-parseTime str = do
-  (_, t) <- parseDateTime str
-  case t of
-    ("", "", "", "") -> mzero
-    _                -> return t
+parseTime = parseMaybe (snd <$> dateTimeParser)
+{-# INLINE parseTime #-}
+
+timeParser :: SP HMS
+timeParser = do
+  h  <-             count 2 digitChar
+  m  <- char ':' *> count 2 digitChar
+  s  <- char ':' *> count 2 digitChar
+  ms <- option ".0" $
+        char '.' *> some    digitChar
+  let (h', m', s') = (read h, read m, read s) :: (Int, Int, Int)
+  if h' >= 0 && h' <= 24
+     &&
+     m' >= 0 && m' <  60
+     &&
+     s' >= 0 && s' <  60
+    then return (h, m, s, ms)
+    else mzero
+
+dateParser :: SP YMD
+dateParser = do
+  y <-              count 4 digitChar
+  m <- oneOf del *> count 2 digitChar
+  d <- oneOf del *> count 2 digitChar
+  let (y', m', d') = (read y, read m, read d) :: (Int, Int, Int)
+  if y' >= 1800 && y' < 3001
+     &&
+     m' >= 1    && m' <= 12
+     &&
+     d' >= 1    && d' <= 31
+    then return (y, m, d)
+    else mzero
+  where
+    del :: String
+    del = "-:"
+
+dateTimeParser :: SP YMD'HMS
+dateTimeParser = do
+  ymd <- dateParser
+  hms <- some spaceChar *> timeParser <* anyString  -- maybe followed by time zone
+  return (ymd, hms)
 
 -- ----------------------------------------
 
-reDeg :: Regex
-reDeg = parseRegexExt $
-  "({deg}[0-9]+) +deg +({min}[0-9]+)' +({sec}[.0-9]+)\" +({dir}[NWES])"
+-- the old regex for matchSubRE was much short, but error phrone
+-- no parse in read::Double and other bugs
 
-reLongLat :: Regex
-reLongLat = parseRegexExt $
-  "({lat}[^NS]+[NS]),? +({long}[^WE]+[WE])"
+degParser :: String -> SP (Int, Int, Double, Char)
+degParser dirs = do
+  deg <- read <$> (some digitChar <* sp <* string "deg" <* sp)
+  mn  <- read <$> (some digitChar <* char '\''          <* sp)
+  sec <- read <$> (float          <* char '"'           <* sp)
+  dir <- oneOf dirs
+  return (deg, mn, sec, dir)
+  where
+    sp :: SP String
+    sp = some (char ' ')
 
--- | "degrees minutes seconds" to "decimal degrees" (google url format)
-parseDeg :: String -> Maybe (Int, Int, Double, Char)
-parseDeg loc =
-  case matchSubexRE reDeg loc of
-    [("deg", deg), ("min", mn), ("sec", sec), ("dir", dir)] ->
-      Just (read deg, read mn, read sec, head dir)
-    _ ->
-      Nothing
+    float :: SP String
+    float =
+      ( some digitChar
+        <++>
+        option ".0"
+        ( string "."
+          <++>
+          ( option "0" $ some digitChar )
+        )
+      )
+      <|>
+      (("0." ++) <$> (char '.' *> some digitChar))
+
+-- parse latitute and longitude
+-- and convert to decimal degees
+
+latLongParser :: SP (Double, Double)
+latLongParser = do
+  lat  <- deg2DegDec <$>         degParser "NS"
+  long <- deg2DegDec <$> (del *> degParser "WE")
+  return (lat, long)
+  where
+    del = option ' ' (char ',') *> some (char ' ')
+
+
+-- | "degrees minutes seconds dir" to "decimal degrees" (google url format)
 
 deg2DegDec :: (Int, Int, Double, Char) -> Double
 deg2DegDec (d, m, s, dir) =
@@ -433,16 +428,6 @@ deg2DegDec (d, m, s, dir) =
     d' = fromIntegral d
     m' = fromIntegral m
 
-latLong2DegDec :: String -> Maybe (Double, Double)
-latLong2DegDec loc =
-  case matchSubexRE reLongLat loc of
-     [("lat", lat), ("long", long)] -> do
-       lat'  <- deg2DegDec <$> parseDeg lat
-       long' <- deg2DegDec <$> parseDeg long
-       return (lat', long')
-     _ ->
-       Nothing
-
 latLong2googleMapsUrl :: (Double, Double) -> String
 latLong2googleMapsUrl (lat, long) =
   lat' ++ "," ++ long'
@@ -453,7 +438,7 @@ latLong2googleMapsUrl (lat, long) =
 
 loc2googleMapsUrl :: String -> Maybe String
 loc2googleMapsUrl loc =
-  latLong2googleMapsUrl <$> latLong2DegDec loc
+  latLong2googleMapsUrl <$> parseMaybe latLongParser loc
 
 -- ----------------------------------------
 
