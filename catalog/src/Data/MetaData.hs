@@ -12,6 +12,7 @@ import qualified Data.List           as L
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
+import           Text.SimpleParser
 import           Text.Printf         ( printf )
 import           Text.Read           ( readMaybe )
 -- import Debug.Trace
@@ -147,11 +148,11 @@ selectMetaData :: (Name -> Bool) -> Lens' MetaData MetaData
 selectMetaData p = partMetaData p . _1
 {-# INLINE selectMetaData #-}
 
-selectByRegex :: RegexText -> Lens' MetaData MetaData
-selectByRegex rx' = selectMetaData p
+selectByParser :: SP String -> Lens' MetaData MetaData
+selectByParser ps = selectMetaData p
   where
-    p n = matchRE rx' (n ^. isoText)
-{-# INLINE selectByRegex #-}
+    p n = matchP ps (n ^. isoString)
+{-# INLINE selectByParser #-}
 
 selectByNames :: [Name] -> Lens' MetaData MetaData
 selectByNames ns = selectMetaData (`elem` ns)
@@ -215,8 +216,8 @@ isRemovable = getAccess (no'delete `notElem`)
 -- ----------------------------------------
 
 getCreateMeta :: (String -> res) -> MetaData -> res
-getCreateMeta parse md =
-  parse cd
+getCreateMeta parse' md =
+  parse' cd
   where
     cd = lookupByNames
       [ "Composite:SubSecCreateDate"
@@ -293,10 +294,10 @@ compareByName =
 -- filter meta data enries by image type
 
 filterMetaData :: ImgType -> MetaData -> MetaData
-filterMetaData IMGraw  m = m ^. selectByRegex reRaw
-filterMetaData IMGmeta m = m ^. selectByRegex reXmp
-filterMetaData IMGjpg  m = m ^. selectByRegex reRaw
-filterMetaData IMGimg  m = m ^. selectByRegex reRaw
+filterMetaData IMGraw  m = m ^. selectByParser psRaw
+filterMetaData IMGmeta m = m ^. selectByParser psXmp
+filterMetaData IMGjpg  m = m ^. selectByParser psRaw
+filterMetaData IMGimg  m = m ^. selectByParser psRaw
 filterMetaData _       _ = mempty
 
 -- ----------------------------------------
@@ -458,76 +459,35 @@ loc2googleMapsUrl loc =
 
 type AttrGroup = (Text, [Text])
 
-attrGroups2regex :: [AttrGroup] -> RegexText
-attrGroups2regex =
-  parseRegex' .
-  mkAlt .
-  map (\ (px, attr) -> (px ^. isoString ++ ":" ++ mkAlt (map (^. isoString) attr)))
-  where
-    mkPar :: String -> String
-    mkPar s = "(" ++ s ++ ")"
+psRaw, psXmp :: SP String
 
-    mkAlt :: [String] -> String
-    mkAlt xs = mkPar $ intercalate "|" $ map mkPar xs
-
-reRaw :: RegexText
-reRaw = attrGroups2regex
+psRaw = attrGroupsParser
   [ attrExif
   , attrComposite
   , attrMaker
   , attrFile
   ]
 
-reXmp :: RegexText
-reXmp = attrGroups2regex
+psXmp = attrGroupsParser
   [ attrComposite
   , attrXmp
   ]
 
--- ----------------------------------------
-
-px2a :: Text -> [Name]
-px2a s = map (^. from isoText) ag20
-{-}
-  case ag20 of
-    [x1] -> mkName x1
-    []   -> mempty
-    xs   -> error $ "ambigious name abreviation " ++ show s ++ " matches " ++ show xs
--- -}
+attrGroupsParser :: [AttrGroup] -> SP String
+attrGroupsParser =
+  foldr1 (<|>) . map toP
   where
-    g, n :: Text
-    (g, n) | T.null n'   = ("", g')
-           | otherwise = (g', T.tail n')
-      where
-        (g', n') = T.span (/= ':') s
+    toP :: AttrGroup -> SP String
+    toP (px, attr) =
+      try ( string (px ^. isoString)
+            <++>
+            string ":"
+            <++>
+            foldr1 (<|>) (map toA attr)
+          )
 
-    filterNotNull =
-      filter (not . null .snd)
-
-    ag20 :: [Text]
-    ag20 = concatMap (\ (x, xs) -> map ((x <> ":") <>) xs) ag11
-    -- exact name matches are prefered
-
-    ag11 :: [AttrGroup]
-    ag11
-      | null ag10 = filterNotNull $
-                    map (second (filter (n `T.isPrefixOf`))) ag01
-      | otherwise = ag10
-
-    ag10 :: [AttrGroup]
-    ag10 = filterNotNull $
-      map (second (filter (== n))) ag01
-
-    -- exact group matches are prefered
-    ag01 :: [AttrGroup]
-    ag01
-      | null ag00 = filter ((g `T.isPrefixOf`) . fst) allAttrGroups
-      | otherwise = ag00
-
-    ag00 :: [AttrGroup]
-    ag00
-      | T.null g  = allAttrGroups
-      | otherwise = filter ((== g) .fst) allAttrGroups
+    toA :: Text -> SP String
+    toA a = try (string (a ^. isoString) <* eof)
 
 -- ----------------------------------------
 
