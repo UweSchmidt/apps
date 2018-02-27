@@ -18,7 +18,9 @@ import Data.MetaData
 import Data.Prim
 
 import Catalog.Cmd
-import Catalog.FilePath   ( addJpg )
+import Catalog.FilePath   ( addJpg
+                          , blazePath'
+                          )
 import Catalog.Html.Basic ( ColRef
                           , ColRefPath
                           , colBlogCont
@@ -37,6 +39,9 @@ import Catalog.Html.Basic ( ColRef
 import Catalog.Html.Templates.Blaze2
 import Catalog.System.ExifTool (getMetaData)
 import Catalog.System.Convert  (getColImgSize)
+
+import Text.SimpleParser
+import qualified Text.Megaparsec.Char.Lexer as L
 
 -- ----------------------------------------
 
@@ -90,16 +95,7 @@ lookupPageConfigs (Geo w h) =
 -- url parsing
 
 parseGeoPath :: FilePath -> Maybe (Geo, FilePath)
-parseGeoPath f =
-  case matchSubexRE geoPathRE f of
-    [("geo", geo), ("path", path)] ->
-      return ( geo ^. from isoString, path)
-    _ -> mzero
-
-geoPathRE :: Regex
-geoPathRE =
-  parseRegexExt $
-  "/blaze-({geo}[0-9]+x[0-9]+)({path}/.*)"
+parseGeoPath = parseMaybe blazePath'
 
 -- --------------------
 
@@ -140,10 +136,10 @@ isoPicNo = iso toS frS
     toS =
       ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ). show
     frS s =
-      case matchSubex "pic-({no}[0-9]+)" s of
-        [("no", no)] ->
-          read no
-        _ -> -1
+      fromMaybe (-1) $ parseMaybe picNoParser s
+
+picNoParser :: SP Int
+picNoParser = string "pic-" *> L.decimal
 
 -- ----------------------------------------
 --

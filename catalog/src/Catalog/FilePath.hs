@@ -171,6 +171,10 @@ jpgPath' =
 topDir' :: SP String
 topDir' = string "/" <++> some (noneOf' "/")
 
+blazePath' :: SP (Geo, String)
+blazePath' =
+  (,) <$> (string "blaze-" *> geoParser) <*> anyString
+
 -- --------------------
 --
 -- file path parsing combinators
