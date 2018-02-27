@@ -55,7 +55,6 @@ library
                      Catalog.System.Convert
                      Catalog.System.ExifTool
                      Catalog.System.IO
-                     Text.SimpleTemplate
                      Text.SimpleParser
                      
   -- Other library packages from which modules are imported.
@@ -67,8 +66,6 @@ library
                    , containers           >= 0.4
                    , directory            >= 1.1
                    , filepath             >= 1
-                   , hxt-regex-xmlschema  >= 9.2
-                   , hxt-unicode          >= 9.0
                    , lens                 >= 4.12
                    , monad-reader-state-err-io
                    , mtl                  >= 2.2
@@ -78,7 +75,6 @@ library
                    , pureMD5              >= 2
                    , process
                    , scientific           >= 0.3
---                   , string-qq            >= 0.0.2
                    , text                 >= 1.0
                    , time                 >= 1.5
                    , transformers         >= 0.4

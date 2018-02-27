@@ -24,6 +24,7 @@ import           Text.Blaze.Html5.Attributes hiding (title, rows, accept)
 import qualified Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Pretty as R
 import qualified Text.Blaze.Html.Renderer.Text   as T
+import qualified Text.SimpleParser as SP
 
 renderPage' :: Html -> LazyText
 renderPage' p = T.renderHtml p
@@ -610,7 +611,8 @@ picMeta md = mconcat $ map toMarkup mdTab
 
     -- subst " deg" by degree char '\176'
     formatDegree :: Text -> Text
-    formatDegree = sed (const "\176") " deg"
+    formatDegree t =
+      (SP.sedP (const "\176") (SP.string " deg") $ t ^. isoString) ^. isoText
 
     mdTab :: [(Text, Name, Text -> Html)]
     mdTab =

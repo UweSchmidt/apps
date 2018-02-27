@@ -9,7 +9,7 @@ import Data.Prim.Prelude
 import Data.Void
 
 import Text.Megaparsec
-import Text.Megaparsec.Char hiding (noneOf)
+import Text.Megaparsec.Char hiding (oneOf, noneOf)
 import qualified
        Text.Megaparsec.Char as P
 
@@ -57,10 +57,28 @@ withSuffix p = uncurry (++) <$> splitSuffix p
 anyString :: SP String
 anyString = many anyChar
 
+-- rename noneOf, it's defined somewhere in lens
 noneOf' :: String -> SP Char
 noneOf' = P.noneOf
 
+oneOf' :: String -> SP Char
+oneOf' = P.oneOf
+
 -- --------------------
+
+sedParser :: (a -> String) -> SP a -> SP String
+sedParser edit p = go
+  where
+    go = try ((edit <$> p) <++> go)
+         <|>
+         ((:) <$> anyChar <*> go)
+         <|>
+         return ""
+
+-- --------------------
+
+sedP :: (a -> String) -> SP a -> String -> String
+sedP ef p = fromMaybe "" . parseMaybe (sedParser ef p)
 
 matchP :: SP a -> String -> Bool
 matchP p = toBool . parseMaybe p

@@ -31,7 +31,6 @@ where
 import Data.Digest.Murmur64 (Hashable64(..))
 import Data.Prim.Name
 import Data.Prim.Prelude
-import Text.Regex.XMLSchema.Generic (tokenize)
 import qualified Data.Text as T
 
 -- ----------------------------------------
@@ -43,8 +42,14 @@ type Path = Path' Name
 
 readPath :: String -> Path
 readPath ('/' : xs0)
-  = buildPath . tokenize "[^/]*" $ xs0
+  = buildPath . tokenize $ xs0
   where
+    tokenize :: String -> [String]
+    tokenize [] = []
+    tokenize xs = xs1 : tokenize (drop 1 xs2)
+      where
+        (xs1, xs2) = span (not . (== '/')) xs
+
     buildPath :: [String] -> Path
     buildPath ("." : xs) = buildPath xs
     buildPath [xs]       = BN $ mkName xs

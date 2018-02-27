@@ -1,7 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DefaultSignatures #-}
 
 
@@ -20,21 +19,6 @@ module Data.Prim.Prelude
        , FromJSON(..)
        , (.=?!)
        , (.:?!)
-         -- Text.Regex.XMLSchema.Generic
-       , Regex
-       , RegexText
-       , parseRegex
-       , parseRegex'
-       , parseRegexExt
-       , parseRegexExt'
-       , match
-       , matchRE
-       , matchSubex
-       , matchSubexRE
-       , sed
-       , sedExt
-       , sedRE
-       , tokenizeRE'
          -- Data.Maybe
        , fromMaybe
        , isNothing
@@ -128,8 +112,6 @@ import           Data.Vector (Vector)
 import           Numeric (readHex)
 import           System.FilePath
 import           Text.Printf (printf, PrintfArg)
-import           Text.Regex.XMLSchema.Generic
-import           Text.Regex.XMLSchema.Generic.RegexParser
 
 type LazyByteString = LB.ByteString
 type LazyText       = LT.Text

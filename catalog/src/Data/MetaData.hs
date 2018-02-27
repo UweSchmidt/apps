@@ -351,9 +351,9 @@ timeParser = do
 
 dateParser :: SP YMD
 dateParser = do
-  y <-              count 4 digitChar
-  m <- oneOf del *> count 2 digitChar
-  d <- oneOf del *> count 2 digitChar
+  y <-               count 4 digitChar
+  m <- oneOf' del *> count 2 digitChar
+  d <- oneOf' del *> count 2 digitChar
   let (y', m', d') = (read y, read m, read d) :: (Int, Int, Int)
   if y' >= 1800 && y' < 3001
      &&
@@ -363,7 +363,6 @@ dateParser = do
     then return (y, m, d)
     else mzero
   where
-    del :: String
     del = "-:"
 
 dateTimeParser :: SP YMD'HMS
@@ -382,7 +381,7 @@ degParser dirs = do
   deg <- read <$> (some digitChar <* sp <* string "deg" <* sp)
   mn  <- read <$> (some digitChar <* char '\''          <* sp)
   sec <- read <$> (float          <* char '"'           <* sp)
-  dir <- oneOf dirs
+  dir <- oneOf' dirs
   return (deg, mn, sec, dir)
   where
     sp :: SP String

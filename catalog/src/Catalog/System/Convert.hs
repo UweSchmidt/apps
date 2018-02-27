@@ -26,6 +26,8 @@ import           Data.Prim
 import           Data.ImgNode
 import           Data.MetaData
 import qualified Data.Text as T
+import           Text.SimpleParser
+
 -- import Debug.Trace
 
 -- ----------------------------------------
@@ -211,13 +213,16 @@ createImageFromTxt d'geo d s =
         T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
         readFileT s
       let str1 = headline ^. isoString
-      let str2 = sed (const "") ".*/" s  -- base name -- pathToBreadCrump s
+      let str2 = sedP (const "") (many (noneOf' "/") >> char '/') s
       let str  = concat . take 1 . filter (not . null) $ [str1, str2]
       trc $ unwords ["createImageFromTxt:", show d'geo, d, s, str]
       icon <-
         fromMaybe ps'blank <$>
-        genAssetIcon (sed (const "_") "[ /$]" $ dropWhile (== '.') s) str
+        genAssetIcon (mapBad $ dropWhile (== '.') s) str
       genImageFrom IMGjpg d'geo icon icon
+
+    mapBad :: String -> String
+    mapBad = sedP (const "_") (oneOf' " /$")
 
     cleanup :: Text -> Text
     cleanup = T.dropWhile (not . isAlphaNum)
