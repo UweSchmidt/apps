@@ -65,6 +65,13 @@ readGeo s =
 readGeo' :: String -> Maybe Geo
 readGeo' = parseMaybe geoParser
 
+-- extract a geo from a string, e.g. "ImageSize : 900x600 ..."
+readGeo'' :: String -> Maybe Geo
+readGeo'' =
+  parseMaybe $ junk *> geoParser <* junk
+  where
+  junk = many (satisfy (not . isDigit))
+
 geoParser :: SP Geo
 geoParser = try pg <|> pg'org
   where

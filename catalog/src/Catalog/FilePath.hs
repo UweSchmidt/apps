@@ -277,6 +277,8 @@ matchExt ty ex xs = matchPred (eqNoCase ex) xs >> return ty
 matchExts :: ImgType -> [String] -> String -> Maybe ImgType
 matchExts ty exs xs = matchPred (\ ys -> any (eqNoCase ys) exs) xs >> return ty
 
+-- used in servant server
+
 extImg, extJpg, extRaw, extDng, extTxt,
   extXmp, extDxO, extPto,
   extJson :: String -> Maybe ImgType
@@ -291,9 +293,11 @@ extDxO  = matchExt  IMGdxo   ".dxo"
 extPto  = matchExt  IMGhugin ".pto"
 extJson = matchExt  IMGjson  ".json"
 
+-- --------------------
+
 addJpg :: String -> String
 addJpg fn
-  | toBool (extJpg fn) = fn
-  | otherwise          = fn ++ ".jpg"
+  | toBool (parseMaybe (withSuffix jpgExt') fn) = fn
+  | otherwise                                   = fn ++ ".jpg"
 
 -- ----------------------------------------

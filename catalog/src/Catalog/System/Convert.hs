@@ -171,18 +171,17 @@ notThere url =
 
 getImageSize    :: FilePath -> Cmd Geo
 getImageSize f =
-  execImageSize f >>= parseGeo
-
-execImageSize :: FilePath -> Cmd String
-execImageSize f
-  = execProcess "exiftool" ["-s", "-ImageSize", f] ""
-
--- TODO: cleanup too many parseGeo's
-
-parseGeo :: String -> Cmd Geo
-parseGeo s =
-  maybe (abort $ "parseGeo: no parse: " ++ s) return $
-  readGeo' s
+  (fromMaybe geo'org . readGeo'') <$> execImageSize
+  where
+    execImageSize :: Cmd String
+    execImageSize
+      = execProcess "exiftool" ["-s", "-ImageSize", f] ""
+        `catchError`
+        ( const $ do
+            warn $ "getImageSize: size couldn't be determined for image " ++
+                   show f
+            return ""
+        )
 
 -- get the geo from an absolut path in catalog
 --
