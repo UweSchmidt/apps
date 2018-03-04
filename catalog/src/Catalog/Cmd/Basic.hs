@@ -278,10 +278,10 @@ adjustDirEntries = adjustNodeVal AdjDirEntries theDirEntries
 adjustMetaData :: (MetaData -> MetaData) -> ObjId -> Cmd ()
 adjustMetaData = adjustNodeVal AdjMetaData theMetaData
 
-adjustColImg :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
+adjustColImg :: (Maybe ImgRef -> Maybe ImgRef) -> ObjId -> Cmd ()
 adjustColImg = adjustNodeVal AdjColImg theColImg
 
-adjustColBlog :: (Maybe (ObjId, Name) -> Maybe (ObjId, Name)) -> ObjId -> Cmd ()
+adjustColBlog :: (Maybe ImgRef -> Maybe ImgRef) -> ObjId -> Cmd ()
 adjustColBlog = adjustNodeVal AdjColBlog theColBlog
 
 adjustColEntries :: ([ColEntry] -> [ColEntry]) -> ObjId -> Cmd ()
@@ -364,7 +364,7 @@ colEntryAt pos n =
 -- process a collection entry at an index pos
 -- if the entry isn't there, an error is thrown
 processColEntryAt :: (ObjId -> Name -> Cmd a) ->
-                     (ObjId ->         Cmd a) ->
+                     (ObjId  -> Cmd a) ->
                      Int ->
                      ImgNode -> Cmd a
 processColEntryAt imgRef colRef pos n =

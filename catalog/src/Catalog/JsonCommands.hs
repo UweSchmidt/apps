@@ -68,15 +68,15 @@ modify'saveblogsource pos t n = putBlogCont t pos n
       processColEntryAt
         (\ i nm -> putColBlogSource val i nm)
         (\ i    -> do
-            be        <- getImgVals i theColBlog
-            (bi, bn)  <- maybe
-                         ( do p <- objid2path i
-                              abort ("modify'saveblogsource: "
-                                     ++ "no blog entry set in collection: "
-                                     ++ p ^. isoString)
-                         )
-                         return
-                         be
+            n'            <- getImgVal i -- theColBlog
+            ImgRef bi bn  <- maybe
+                             ( do p <- objid2path i
+                                  abort ("modify'saveblogsource: "
+                                         ++ "no blog entry set in collection: "
+                                         ++ p ^. isoString)
+                             )
+                             return
+                             (n' ^? theColBlog . traverse)
             putColBlogSource val bi bn
         )
 
@@ -260,17 +260,15 @@ modify'colblog :: Path -> Int -> ObjId -> Cmd ()
 modify'colblog = modifyCol adjustColBlog
 
 
-modifyCol :: ((Maybe (ObjId, Name) -> Maybe (ObjId, Name)) ->
-               ObjId -> Cmd ()
-             ) ->
-             Path -> Int -> ObjId -> Cmd ()
+modifyCol :: ((Maybe ImgRef -> Maybe ImgRef) -> ObjId -> Cmd ())
+          -> Path -> Int -> ObjId -> Cmd ()
 modifyCol adjust sPath pos i
   | pos < 0 =
       adjust (const Nothing) i
   | otherwise = do
       scn <- snd <$> getIdNode' sPath
       processColImgEntryAt
-        (\ iid inm -> adjust (const $ Just (iid, inm)) i)
+        (\ iid inm -> adjust (const $ Just (ImgRef iid inm)) i)
         pos scn
 
 -- --------------------
@@ -436,12 +434,12 @@ read'iconref geo i =
 read'blogcontents :: Int -> ImgNode -> Cmd Text
 read'blogcontents =
   processColEntryAt
-    getColBlogCont                        -- ImgRef: entry is a blog text
+    getColBlogCont                        -- ImgEnt: entry is a blog text
     (\ i    -> do                         -- ColRef: lookup the col blog ref
-        be <- getImgVals i theColBlog
+        n <- getImgVal i -- theColBlog
         maybe (return mempty)             -- return nothing, when not there
-              (uncurry getColBlogCont)    -- else generate the HTML
-              be
+              (\(ImgRef i nm) -> getColBlogCont i nm)    -- else generate the HTML
+              (n ^? theColBlog . traverse)
     )
 
 -- get the contents of a blog entry
@@ -451,14 +449,14 @@ read'blogsource =
   processColEntryAt
     getColBlogSource
     (\ i    -> do
-        be        <- getImgVals i theColBlog
-        (bi, bn)  <- maybe
-                     ( do p <- objid2path i
-                          abort ("getBlogCont: no blog entry set in collection: "
-                                 ++ p ^. isoString)
-                     )
-                     return
-                     be
+        n  <- getImgVal i
+        ImgRef bi bn <- maybe
+              ( do p <- objid2path i
+                   abort ("getBlogCont: no blog entry set in collection: "
+                           ++ p ^. isoString)
+              )
+              return
+              (n ^? theColBlog . traverse)
         getColBlogSource bi bn
     )
 

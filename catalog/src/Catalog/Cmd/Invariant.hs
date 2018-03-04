@@ -4,6 +4,7 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
+import           Data.MetaData
 import           Data.ImageStore
 import           Data.ImgTree
 import           Data.Prim
@@ -67,17 +68,21 @@ cleanupImgRefs i0 = do
     -- and all img refs in the entries list
     -- and recurse into subcollections
 
+    colA :: (ObjId -> Cmd())
+         -> ObjId
+         -> MetaData -> Maybe ImgRef -> Maybe ImgRef -> [ColEntry]
+         -> Cmd ()
     colA go i _md im be es = do
       p <- objid2path i
       -- trc $ "cleanupImgRefs: process collection: " ++ quotePath p
 
-      im' <- filterMM (isOK (uncurry checkImgPart)) im
+      im' <- filterMM (isOK checkImgPart) im
       when (im /= im') $ do
         warn $ "cleanupImgRefs: col img ref removed in: "
                ++ quotePath p ++ ", " ++ show (im, im')
         adjustColImg (const im') i
 
-      be' <- filterMM (isOK (uncurry checkImgPart)) be
+      be' <- filterMM (isOK checkImgPart) be
       when (be /= be') $ do
         warn $ "cleanupImgRefs: col blog ref removed in: "
                ++ quotePath p ++ ", " ++ show (be, be')
@@ -126,8 +131,8 @@ cleanupImgRefs i0 = do
         else empty
 
     -- check whether both the ref and the part in an ImgRef exist
-    checkImgPart :: ObjId -> Name -> CmdMaybe ImgNode
-    checkImgPart i nm = do
+    checkImgPart :: ImgRef -> CmdMaybe ImgNode
+    checkImgPart (ImgRef i nm) = do
       n <- checkImgRef i
       _ <- return $ n ^? theParts . isoImgPartsMap . at nm
       return n
@@ -136,12 +141,12 @@ cleanupImgRefs i0 = do
     -- only the ImgRef's are checked, not the ColRef's
     checkColEntry :: ColEntry -> CmdMaybe ColEntry
     checkColEntry ce =
-      colEntry imgRef colRef ce
+      colEntry' imgRef colRef ce
       where
         colRef _ =
           return ce
-        imgRef i nm =
-          checkImgPart i nm >> return ce
+        imgRef ir =
+          checkImgPart ir >> return ce
 
     isOK :: (b -> CmdMaybe a) -> b -> Cmd Bool
     isOK cmd i =
@@ -178,7 +183,7 @@ undefRefs i0 = do
       warnU i $ S.unions (s1 : s2 : s3)
       where
         mapMb =
-          maybe (return S.empty) (go . fst)
+          maybe (return S.empty) (go . (\(ImgRef i' _name) -> i'))
 
     rootA go i dir col = do
       s <- S.union <$> go dir <*> go col
@@ -216,8 +221,8 @@ definedRefs i0 = do
       (S.insert i . S.unions) <$> mapM go (es ^. isoDirEntries)
 
     colA go i _md im be es = do
-      s1 <- maybe (return S.empty) (go . fst) im
-      s2 <- maybe (return S.empty) (go . fst) be
+      s1 <- maybe (return S.empty) (go . _iref) im
+      s2 <- maybe (return S.empty) (go . _iref) be
       s3 <- mapM (go . (^. theColObjId)) (filter isColColRef es)
       return $ S.insert i $ S.unions (s1 : s2 : s3)
 
@@ -287,101 +292,4 @@ checkUpLink i0 = do
       s2 <- go col
       return $ S.fromList s0 `S.union` (s1 `S.union` s2)
 
--- ----------------------------------------
-
-{-
-listNames :: ObjId -> Cmd String
-listNames i0 =
-  unlines <$> foldMT imgA dirA rootA colA i0
-  where
-    nm i     = show <$> getImgName i
-    ind n xs = n : map ("  " ++) xs
-
-    imgA i ps _md = do
-      n <- nm i
-      return $
-        ind n (ps ^.. isoImgParts . traverse . theImgName . isoString)
-
-    dirA go i es _ts = do
-      n  <- nm i
-      xs <- mapM go (es ^. isoDirEntries)
-      return $
-        ind n (concat xs)
-
-    rootA go i dir col = do
-      n   <- nm i
-      dns <- go dir
-      cns <- go col
-      return $
-        ind n (dns ++ cns)
-
-    colA go i _md _im _be es = do
-      n   <- nm i
-      cns <- mapM go' es
-      return $
-        ind n (concat cns)
-      where
-        go' (ImgRef _i n) =
-          return [n ^. isoString]
-        go' (ColRef i') =
-          go i'
-
-listPaths' :: ObjId -> Cmd [Path]
-listPaths' =
-  foldMT imgA dirA rootA colA
-  where
-    imgA i ps _md = do
-      p  <- objid2path i
-      let pp = ps ^.. isoImgParts . traverse . theImgName . to (`substPathName` p)
-      return $
-        p : pp
-
-    dirA go i es _ts = do
-      p  <- objid2path i
-      pp <- mapM go (es ^. isoDirEntries)
-      return $
-        p : concat pp
-
-    rootA go i dir col = do
-      p  <- objid2path i
-      pd <- go dir
-      pc <- go col
-      return $
-        p : pd ++ pc
-
-    colA go i _md _im _be es = do
-      p  <- objid2path i
-      pp <- mapM go' es
-      return $
-        p : concat pp
-      where
-        go' :: ColEntry -> Cmd [Path]
-        go' (ImgRef i' n') = do
-          ip <- objid2path i'
-          return [substPathName n' ip]
-        go' (ColRef i') =
-          go i'
-
-listPaths :: ObjId -> Cmd String
-listPaths i = (unlines . map show) <$> listPaths' i
-
-listImages' :: Cmd [(Path, [Name])]
-listImages' = do
-  r <- use (theImgTree . rootRef)
-  foldImages listImg r
-  where
-    listImg :: ObjId -> ImgParts -> MetaData -> Cmd [(Path, [Name])]
-    listImg i ps _md = do
-      p <- objid2path i
-      let pns = ps ^.. isoImgParts . traverse . theImgName
-      return [(p, pns)]
-
-listImages :: Cmd String
-listImages = formatImages <$> listImages'
-  where
-    formatImages :: [(Path, [Name])] -> String
-    formatImages = unlines . map (uncurry fmt)
-      where
-        fmt p ns = show p ++ ": " ++ intercalate ", " (map show ns)
--}
 -- ----------------------------------------

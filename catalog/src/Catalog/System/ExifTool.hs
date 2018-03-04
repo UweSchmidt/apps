@@ -97,7 +97,7 @@ syncAllMetaData i0 = do
 
     -- for a COL the col img and the entries must be traversed
     colA go _i _md im _be es = do
-      traverse_ (go . fst) im
+      traverse_ (go . (\(ImgRef i' _name) -> i')) im
       traverse_ go' es
         where
           go' = colEntry (\ i' _name -> go i') go

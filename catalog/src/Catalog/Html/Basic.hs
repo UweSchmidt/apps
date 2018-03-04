@@ -49,7 +49,7 @@ colImgOp iop cop = maybeColRef cop iref
     iref i pos = do
       cs <- getImgVals i theColEntries
       case cs ^? ix pos of
-        Just (ImgRef j n) -> iop j n
+        Just (ImgEnt (ImgRef j n)) -> iop j n
         _ -> return mempty
 
 -- ----------------------------------------
@@ -76,11 +76,11 @@ colImgPath0 :: ColRef -> Cmd (Maybe FilePath)
 colImgPath0 = colImgOp iop cop
   where
     cop i = do -- col ref
-      j'img <- getImgVals i theColImg
-      case j'img of
+      n <- getImgVal i
+      case n ^? theColImg . traverse of
         -- collection has a front page image
-        Just (k, n) ->
-          Just <$> buildImgPath0 k n
+        Just (ImgRef k no) ->
+          Just <$> buildImgPath0 k no
         _ ->
           return Nothing
 

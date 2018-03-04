@@ -240,8 +240,11 @@ sortByName =
     -- collections come first and are sorted by name
     -- images are sorted by name and part name
     getVal :: ColEntry -> Cmd (Either Name (Name, Name))
-    getVal (ColRef j)    = Left                    <$> getImgName j
-    getVal (ImgRef j n1) = (\ n -> Right (n, n1))  <$> getImgName j
+    getVal =
+      colEntry
+      (\ j n1 -> (\ n -> Right (n, n1))  <$> getImgName j)
+      (\ j    ->         Left            <$> getImgName j)
+
 
 sortByDate :: [ColEntry] -> Cmd [ColEntry]
 sortByDate =
@@ -253,12 +256,14 @@ sortByDate =
     -- the images are sorted by creation time and
     -- if that fails, by name
 
-    getVal (ColRef j) =
-      Left <$> getImgName j -- should never occur
-    getVal (ImgRef j n1) = do
-      md  <- getMetaData j
-      let t = getCreateMeta parseTime md
-      return $ Right (t, n1)
+    getVal =
+      colEntry
+      (\ j n1 -> do
+          md  <- getMetaData j
+          let t = getCreateMeta parseTime md
+          return $ Right (t, n1)
+      )
+      (\ j    -> Left <$> getImgName j )
 
 -- ----------------------------------------
 --
@@ -293,13 +298,14 @@ adjustColBy sortCol cs parent'i = do
 findFstTxtEntry :: ObjId -> Cmd (Maybe (Int, ColEntry))
 findFstTxtEntry = findFstColEntry isTxtEntry
   where
-    isTxtEntry (ImgRef i n) = do
-      nd <- getImgVal i
-      let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
-      return $ maybe False (== IMGtxt) ty
-
-    isTxtEntry (ColRef _) =
-      return False
+    isTxtEntry =
+      colEntry
+      (\ i n -> do
+          nd <- getImgVal i
+          let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
+          return $ maybe False (== IMGtxt) ty
+      )
+      (const $ return False)
 
 -- take the 1. text entry in a collection
 -- and set the collection blog entry to this value
@@ -310,9 +316,9 @@ setColBlogToFstTxtEntry rm i = do
   fte <- findFstTxtEntry i
   maybe (return ()) setEntry fte
   where
-    setEntry (pos, ir@(ImgRef j n)) = do
+    setEntry (pos, (ImgEnt ir)) = do
       trc $ unwords ["setColBlogToFstTxtEntry", show i, show pos, show ir]
-      adjustColBlog (const $ Just (j, n)) i
+      adjustColBlog (const $ Just ir) i
       when rm $
         remColEntry pos i
     setEntry _ =

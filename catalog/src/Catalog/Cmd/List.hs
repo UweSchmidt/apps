@@ -42,10 +42,8 @@ listNames i0 =
       return $
         ind n (concat cns)
       where
-        go' (ImgRef _i n) =
-          return [n ^. isoString]
-        go' (ColRef i') =
-          go i'
+        go' =
+          colEntry (\ _i n -> return [n ^. isoString]) go
 
 listPaths' :: ObjId -> Cmd [Path]
 listPaths' =
@@ -77,11 +75,13 @@ listPaths' =
         p : concat pp
       where
         go' :: ColEntry -> Cmd [Path]
-        go' (ImgRef i' n') = do
-          ip <- objid2path i'
-          return [substPathName n' ip]
-        go' (ColRef i') =
-          go i'
+        go' =
+          colEntry
+          (\ i' n' -> do
+              ip <- objid2path i'
+              return [substPathName n' ip]
+          )
+          go
 
 listPaths :: ObjId -> Cmd String
 listPaths i = (unlines . map show) <$> listPaths' i

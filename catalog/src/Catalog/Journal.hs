@@ -19,8 +19,8 @@ data Journal' ref = MkIMG         ref Name
                   | AdjImgParts   ref ImgParts
                   | AdjDirEntries ref DirEntries
                   | AdjMetaData   ref MetaData
-                  | AdjColImg     ref (Maybe (ref, Name))
-                  | AdjColBlog    ref (Maybe (ref, Name))
+                  | AdjColImg     ref (Maybe (ImgRef' ref))
+                  | AdjColBlog    ref (Maybe (ImgRef' ref))
                   | AdjColEntries ref [ColEntry' ref]
                   | SetSyncTime   ref TimeStamp
                   | InitImgStore  Name Name FilePath

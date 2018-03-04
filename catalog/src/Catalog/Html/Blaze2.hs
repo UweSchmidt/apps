@@ -153,14 +153,14 @@ normColRef = maybeColRef cref iref
     cref i = return $ Just $ mkColRefC i
     iref i pos = do
       val <- getImgVal i
-      return $
-        case val ^? theColEntries . ix pos of
-          Just (ImgRef _ _) ->    -- ref to an image
-            Just $ mkColRefI i pos
-          Just (ColRef j) ->      -- ref to a sub collection
-            Just $ mkColRefC j
-          Nothing ->              -- index out of bounds
-            Nothing
+      return
+        ( ( colEntry
+            (\ _ _ -> mkColRefI i pos) -- ref to an image
+            mkColRefC                  -- ref to a sub collection
+          )
+          <$>
+          (val ^? theColEntries . ix pos)  -- a Maybe value
+        )
 
 -- ----------------------------------------
 --
@@ -453,10 +453,10 @@ colImgBlog :: ColRef -> Cmd Text
 colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
   where
     cref i = do
-      nd <- getImgVals i theColBlog
-      case nd of
-        Just (j, n) -> getColBlogCont j n
-        Nothing     -> return mempty
+      nd <- getImgVal i -- theColBlog
+      case nd ^? theColBlog . traverse of
+        Just (ImgRef j n) -> getColBlogCont j n
+        Nothing           -> return mempty
 
 -- ----------------------------------------
 

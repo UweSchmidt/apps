@@ -15,8 +15,8 @@ foldMT' :: (         ObjId                                        -> Cmd r) ->  
            (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
            (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
            (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
-           (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
-                           -> (Maybe (ObjId, Name)) -> [ColEntry] -> Cmd r) ->  -- COL
+           (Act r -> ObjId -> MetaData -> Maybe ImgRef
+                           -> Maybe ImgRef -> [ColEntry] -> Cmd r) ->  -- COL
            Act r
 foldMT' undefId imgA dirA' rootA' colA' i0 = do
   go i0
@@ -45,8 +45,8 @@ foldMT' undefId imgA dirA' rootA' colA' i0 = do
 foldMT :: (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
           (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR
           (Act r -> ObjId -> ObjId    -> ObjId                   -> Cmd r) ->  -- ROOT
-          (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
-                          -> (Maybe (ObjId, Name)) -> [ColEntry] -> Cmd r) ->  -- COL
+          (Act r -> ObjId -> MetaData -> Maybe ImgRef
+                          -> Maybe ImgRef -> [ColEntry] -> Cmd r) ->  -- COL
            Act r
 foldMT = foldMT' undefId
   where
@@ -70,8 +70,8 @@ foldImgDirs imgA dirA =
 
 foldCollections ::
   Monoid r =>
-  (Act r -> ObjId -> MetaData -> (Maybe (ObjId, Name))
-                  -> (Maybe (ObjId, Name)) -> [ColEntry] -> Cmd r) ->
+  (Act r -> ObjId -> MetaData -> Maybe ImgRef
+                  -> Maybe ImgRef -> [ColEntry] -> Cmd r) ->
   Act r
 
 foldCollections colA =

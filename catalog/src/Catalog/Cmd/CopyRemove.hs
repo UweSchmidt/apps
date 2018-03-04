@@ -61,8 +61,8 @@ createColCopy target'path src'id = do
   -- copy collection attributes
   n <- getImgVal src'id
   adjustMetaData (const $ n ^. theColMetaData) col'id
-  adjustColImg   (const $ n ^. theColImg)      col'id
-  adjustColBlog  (const $ n ^. theColBlog)     col'id
+  adjustColImg   (const $ join $ n ^? theColImg)      col'id
+  adjustColBlog  (const $ join $ n ^? theColBlog)     col'id
   return col'id
 
 
@@ -88,11 +88,14 @@ copyColEntries pf =
           where
 
             copy :: ColEntry -> Cmd ColEntry
-            copy r@(ImgRef _i _n) =
-              return r
-            copy (ColRef i') = do
-              copy'path <- pf <$> objid2path i'
-              mkColColRef <$> createColCopy copy'path i'
+            copy ce =
+              colEntry
+              (\ _ _ -> return ce)
+              (\ i'  -> do
+                  copy'path <- pf <$> objid2path i'
+                  mkColColRef <$> createColCopy copy'path i'
+              )
+              ce
 
 -- ----------------------------------------
 
@@ -167,9 +170,9 @@ cleanupCollections i0 = do
           return ()
       where
         -- TODO: Bug, for be adjustColBlog should be called
-        cleanupIm :: ObjId -> Maybe (ObjId, Name) -> Cmd ()
-        cleanupIm i' (Just (j, n)) =
-          unlessM (exImg j n) $
+        cleanupIm :: ObjId -> Maybe ImgRef -> Cmd ()
+        cleanupIm i' (Just ir) =
+          unlessM (exImg ir) $
             adjustColImg (const Nothing) i'
         cleanupIm _ Nothing =
           return ()
@@ -181,9 +184,9 @@ cleanupCollections i0 = do
             adjustColEntries (const es') i'
           where
             cleanupE :: ColEntry -> Cmd Bool
-            cleanupE (ImgRef j n) =
-              exImg j n
-            cleanupE (ColRef j) = do
+            cleanupE (ImgEnt ir) =
+              exImg ir
+            cleanupE (ColEnt j) = do
               -- recurse into subcollection and cleanup
               cleanup j
               j'not'empty <- (not . null) <$> getImgVals j theColEntries
@@ -192,8 +195,8 @@ cleanupCollections i0 = do
                 rmRec j
               return j'not'empty
 
-        exImg :: ObjId -> Name -> Cmd Bool
-        exImg i' n' = do
+        exImg :: ImgRef -> Cmd Bool
+        exImg (ImgRef i' n') = do
           me <- getTree (entryAt i')
           let ex = case me of
                 Just e
@@ -231,7 +234,7 @@ cleanupRefs rs i0
 
         cleanupIm :: Path -> Cmd ()
         cleanupIm p = maybe (return ())
-          (\ (j, n) -> do
+          (\ (ImgRef j n) -> do
               when (removedImg j n) $ do
                 warn $ "cleanupRefs: col img removed: " ++
                        quotePath p ++ ", " ++ show (i, j, n)
@@ -240,7 +243,7 @@ cleanupRefs rs i0
 
         cleanupBe :: Path -> Cmd ()
         cleanupBe p = maybe (return ())
-          (\ (j, n) -> do
+          (\ (ImgRef j n) -> do
               when (removedImg j n) $ do
                 warn $ "cleanupRefs: col blog removed: " ++
                        quotePath p ++ ", " ++ show (i, j, n)

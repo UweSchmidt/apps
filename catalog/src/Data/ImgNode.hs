@@ -9,6 +9,8 @@ module Data.ImgNode
        ( ImgNode'(..)
        , ImgParts
        , ImgPart
+       , ImgRef'(..)
+       , ImgRef
        , ColEntry'(..)
        , ColEntrySet'
        , ColEntrySet
@@ -16,6 +18,7 @@ module Data.ImgNode
        , mkImgParts
        , mkImgPart
        , mkColImgRef
+       , mkColImgRef'
        , mkColColRef
        , mkDirEntries
        , emptyImg
@@ -29,6 +32,7 @@ module Data.ImgNode
        , isColColRef
        , isColImgRef
        , colEntry
+       , colEntry'
        , isoImgParts
        , isoImgPartsMap
        , isoDirEntries
@@ -79,14 +83,17 @@ import qualified Data.Set        as S
 
 
 data ImgNode' ref = IMG  !ImgParts
-                         !MetaData             -- image meta data other than exif data
-                  | DIR  !(DirEntries' ref)    -- the contents of an image dir
-                         !TimeStamp            -- the last sync with the file system
+                         !MetaData               -- image meta data other
+                                                 -- than exif data
+                  | DIR  !(DirEntries' ref)      -- the contents of an image dir
+                         !TimeStamp              -- the last sync with
+                                                 -- the file system
                   | ROOT !ref !ref
-                  | COL  !MetaData             -- collection meta data
-                         !(Maybe (ref, Name))  -- optional image
-                         !(Maybe (ref, Name))  -- optional blog entry
-                         ![ColEntry' ref]      -- the list of images and subcollections
+                  | COL  !MetaData               -- collection meta data
+                         !(Maybe (ImgRef' ref))  -- optional image
+                         !(Maybe (ImgRef' ref))  -- optional blog entry
+                         ![ColEntry' ref]        -- the list of images
+                                                 -- and subcollections
 
 -- ----------------------------------------
 
@@ -123,10 +130,10 @@ instance ToJSON ref => ToJSON (ImgNode' ref) where
     ]
     ++ case im of
          Nothing -> []
-         Just p  -> ["image" J..= p]
+         Just (ImgRef i n)  -> ["image" J..= (i, n)]
     ++ case be of
          Nothing -> []
-         Just p  -> ["blog"  J..= p]
+         Just (ImgRef i n)  -> ["blog"  J..= (i, n)]
 
 instance (FromJSON ref) => FromJSON (ImgNode' ref) where
   parseJSON = J.withObject "ImgNode" $ \ o ->
@@ -143,8 +150,8 @@ instance (FromJSON ref) => FromJSON (ImgNode' ref) where
                 <*> o J..: t'collections
          "COL" ->
            COL  <$> o J..: "metadata"
-                <*> (Just <$> o J..:? "image") J..!= Nothing
-                <*> (Just <$> o J..:? "blog" ) J..!= Nothing
+                <*> ((uncurry ImgRef <$>) <$> o J..:? "image" J..!= Nothing)
+                <*> ((uncurry ImgRef <$>) <$> o J..:? "blog"  J..!= Nothing)
                 <*> o J..: "entries"
          _ -> mzero
 
@@ -228,7 +235,7 @@ theRootImgCol = theImgRoot . _2
 {-# INLINE theRootImgCol #-}
 
 theImgCol :: Prism' (ImgNode' ref)
-                    (MetaData, Maybe (ref, Name), Maybe (ref, Name), [ColEntry' ref])
+                    (MetaData, Maybe (ImgRef' ref), Maybe (ImgRef' ref), [ColEntry' ref])
 theImgCol =
   prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
         (\ x -> case x of
@@ -241,11 +248,11 @@ theColMetaData :: Traversal' (ImgNode' ref) MetaData
 theColMetaData = theImgCol . _1
 {-# INLINE theColMetaData #-}
 
-theColImg :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
+theColImg :: Traversal' (ImgNode' ref) (Maybe (ImgRef' ref))
 theColImg = theImgCol . _2
 {-# INLINE theColImg #-}
 
-theColBlog :: Traversal' (ImgNode' ref) (Maybe (ref, Name))
+theColBlog :: Traversal' (ImgNode' ref) (Maybe (ImgRef' ref))
 theColBlog = theImgCol . _3
 {-# INLINE theColBlog #-}
 
@@ -377,8 +384,19 @@ theImgCheckSum k (IP n t s c) = (\ new -> IP n t s new) <$> k c
 
 -- ----------------------------------------
 
-data ColEntry' ref = ImgRef !ref !Name
-                   | ColRef !ref
+data ImgRef' ref = ImgRef {_iref :: !ref, _iname ::  !Name}
+
+deriving instance (Eq   ref) => Eq   (ImgRef' ref)
+deriving instance (Ord  ref) => Ord  (ImgRef' ref)
+deriving instance (Show ref) => Show (ImgRef' ref)
+deriving instance Functor ImgRef'
+
+type ImgRef      = ImgRef' ObjId
+
+-- --------------------
+
+data ColEntry' ref = ImgEnt ! (ImgRef' ref)
+                   | ColEnt ! ref
 
 deriving instance (Eq   ref) => Eq   (ColEntry' ref)
 deriving instance (Ord  ref) => Ord  (ColEntry' ref)
@@ -386,13 +404,13 @@ deriving instance (Show ref) => Show (ColEntry' ref)
 deriving instance Functor ColEntry'
 
 instance (ToJSON ref) => ToJSON (ColEntry' ref) where
-  toJSON (ImgRef i n) = J.object $
+  toJSON (ImgEnt (ImgRef i n)) = J.object $
     [ "ColEntry"  J..= ("IMG" :: String)
     , "ref"       J..= i
     , "part"      J..= n
     ]
 
-  toJSON (ColRef i) = J.object
+  toJSON (ColEnt i) = J.object
     [ "ColEntry"  J..= ("COL" :: String)
     , "ref"       J..= i
     ]
@@ -402,30 +420,41 @@ instance (FromJSON ref) => FromJSON (ColEntry' ref) where
     do t <- o J..: "ColEntry"
        case t :: String of
          "IMG" ->
-           ImgRef <$> o J..: "ref"
-                  <*> o J..: "part"
+           ImgEnt <$> (ImgRef <$> o J..: "ref"
+                              <*> o J..: "part"
+                      )
          "COL" ->
-           ColRef <$> o J..: "ref"
+           ColEnt <$> o J..: "ref"
          _ -> mzero
 
 mkColImgRef :: ref -> Name -> ColEntry' ref
-mkColImgRef i n = ImgRef i n
+mkColImgRef i n = ImgEnt $ ImgRef i n
 {-# INLINE mkColImgRef #-}
 
+mkColImgRef' :: ImgRef' ref -> ColEntry' ref
+mkColImgRef' = ImgEnt
+{-# INLINE mkColImgRef' #-}
+
 mkColColRef :: ref -> ColEntry' ref
-mkColColRef = ColRef
+mkColColRef = ColEnt
 {-# INLINE mkColColRef #-}
 
 colEntry :: (ref -> Name -> a) ->
             (ref         -> a) ->
             ColEntry' ref -> a
-colEntry  imgRef _colRef (ImgRef i n) = imgRef i n
-colEntry _imgRef  colRef (ColRef i  ) = colRef i
+colEntry  imgRef _colRef (ImgEnt (ImgRef i n)) = imgRef i n
+colEntry _imgRef  colRef (ColEnt i           ) = colRef i
+
+colEntry' :: (ImgRef' ref -> a) ->
+             (ref         -> a) ->
+             ColEntry' ref -> a
+colEntry'  imgRef _colRef (ImgEnt ir) = imgRef ir
+colEntry' _imgRef  colRef (ColEnt i ) = colRef i
 
 
 theColObjId :: Lens' (ColEntry' ref) ref
-theColObjId k (ImgRef i n) = (\ new -> ImgRef new n) <$> k i
-theColObjId k (ColRef i)   =           ColRef        <$> k i
+theColObjId k (ImgEnt (ImgRef i n)) = (\ new -> ImgEnt (ImgRef new n)) <$> k i
+theColObjId k (ColEnt i           ) =           ColEnt                 <$> k i
 {-# INLINE theColObjId #-}
 
 -- theImgName :: Lens' ImgPart Name
@@ -433,26 +462,26 @@ theColObjId k (ColRef i)   =           ColRef        <$> k i
 
 theColImgRef :: Prism' (ColEntry' ref) (ref, Name)
 theColImgRef =
-  prism (\ (i, n) -> ImgRef i n)
+  prism (\ (i, n) -> ImgEnt (ImgRef i n))
         (\ x -> case x of
-            ImgRef i n -> Right (i, n)
-            _          -> Left  x
+            ImgEnt (ImgRef i n) -> Right (i, n)
+            _                   -> Left  x
         )
 {-# INLINE theColImgRef #-}
 
 theColColRef :: Prism' (ColEntry' ref) ref
 theColColRef =
-  prism ColRef
+  prism ColEnt
         (\ x -> case x of
-            ColRef i -> Right i
-            _        -> Left  x
+                  ColEnt i -> Right i
+                  _        -> Left  x
         )
 {-# INLINE theColColRef #-}
 
 isColColRef
   , isColImgRef :: ColEntry' ref -> Bool
 
-isColColRef (ColRef{}) = True
+isColColRef (ColEnt{}) = True
 isColColRef _          = False
 
 isColImgRef = not . isColColRef
@@ -530,9 +559,6 @@ instance Ord ref => Monoid (ColEntrySet' ref) where
 instance IsEmpty (ColEntrySet' ref) where
   isempty (CES s) = S.null s
 
-memberColEntrySet :: Ord ref => ColEntry' ref -> ColEntrySet' ref -> Bool
-memberColEntrySet ce (CES s) = ce `S.member` s
-
 singletonColEntrySet :: ColEntry' ref -> ColEntrySet' ref
 singletonColEntrySet = CES . S.singleton
 
@@ -542,10 +568,21 @@ fromListColEntrySet = CES . S.fromList
 toListColEntrySet :: ColEntrySet' ref -> [ColEntry' ref]
 toListColEntrySet (CES s) = S.toList s
 
-diffColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
+memberColEntrySet :: Ord ref
+                  => ColEntry' ref
+                  -> ColEntrySet' ref -> Bool
+memberColEntrySet ce (CES s) = ce `S.member` s
+
+diffColEntrySet :: Ord ref
+                =>  ColEntrySet' ref
+                -> ColEntrySet' ref
+                -> ColEntrySet' ref
 CES s1 `diffColEntrySet` CES s2 = CES $ s1 `S.difference` s2
 
-intersectColEntrySet :: Ord ref =>  ColEntrySet' ref -> ColEntrySet' ref -> ColEntrySet' ref
+intersectColEntrySet :: Ord ref
+                     => ColEntrySet' ref
+                     -> ColEntrySet' ref
+                     -> ColEntrySet' ref
 CES s1 `intersectColEntrySet` CES s2 = CES $ s1 `S.intersection` s2
 
 -- ----------------------------------------

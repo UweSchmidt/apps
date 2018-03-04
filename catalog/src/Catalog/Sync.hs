@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -8,6 +9,7 @@ import Catalog.Cmd
 import Catalog.FilePath        (filePathToImgType)
 import Catalog.System.ExifTool (syncMetaData)
 import Data.ImgTree
+import Data.MetaData
 import Data.Prim
 
 -- ----------------------------------------
@@ -29,11 +31,15 @@ allColEntries =
   where
     -- collect all ImgRef's by recursing into subcollections
     -- union subcollection results and imgrefs together
+    colA :: (ObjId -> Cmd ColEntrySet)
+         -> ObjId -> MetaData
+         -> Maybe ImgRef -> Maybe ImgRef -> [ColEntry]
+         -> Cmd ColEntrySet
     colA  go  i _md im be cs = do
       p <- objid2path i
       verbose $ "allColEntries: " ++ quotePath p
-      let imref = im ^.. traverse . to (uncurry mkColImgRef)
-      let beref = be ^.. traverse . to (uncurry mkColImgRef)
+      let imref = im ^.. traverse . to mkColImgRef'
+      let beref = be ^.. traverse . to mkColImgRef'
       let (crs, irs) = partition isColColRef cs
       iss <- mapM go (crs ^.. traverse . theColColRef)
       return $ foldl' (<>) (fromListColEntrySet $ imref ++ beref ++ irs) iss
@@ -58,10 +64,10 @@ trcColEntrySet :: ColEntrySet -> Cmd [(Path, Name)]
 trcColEntrySet cs =
   traverse trcCE $ toListColEntrySet cs
   where
-    trcCE = colEntry iref cref
+    trcCE = colEntry ir cr
       where
-        iref i n = (\ p -> (p, n)) <$> objid2path i
-        cref i   = (\ p -> (p, mempty)) <$> objid2path i
+        ir i n = (, n)      <$> objid2path i
+        cr i   = (, mempty) <$> objid2path i
 
 -- ----------------------------------------
 
