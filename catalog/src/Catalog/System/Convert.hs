@@ -101,7 +101,7 @@ genImage geo oid nm = do
   n       <- getImgVal oid
   let ityp = fromMaybe IMGother $
              n ^? theParts . isoImgPartsMap . ix nm . theImgType
-  srcPath <- buildImgPath oid nm
+  srcPath <- buildImgPath (ImgRef oid nm)
   genImageFrom ityp geo srcPath (addJpg srcPath)
 
 

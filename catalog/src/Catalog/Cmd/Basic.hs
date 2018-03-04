@@ -363,18 +363,18 @@ colEntryAt pos n =
 
 -- process a collection entry at an index pos
 -- if the entry isn't there, an error is thrown
-processColEntryAt :: (ObjId -> Name -> Cmd a) ->
+processColEntryAt :: (ImgRef -> Cmd a) ->
                      (ObjId  -> Cmd a) ->
                      Int ->
                      ImgNode -> Cmd a
 processColEntryAt imgRef colRef pos n =
   colEntryAt pos n >>=
-  colEntry imgRef colRef
+  colEntry' imgRef colRef
 
 -- process a collection image entry at an index pos
 -- if the entry isn't there, an error is thrown
 processColImgEntryAt :: Monoid a =>
-                        (ObjId -> Name -> Cmd a) ->
+                        (ImgRef -> Cmd a) ->
                         Int ->
                         ImgNode -> Cmd a
 processColImgEntryAt imgRef =
@@ -434,12 +434,12 @@ toJournalPath j = dt >>= go
 
 -- ----------------------------------------
 
-buildImgPath0 :: ObjId -> Name -> Cmd FilePath
-buildImgPath0 i n = do
+buildImgPath0 :: ImgRef -> Cmd FilePath
+buildImgPath0 (ImgRef i n) = do
   p <- objid2path i
   return $ substPathName n p ^. isoString
 
-buildImgPath :: ObjId -> Name -> Cmd FilePath
-buildImgPath i n = addJpg <$> buildImgPath0 i n
+buildImgPath :: ImgRef -> Cmd FilePath
+buildImgPath ir = addJpg <$> buildImgPath0 ir
 
 -- ----------------------------------------

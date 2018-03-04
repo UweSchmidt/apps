@@ -455,8 +455,8 @@ colImgBlog = maybeColRef cref (\ _ _ -> return mempty)
     cref i = do
       nd <- getImgVal i -- theColBlog
       case nd ^? theColBlog . traverse of
-        Just (ImgRef j n) -> getColBlogCont j n
-        Nothing           -> return mempty
+        Just ir -> getColBlogCont ir
+        Nothing -> return mempty
 
 -- ----------------------------------------
 

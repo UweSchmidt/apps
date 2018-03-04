@@ -66,10 +66,10 @@ modify'saveblogsource pos t n = putBlogCont t pos n
     putBlogCont :: Text -> Int -> ImgNode -> Cmd ()
     putBlogCont val =
       processColEntryAt
-        (\ i nm -> putColBlogSource val i nm)
+        (putColBlogSource val)
         (\ i    -> do
             n'            <- getImgVal i -- theColBlog
-            ImgRef bi bn  <- maybe
+            br  <- maybe
                              ( do p <- objid2path i
                                   abort ("modify'saveblogsource: "
                                          ++ "no blog entry set in collection: "
@@ -77,7 +77,7 @@ modify'saveblogsource pos t n = putBlogCont t pos n
                              )
                              return
                              (n' ^? theColBlog . traverse)
-            putColBlogSource val bi bn
+            putColBlogSource val br
         )
 
 -- --------------------
@@ -268,7 +268,7 @@ modifyCol adjust sPath pos i
   | otherwise = do
       scn <- snd <$> getIdNode' sPath
       processColImgEntryAt
-        (\ iid inm -> adjust (const $ Just (ImgRef iid inm)) i)
+        (\ ir -> adjust (const $ Just ir) i)
         pos scn
 
 -- --------------------
@@ -436,9 +436,9 @@ read'blogcontents =
   processColEntryAt
     getColBlogCont                        -- ImgEnt: entry is a blog text
     (\ i    -> do                         -- ColRef: lookup the col blog ref
-        n <- getImgVal i -- theColBlog
+        n <- getImgVal i                  -- theColBlog
         maybe (return mempty)             -- return nothing, when not there
-              (\(ImgRef i nm) -> getColBlogCont i nm)    -- else generate the HTML
+              getColBlogCont              -- else generate the HTML
               (n ^? theColBlog . traverse)
     )
 
@@ -448,16 +448,16 @@ read'blogsource :: Int -> ImgNode -> Cmd Text
 read'blogsource =
   processColEntryAt
     getColBlogSource
-    (\ i    -> do
+    (\ i -> do
         n  <- getImgVal i
-        ImgRef bi bn <- maybe
+        br <- maybe
               ( do p <- objid2path i
                    abort ("getBlogCont: no blog entry set in collection: "
                            ++ p ^. isoString)
               )
               return
               (n ^? theColBlog . traverse)
-        getColBlogSource bi bn
+        getColBlogSource br
     )
 
 -- --------------------
@@ -480,9 +480,10 @@ read'previewref pos geo n =
 read'metadata :: Int -> ImgNode -> Cmd MetaData
 read'metadata =
   processColEntryAt
-    (\ i _ -> do exifMD <- getMetaData i               -- exif meta data
-                 imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
-                 return $ imgMD <> exifMD
+    (\ (ImgRef i _) -> do
+        exifMD <- getMetaData i               -- exif meta data
+        imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
+        return $ imgMD <> exifMD
     )
     (\ i   -> getImgVals i theMetaData)
 
@@ -491,7 +492,7 @@ read'metadata =
 read'rating :: Int -> ImgNode -> Cmd Rating
 read'rating pos n =
   getRating <$>
-  processColEntryAt (\ i' _ -> getM i') getM pos n
+  processColEntryAt (\ (ImgRef i' _) -> getM i') getM pos n
   where
     getM i' = getImgVals i' theMetaData
 

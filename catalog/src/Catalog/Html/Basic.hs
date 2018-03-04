@@ -79,12 +79,12 @@ colImgPath0 = colImgOp iop cop
       n <- getImgVal i
       case n ^? theColImg . traverse of
         -- collection has a front page image
-        Just (ImgRef k no) ->
-          Just <$> buildImgPath0 k no
+        Just ir ->
+          Just <$> buildImgPath0 ir
         _ ->
           return Nothing
 
-    iop j n = Just <$> buildImgPath0 j n
+    iop j n = Just <$> buildImgPath0 (ImgRef j n)
 
 colImgPath :: ColRef -> Cmd (Maybe FilePath)
 colImgPath cr = do
@@ -204,28 +204,28 @@ colBlogCont :: ImgType -> ColRef -> Cmd Text
 colBlogCont IMGtxt cr = do
   colImgOp iop cop cr
   where
-    iop i n     = getColBlogCont i n
+    iop i n     = getColBlogCont (ImgRef i n)
     cop _       = return mempty
 colBlogCont _ _ = return mempty
 
-getColBlogCont :: ObjId -> Name -> Cmd Text
-getColBlogCont i n = do
+getColBlogCont :: ImgRef -> Cmd Text
+getColBlogCont (ImgRef i n) = do
       p <- objid2path i
       -- subst the name by the part name
       -- and build a file path
       f <- toFilePath (substPathName n p)
       genBlogHtml f
 
-getColBlogSource :: ObjId -> Name -> Cmd Text
-getColBlogSource i n = do
+getColBlogSource :: ImgRef -> Cmd Text
+getColBlogSource (ImgRef i n) = do
   p <- objid2path i
   -- subst the name by the part name
   -- and build a file path
   f <- toFilePath (substPathName n p)
   genBlogText f
 
-putColBlogSource :: Text -> ObjId -> Name -> Cmd ()
-putColBlogSource t i n = do
+putColBlogSource :: Text -> ImgRef -> Cmd ()
+putColBlogSource t (ImgRef i n) = do
   p <- objid2path i
   f <- toFilePath (substPathName n p)
   writeBlogText t f

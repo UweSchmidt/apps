@@ -48,12 +48,15 @@ fillImgCache' cmd =
   foldCollections fill
   where
     fill go i _md im _be es = do
-      maybe (return ()) (uncurry updateImg) im
+      maybe
+        (return ())
+        (\ (ImgRef i' n') -> updateImg i' n')
+        im
       updateColImg i
       mapM_ (colEntry updateImg go) es
 
     updateImg i n =
-      buildImgPath i n >>= cmd
+      buildImgPath (ImgRef i n) >>= cmd
 
     updateColImg i =
       colImgRef i >>= cmd
