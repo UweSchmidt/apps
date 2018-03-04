@@ -96,8 +96,8 @@ genIcon path t = do
 
 -- ----------------------------------------
 
-genImage :: GeoAR -> ObjId -> Name -> Cmd FilePath
-genImage geo oid nm = do
+genImage :: GeoAR -> ImgRef -> Cmd FilePath
+genImage geo (ImgRef oid nm) = do
   n       <- getImgVal oid
   let ityp = fromMaybe IMGother $
              n ^? theParts . isoImgPartsMap . ix nm . theImgType

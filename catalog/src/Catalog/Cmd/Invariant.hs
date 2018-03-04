@@ -94,7 +94,7 @@ cleanupImgRefs i0 = do
                ++ quotePath p ++ ", " ++ show (es, es')
         adjustColEntries (const es') i
 
-      mapM_ (colEntry (\ _ _ -> return ()) go) es'
+      mapM_ (colEntry' (\ _ -> return ()) go) es'
 
     -- in ROOT case: traverse COL and DIR hierachies
     rootA go _i dir col = go dir >> go col

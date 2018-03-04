@@ -89,8 +89,8 @@ copyColEntries pf =
 
             copy :: ColEntry -> Cmd ColEntry
             copy ce =
-              colEntry
-              (\ _ _ -> return ce)
+              colEntry'
+              (\ _ir -> return ce)
               (\ i'  -> do
                   copy'path <- pf <$> objid2path i'
                   mkColColRef <$> createColCopy copy'path i'
@@ -230,7 +230,7 @@ cleanupRefs rs i0
       where
         cleanupSubCol :: ColEntry -> Cmd ()
         cleanupSubCol =
-          colEntry (\ _ _ -> return ()) go
+          colEntry' (\ _ir -> return ()) go
 
         cleanupIm :: Path -> Cmd ()
         cleanupIm p = maybe (return ())
@@ -281,16 +281,16 @@ cleanupRefs rs i0
           where
             checkESC :: [ObjId] -> ColEntry -> Cmd [ObjId]
             checkESC res =
-              colEntry (\ _ _ -> return res)
-                       (\ ci -> do cn <- getImgVal ci
-                                   return $
-                                     if isCOL cn
-                                        &&
-                                        null (cn ^. theColEntries)
-                                        &&
-                                        isRemovable (cn ^. theMetaData)
-                                     then ci : res
-                                     else      res
-                       )
+              colEntry' (\ _  -> return res)
+                        (\ ci -> do cn <- getImgVal ci
+                                    return $
+                                      if isCOL cn
+                                         &&
+                                         null (cn ^. theColEntries)
+                                         &&
+                                         isRemovable (cn ^. theMetaData)
+                                      then ci : res
+                                      else      res
+                        )
 
 -- ----------------------------------------

@@ -100,7 +100,7 @@ syncAllMetaData i0 = do
       traverse_ (go . (\(ImgRef i' _name) -> i')) im
       traverse_ go' es
         where
-          go' = colEntry (\ i' _name -> go i') go
+          go' = colEntry' (go . _iref) go
 
 -- i must be an objid pointing to am ImgNode
 -- else this becomes a noop

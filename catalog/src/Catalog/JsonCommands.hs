@@ -94,8 +94,8 @@ modify'changeWriteProtected ixs ro n =
       | mark < 0 =
           return ()
       | otherwise =
-          colEntry
-          (\ _ _ -> return ())            -- ignore ImgRef's
+          colEntry'
+          (\ _ -> return ())            -- ignore ImgRef's
           (adjustMetaData cf)
           ce
 
@@ -169,8 +169,8 @@ removeFromCol ixs i n = do
 
 removeEntryFromCol :: ObjId -> Int -> ColEntry -> Cmd ()
 removeEntryFromCol i pos =
-  colEntry
-  (\ _ _ -> adjustColEntries (removeAt pos) i)
+  colEntry'
+  (\ _ -> adjustColEntries (removeAt pos) i)
   rmRec
 
 -- --------------------
@@ -196,8 +196,8 @@ copyToCol ixs di n =
 
 copyEntryToCol :: ObjId -> ColEntry -> Cmd ()
 copyEntryToCol di ce =
-  colEntry
-  (\ _ _ -> adjustColEntries (++ [ce]) di)
+  colEntry'
+  (\ _ -> adjustColEntries (++ [ce]) di)
   copyColToCol
   ce
   where
@@ -320,9 +320,9 @@ modify'setMetaData ixs md n =
       | mark < 0 =
           return ()
       | otherwise =
-          colEntry
-          (\ ii _ -> adjustMetaData (md <>) ii)
-          (          adjustMetaData (md <>)   )
+          colEntry'
+          ( adjustMetaData (md <>) . _iref )
+          ( adjustMetaData (md <>)         )
           ce
 
 -- set meta data fields for a single collection entry
@@ -502,7 +502,7 @@ read'ratings :: ImgNode -> Cmd [Rating]
 read'ratings n =
   traverse f (n ^. theColEntries)
   where
-    f = colEntry (\ i' _ -> getR i') getR
+    f = colEntry' (getR . _iref) getR
       where
         getR i' = getRating <$> getImgVals i' theMetaData
 

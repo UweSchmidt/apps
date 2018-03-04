@@ -50,13 +50,13 @@ fillImgCache' cmd =
     fill go i _md im _be es = do
       maybe
         (return ())
-        (\ (ImgRef i' n') -> updateImg i' n')
+        updateImg
         im
       updateColImg i
-      mapM_ (colEntry updateImg go) es
+      mapM_ (colEntry' updateImg go) es
 
-    updateImg i n =
-      buildImgPath (ImgRef i n) >>= cmd
+    updateImg ir =
+      buildImgPath ir >>= cmd
 
     updateColImg i =
       colImgRef i >>= cmd

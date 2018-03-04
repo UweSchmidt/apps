@@ -70,13 +70,13 @@ zipEntries geoar px e =
     cs = e ^. theColEntries
 
     zipE :: ColEntry -> Int -> Cmd ()
-    zipE ce i = colEntry zipI zipC ce
+    zipE ce i = colEntry' zipI zipC ce
       where
         i' = fmtInt (i + 1)
 
-        zipI :: ObjId -> Name -> Cmd ()
-        zipI oid n = do
-          cpyPath  <- genImage geoar oid n
+        zipI :: ImgRef -> Cmd ()
+        zipI ir = do
+          cpyPath  <- genImage geoar ir
           trc $ "zipEntries: ln " ++ cpyPath ++ " " ++ lnk
           linkFile cpyPath lnk
             where

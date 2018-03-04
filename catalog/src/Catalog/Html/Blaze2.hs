@@ -154,9 +154,9 @@ normColRef = maybeColRef cref iref
     iref i pos = do
       val <- getImgVal i
       return
-        ( ( colEntry
-            (\ _ _ -> mkColRefI i pos) -- ref to an image
-            mkColRefC                  -- ref to a sub collection
+        ( ( colEntry'
+            (\ _  -> mkColRefI i pos) -- ref to an image
+            mkColRefC                 -- ref to a sub collection
           )
           <$>
           (val ^? theColEntries . ix pos)  -- a Maybe value
