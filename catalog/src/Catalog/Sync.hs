@@ -205,7 +205,7 @@ idSyncFS recursive i = getImgVal i >>= go
               checkEmptyDir i
             else do
               verbose $ "sync: fs dir not found: " ++ show fp
-              rmImgNode i
+              rmRec i
 
       | isROOT e = do
           trcObj i "idSyncFS: syncing root"

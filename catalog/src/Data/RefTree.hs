@@ -233,7 +233,7 @@ remDirNode removable updateParent r t
          throwError $ "remDirNode: ref doesn't exist: " ++ show r
 
        when (r `isDirRoot` t) $
-         throwError $ "remDirNode: root ref can't be removed"
+         throwError "remDirNode: root ref can't be removed"
 
        unless (removable (t ^. theNode r . nodeVal)) $
          throwError $ "remDirNode: node value not removable, entry: "
