@@ -41,6 +41,7 @@ module Data.ImgNode
        , thePartNames
        , thePartNamesI
        , theImgName
+       , theImgPart
        , theImgType
        , theImgTimeStamp
        , theImgCheckSum
@@ -185,6 +186,10 @@ thePartsMd
 theParts :: Traversal' (ImgNode' ref) ImgParts
 theParts = thePartsMd . _1
 {-# INLINE theParts #-}
+
+theImgPart :: Name -> Traversal' (ImgNode' ref) ImgPart
+theImgPart nm = theParts . isoImgPartsMap . ix nm
+{-# INLINE theImgPart #-}
 
 theDir :: Prism' (ImgNode' ref) (DirEntries' ref, TimeStamp)
 theDir =
