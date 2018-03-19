@@ -293,6 +293,13 @@ extDxO  = matchExt  IMGdxo   ".dxo"
 extPto  = matchExt  IMGhugin ".pto"
 extJson = matchExt  IMGjson  ".json"
 
+
+mediaIsImg, mediaIsJpg, mediaIsRaw, mediaIsTxt :: String -> Bool
+mediaIsImg = isJust . extImg
+mediaIsJpg = isJust . extJpg
+mediaIsTxt = isJust . extTxt
+mediaIsRaw = isJust . extRaw
+
 -- --------------------
 
 addJpg :: String -> String

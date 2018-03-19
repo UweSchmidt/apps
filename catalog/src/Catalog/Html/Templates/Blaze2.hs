@@ -276,7 +276,8 @@ picPage theHeadTitle theDate theImgGeo
         jsCode picImg picTitle picNav picInfo
   = htmlPage
     ( headPage theHeadTitle theDate jsCode ) $ do
-  body ! onload "initPicture();"
+  body
+    ! onload "initPicture();"
     ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
     picImg
     picTitle
@@ -289,7 +290,8 @@ txtPage :: Text -> Text -> Html -> Text -> Html
 txtPage theHeadTitle theDate jsCode blogContents
   = htmlPage
     ( headPage theHeadTitle theDate jsCode ) $ do
-  body ! onload "initPicture();"
+  body
+    ! onload "initPicture();"
     ! class_ "text" $ preEscapedText blogContents
 
 -- ----------------------------------------
@@ -301,7 +303,8 @@ colPage theHeadTitle theDate theImgGeo
         jsCode colImg colTitle colNav colBlog colContents
   = htmlPage
     ( headPage theHeadTitle theDate jsCode ) $ do
-  body ! onload "initAlbum();"
+  body
+    ! onload "initAlbum();"
     ! class_ (toValue $ "album album-" <> theImgGeo ^. isoText)
     ! A.id   "theAlbumBody"
     $ do
@@ -330,24 +333,29 @@ headPage theHeadTitle theDate theJS
   meta ! name "author"      ! content "Uwe Schmidt"
   meta ! name "generator"   ! content "catalog-server"
   meta ! name "date"        ! content (toValue theDate)
-  link ! rel   "shortcut icon"
+  link
+    ! rel   "shortcut icon"
     ! href  "/favicon.ico"
     ! type_ "image/x-icon"
-  link ! rel   "stylesheet"
+  link
+    ! rel   "stylesheet"
     ! type_ "text/css"
     ! href  "/assets/css/html-album.css"
   theJS
-  script ! type_   "text/javascript"
+  script
+    ! type_   "text/javascript"
     ! src     "/bootstrap/js/jquery/1.12.4/jquery.min.js"
     $ mempty
-  script ! type_   "text/javascript"
+  script
+    ! type_   "text/javascript"
     ! src     "/assets/javascript/html-album.js"
     $ mempty
 
 htmlPage :: Html -> Html -> Html
 htmlPage theHead theBody = do
   docType
-  html ! lang "de" $ do
+  html
+    ! lang "de" $ do
     theHead
     theBody
 

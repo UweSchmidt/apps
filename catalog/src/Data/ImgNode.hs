@@ -23,6 +23,7 @@ module Data.ImgNode
        , mkDirEntries
        , emptyImg
        , emptyImgDir
+       , emptyImgRef
        , emptyImgRoot
        , emptyImgCol
        , isDIR
@@ -396,7 +397,13 @@ deriving instance (Ord  ref) => Ord  (ImgRef' ref)
 deriving instance (Show ref) => Show (ImgRef' ref)
 deriving instance Functor ImgRef'
 
+instance IsEmpty (ImgRef' ref) where
+  isempty = isempty . _iname
+
 type ImgRef      = ImgRef' ObjId
+
+emptyImgRef :: ImgRef
+emptyImgRef = ImgRef mempty mempty
 
 -- --------------------
 
