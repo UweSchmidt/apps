@@ -46,6 +46,13 @@ readFileLB = io . LB.readFile
 readFileT :: FilePath -> Cmd Text
 readFileT = io . T.readFile
 
+readFileT' :: FilePath -> Cmd Text
+readFileT' fp = do
+  ex <- fileExist fp
+  if ex
+    then readFileT fp
+    else return mempty
+
 writeFileT :: FilePath -> Text -> Cmd ()
 writeFileT f = io . T.writeFile f
 

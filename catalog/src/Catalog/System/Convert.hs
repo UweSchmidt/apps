@@ -210,7 +210,7 @@ createImageFromTxt d'geo d s =
     go = do
       headline <-
         T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
-        readFileT s
+        readFileT' s
       let str1 = headline ^. isoString
       let str2 = sedP (const "") (many (noneOf' "/") >> char '/') s
       let str  = concat . take 1 . filter (not . null) $ [str1, str2]
