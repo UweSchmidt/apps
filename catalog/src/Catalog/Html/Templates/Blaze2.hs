@@ -15,7 +15,6 @@ module Catalog.Html.Templates.Blaze2
 where
 
 import           Data.MetaData -- (MetaData, metaDataAt, loc2googleMapsUrl)
-import           Data.Monoid
 import           Data.Prim
 import qualified Data.Text as T
 import           Text.Blaze.Html5 hiding (map, head)

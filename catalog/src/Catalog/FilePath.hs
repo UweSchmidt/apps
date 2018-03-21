@@ -6,6 +6,7 @@ module Catalog.FilePath where
 import Control.Applicative
 import Data.Prim
 import Text.SimpleParser
+import qualified Text.SimpleParser as SP
 
 -- ----------------------------------------
 --
@@ -115,16 +116,16 @@ baseName
 baseName   = some (oneOf' "-+._" <|> alphaNumChar)
 
 imgdirName = baseName
-imgdirPre  = option "" (imgdirName <++> string "/")
+imgdirPre  = SP.option "" (imgdirName <++> string "/")
 
 jpgdirName =             jpgdirName' (eof >> return "")
-jpgdirPre  = option "" $ jpgdirName' (string "/")
+jpgdirPre  = SP.option "" $ jpgdirName' (string "/")
 
 jpgdirName' :: SP String -> SP String
 jpgdirName' eof' =
   try ( string "srgb" <++> many digitChar <++> eof' )
   <|>
-  try ( string "srgb" <++> (option "" $ string "-bw") <++> og <++> eof' )
+  try ( string "srgb" <++> (SP.option "" $ string "-bw") <++> og <++> eof' )
   <|>
   try ( p'geo <++> eof' )
   <|>
@@ -138,10 +139,10 @@ jpgdirName' eof' =
     og :: SP String
     og = ( string "-" <|> return "" )
          <++>
-         ( option "" $ try
+         ( SP.option "" $ try
            ( some digitChar
              <++>
-             ( option "" $ try (string "x" <++> some digitChar) )
+             ( SP.option "" $ try (string "x" <++> some digitChar) )
            )
          )
 
@@ -279,26 +280,51 @@ matchExts ty exs xs = matchPred (\ ys -> any (eqNoCase ys) exs) xs >> return ty
 
 -- used in servant server
 
-extImg, extJpg, extRaw, extDng, extTxt,
-  extXmp, extDxO, extPto,
-  extJson :: String -> Maybe ImgType
+extImg
+  , extJpg
+  , extTxt
+  , extVideo
+  , extRaw
+  , extDng
+  , extMeta
+  , extDxO
+  , extPto
+  , extJson :: String -> Maybe ImgType
 
-extImg  = matchExts IMGimg  [".png", ".gif", ".tif", ".tiff", ".ppm", ".pgm", ".pbm"]
-extJpg  = matchExt  IMGjpg   ".jpg"
-extTxt  = matchExts IMGtxt  [".txt", ".md"]
-extRaw  = matchExts IMGraw  [".nef", ".rw2"]
-extDng  = matchExt  IMGdng   ".dng"
-extXmp  = matchExt  IMGmeta  ".xmp"
-extDxO  = matchExt  IMGdxo   ".dxo"
-extPto  = matchExt  IMGhugin ".pto"
-extJson = matchExt  IMGjson  ".json"
+[ extImg
+  , extJpg
+  , extTxt
+  , extVideo
+  , extRaw
+  , extDng
+  , extMeta
+  , extDxO
+  , extPto
+  , extJson
+  ] = map (uncurry matchExts) imgTypeExt
 
+imgTypeExt :: [(ImgType, [String])]
+imgTypeExt =
+  [ (IMGimg,   [".png", ".gif", ".tif", ".tiff", ".ppm", ".pgm", ".pbm"])
+  , (IMGjpg,   [".jpg"])
+  , (IMGtxt,   [".txt", ".md"])
+  , (IMGvideo, [".mp4"])
+  , (IMGraw,   [".nef", ".rw2"])
+  , (IMGdng,   [".dng"])
+  , (IMGmeta,  [".xmp"])
+  , (IMGdxo,   [".dxo"])
+  , (IMGhugin, [".pto"])
+  , (IMGjson,  [".json"])
+  ]
 
-mediaIsImg, mediaIsJpg, mediaIsRaw, mediaIsTxt :: String -> Bool
-mediaIsImg = isJust . extImg
-mediaIsJpg = isJust . extJpg
-mediaIsTxt = isJust . extTxt
-mediaIsRaw = isJust . extRaw
+fileName2ImgType :: String -> ImgType
+fileName2ImgType fn =
+  fromMaybe IMGother $
+  foldr (<|>) mzero $
+  map ($ ext) $
+  map (uncurry matchExts) imgTypeExt
+  where
+    ext = maybe mempty last $ splitExt fn
 
 -- --------------------
 

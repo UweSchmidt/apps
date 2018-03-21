@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -8,8 +9,14 @@ where
 import Data.Prim
 import Data.ImgNode
 import Data.ImgTree
-import Data.Semigroup
+import Data.MetaData
 import Catalog.Cmd
+import Catalog.FilePath -- (fileName2ImgType, )
+import Catalog.Html.Basic (baseNameParser, ymdParser)
+import Catalog.System.Convert (createResizedImage, genIcon)
+import Text.SimpleParser (parseMaybe)
+
+import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
 
 -- ----------------------------------------
@@ -343,168 +350,149 @@ processReqIcon r0 = do
     Just _pos -> do
       r2 <- setImgRef r1
       sp <- toSourcePath r2
-      genIcon r2 sp dp
+      genReqIcon r2 sp dp
 
     -- create an icon for a collection
     Nothing -> do
       r2 <- setColImgRef r1
       if isempty r2
-        -- collection does not have a front page image
-        then createIcon r1 dp
-        else do
-             sp <- toSourcePath r2
-             genIcon r2 sp dp
+        -- col does not have a front page image
+        then do r2' <- setColBlogRef r1
+                if isempty r2'
+                  -- no col image, not col blog
+                  -- create an icon from col title or name
+                  then createIconFromObj r1 dp
+                  -- col has a blog text (with headline)
+                  else  do sp <- toSourcePath r2'
+                           genReqIcon r2' sp dp
+        -- col has a front page image
+        else do sp <- toSourcePath r2
+                genReqIcon r2 sp dp
 
   return dp
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
-genIcon :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genIcon r sp dp = return ()
+genReqIcon :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
+genReqIcon r sp dp =
+  case ity of
+    IMGjpg ->
+      createIconFromImg geo sp dp
 
--- create an icon from a piece of text, name, ...
-createIcon :: Req'IdNode a -> FilePath -> Cmd ()
-createIcon r dst = return ()
+    IMGimg ->
+      createIconFromImg geo sp dp
+
+    IMGvideo ->
+      abortR "genReqIcon: icon for video not yet implemented" r
+
+    IMGtxt -> do
+      -- read text from source file
+      -- if no text there,
+      -- fall back to create icon from object path
+
+      str <- getTxtFromFile sp
+      if isempty str
+        then createIconFromObj    r       dp
+        else createIconFromString geo str dp
+
+    _ ->
+      abortR "genReqIcon: no icon for image type" r
+  where
+    geo = mkGeoAR (r ^. rGeo) Fix
+    ity = fileName2ImgType (r ^. rImgRef . to _iname . isoString)
+
+
+-- create an icon from the title of the path of a collection
+
+createIconFromObj :: Req'IdNode a -> FilePath -> Cmd ()
+createIconFromObj r dp = do
+  -- read the collection title
+  str1 <- getImgVals
+          (r ^. rColId)
+          (theMetaData . metaDataAt descrTitle . isoString)
+
+  str2 <- if isempty str1
+          -- if no title there, extract text from path
+          then do
+               p <- objid2path (r ^. rColId)
+               return $ path2str (p ^. isoString)
+          else return str1
+
+  createIconFromString geo str2 dp
+    where
+      geo = mkGeoAR (r ^. rGeo) Fix
+
+      path2str :: String -> String
+      path2str f
+        | Just (y, Nothing)           <- ymd = y
+        | Just (y, Just (m, Nothing)) <- ymd = toN m ++ "." ++ y
+        | Just (y, Just (m, Just d))  <- ymd = toN d ++ "." ++ toN m ++ "." ++ y
+        | Just n <- nm                       = n
+        | otherwise                          = "?"
+        where
+          ymd = parseMaybe ymdParser      f
+          nm  = parseMaybe baseNameParser f
+
+          toN :: String -> String
+          toN s = show i   -- remove leading 0's
+            where
+              i :: Int
+              i = read s
+
+createIconFromImg :: GeoAR -> FilePath -> FilePath -> Cmd ()
+createIconFromImg geo sp dp =
+  withCache (createResizedImage geo) sp dp
+
+createIconFromString :: GeoAR -> String -> FilePath -> Cmd ()
+createIconFromString geo str dp = do
+  sp <- createRawIconFromString str
+  withCache (createResizedImage geo) sp dp
+
+createRawIconFromString :: String -> Cmd FilePath
+createRawIconFromString str = do
+  trc $ "createRawIconFromString: " ++ show fn ++ " " ++ show str
+  genIcon fn str
+  return fn
+    where
+      fn = ps'iconsgen </> str2fn str ++ ".jpg"
+      str2fn = concatMap urlEnc
+        where
+          urlEnc c
+            | isAlphaNum c = [c]
+            | otherwise    = "-" ++ show (fromEnum c) ++ "-"
+
+getTxtFromFile :: FilePath -> Cmd String
+getTxtFromFile sp = do
+  txt <- cut 32 . T.concat . take 1 .
+         filter (not . T.null) . map cleanup . T.lines <$>
+         readFileT' sp
+  return (txt ^. isoString)
+  where
+    cleanup :: Text -> Text
+    cleanup = T.dropWhile (not . isAlphaNum)
+
+    cut :: Int -> Text -> Text
+    cut l t
+      | T.length t <= l = t
+      | otherwise       = T.take (l - 3) t <> "..."
 
 -- --------------------
-{-
-data Req
-  = Req { _reqPath  :: Path
-        , _reqIx    :: Maybe Int
-        , _reqGeoAR :: GeoAR
-        , _reqColId :: ObjId
-        , _reqColNd :: ImgNode
-        , _reqImgId :: ObjId
-        , _reqImgNd :: ImgNode
-        , _reqIName :: Name
-        , _reqIType :: ImgType
-        , _reqRes   :: LazyByteString
-        }
-
-deriving instance Show Req
-
-emptyReq :: Req
-emptyReq =
-  Req { _reqPath  = mempty
-      , _reqIx    = mzero
-      , _reqGeoAR = geoar'org
-      , _reqColId = mempty
-      , _reqColNd = emptyImgCol
-      , _reqImgId = mempty
-      , _reqImgNd = emptyImg
-      , _reqIName = mempty
-      , _reqIType = mempty
-      , _reqRes   = mempty
-      }
-
--- --------------------
-
-reqPath :: Lens' Req Path
-reqPath k r = (\ new -> r {_reqPath = new}) <$> k (_reqPath r)
-
-reqIx :: Lens' Req (Maybe Int)
-reqIx k r = (\ new -> r {_reqIx = new}) <$> k (_reqIx r)
-
-reqGeoAR :: Lens' Req GeoAR
-reqGeoAR k r = (\ new -> r {_reqGeoAR = new}) <$> k (_reqGeoAR r)
-
-reqColId :: Lens' Req ObjId
-reqColId k r = (\ new -> r {_reqColId = new}) <$> k (_reqColId r)
-
-reqColNd :: Lens' Req ImgNode
-reqColNd k r = (\ new -> r {_reqColNd = new}) <$> k (_reqColNd r)
-
-reqImgId :: Lens' Req ObjId
-reqImgId k r = (\ new -> r {_reqImgId = new}) <$> k (_reqImgId r)
-
-reqImgNd :: Lens' Req ImgNode
-reqImgNd k r = (\ new -> r {_reqImgNd = new}) <$> k (_reqImgNd r)
-
-reqIName :: Lens' Req Name
-reqIName k r = (\ new -> r {_reqIName = new}) <$> k (_reqIName r)
-
-reqIType :: Lens' Req ImgType
-reqIType k r = (\ new -> r {_reqIType = new}) <$> k (_reqIType r)
-
-reqRes :: Lens' Req LazyByteString
-reqRes k r = (\ new -> r {_reqRes = new}) <$> k (_reqRes r)
-
--- ----------------------------------------
 --
--- dispatch HTML page generation
--- depending on type of object (collection, image, blog entry)
+-- cache generated files, e.g. icons, scaled down images, ...
 
-processHtmlPage :: Req -> Cmd Req
-processHtmlPage r = do
-  (i, n) <- getIdNode' (r ^. reqPath)
-  unless (isCOL n) $
-    abortWF "processHtmlPage: path not found: " r
+withCache :: (FilePath -> FilePath -> Cmd ())
+          ->  FilePath -> FilePath -> Cmd ()
+withCache cmd sp dp = do
+  sw <- getModiTime' sp
+  dw <- getModiTime' dp
+  trc $ "withCache: " ++ show ((sp, sw), (dp, dw))
 
-  -- set collection id and collection node
-  let r' = r & reqColId .~ i
-             & reqColNd .~ n
+  unless (dw == sw && not (isempty dw)) $ do
+    -- no cache hit
+    -- execute command and
+    -- set mtime of dest to mtime of source
+    -- so cache hits are those with equal mtime timestamp (dw == ws)
+    trc "withCache: cache miss"
+    cmd sp dp
+    setModiTime sw dp
 
-  case r ^. reqIx of
-    Just ix' -> do
-      ce <- colEntryAt ix' n
-      colEntry
-        (\ i' nm' ->
-            -- set image id and image name
-            -- and process image (or blog entry or ...)
-            processHtmlObjPage (r' & reqImgId .~ i'
-                                   & reqIName .~ nm'
-                               )
-        )
-        (\ c' -> do
-            -- normalize path to a collection (remove ix)
-            -- and restart processing
-            p' <- objid2path c'
-            processHtmlPage    (r' & reqPath .~ p'
-                                   & reqIx   .~ mzero
-                               )
-        )
-        ce
-    Nothing ->
-      -- generate a collection page
-      processHtmlColPage r'
-
-
-processHtmlObjPage :: Req -> Cmd Req
-processHtmlObjPage r = do
-  n  <- getImgVal (r ^. reqImgId)
-
-  let r' = r & reqImgNd .~ n
-
-  -- compute image type
-  ty <- maybe
-        (abortWF "processHtmlObjPage: image part not found" r')
-        return
-        (n ^? theImgPart (r' ^. reqIName) . theImgType)
-
-  -- and store type
-  let r'' = r' & reqIType .~ ty
-
-  -- dispatch over image type
-  case ty of
-    IMGtxt
-        -> processHtmlBlogPage r''
-    _
-      | ty `elem` [IMGjpg, IMGimg, IMGcopy]
-        -> processHtmlImgPage r''
-
-      | otherwise
-        -> abortWF "processHtmlObjPage: HTML for image type not supported" r''
-
-processHtmlColPage :: Req -> Cmd Req
-processHtmlColPage r = undefined
-
-processHtmlImgPage :: Req -> Cmd Req
-processHtmlImgPage r = undefined
-
-processHtmlBlogPage :: Req -> Cmd Req
-processHtmlBlogPage r = undefined
-
-abortWF :: String -> Req -> Cmd a
-abortWF msg r = abort (msg ++ ": req = " ++ show r)
-
--- ----------------------------------------
--}
+-- --------------------

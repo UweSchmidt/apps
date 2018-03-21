@@ -296,11 +296,8 @@ instance IsEmpty ImgParts where
   isempty (ImgParts im) = isempty im
   {-# INLINE isempty #-}
 
-instance Monoid ImgParts where
-  mempty = ImgParts M.empty
-  {-# INLINE mempty #-}
-
-  ImgParts m1 `mappend` ImgParts m2
+instance Semigroup ImgParts where
+  ImgParts m1 <> ImgParts m2
     = ImgParts $ M.mergeWithKey combine only1 only2 m1 m2
     where
       only1 = const M.empty
@@ -311,6 +308,10 @@ instance Monoid ImgParts where
         where
           t1 = e1 ^. theImgTimeStamp
           t2 = e2 ^. theImgTimeStamp
+
+instance Monoid ImgParts where
+  mempty  = ImgParts M.empty
+  mappend = (<>)
 
 instance ToJSON ImgParts where
   toJSON (ImgParts pm) = toJSON . M.toList $ pm
@@ -512,12 +513,12 @@ instance IsEmpty (DirEntries' ref) where
   isempty (DE xs) = isempty xs
   {-# INLINE isempty #-}
 
-instance Monoid (DirEntries' ref) where
-  mempty = DE []
-  {-# INLINE mempty #-}
+instance Semigroup (DirEntries' ref) where
+  DE xs <> DE ys = DE $ xs ++ ys
 
-  DE xs `mappend` DE ys = DE $ xs ++ ys
-  {-# INLINE mappend #-}
+instance Monoid (DirEntries' ref) where
+  mempty  = DE []
+  mappend = (<>)
 
 instance (ToJSON ref) => ToJSON (DirEntries' ref) where
   toJSON (DE rs) = toJSON rs
@@ -564,9 +565,12 @@ type ColEntrySet = ColEntrySet' ObjId
 
 deriving instance (Show ref) => Show (ColEntrySet' ref)
 
+instance Ord ref => Semigroup (ColEntrySet' ref) where
+  CES s1 <> CES s2 = CES $ s1 `S.union` s2
+
 instance Ord ref => Monoid (ColEntrySet' ref) where
-  mempty = CES S.empty
-  CES s1 `mappend` CES s2 = CES $ s1 `S.union` s2
+  mempty  = CES S.empty
+  mappend = (<>)
 
 instance IsEmpty (ColEntrySet' ref) where
   isempty (CES s) = S.null s

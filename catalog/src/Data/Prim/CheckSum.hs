@@ -35,11 +35,14 @@ deriving instance Eq CheckSum
 instance IsEmpty CheckSum where
   isempty = (== zeroCheckSum)
 
-instance Monoid CheckSum where
-  mempty = zeroCheckSum
-  c1 `mappend` c2
+instance Semigroup CheckSum where
+  c1 <> c2
     | isempty c1 = c2
     | otherwise  = c1
+
+instance Monoid CheckSum where
+  mempty  = zeroCheckSum
+  mappend = (<>)
 
 instance IsoInteger CheckSum where
   isoInteger = iso fromCheckSum toCheckSum

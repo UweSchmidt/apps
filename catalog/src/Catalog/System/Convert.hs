@@ -5,6 +5,7 @@ module Catalog.System.Convert
   ( getImageSize
   , getColImgSize
   , createImageCopy
+  , createResizedImage
   , genImageFrom
   , genImage
   , createImageFromTxt
@@ -92,7 +93,7 @@ genIcon path t = do
         len3      = len `div` 3
         (t1, t2)  = splitAt len2 t
         (s1, r2)  = splitAt len3 t
-        (s2, s3) = splitAt len3 r2
+        (s2, s3)  = splitAt len3 r2
 
 -- ----------------------------------------
 
@@ -227,6 +228,25 @@ createImageFromTxt d'geo d s =
     cleanup = T.dropWhile (not . isAlphaNum)
 
 -- ----------------------------------------
+
+createResizedImage :: GeoAR -> FilePath -> FilePath -> Cmd ()
+createResizedImage d'geo sp dp = do
+  ori <- getOrientation <$> getExifTool sp
+  createResized ori
+  where
+    createResized rot =
+      getImageSize sp >>= go
+      where
+        go s'geo
+          | "#" `isPrefixOf` shellCmd = do
+              trc "createResizedImage: make link to src"
+              linkFile sp dp
+          | otherwise = do
+              trc $ "createResizedImage: " ++ show shellCmd
+              runDry ("create image copy: " ++ show shellCmd) $
+                execProcess "bash" [] shellCmd >> return ()
+          where
+            shellCmd = buildCmd rot d'geo s'geo dp sp
 
 -- rot == 0:  no rotate
 -- rot == 1:  90 degrees clockwise

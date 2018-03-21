@@ -23,7 +23,7 @@ type SP = Parsec Void String
 
 infixr 5 <++>
 
-(<++>) :: (Applicative f, Monoid b) => f b -> f b -> f b
+(<++>) :: (Applicative f, Semigroup b) => f b -> f b -> f b
 p1 <++> p2 = (<>) <$> p1 <*> p2
 
 {-# INLINE (<++>) #-}

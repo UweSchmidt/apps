@@ -46,15 +46,15 @@ deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 deriving instance Show ObjId
 
-instance Monoid ObjId where
-  mempty = toObjId 0
-
-  i1 `mappend` i2
+instance Semigroup ObjId where
+  i1 <> i2
     | isempty i1 = i2
     | otherwise  = i1
-  {-# INLINE mempty #-}
-  {-# INLINE mappend #-}
+  {-# INLINE (<>) #-}
 
+instance Monoid ObjId where
+  mempty  = toObjId 0
+  mappend = (<>)
 
 instance IsEmpty ObjId where
   isempty = (== mempty)

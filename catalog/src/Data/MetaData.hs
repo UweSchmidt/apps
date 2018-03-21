@@ -12,6 +12,7 @@ import qualified Data.List           as L
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
+import qualified Text.SimpleParser   as SP
 import           Text.SimpleParser
 import           Text.Printf         ( printf )
 import           Text.Read           ( readMaybe )
@@ -25,12 +26,12 @@ newtype MetaData = MD J.Object
 
 deriving instance Show MetaData
 
+instance Semigroup MetaData where
+  (<>) = mergeMD
+
 instance Monoid MetaData where
   mempty  = MD HM.empty
-  mappend = mergeMD
-  -- the left map entries are prefered
-  {-# INLINE mappend #-}
-  {-# INLINE mempty  #-}
+  mappend = (<>)
 
 instance IsEmpty MetaData where
   isempty (MD md) = HM.null md
@@ -338,7 +339,7 @@ timeParser = do
   h  <-             count 2 digitChar
   m  <- char ':' *> count 2 digitChar
   s  <- char ':' *> count 2 digitChar
-  ms <- option ".0" $
+  ms <- SP.option ".0" $
         char '.' *> some    digitChar
   let (h', m', s') = (read h, read m, read s) :: (Int, Int, Int)
   if h' >= 0 && h' <= 24
@@ -391,10 +392,10 @@ degParser dirs = do
     float =
       ( some digitChar
         <++>
-        option ".0"
+        SP.option ".0"
         ( string "."
           <++>
-          ( option "0" $ some digitChar )
+          ( SP.option "0" $ some digitChar )
         )
       )
       <|>
@@ -409,7 +410,7 @@ latLongParser = do
   long <- deg2DegDec <$> (del *> degParser "WE")
   return (lat, long)
   where
-    del = option ' ' (char ',') *> some (char ' ')
+    del = SP.option ' ' (char ',') *> some (char ' ')
 
 
 -- | "degrees minutes seconds dir" to "decimal degrees" (google url format)

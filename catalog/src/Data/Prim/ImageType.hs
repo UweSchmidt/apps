@@ -28,9 +28,12 @@ instance ToJSON ImgType where
 instance FromJSON ImgType where
   parseJSON o = read <$> parseJSON o
 
+instance Semigroup ImgType where
+  IMGother <> t2 = t2
+  t1       <> _  = t1
+
 instance Monoid ImgType where
-  mempty = IMGother
-  IMGother `mappend` t2 = t2
-  t1       `mappend` _  = t1
+  mempty  = IMGother
+  mappend = (<>)
 
 -- ----------------------------------------

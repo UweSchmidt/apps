@@ -36,13 +36,15 @@ objId2path = iso (\ (ObjId p) -> p) mkObjId
 deriving instance Eq   ObjId
 deriving instance Ord  ObjId
 
-instance Monoid ObjId where
-  mempty = ObjId mempty
-  i1 `mappend` i2
+instance Semigroup ObjId where
+  i1 <> i2
     | isempty i1 = i2
     | otherwise  = i1
-  {-# INLINE mappend #-}
-  {-# INLINE mempty #-}
+  {-# INLINE (<>) #-}
+
+instance Monoid ObjId where
+  mempty  = ObjId mempty
+  mappend = (<>)
 
 instance IsEmpty ObjId where
   isempty = (== mempty)

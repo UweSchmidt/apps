@@ -31,10 +31,13 @@ instance IsoText Geo where
   isoText = isoString . isoText
   {-# INLINE isoText #-}
 
+instance Semigroup Geo where
+  Geo 0 0 <> geo2 = geo2
+  geo1    <> _    = geo1
+
 instance Monoid Geo where
-  mempty = Geo 0 0
-  Geo 0 0 `mappend` geo2 = geo2
-  geo1    `mappend` _    = geo1
+  mempty  = Geo 0 0
+  mappend = (<>)
 
 instance IsEmpty Geo where
   isempty g = g == mempty

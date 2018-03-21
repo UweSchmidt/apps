@@ -4,6 +4,7 @@ module Data.Prim.TimeStamp
        ( TimeStamp
        , now
        , fsTimeStamp
+       , isoEpochTime
        )
 where
 
@@ -17,6 +18,9 @@ import qualified System.Posix as X
 
 newtype TimeStamp = TS X.EpochTime
 
+isoEpochTime :: Iso' TimeStamp X.EpochTime
+isoEpochTime = iso (\ (TS et) -> et) TS
+
 deriving instance Eq   TimeStamp
 deriving instance Ord  TimeStamp
 deriving instance Show TimeStamp
@@ -25,11 +29,12 @@ instance IsoString TimeStamp where
   isoString = iso (\ (TS t) -> show t) (TS . read)
   {-# INLINE isoString #-}
 
+instance Semigroup TimeStamp where
+  (<>) = max
+
 instance Monoid TimeStamp where
-  mempty = zeroTimeStamp
-  ts1 `mappend` ts2 = ts1 `max` ts2
-  {-# INLINE mappend #-}
-  {-# INLINE mempty #-}
+  mempty  = zeroTimeStamp
+  mappend = (<>)
 
 instance IsEmpty TimeStamp where
   isempty = (== zeroTimeStamp)

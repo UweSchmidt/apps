@@ -61,12 +61,12 @@ instance IsoText Name where
   isoText = iso (\ (Name n) -> n) Name
   {-# INLINE isoText #-}
 
-instance Monoid Name where
-  mempty = emptyName
-  Name n1 `mappend` Name n2 = Name $ n1 `T.append` n2
-  {-# INLINE mempty #-}
-  {-# INLINE mappend #-}
+instance Semigroup Name where
+  Name n1 <> Name n2 = Name $ n1 `T.append` n2
 
+instance Monoid Name where
+  mempty  = emptyName
+  mappend = (<>)
 
 instance IsString Name where
   fromString = mkName
