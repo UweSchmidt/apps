@@ -61,8 +61,6 @@ module Catalog.Cmd.Basic
   , buildImgPath0
   , buildImgPath
   -- file system path
-  , SysPath
-  , isoFilePath
   , toSysPath
   , path2SysPath
   , path2ExifSysPath
@@ -486,17 +484,11 @@ buildImgPath :: ImgRef -> Cmd FilePath
 buildImgPath ir = addJpg <$> buildImgPath0 ir
 
 -- ----------------------------------------
-
-newtype SysPath' a = SP {_unSP :: a}
-  deriving (Eq, Ord, Show, Functor)
-
-type SysPath = SysPath' FilePath
-
-isoFilePath :: Iso' SysPath FilePath
-isoFilePath = iso _unSP SP
+--
+-- basic ops for files system paths
 
 toSysPath :: FilePath -> Cmd SysPath
-toSysPath fp@('/' : _) = (SP . (++ fp)) <$> view envMountPath
+toSysPath fp@('/' : _) = (fmap (++ fp)) <$> view envMountPath
 toSysPath fp           = toSysPath ('/' : fp)
 
 -- build a file system path from an internal path

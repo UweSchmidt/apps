@@ -40,15 +40,15 @@ import           Data.Prim
 
 -- ----------------------------------------
 
-initImgStore :: Name -> Name -> FilePath -> Cmd ()
+initImgStore :: Name -> Name -> SysPath -> Cmd ()
 initImgStore rootName colName mountPath = do
   r <- liftE $
     mkEmptyImgRoot rootName dirName colName
   put $ mkImgStore r mPath (r ^. rootRef)
   journalChange $ InitImgStore rootName colName mountPath
   where
-    dirName  = mkName $ takeFileName mountPath
-    mPath    = takeDirectory mountPath
+    dirName  = mkName (takeFileName $ mountPath ^. isoFilePath)
+    mPath    = takeDirectory <$> mountPath
 
 -- ----------------------------------------
 
@@ -69,10 +69,9 @@ initEnv =
 initState :: Env -> IO (Either String ImgStore)
 initState env = do
   (res, store) <- runCmd' env $ do
-    mp' <- view envMountPath
+    mp' <- toSysPath s'photos
     jp' <- view envJsonArchive
-    initImgStore n'archive n'collections
-                 (mp' </> s'photos)
+    initImgStore n'archive n'collections mp'
     loadImgStore jp'
   case res of
     Left msg ->

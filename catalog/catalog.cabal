@@ -31,6 +31,7 @@ library
                      Data.Prim.PathId
                      Data.Prim.Prelude
                      Data.Prim.ObjId
+                     Data.Prim.SysPath
                      Data.Prim.TimeStamp
                      Catalog.FilePath
                      Catalog.Cmd
@@ -55,6 +56,7 @@ library
                      Catalog.System.Convert
                      Catalog.System.ExifTool
                      Catalog.System.IO
+                     Catalog.Workflow
                      Text.SimpleParser
                      
   -- Other library packages from which modules are imported.

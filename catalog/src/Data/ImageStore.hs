@@ -25,7 +25,7 @@ import qualified Data.Aeson as J
 
 -- ----------------------------------------
 
-data ImgStore' ref = IS !(DirTree ImgNode' ref) !FilePath !ref
+data ImgStore' ref = IS !(DirTree ImgNode' ref) !SysPath !ref
 
 type ImgStore  = ImgStore' ObjId
 
@@ -49,7 +49,7 @@ theImgTree :: Lens' (ImgStore' ref) (DirTree ImgNode' ref)
 theImgTree k (IS t p w) = (\new -> IS new p w) <$> k t
 {-# INLINE theImgTree #-}
 
-theMountPath :: Lens' (ImgStore' ref) FilePath
+theMountPath :: Lens' (ImgStore' ref) SysPath
 theMountPath k (IS t p w) = (\new -> IS t new w) <$> k p
 {-# INLINE theMountPath #-}
 
@@ -65,13 +65,13 @@ mapImgStore f (IS i mp wd) =
 
 -- ----------------------------------------
 
-mkImgStore :: ImgTree -> FilePath -> ObjId -> ImgStore
+mkImgStore :: ImgTree -> SysPath -> ObjId -> ImgStore
 mkImgStore = IS
 {-# INLINE mkImgStore #-}
 
 emptyImgStore :: ImgStore
 emptyImgStore =
-  IS r "" (r ^. rootRef)
+  IS r emptySysPath (r ^. rootRef)
   where
     r = mkDirRoot mkObjId "" emptyImgRoot
 {-# INLINE emptyImgStore #-}

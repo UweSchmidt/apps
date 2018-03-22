@@ -32,9 +32,10 @@ module Catalog.System.IO
 where
 
 import           Catalog.Cmd.Types
-import           Catalog.Cmd.Basic (SysPath, isoFilePath, toSysPath)
+import           Catalog.Cmd.Basic (toSysPath)
 import qualified Data.ByteString.Lazy.Char8 as LB
 import           Data.Prim.Prelude
+import           Data.Prim.SysPath
 import           Data.Prim.TimeStamp
 import qualified Data.Text.IO     as T
 import           Data.Time.Clock (UTCTime)

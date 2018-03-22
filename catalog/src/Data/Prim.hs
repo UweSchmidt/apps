@@ -8,6 +8,7 @@ module Data.Prim
        -- , module Data.Prim.PathId
        , module Data.Prim.ObjId
        , module Data.Prim.Prelude
+       , module Data.Prim.SysPath
        , module Data.Prim.TimeStamp
        )
 where
@@ -19,6 +20,7 @@ import Data.Prim.ImageType
 import Data.Prim.Name
 import Data.Prim.Path
 import Data.Prim.Prelude
+import Data.Prim.SysPath
 import Data.Prim.TimeStamp
 
 -- import Data.Prim.PathId  -- not used at the moment

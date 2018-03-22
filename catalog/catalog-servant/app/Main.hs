@@ -141,7 +141,7 @@ catalogServer env runR runM =
   ziparchive
 
   where
-    mountPath = env ^. envMountPath
+    mountPath = env ^. envMountPath . isoFilePath
     static p  = serveDirectoryWebApp (mountPath ++ p)
 
     bootstrap         = static "/bootstrap"

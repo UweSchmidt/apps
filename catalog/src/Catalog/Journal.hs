@@ -7,10 +7,9 @@
 
 module Catalog.Journal where
 
-import           Data.ImgTree
-import           Data.MetaData
-import           Data.Prim
-
+import Data.ImgTree
+import Data.MetaData
+import Data.Prim
 
 data Journal' ref = MkIMG         ref Name
                   | MkDIR         ref Name
@@ -23,7 +22,7 @@ data Journal' ref = MkIMG         ref Name
                   | AdjColBlog    ref (Maybe (ImgRef' ref))
                   | AdjColEntries ref [ColEntry' ref]
                   | SetSyncTime   ref TimeStamp
-                  | InitImgStore  Name Name FilePath
+                  | InitImgStore  Name Name SysPath
                   | LoadImgStore  FilePath
                   | SaveImgStore  FilePath
                   | SaveBlogText  ref Name Text

@@ -3,7 +3,7 @@ where
 
 import Catalog.Cmd.Types
 import Catalog.System.Convert (selectFont)
-import Data.Prim.Prelude
+import Data.Prim
 import Options.Applicative
 
 -- ----------------------------------------
@@ -86,13 +86,15 @@ envp = mkEnv
                   )
         )
       )
-  <*> strOption
-      ( long "mount-path"
-        <> short 'm'
-        <> metavar "MOUNT-PATH"
-        <> showDefault
-        <> value "."
-        <> help "The mount path for the whole archive"
+  <*> ( mkSysPath <$>
+        strOption
+        ( long "mount-path"
+          <> short 'm'
+          <> metavar "MOUNT-PATH"
+          <> showDefault
+          <> value "."
+          <> help "The mount path for the whole archive"
+        )
       )
   <*> strOption
       ( long "dir-path"

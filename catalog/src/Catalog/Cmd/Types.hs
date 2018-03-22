@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Catalog.Cmd.Types
@@ -44,7 +45,7 @@ data Env = Env
   , _port        :: Int
   , _jsonArchive :: FilePath
   , _jsonImport  :: Maybe FilePath
-  , _mountPath   :: FilePath
+  , _mountPath   :: SysPath
   , _syncDir     :: FilePath
   , _fontName    :: Text
   , _logOp       :: String -> IO ()
@@ -63,7 +64,7 @@ mkEnv :: Bool
       -> Int
       -> FilePath
       -> Maybe FilePath
-      -> FilePath
+      -> SysPath
       -> FilePath
       -> Text
       -> (String -> IO ())
@@ -89,7 +90,7 @@ defaultEnv = Env
   , _port         = 3001
   , _jsonArchive  = "catalog.json" -- rel to mount path
   , _jsonImport   = Nothing
-  , _mountPath    = "."
+  , _mountPath    = mkSysPath "."
   , _syncDir      = s'photos       -- the top archive dir
   , _fontName     = mempty
   , _logOp        = hPutStrLn stderr
@@ -120,7 +121,7 @@ envJsonArchive k e = (\ new -> e {_jsonArchive = new}) <$> k (_jsonArchive e)
 envJsonImport :: Lens' Env (Maybe FilePath)
 envJsonImport k e = (\ new -> e {_jsonImport = new}) <$> k (_jsonImport e)
 
-envMountPath :: Lens' Env FilePath
+envMountPath :: Lens' Env SysPath
 envMountPath k e = (\ new -> e {_mountPath = new}) <$> k (_mountPath e)
 
 envSyncDir :: Lens' Env FilePath
