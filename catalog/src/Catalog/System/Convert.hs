@@ -134,6 +134,7 @@ fillCache :: GeoAR -> FilePath -> FilePath
       -> Cmd FilePath
 fillCache geo sfp path genImg = do
   let dfp = ps'cache </> (geo ^. isoString) ++ path
+  trc $ "fillCache: " ++ show (geo, sfp, path)
   sp <- toSysPath sfp
   dp <- toSysPath dfp
   sx <- fileExist sp
@@ -148,6 +149,7 @@ fillCache geo sfp path genImg = do
       then
       ( do
           createDir (takeDirectory <$> dp)
+          trc $ "fillCache: cache miss: " ++ show (geo, dfp, sfp)
           genImg geo dfp sfp
       )
       `catchError`      -- if the org image is broken
@@ -233,30 +235,25 @@ createImageFromTxt d'geo d s =
 
 createResizedImage :: GeoAR -> FilePath -> FilePath -> Cmd ()
 createResizedImage d'geo src dst = do
-  sp  <- toSysPath src
-  dp  <- toSysPath dst
-  ori <- getOrientation <$> getExifTool sp
-  createResized ori sp dp
+  sp    <- toSysPath src
+  dp    <- toSysPath dst
+  ori   <- getOrientation <$> getExifTool sp
+  s'geo <- getImageSize src
+  createResized ori s'geo sp dp
   where
-    createResized rot sp dp =
-      getImageSize src >>= go
+    createResized rot s'geo sp dp
+      -- resize is a noop so a link is sufficient
+      | "#" `isPrefixOf` shellCmd = do
+          trc "createResizedImage: make link to src"
+          linkFile sp dp
+      -- resize done with external prog convert
+      | otherwise = do
+          trc $ "createResizedImage: " ++ show shellCmd
+          runDry ("create image copy: " ++ show shellCmd) $
+            execProcess "bash" [] shellCmd >> return ()
       where
-        go s'geo
-          -- resize is a noop so a link is sufficient
-          | "#" `isPrefixOf` shellCmd = do
-              trc "createResizedImage: make link to src"
-              linkFile sp dp
-          -- resize done with external prog convert
-          | otherwise = do
-              trc $ "createResizedImage: " ++ show shellCmd
-              runDry ("create image copy: " ++ show shellCmd) $
-                execProcess "bash" [] shellCmd >> return ()
-          where
-            shellCmd =
-              buildCmd rot
-                       d'geo s'geo
-                       (dp ^. isoFilePath)
-                       (sp ^. isoFilePath)
+        shellCmd =
+          buildCmd rot d'geo s'geo dp sp
 
 -- rot == 0:  no rotate
 -- rot == 1:  90 degrees clockwise
@@ -270,21 +267,22 @@ createImageCopy d'geo d s = do
   createImageCopy' ori d'geo d s
 
 createImageCopy' :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageCopy' rot d'geo d s =
-  getImageSize s >>= go
+createImageCopy' rot d'geo d s = do
+  trc $ "createImageCopy': " ++ show (rot, d'geo, d, s)
+  s'geo <- getImageSize s
+  cmd   <- buildCmd rot d'geo s'geo <$> toSysPath d <*> toSysPath s
+  go cmd
   where
-    go s'geo
+    go shellCmd
       | "#" `isPrefixOf` shellCmd = do
           trc $ "createImageCopy: " ++ shellCmd
           return s
       | otherwise = do
           runDry ("create image copy: " ++ show shellCmd) $
-            execProcess "bash" [] shellCmd >> return ()
+            execProcess "bash" [] shellCmd  >> return ()
           return d
-      where
-        shellCmd = buildCmd rot d'geo s'geo d s
 
-buildCmd :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd :: Int -> GeoAR -> Geo -> SysPath -> SysPath -> String
 buildCmd rot d'g s'geo d s =
   buildCmd2 rot d'g' s'geo d s
   where
@@ -294,7 +292,7 @@ buildCmd rot d'g s'geo d s =
                                & theAR  .~ Pad
       | otherwise        = d'g
 
-buildCmd2 :: Int -> GeoAR -> Geo -> FilePath -> FilePath -> String
+buildCmd2 :: Int -> GeoAR -> Geo -> SysPath -> SysPath -> String
 buildCmd2 rot d'g s'geo d s =
   buildCmd3 os d'g s'geo' d s
   where
@@ -308,8 +306,8 @@ buildCmd2 rot d'g s'geo d s =
 
     rot' = rot `mod` 4
 
-buildCmd3 :: [String] -> GeoAR -> Geo -> FilePath -> FilePath -> String
-buildCmd3 rotate d'g s'geo d s
+buildCmd3 :: [String] -> GeoAR -> Geo -> SysPath -> SysPath -> String
+buildCmd3 rotate d'g s'geo d' s'
   | d'geo == s'geo
     &&
     null rotate
@@ -317,6 +315,8 @@ buildCmd3 rotate d'g s'geo d s
     ".jpg" `isSuffixOf` s = "# nothing to do for " ++ show s
   | otherwise = shellCmd
   where
+    s           = s' ^. isoFilePath
+    d           = d' ^. isoFilePath
     d'geo       = d'g ^. theGeo
     aspect      = d'g ^. theAR
     (Geo cw ch, Geo xoff yoff)

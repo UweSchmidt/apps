@@ -226,10 +226,10 @@ catalogServer env runR runM =
             doesFileExist $ mountPath ++ srcPath
 
       if ex && srcType /= IMGother
-        then do
-          imgPath <- runR $
-                     genImageFrom srcType geo srcPath fp
-          liftIO (LBS.readFile imgPath)
+        then
+          runR $ genImageFrom srcType geo srcPath fp
+                 >>= toSysPath
+                 >>= readFileLB
         else
           throwError $
           err404 { errBody = ("image not found: " ++ fp) ^. from isoString }
