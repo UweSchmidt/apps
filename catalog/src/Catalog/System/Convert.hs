@@ -133,8 +133,6 @@ fillCache :: GeoAR -> FilePath -> FilePath
       -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
       -> Cmd FilePath
 fillCache geo sfp path genImg = do
-  -- mp <- view envMountPath
-  -- src <- toSysPath sp
   let dfp = ps'cache </> (geo ^. isoString) ++ path
   sp <- toSysPath sfp
   dp <- toSysPath dfp

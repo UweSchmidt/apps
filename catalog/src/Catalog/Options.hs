@@ -32,7 +32,7 @@ appInfo pname =
   )
 
 envp :: Parser Env
-envp = Env
+envp = mkEnv
   <$> ( flag (defaultEnv ^. envTrc) True
         ( long "trc"
           <> short 't'

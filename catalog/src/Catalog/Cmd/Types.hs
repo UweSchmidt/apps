@@ -1,13 +1,32 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Catalog.Cmd.Types
-       ( module Catalog.Cmd.Types
-       , module Control.Monad.ReaderStateErrIO
+       ( module Control.Monad.ReaderStateErrIO
+         -- Env
+       , Env
+       , mkEnv
+       , CopyGeo
+       , defaultEnv
+       , envTrc
+       , envVerbose
+       , envJournal
+       , envDryRun
+       , envForceMDU
+       , envPort
+       , envJsonArchive
+       , envJsonImport
+       , envMountPath
+       , envSyncDir
+       , envFontName
+       , envLogOp
+       , envUpdateCache
+       -- Cmd
+       , Cmd
+       , runCmd
+       , runCmd'
        )
 where
 
--- import           Control.Concurrent.QSem
--- import           Control.Exception.Base (bracket_)
 import           Control.Lens
 import           Control.Monad.ReaderStateErrIO
 import           Data.ImageStore
@@ -31,6 +50,26 @@ data Env = Env
   , _logOp       :: String -> IO ()
   , _updateCache :: Maybe FilePath
   }
+
+-- the named constructor
+--
+-- constructor and selector names are not exported
+
+mkEnv :: Bool
+      -> Bool
+      -> Bool
+      -> Bool
+      -> Bool
+      -> Int
+      -> FilePath
+      -> Maybe FilePath
+      -> FilePath
+      -> FilePath
+      -> Text
+      -> (String -> IO ())
+      -> Maybe FilePath
+      -> Env
+mkEnv = Env
 
 -- deriving instance Show Env
 
