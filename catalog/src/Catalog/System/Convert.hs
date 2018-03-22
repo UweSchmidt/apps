@@ -43,19 +43,20 @@ genAssetIcon px s = do
 
 genIcon :: FilePath -> String -> Cmd ()
 genIcon path t = do
-  dst  <- (++ path) <$> view envMountPath
+  dst  <- toSysPath path
   dx   <- fileExist dst
   fopt <- (\ fn ->
-            if null fn
-            then ""
-            else "-font " ++ fn
-           ) <$> asks (^. envFontName . isoString)
+             if null fn
+             then ""
+             else "-font " ++ fn
+          ) <$> asks (^. envFontName . isoString)
   trc $ unwords ["genIcon", show path, show t, show dst, show dx]
   unless dx $ do
-    createDir $ takeDirectory dst
+    createDir (takeDirectory <$> dst)
     trc  $ shellCmd dst fopt
     void $ execProcess "bash" [] (shellCmd dst fopt)
   where
+    shellCmd :: SysPath -> String -> String
     shellCmd dst fopt =
       unwords $
       [ "convert"
@@ -71,8 +72,9 @@ genIcon path t = do
       , "label:'" ++ t' ++ "'"
       , "-background 'rgb(128,128,128)'"
       , "-vignette 0x40"
-      , dst
+      , dst ^. isoFilePath
       ]
+
     (t', ps')
       | multiline = (t0, ps0)
       | len <= 10 = (t, "92")
@@ -130,23 +132,25 @@ genImageFrom srcType _g  _s path =
 fillCache :: GeoAR -> FilePath -> FilePath
       -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
       -> Cmd FilePath
-fillCache geo srcPath path genImg = do
-  mp <- view envMountPath
-  let src = mp ++ srcPath
-  let dst = mp ++ ps'cache </> (geo ^. isoString) ++ path
-  sx <- fileExist src
+fillCache geo sfp path genImg = do
+  -- mp <- view envMountPath
+  -- src <- toSysPath sp
+  let dfp = ps'cache </> (geo ^. isoString) ++ path
+  sp <- toSysPath sfp
+  dp <- toSysPath dfp
+  sx <- fileExist sp
   if sx
     then do
-    dx <- fileExist dst
+    sw <- getModiTime sp
+    dx <- fileExist dp
     dw <- if dx
-          then getModiTime dst
+          then getModiTime dp
           else return mempty
-    sw <- getModiTime src
     if dw <= sw
       then
       ( do
-          createDir $ takeDirectory dst
-          genImg geo dst src
+          createDir (takeDirectory <$> dp)
+          genImg geo dfp sfp
       )
       `catchError`      -- if the org image is broken
       ( const $ do      -- a "broken image" icon is generated
@@ -158,7 +162,7 @@ fillCache geo srcPath path genImg = do
           fillCache geo broken broken createImageCopy
       )
       else
-      return dst
+      return dfp
     else
     notThere path
 
@@ -171,16 +175,17 @@ notThere url =
 -- ----------------------------------------
 
 getImageSize    :: FilePath -> Cmd Geo
-getImageSize f =
-  (fromMaybe geo'org . readGeo'') <$> execImageSize
+getImageSize fp =
+  (fromMaybe geo'org . readGeo'') <$>
+  (toSysPath fp >>= execImageSize)
   where
-    execImageSize :: Cmd String
-    execImageSize
-      = execProcess "exiftool" ["-s", "-ImageSize", f] ""
+    execImageSize :: SysPath -> Cmd String
+    execImageSize sp
+      = execProcess "exiftool" ["-s", "-ImageSize", sp ^. isoFilePath] ""
         `catchError`
         ( const $ do
             warn $ "getImageSize: size couldn't be determined for image " ++
-                   show f
+                   show sp
             return ""
         )
 
@@ -191,8 +196,7 @@ getImageSize f =
 
 getColImgSize :: FilePath -> Cmd Geo
 getColImgSize imgRef = do
-  mp <- view envMountPath
-  getImageSize $ mp ++ drop (length ps'archive) imgRef
+   getImageSize $ drop (length ps'archive) imgRef
 
 scaleWidth :: Int -> Geo -> Geo
 scaleWidth h' (Geo w h) = Geo w' h'
@@ -211,7 +215,7 @@ createImageFromTxt d'geo d s =
     go = do
       headline <-
         T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
-        readFileT' s
+        (toSysPath s >>= readFileT')
       let str1 = headline ^. isoString
       let str2 = sedP (const "") (many (noneOf' "/") >> char '/') s
       let str  = concat . take 1 . filter (not . null) $ [str1, str2]
@@ -230,23 +234,31 @@ createImageFromTxt d'geo d s =
 -- ----------------------------------------
 
 createResizedImage :: GeoAR -> FilePath -> FilePath -> Cmd ()
-createResizedImage d'geo sp dp = do
+createResizedImage d'geo src dst = do
+  sp  <- toSysPath src
+  dp  <- toSysPath dst
   ori <- getOrientation <$> getExifTool sp
-  createResized ori
+  createResized ori sp dp
   where
-    createResized rot =
-      getImageSize sp >>= go
+    createResized rot sp dp =
+      getImageSize src >>= go
       where
         go s'geo
+          -- resize is a noop so a link is sufficient
           | "#" `isPrefixOf` shellCmd = do
               trc "createResizedImage: make link to src"
               linkFile sp dp
+          -- resize done with external prog convert
           | otherwise = do
               trc $ "createResizedImage: " ++ show shellCmd
               runDry ("create image copy: " ++ show shellCmd) $
                 execProcess "bash" [] shellCmd >> return ()
           where
-            shellCmd = buildCmd rot d'geo s'geo dp sp
+            shellCmd =
+              buildCmd rot
+                       d'geo s'geo
+                       (dp ^. isoFilePath)
+                       (sp ^. isoFilePath)
 
 -- rot == 0:  no rotate
 -- rot == 1:  90 degrees clockwise
@@ -255,7 +267,8 @@ createResizedImage d'geo sp dp = do
 
 createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
 createImageCopy d'geo d s = do
-  ori <- getOrientation <$> getExifTool s
+  sp  <- toSysPath s
+  ori <- getOrientation <$> getExifTool sp
   createImageCopy' ori d'geo d s
 
 createImageCopy' :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
@@ -414,27 +427,30 @@ fontList = toFL <$> execProcess "bash" [] shellCmd
 
 genBlogText :: FilePath -> Cmd Text
 genBlogText src = do
-  dx  <- fileExist src
+  sp  <- toSysPath src
+  dx  <- fileExist sp
   trc $ unwords ["genBlogText", show src, show dx]
   if dx
-    then readFileT src
+    then readFileT sp
     else return $ ("no file found for blog text: " ++ show src) ^. isoText
 
 genBlogHtml :: FilePath -> Cmd Text
 genBlogHtml src = do
-  dx  <- fileExist src
+  sp  <- toSysPath src
+  dx  <- fileExist sp
   trc $ unwords ["genBlogText", show src, show dx]
   if dx
-    then formatBlogText src
+    then formatBlogText sp
     else return $ ("no file found for blog text: " ++ show src) ^. isoText
 
-formatBlogText :: FilePath -> Cmd Text
-formatBlogText f =
+formatBlogText :: SysPath -> Cmd Text
+formatBlogText sp =
   (^. isoText) <$>
-    execProcess "pandoc" ["-f", "markdown", "-t", "html", f] ""
+    execProcess "pandoc" ["-f", "markdown", "-t", "html", sp ^. isoFilePath] ""
 
 writeBlogText :: Text -> FilePath -> Cmd ()
 writeBlogText t dst = do
-  writeFileT dst t
+  dp <- toSysPath dst
+  writeFileT dp t
 
 -- ----------------------------------------

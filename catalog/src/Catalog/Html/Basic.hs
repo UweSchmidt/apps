@@ -208,27 +208,25 @@ colBlogCont IMGtxt cr = do
     cop _       = return mempty
 colBlogCont _ _ = return mempty
 
-getColBlogCont :: ImgRef -> Cmd Text
-getColBlogCont (ImgRef i n) = do
-      p <- objid2path i
-      -- subst the name by the part name
-      -- and build a file path
-      f <- toFilePath (substPathName n p)
-      genBlogHtml f
+getColBlogCont   :: ImgRef -> Cmd Text
+getColBlogCont   = processBlog genBlogHtml
 
 getColBlogSource :: ImgRef -> Cmd Text
-getColBlogSource (ImgRef i n) = do
-  p <- objid2path i
-  -- subst the name by the part name
-  -- and build a file path
-  f <- toFilePath (substPathName n p)
-  genBlogText f
+getColBlogSource = processBlog genBlogText
 
 putColBlogSource :: Text -> ImgRef -> Cmd ()
-putColBlogSource t (ImgRef i n) = do
+putColBlogSource t ir@(ImgRef i n) =
+  processBlog putBlog ir
+  where
+    putBlog f = do
+      writeBlogText t f
+      journalChange $ SaveBlogText i n t
+
+processBlog :: (FilePath -> Cmd a)
+            -> ImgRef
+            -> Cmd a
+processBlog process (ImgRef i n) = do
   p <- objid2path i
-  f <- toFilePath (substPathName n p)
-  writeBlogText t f
-  journalChange $ SaveBlogText i n t
+  process $ (tailPath $ substPathName n p) ^. isoString
 
 -- ----------------------------------------

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -6,6 +7,66 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Catalog.Cmd.Basic
+  ( dt
+  , getTree
+  , getImgName
+  , getImgParent
+  , getImgVal
+  , getImgVals
+  , getImgSubDirs
+  , getRootId
+  , getRootImgDirId
+  , getRootImgColId
+  , existsObjId
+  , lookupByName
+  , lookupByPath
+  , getIdNode
+  , getIdNode'
+  , objid2path
+  , objid2type
+  , objid2contNames
+  , mapObjId2Path
+  , mapImgStore2Path
+  , mapPath2ObjId
+  , mapImgStore2ObjId
+  , mkImgDir
+  , mkImgCol
+  , mkImg
+  , rmImgNode
+  , mkCollection
+  , mkCollectionC
+  , adjustImg
+  , adjustDirEntries
+  , adjustMetaData
+  , adjustColImg
+  , adjustColBlog
+  , adjustColEntries
+  , remColEntry
+  , setSyncTime
+  , findAllColEntries
+  , findFstColEntry
+  , sortColEntries
+  , mergeColEntries
+  , colEntryAt
+  , processColEntryAt
+  , processColImgEntryAt
+    -- basic combinators
+  , fromJustCmd
+  , liftE
+  , catchAll
+  , runDry
+  , trcObj
+  , trcCmd
+  , journalChange
+  , buildImgPath0
+  , buildImgPath
+  -- file system path
+  , SysPath
+  , isoFilePath
+  , toSysPath
+  , path2SysPath
+  , path2ExifSysPath
+  )
 where
 
 import           Catalog.Cmd.Types
@@ -170,24 +231,6 @@ mapPath2ObjId = fmap mkObjId
 
 mapImgStore2ObjId :: ImgStore' Path -> ImgStore
 mapImgStore2ObjId = mapImgStore mkObjId
-
--- ----------------------------------------
---
-
--- | convert an image path to a file system path
-toFilePath :: Path -> Cmd FilePath
-toFilePath p = do
-  mp <- use theMountPath
-  return $ mp ++ tailPath p ^. isoString
-
--- | convert a file system path to an image path
-fromFilePath :: FilePath -> Cmd Path
-fromFilePath f = do
-  mp <- use theMountPath
-  unless (mp `isPrefixOf` f) $
-    abort $ "fromFilePath: not a legal image path " ++ show f
-  r' <- getTree rootRef >>= getImgName
-  return $ consPath r' (readPath $ drop (length mp) f)
 
 -- ----------------------------------------
 --
@@ -443,3 +486,34 @@ buildImgPath :: ImgRef -> Cmd FilePath
 buildImgPath ir = addJpg <$> buildImgPath0 ir
 
 -- ----------------------------------------
+
+newtype SysPath' a = SP {_unSP :: a}
+  deriving (Eq, Ord, Show, Functor)
+
+type SysPath = SysPath' FilePath
+
+isoFilePath :: Iso' SysPath FilePath
+isoFilePath = iso _unSP SP
+
+toSysPath :: FilePath -> Cmd SysPath
+toSysPath fp@('/' : _) = (SP . (++ fp)) <$> view envMountPath
+toSysPath fp           = toSysPath ('/' : fp)
+
+-- build a file system path from an internal path
+-- remove the redundant "/archive" top level dir
+
+path2SysPath :: Path -> Cmd SysPath
+path2SysPath p =
+  toSysPath $ tailPath p ^. isoString
+
+-- build a file system path from an internal image path
+--
+-- "/archive/photos/2016/emil"
+-- -->
+-- "<mountpath>/cache/exif-meta/photos/2016/emil.json"
+
+path2ExifSysPath :: Path -> Cmd SysPath
+path2ExifSysPath ip =
+  toSysPath $ ps'exifcache ++ tailPath ip ^. isoString ++ ".json"
+
+-- --------------------

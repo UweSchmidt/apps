@@ -21,12 +21,16 @@ encodeJSON = J.encodePretty' conf
     conf = J.defConfig
            { J.confIndent  = J.Spaces 2 }
 
+-- save the whole image store
+-- file path must be a relative path
+-- to the mount path
+
 saveImgStore :: FilePath -> Cmd ()
 saveImgStore p = do
   bs <- toBS
-  p' <- (</> p) <$> view envMountPath
-  verbose $ "saveImgStore: save state to " ++ show p'
-  writeFileLB p' bs
+  sp <- toSysPath p
+  verbose $ "saveImgStore: save state to " ++ show sp
+  writeFileLB sp bs
   journalChange $ SaveImgStore p
   where
     toBS
@@ -57,42 +61,49 @@ snapshotImgStore cmt = do
   checkinImgStore cmt pt'
 
 checkinImgStore :: String -> FilePath -> Cmd ()
-checkinImgStore cmt pt = do
+checkinImgStore cmt f = do
+  pt <- toSysPath f
   ts <- nowAsIso8601
-  verbose $ unwords ["bash []", checkinScript ts]
-  void $ execProcess "bash" [] $ checkinScript ts
+  verbose $ unwords ["bash  []", checkinScript pt ts]
+  void $ execProcess "bash" [] $ checkinScript pt ts
   where
+    qt s = '\'' : s ++ "'"
+
     cmt' | null cmt  = cmt
          | otherwise = ", " ++ cmt
+
     -- the git script is somewhat fragile,
     -- if there are untracked files in the dir
     -- git returns exit code 1, this generates an error
     -- even if everything was o.k.
-    checkinScript ts =
+    checkinScript :: SysPath -> String -> String
+    checkinScript pt ts =
       unwords
-      [ "cd", qt $ FP.takeDirectory pt, ";"
+      [ "cd", qt $ FP.takeDirectory fp, ";"
       , "git add -A ;"
       , "git diff --quiet --exit-code --cached ||"
-      , "git commit -a -m", qt ("catalog-server: " ++ ts ++ ", " ++ pt ++ cmt')
+      , "git commit -a -m", qt ("catalog-server: " ++ ts ++ ", " ++ fp ++ cmt')
       ]
-    qt s = '\'' : s ++ "'"
+      where
+        fp   = pt ^. isoFilePath
+
 
 loadImgStore :: FilePath -> Cmd ()
-loadImgStore p = do
-  p' <- (</> p) <$> view envMountPath
-  verbose $ "loadImgStore: load State from " ++ show p'
-  bs <- readFileLB p'
+loadImgStore f = do
+  sp <- toSysPath f
+  verbose $ "loadImgStore: load State from " ++ show (sp ^. isoFilePath)
+  bs <- readFileLB sp
   case fromBS bs of
     Nothing ->
-      abort $ "loadImgStore: JSON input corrupted: " ++ show p
+      abort $ "loadImgStore: JSON input corrupted: " ++ show (sp ^. isoFilePath)
     Just st -> do
       put st
-      journalChange $ LoadImgStore p
+      journalChange $ LoadImgStore f
       -- make a "FS check" and throw away undefined refs
       checkImgStore
   where
     fromBS
-      | isPathIdArchive p = fmap mapImgStore2ObjId . J.decode'
+      | isPathIdArchive f = fmap mapImgStore2ObjId . J.decode'
       | otherwise         = J.decode'
 
 archiveName :: FilePath -> (FilePath, String, String)

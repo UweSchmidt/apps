@@ -67,8 +67,8 @@ cwLs :: Cmd [Name]
 cwLs = we >>= objid2contNames
 
 -- | convert working node path to file system path
-cwFilePath :: Cmd FilePath
-cwFilePath = cwPath >>= toFilePath
+-- cwFilePath :: Cmd SysPath
+-- cwFilePath = cwPath >>= path2SysPath
 
 cwListPaths :: Cmd String
 cwListPaths = we >>= listPaths

@@ -7,7 +7,6 @@ where
 import Catalog.Cmd
 import Catalog.System.Convert ( genImage )
 
-import Data.ImageStore
 import Data.ImgTree
 import Data.Prim
 
@@ -29,34 +28,40 @@ zipCollection1 geo i e
   | isCOL e = do
       trcObj i "zipColl: create zip archive"
       p  <- objid2path i
-      mp <- use theMountPath
 
-      let archDir      = mp ++ ps'zipcache ++ p ^. isoString
-      let archFilePath = archDir ++ ".zip"
+      let archDirPath = ps'zipcache ++ p ^. isoString
+      let archFilPath = archDirPath ++ ".zip"
 
-      trcObj i $ "zipColl: create zip archive " ++ archFilePath ++ " for collection " ++ show p
+      archDir <- toSysPath archDirPath
+      archFil <- toSysPath archFilPath
+
+      trcObj i $
+        "zipColl: create zip archive " ++ archFilPath ++
+        " for collection " ++ show p
 
       -- remove old stuff
-      whenM (fileExist archFilePath) $ removeFile archFilePath
-      whenM (dirExist archDir)  $ removeDir archDir
+      whenM (fileExist archFil) $
+        removeFile archFil
+      whenM (dirExist archDir) $
+        removeDir archDir
 
       -- create temporary dir for archive entries
-      trc $ "zipCollection: create temporary dir " ++ archDir
+      trc $ "zipCollection: create temporary dir " ++ archDirPath
       createDir archDir
 
       -- recursive traversal of the collection to create image copies
       trc $ "zipCollection: zip entries"
-      zipEntries geo archDir e
+      zipEntries geo archDirPath e
 
       -- create archive
-      trc $ "zipCollection: zip archive " ++ archDir
-      zipArchive archDir archFilePath
+      trc $ "zipCollection: zip archive " ++ archDirPath
+      zipArchive archDir archFil
 
       -- cleanup: remove temporary dir
-      trc $ "zipCollection: remove temporary dir " ++ archDir
+      trc $ "zipCollection: remove temporary dir " ++ archDirPath
       removeDir archDir
 
-      return archFilePath
+      return archFilPath
 
   | otherwise = do
       abort $  "zipCollection: not a collection"
@@ -72,22 +77,20 @@ zipEntries geoar px e =
     zipE :: ColEntry -> Int -> Cmd ()
     zipE ce i = colEntry' zipI zipC ce
       where
-        i' = fmtInt (i + 1)
+        i'  = fmtInt (i + 1)
+        px' = px </> i'
 
         zipI :: ImgRef -> Cmd ()
         zipI ir = do
-          cpyPath  <- genImage geoar ir
-          trc $ "zipEntries: ln " ++ cpyPath ++ " " ++ lnk
+          cpyPath  <- genImage geoar ir >>= toSysPath
+          lnk      <- toSysPath (px' ++ ".jpg")
+          trc $ "zipEntries: ln " ++ show cpyPath ++ " " ++ show lnk
           linkFile cpyPath lnk
-            where
-              lnk = px </> i' ++ ".jpg"
 
         zipC :: ObjId -> Cmd ()
         zipC oid = do
-          createDir px'
+          (toSysPath px' >>= createDir)
           getImgVal oid >>= zipEntries geoar px'
-            where
-              px' = px </> i'
 
 fmtInt :: Int -> String
 fmtInt i = s0 ++ si
@@ -99,14 +102,16 @@ fmtInt i = s0 ++ si
 --
 -- the system call to zip
 
-zipArchive :: FilePath -> FilePath -> Cmd ()
-zipArchive dir file =
+zipArchive :: SysPath -> SysPath -> Cmd ()
+zipArchive sdir sfile =
   void $
     execProcess "bash" [] $
     unwords ["cd", baseDir, ";"
             , "zip", "-v", "-r", archive, archDir
             ]
   where
+    dir     = sdir  ^. isoFilePath
+    file    = sfile ^. isoFilePath
     baseDir = takeDirectory dir
     archive = takeFileName  file
     archDir = takeFileName  dir

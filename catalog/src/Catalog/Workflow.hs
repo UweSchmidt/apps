@@ -277,7 +277,7 @@ toUrlPath r =
 -- --------------------
 --
 -- build the source path for an image file
--- from a col entry an an ImgRef
+-- from a col entry and an ImgRef
 -- used for converting the image file into
 -- a file required by the request url
 --
@@ -291,10 +291,10 @@ toSourcePath =
   srcPath
   where
     srcPath _part r = do
-      p' <- substPathName nm <$> objid2path oid
-      toFilePath p'
+      p <- objid2path i
+      return $ (tailPath $ substPathName n p) ^. isoString
       where
-        ImgRef oid nm = r ^. rImgRef
+        ImgRef i n = r ^. rImgRef
 
 -- --------------------
 --
@@ -464,7 +464,7 @@ getTxtFromFile :: FilePath -> Cmd String
 getTxtFromFile sp = do
   txt <- cut 32 . T.concat . take 1 .
          filter (not . T.null) . map cleanup . T.lines <$>
-         readFileT' sp
+         (toSysPath sp >>= readFileT')
   return (txt ^. isoString)
   where
     cleanup :: Text -> Text
@@ -482,8 +482,10 @@ getTxtFromFile sp = do
 withCache :: (FilePath -> FilePath -> Cmd ())
           ->  FilePath -> FilePath -> Cmd ()
 withCache cmd sp dp = do
-  sw <- getModiTime' sp
-  dw <- getModiTime' dp
+  sp' <- toSysPath sp
+  dp' <- toSysPath dp
+  sw  <- getModiTime' sp'
+  dw  <- getModiTime' dp'
   trc $ "withCache: " ++ show ((sp, sw), (dp, dw))
 
   unless (dw == sw && not (isempty dw)) $ do
@@ -493,6 +495,6 @@ withCache cmd sp dp = do
     -- so cache hits are those with equal mtime timestamp (dw == ws)
     trc "withCache: cache miss"
     cmd sp dp
-    setModiTime sw dp
+    setModiTime sw dp'
 
 -- --------------------

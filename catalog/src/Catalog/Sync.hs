@@ -169,7 +169,7 @@ syncNewDirs p = do
     Just (i', n') -> do
       unless (isDIR n') $
         abort $ "syncNewDirs: path isn't an image dir: " ++ quotePath p
-      whenM (objid2path i' >>= toFilePath >>= dirExist) $
+      whenM (objid2path i' >>= path2SysPath >>= dirExist) $
         syncNewDirsCont i'
 
 syncNewDirsCont :: ObjId -> Cmd ()
@@ -196,7 +196,7 @@ idSyncFS recursive i = getImgVal i >>= go
 
       | isDIR e = do
           trcObj i "idSyncFS: syncing directory"
-          fp <- objid2path i >>= toFilePath
+          fp <- objid2path i >>= path2SysPath
           ex <- dirExist fp
           if ex
             then do
@@ -261,7 +261,7 @@ collectImgCont i = do
 collectDirCont :: ObjId -> Cmd ([Name], [ClassifiedNames])
 collectDirCont i = do
   -- trcObj i "collectDirCont: group entries in dir "
-  fp <- objid2path i >>= toFilePath
+  fp <- objid2path i >>= path2SysPath
   es <- parseDirCont fp
   trc $ "collectDirCont: entries found " ++ show es
 
@@ -289,8 +289,9 @@ collectDirCont i = do
          , partitionBy (^. _2 . _1) imgfiles
          )
   where
+    isSubDir :: SysPath -> (Name, (Name, ImgType)) -> Cmd Bool
     isSubDir fp n =
-      dirExist $ fp </> (n ^. _1 . isoString)
+      dirExist ((</> (n ^. _1 . isoString)) <$> fp)
 
 type ClassifiedName  = (Name, (Name, ImgType))
 type ClassifiedNames = [ClassifiedName]
@@ -333,7 +334,7 @@ syncParts i pp = do
   syncMetaData i
   where
     syncPart p = do
-      fsp <- toFilePath (pp `snocPath` (p ^. theImgName))
+      fsp <- path2SysPath (pp `snocPath` (p ^. theImgName))
       ts  <- fsTimeStamp <$> fsFileStat fsp
 
       -- if file has changed, update timestamp and reset checksum
@@ -350,20 +351,23 @@ checkEmptyDir i =
     verbose $ "sync: empty image dir ignored " ++ quotePath p
     rmImgNode i
 
+-- --------------------
+--
+-- low level directory and file ops
 
-fsStat :: String -> (FilePath -> Cmd Bool) -> FilePath -> Cmd FileStatus
+fsStat :: String -> (SysPath -> Cmd Bool) -> SysPath -> Cmd FileStatus
 fsStat msg exists f = do
   unlessM (exists f) $
     abort $ "fs entry not found or not a " ++ msg ++ ": " ++ show f
   getFileStatus f
 
-fsDirStat :: FilePath -> Cmd FileStatus
+fsDirStat :: SysPath -> Cmd FileStatus
 fsDirStat = fsStat "directory" dirExist
 
-fsFileStat :: FilePath -> Cmd FileStatus
+fsFileStat :: SysPath -> Cmd FileStatus
 fsFileStat = fsStat "regular file" fileExist
 
-parseDirCont :: FilePath -> Cmd [(Name, (Name, ImgType))]
+parseDirCont :: SysPath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
   (es, jpgdirs)  <- classifyNames <$> readDir p
   -- trc $ "parseDirCont: " ++ show (es, jpgdirs)
@@ -380,9 +384,9 @@ parseDirCont p = do
       .
       map (mkName &&& filePathToImgType)
 
-parseJpgDirCont :: FilePath -> FilePath -> Cmd [(Name, (Name, ImgType))]
+parseJpgDirCont :: SysPath -> FilePath -> Cmd [(Name, (Name, ImgType))]
 parseJpgDirCont p d =
-  classifyNames <$> readDir (p </> d)
+  classifyNames <$> readDir ((</> d) <$> p)
   where
     classifyNames =
       filter (\ n -> (n ^. _2 . _2) == IMGjpg)

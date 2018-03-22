@@ -1,9 +1,38 @@
+{-# LANGUAGE DeriveFunctor #-}
 -- all IO operations lifted to commands
 
 module Catalog.System.IO
+  ( SysPath
+  , FileStatus
+  , toSysPath
+  , fileExist
+  , dirExist
+  , getFileStatus
+  , getModiTime
+  , getModiTime'
+  , setModiTime
+  , writeFileLB
+  , writeFileT
+  , readFileLB
+  , readFileT
+  , readFileT'
+  , removeFile
+  , renameFile
+  , linkFile
+  , createDir
+  , removeDir
+  , getWorkingDirectory
+  , readDir
+  , putStrLnLB
+  , putStrLn'
+  , atThisMoment
+  , formatTimeIso8601
+  , nowAsIso8601
+  )
 where
 
 import           Catalog.Cmd.Types
+import           Catalog.Cmd.Basic (SysPath, isoFilePath, toSysPath)
 import qualified Data.ByteString.Lazy.Char8 as LB
 import           Data.Prim.Prelude
 import           Data.Prim.TimeStamp
@@ -18,70 +47,82 @@ import qualified System.Posix     as X
 
 type FileStatus = X.FileStatus
 
-fileExist :: FilePath -> Cmd Bool
-fileExist = io . D.doesFileExist
+fileExist :: SysPath -> Cmd Bool
+fileExist sp = io . D.doesFileExist $ sp ^. isoFilePath
 
-dirExist :: FilePath -> Cmd Bool
-dirExist = io . D.doesDirectoryExist
+-- fileExist :: FilePath -> Cmd Bool
+-- fileExist = io . D.doesFileExist
 
-getFileStatus :: FilePath -> Cmd FileStatus
-getFileStatus = io . X.getFileStatus
+dirExist :: SysPath -> Cmd Bool
+dirExist sp = io . D.doesDirectoryExist $ sp ^. isoFilePath
 
-getModiTime :: FilePath -> Cmd TimeStamp
+getFileStatus :: SysPath -> Cmd FileStatus
+getFileStatus sp = io . X.getFileStatus $ sp ^. isoFilePath
+
+getModiTime :: SysPath -> Cmd TimeStamp
 getModiTime f = fsTimeStamp <$> getFileStatus f
 
-getModiTime' :: FilePath -> Cmd TimeStamp
+getModiTime' :: SysPath -> Cmd TimeStamp
 getModiTime' f = do
   ex <- fileExist f
   if ex
     then getModiTime f
     else return mempty
 
-writeFileLB :: FilePath -> LB.ByteString -> Cmd ()
-writeFileLB f = io . LB.writeFile f
+setModiTime :: TimeStamp -> SysPath -> Cmd ()
+setModiTime ts sp =
+  io $ X.setFileTimes (sp ^. isoFilePath) ep ep
+  where
+    ep = ts ^. isoEpochTime
 
-readFileLB :: FilePath -> Cmd LB.ByteString
-readFileLB = io . LB.readFile
+writeFileLB :: SysPath -> LB.ByteString -> Cmd ()
+writeFileLB sp = io . LB.writeFile (sp ^. isoFilePath)
 
-readFileT :: FilePath -> Cmd Text
-readFileT = io . T.readFile
+readFileLB :: SysPath -> Cmd LB.ByteString
+readFileLB sp = io . LB.readFile $ sp ^. isoFilePath
 
-readFileT' :: FilePath -> Cmd Text
+readFileT :: SysPath -> Cmd Text
+readFileT sp = io . T.readFile $ sp ^. isoFilePath
+
+readFileT' :: SysPath -> Cmd Text
 readFileT' fp = do
   ex <- fileExist fp
   if ex
     then readFileT fp
     else return mempty
 
-writeFileT :: FilePath -> Text -> Cmd ()
-writeFileT f = io . T.writeFile f
+writeFileT :: SysPath -> Text -> Cmd ()
+writeFileT sp = io . T.writeFile (sp ^. isoFilePath)
 
-removeFile :: FilePath -> Cmd ()
-removeFile = io . D.removeFile
+removeFile :: SysPath -> Cmd ()
+removeFile sp = io . D.removeFile $ sp ^. isoFilePath
 
-renameFile :: FilePath -> FilePath -> Cmd ()
-renameFile old new = io $ X.rename old new
+renameFile :: SysPath -> SysPath -> Cmd ()
+renameFile old new = io $ X.rename (old ^. isoFilePath) (new ^. isoFilePath)
 
 -- try to make a hard link, if that fails copy file
 
-linkFile :: FilePath -> FilePath -> Cmd ()
-linkFile old new =
+linkFile :: SysPath -> SysPath -> Cmd ()
+linkFile oldf newf =
   (io $ X.createLink old new)
   `catchError`
   (\ _e -> io $ D.copyFile old new)
+  where
+    old = oldf ^. isoFilePath
+    new = newf ^. isoFilePath
 
-createDir :: FilePath -> Cmd ()
-createDir = io . D.createDirectoryIfMissing True
+createDir :: SysPath -> Cmd ()
+createDir sp = io . D.createDirectoryIfMissing True $ sp ^. isoFilePath
 
-removeDir :: FilePath -> Cmd ()
-removeDir = io . D.removeDirectoryRecursive
+removeDir :: SysPath -> Cmd ()
+removeDir sp = io . D.removeDirectoryRecursive $ sp ^. isoFilePath
 
 getWorkingDirectory :: Cmd FilePath
 getWorkingDirectory = io X.getWorkingDirectory
 
-readDir :: FilePath -> Cmd [FilePath]
-readDir p = io $ do
-  s  <- X.openDirStream p
+readDir :: SysPath -> Cmd [FilePath]
+readDir sp = io $ do
+  s  <- X.openDirStream (sp ^. isoFilePath)
   xs <- readDirEntries s
   X.closeDirStream s
   return xs

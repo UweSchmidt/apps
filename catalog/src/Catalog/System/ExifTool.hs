@@ -9,51 +9,67 @@ import           Catalog.Cmd.Types
 import           Catalog.System.IO
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
-import           Data.ImageStore
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
 import qualified Data.Text as T
 
 -- ----------------------------------------
+--
+-- the low level ops
+-- working on file system paths
 
-getExifTool    :: FilePath -> Cmd MetaData
-getExifTool f = do
-  ex <- fileExist f
+
+-- update MetaData with exif data
+-- contained in the .nef, .png, .jpg, .xmp files
+
+syncMD :: (ImgPart -> Bool) ->
+          Path -> SysPath -> ImgPart -> Cmd ()
+syncMD p ip fp pt =
+  when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
+                        -- parts used by exif tool
+    sp <- path2SysPath (substPathName tn ip)
+    verbose $ "syncMetaData: syncing with " ++ show sp
+    m1 <- readMetaData fp
+    m2 <- filterMetaData ty <$> getExifTool sp
+    writeMetaData fp (m2 <> m1)
+  where
+    ty = pt ^. theImgType
+    tn = pt ^. theImgName
+
+-- ----------------------------------------
+
+getExifTool    :: SysPath -> Cmd MetaData
+getExifTool sp = do
+  ex <- fileExist sp
   if ex
     then
       ( do md <- (^. from isoString) <$>
-                 execExifTool ["-groupNames", "-json"] f
+                 execExifTool ["-groupNames", "-json"] sp
            buildMetaData md
       )
       `catchError`
       ( \ e -> do
-          warn $ "exiftool failed for " ++ show f ++ ", error: " ++ show e
+          warn $ "exiftool failed for " ++ show sp ++ ", error: " ++ show e
           return mempty
       )
     else do
-      warn $ "exiftool: file not found: " ++ show f
+      warn $ "exiftool: file not found: " ++ show sp
       return mempty
 
-execExifTool :: [String] -> FilePath -> Cmd String
-execExifTool args f = do
-  trc $ unwords ["exiftool", show (args ++ [f]), ""]
-  execProcess "exiftool" (args ++ [f]) ""
+execExifTool :: [String] -> SysPath -> Cmd String
+execExifTool args sp = do
+  trc $ unwords ["exiftool", show (args ++ [sp ^. isoFilePath]), ""]
+  execProcess "exiftool" (args ++ [sp ^. isoFilePath]) ""
 
-buildMetaData :: ByteString -> Cmd MetaData
-buildMetaData =
-  either (abort . ("getExifTool: " ++)) return
-  .
-  J.eitherDecodeStrict'
-
-writeMetaData :: FilePath -> MetaData -> Cmd ()
+writeMetaData :: SysPath -> MetaData -> Cmd ()
 writeMetaData f m =
   runDry ("write metadata to file " ++ show f) $
     writeFileLB f (J.encodePretty' conf m)
   where
     conf = J.defConfig {J.confCompare = compare}
 
-readMetaData :: FilePath -> Cmd MetaData
+readMetaData :: SysPath -> Cmd MetaData
 readMetaData f = do
   trc $ "readMetadata from " ++ show f
   whenM (do ex <- fileExist f
@@ -69,10 +85,18 @@ readMetaData f = do
         Just m ->
           return m
 
+-- ----------------------------------------
+
+buildMetaData :: ByteString -> Cmd MetaData
+buildMetaData =
+  either (abort . ("getExifTool: " ++)) return
+  .
+  J.eitherDecodeStrict'
+
 getMetaData :: ObjId -> Cmd MetaData
 getMetaData i = do
   md1 <- getImgVals i theMetaData
-  md2 <- objid2path i >>= exifPath >>= readMetaData
+  md2 <- objid2path i >>= path2ExifSysPath >>= readMetaData
   return $ md1 `mergeMD` md2
 
 -- ----------------------------------------
@@ -117,13 +141,13 @@ syncMetaData' :: ObjId -> [ImgPart] -> Cmd ()
 syncMetaData' i ps = do
   ip <- objid2path i
 
-  p  <- exifPath ip          -- the exif file path
-  px <- fileExist p
+  sp <- path2ExifSysPath ip
+  px <- fileExist sp
   unless px $                -- the dir for the exif file
-    createDir $ takeDirectory p
+    createDir (takeDirectory <$> sp)
 
   ts <- if px
-        then getModiTime p   -- the time stamp
+        then getModiTime sp   -- the time stamp
         else return mempty
 
   fu <- view envForceMDU
@@ -131,29 +155,15 @@ syncMetaData' i ps = do
 
   trc $
     "syncMetaData: syncing exif data "
-    ++ show p ++ " " ++ show ps ++ " " ++ i ^. isoString
+    ++ show sp ++ " " ++ show ps ++ " " ++ i ^. isoString
 
   -- collect meta data from raw and xmp parts
   when update $ do
-    mapM_ (syncMD isRawMeta ip p) ps
+    mapM_ (syncMD isRawMeta ip sp) ps
 
     -- if neither raw, png, ... nor xmp there, collect meta from jpg files
     unless (has (traverse . isA isRawMeta) ps) $
-      mapM_ (syncMD isJpg ip p) ps
-
-syncMD :: (ImgPart -> Bool) ->
-          Path -> FilePath -> ImgPart -> Cmd ()
-syncMD p ip fp pt =
-  when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
-                        -- parts used by exif tool
-    sp <- toFilePath (substPathName tn ip)
-    verbose $ "syncMetaData: syncing with " ++ show sp
-    m1 <- readMetaData fp
-    m2 <- filterMetaData ty <$> getExifTool sp
-    writeMetaData fp (m2 <> m1)
-  where
-    ty = pt ^. theImgType
-    tn = pt ^. theImgName
+      mapM_ (syncMD isJpg ip sp) ps
 
 isRawMeta :: ImgPart -> Bool
 isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGimg, IMGmeta]
@@ -179,19 +189,5 @@ syncRating i = do
     md2 <- getMetaData i
     unless (T.null $ md2 ^. metaDataAt "XMP:Rating") $
       adjustMetaData ((mkRating $ getRating md2) <>) i
-
--- ----------------------------------------
-
--- build a file path from an internal image path
---
--- "/archive/photos/2016/emil"
--- -->
--- "<mountpath>/cache/exif-meta/photos/2016/emil.json"
-
-exifPath :: Path -> Cmd FilePath
-exifPath ip = do
-  mp <- use theMountPath
-  return $
-    mp ++ ps'exifcache ++ tailPath ip ^. isoString ++ ".json"
 
 -- ----------------------------------------
