@@ -62,6 +62,8 @@ type CatalogAPI
     JsonAPI
     :<|>
     ZipAPI
+    :<|>
+    NewDocAPI
 
 -- ----------------------------------------
 --
@@ -91,6 +93,22 @@ type RootAPI
 
 type ZipAPI
   = "cache" :> "zip-cache" :> Raw
+
+-- ----------------------------------------
+--
+-- new URL API
+
+type NewDocAPI = IconAPI
+--
+-- icons: /icon/<w>x<h>/collections/<path>.jpg           -- collection icon
+--        /icon/<w>x<h>/collections/<path>/pic-<ix>.jpg  -- col entry  icon
+--
+-- the .jpg extension and the pic-<ix> part must be parsed by the handler
+-- due to restricted servant URL parsing capabilities
+
+type IconAPI
+  = "icon" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Get '[JPEG] LazyByteString
 
 -- ----------------------------------------
 --

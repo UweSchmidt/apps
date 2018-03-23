@@ -21,6 +21,9 @@ import System.Directory       (doesFileExist)
 import System.Exit            (die)
 import System.IO              (hPutStrLn, stderr, hFlush)
 
+import Data.Text.Strict.Lens (utf8)
+
+import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
 import qualified Data.ByteString.Lazy as LBS
 
@@ -139,6 +142,9 @@ catalogServer env runR runM =
   )
   :<|>
   ziparchive
+  :<|>
+  ( get'icon
+  )
 
   where
     mountPath = env ^. envMountPath . isoFilePath
@@ -171,6 +177,18 @@ catalogServer env runR runM =
           liftIO (LBS.readFile fp)
       where
         fp = mountPath ++ dirPath ++ "/" ++ n ^. isoString
+
+    backToPath :: Text -> Geo -> [Text] -> Text
+    backToPath req geo path =
+      mconcat $ map (T.cons '/') (req : geo ^. isoText : path)
+
+    get'icon :: Geo' -> [Text] -> Handler LazyByteString
+    get'icon (Geo' geo) path@(_ : _)
+      | False = do
+          return undefined
+      | otherwise =
+          throwError $
+          err404 { errBody = (_xxx . utf8) # ("icon not found: " <> backToPath "icon" geo path) }
 
     blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
     blaze (BlazeHTML (Geo' geo)) ts = do

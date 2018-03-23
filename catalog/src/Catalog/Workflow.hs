@@ -11,13 +11,13 @@ import Data.ImgNode
 import Data.ImgTree
 import Data.MetaData
 import Catalog.Cmd
-import Catalog.FilePath -- (fileName2ImgType, )
-import Catalog.Html.Basic (baseNameParser, ymdParser)
+import Catalog.FilePath       (fileName2ImgType)
+import Catalog.Html.Basic     (baseNameParser, ymdParser)
 import Catalog.System.Convert (createResizedImage, genIcon)
-import Text.SimpleParser (parseMaybe)
+import Text.SimpleParser      (parseMaybe)
 
 import qualified Data.Text            as T
-import qualified Text.Blaze.Html      as Blaze
+-- import qualified Text.Blaze.Html      as Blaze
 
 -- ----------------------------------------
 
