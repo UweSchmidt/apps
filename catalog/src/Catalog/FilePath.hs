@@ -6,7 +6,9 @@ module Catalog.FilePath where
 import Control.Applicative
 import Data.Prim
 import Text.SimpleParser
-import qualified Text.SimpleParser as SP
+
+import qualified Text.SimpleParser          as SP
+import qualified Text.Megaparsec.Char.Lexer as L
 
 -- ----------------------------------------
 --
@@ -325,6 +327,19 @@ fileName2ImgType fn =
   map (uncurry matchExts) imgTypeExt
   where
     ext = maybe mempty last $ splitExt fn
+
+-- --------------------
+
+isoPicNo :: Iso' Int String
+isoPicNo = iso toS frS
+  where
+    toS =
+      ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ). show
+    frS s =
+      fromMaybe (-1) $ parseMaybe picNoParser s
+
+picNoParser :: SP Int
+picNoParser = string "pic-" *> L.decimal
 
 -- --------------------
 

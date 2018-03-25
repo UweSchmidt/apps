@@ -169,14 +169,13 @@ setColBlogRef = setColRef' theColBlog
 setColRef' :: Traversal' ImgNode (Maybe ImgRef)
               -> Req'IdNode a
               -> Cmd (Req'IdNode'ImgRef a)
-setColRef' theC = return . setRef . toImgRef
+setColRef' theC =
+  return . setRef . toImgRef
   where
     setRef r
-      | Just _pos <- r ^. rPos                       = r'
-      | Just ir   <- r ^? rColNode . theC . traverse = r & rImgRef .~ ir
-      | otherwise                                    = r'
-      where
-        r' =  r' & rType .~ RNull
+      | Nothing <- r ^. rPos
+      , Just ir <- r ^? rColNode . theC . traverse = r & rImgRef .~ ir
+      | otherwise                                  = r & rType   .~ RNull
 
 toImgRef :: Req'IdNode a -> Req'IdNode'ImgRef a
 toImgRef r = r & rVal . _2 %~ (emptyImgRef, )
@@ -261,11 +260,12 @@ toUrlPath r =
   case ty of
     RNull   -> mempty
     RStatic -> fp
-    _       -> px ++ fp ++ ex ty
+    _       -> rt ++ px ++ fp ++ ex ty
   where
     ty = r ^. rType
     fp = toRawPath r
-    px = "/" ++ (map toLower $ show ty)
+    px = "/" ++ drop 1 (map toLower $ show ty)
+    rt = "/docroot"
 
     ex RPage  = ".html"
     ex RIcon  = ".jpg"
@@ -273,6 +273,7 @@ toUrlPath r =
     ex RBlog  = ".html"
     ex RVideo = ".mp4"
     ex _      = ""
+
 
 -- --------------------
 --
@@ -295,6 +296,14 @@ toSourcePath =
       return $ (tailPath $ substPathName n p) ^. isoString
       where
         ImgRef i n = r ^. rImgRef
+
+toCachedImgPath :: Req'IdNode'ImgRef a -> Cmd FilePath
+toCachedImgPath r =
+  addP <$> toSourcePath r
+  where
+    addP fp = rt ++ geo ++ fp ++ ".jpg"
+    rt      = "/docroot"
+    geo     = "/" ++ r ^. rGeo .isoString
 
 -- --------------------
 --
@@ -340,10 +349,11 @@ processReq'IdNode'ImgRef pNull pNode r
 
 -- --------------------
 
-processReqIcon :: Req' a -> Cmd FilePath
+processReqIcon :: Show a => Req' a -> Cmd FilePath
 processReqIcon r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
+  trc $ "processReqIcon: dp=" ++ show dp
 
   case r1 ^. rPos of
     -- create an icon from a media file
@@ -373,13 +383,16 @@ processReqIcon r0 = do
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
 genReqIcon :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genReqIcon r sp dp =
+genReqIcon r sp dp = do
+  trc $ "genReqIcon sp=" ++ show sp ++ ", dp=" ++ show dp
+
+  ip <- toCachedImgPath r
   case ity of
     IMGjpg ->
-      createIconFromImg geo sp dp
+      createCopyFromImg geo sp ip dp
 
     IMGimg ->
-      createIconFromImg geo sp dp
+      createCopyFromImg geo sp ip dp
 
     IMGvideo ->
       abortR "genReqIcon: icon for video not yet implemented" r
@@ -405,10 +418,12 @@ genReqIcon r sp dp =
 
 createIconFromObj :: Req'IdNode a -> FilePath -> Cmd ()
 createIconFromObj r dp = do
+  trc $ "createIconFromObj: " ++ dp
   -- read the collection title
   str1 <- getImgVals
           (r ^. rColId)
           (theMetaData . metaDataAt descrTitle . isoString)
+  trc $ "createIconFromObj: " ++ str1
 
   str2 <- if isempty str1
           -- if no title there, extract text from path
@@ -416,6 +431,7 @@ createIconFromObj r dp = do
                p <- objid2path (r ^. rColId)
                return $ path2str (p ^. isoString)
           else return str1
+  trc $ "createIconFromObj: " ++ str2
 
   createIconFromString geo str2 dp
     where
@@ -438,9 +454,30 @@ createIconFromObj r dp = do
               i :: Int
               i = read s
 
-createIconFromImg :: GeoAR -> FilePath -> FilePath -> Cmd ()
-createIconFromImg geo sp dp =
-  withCache (createResizedImage geo) sp dp
+-- --------------------
+--
+-- create an image copy with a given geometry
+-- from a source image sp0
+--
+-- the copy is stored under the path of the image, not the col entry
+-- and then a link to this file is created with the col entry path
+-- with this 2 step process all copies in all collection of the same
+-- image share the same physical image file
+
+createCopyFromImg :: GeoAR -> FilePath -> FilePath -> FilePath -> Cmd ()
+createCopyFromImg geo sp0 ip dp0 =
+  withCache resizeAndLink sp0 dp0
+  where
+    resizeAndLink sp dp = do
+      withCache (createResizedImage geo) sp ip
+      withCache linkCopy                 ip dp
+        where
+          linkCopy s d = do
+            s' <- toSysPath s
+            d' <- toSysPath d
+            linkFile s' d'
+
+-- --------------------
 
 createIconFromString :: GeoAR -> String -> FilePath -> Cmd ()
 createIconFromString geo str dp = do
@@ -478,6 +515,9 @@ getTxtFromFile sp = do
 -- --------------------
 --
 -- cache generated files, e.g. icons, scaled down images, ...
+--
+-- the cached entry gets the same time stamp as the source
+-- cache hit only when both time stamps are the same
 
 withCache :: (FilePath -> FilePath -> Cmd ())
           ->  FilePath -> FilePath -> Cmd ()
@@ -494,6 +534,7 @@ withCache cmd sp dp = do
     -- set mtime of dest to mtime of source
     -- so cache hits are those with equal mtime timestamp (dw == ws)
     trc "withCache: cache miss"
+    createDir (takeDirectory <$> dp')
     cmd sp dp
     setModiTime sw dp'
 

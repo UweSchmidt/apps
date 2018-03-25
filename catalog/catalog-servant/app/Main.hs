@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -21,9 +22,6 @@ import System.Directory       (doesFileExist)
 import System.Exit            (die)
 import System.IO              (hPutStrLn, stderr, hFlush)
 
-import Data.Text.Strict.Lens (utf8)
-
-import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
 import qualified Data.ByteString.Lazy as LBS
 
@@ -38,6 +36,7 @@ import Catalog.Html.Blaze2
 import Catalog.JsonCommands
 import Catalog.Options        (mainWithArgs)
 import Catalog.System.Convert (genImageFrom)
+import Catalog.Workflow
 
 -- servant interface
 import API
@@ -178,17 +177,60 @@ catalogServer env runR runM =
       where
         fp = mountPath ++ dirPath ++ "/" ++ n ^. isoString
 
-    backToPath :: Text -> Geo -> [Text] -> Text
+    -- --------------------
+    --
+    -- new URL handlers
+
+    -- parsed URL -> org URL, for error messages
+
+    backToPath :: String -> Geo -> [Text] -> String
     backToPath req geo path =
-      mconcat $ map (T.cons '/') (req : geo ^. isoText : path)
+      mconcat $ map ('/' :) (req  : geo ^. isoString : map (^. isoString) path)
+
+    -- parser for object path
+    --
+    -- remove extension
+    -- parse optional collection index
+    --
+    -- example: path2colPath ".jpg" ["collections","2018", "may", "pic-0007.jpg"]
+    --          -> Just ("/collections/2018/may", Just 7)
+
+    path2colPath :: String -> [Text] -> Maybe PathPos
+    path2colPath ext ts
+      | Just (dp, fn, ex) <- splitDirFileExt ps
+      , ex == ext =
+          Just $ buildPP dp fn
+      | otherwise =
+          Nothing
+      where
+        ps = concatMap (('/' :) . (^. isoString)) ts
+
+        buildPP dp' fn'
+          | cx < 0    = (readPath $ dp' </> fn', Nothing)
+          | otherwise = (readPath   dp',         Just cx)
+          where
+            cx = fn' ^. from isoPicNo
+
+    -- handle icon request
 
     get'icon :: Geo' -> [Text] -> Handler LazyByteString
-    get'icon (Geo' geo) path@(_ : _)
-      | False = do
-          return undefined
-      | otherwise =
+    get'icon (Geo' geo) ts@(_ : _)
+      | Just ppos <- path2colPath ".jpg" ts =
+          runR $
+          do let req =
+                   emptyReq' & rType    .~ RIcon
+                             & rGeo     .~ geo
+                             & rPathPos .~ ppos
+             processReqIcon req >>= toSysPath >>= readFileLB
+
+    get'icon (Geo' geo) ts =
           throwError $
-          err404 { errBody = (_xxx . utf8) # ("icon not found: " <> backToPath "icon" geo path) }
+          err404 { errBody =
+                     ( "icon not found: " ++ backToPath "icon" geo ts )
+                     ^. from isoString
+                 }
+
+    -- --------------------
 
     blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
     blaze (BlazeHTML (Geo' geo)) ts = do

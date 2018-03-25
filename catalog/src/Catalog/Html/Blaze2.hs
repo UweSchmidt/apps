@@ -20,6 +20,7 @@ import Data.Prim
 import Catalog.Cmd
 import Catalog.FilePath   ( addJpg
                           , blazePath'
+                          , isoPicNo
                           )
 import Catalog.Html.Basic ( ColRef
                           , ColRefPath
@@ -41,7 +42,6 @@ import Catalog.System.ExifTool (getMetaData)
 import Catalog.System.Convert  (getColImgSize)
 
 import Text.SimpleParser
-import qualified Text.Megaparsec.Char.Lexer as L
 
 -- ----------------------------------------
 
@@ -127,19 +127,6 @@ parseImgGeoPathPic :: FilePath -> Maybe (PageConfig, (Path, Maybe Int))
 parseImgGeoPathPic fp = do
   (geo, fp1) <- parseGeoPath fp
   parseImgGeoPath geo fp1
-
--- --------------------
-
-isoPicNo :: Iso' Int String
-isoPicNo = iso toS frS
-  where
-    toS =
-      ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ). show
-    frS s =
-      fromMaybe (-1) $ parseMaybe picNoParser s
-
-picNoParser :: SP Int
-picNoParser = string "pic-" *> L.decimal
 
 -- ----------------------------------------
 --
