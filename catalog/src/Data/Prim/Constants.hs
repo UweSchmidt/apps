@@ -81,7 +81,9 @@ ps'archive
   , ps'css
   , ps'exifcache
   , ps'zipcache
-  , ps'blank :: FilePath
+  , ps'blank
+  , ps'docroot
+  , ps'gen'icon :: FilePath
 
 ps'archive      = p'archive      ^. isoString
 ps'bootstrap    = "/bootstrap"
@@ -100,6 +102,8 @@ ps'javascript   = ps'assets </> "javascript"
 ps'css          = ps'assets </> "css"
 ps'exifcache    = ps'cache  </> "exif-meta"
 ps'zipcache     = ps'cache  </> "zip-cache"
+ps'docroot      = "/docroot"
+ps'gen'icon     = ps'docroot </> "generated/icon"
 
 -- ----------------------------------------
 

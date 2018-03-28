@@ -25,11 +25,17 @@ module Catalog.Cmd.Types
        , Cmd
        , runCmd
        , runCmd'
+       -- CmdMB
+       , CmdMB
+       , liftMB
+       , pureMB
+       , runMaybeT
        )
 where
 
 import           Control.Lens
 import           Control.Monad.ReaderStateErrIO
+import           Control.Monad.Trans.Maybe
 import           Data.ImageStore
 import           Data.Prim
 import           System.IO
@@ -145,5 +151,15 @@ runCmd = runCmd' defaultEnv
 
 runCmd' :: Env -> Cmd a -> IO (Either Msg a, ImgStore)
 runCmd' env cmd = runAction cmd env emptyImgStore
+
+type CmdMB = MaybeT Cmd
+
+liftMB :: Cmd (Maybe a) -> CmdMB a
+liftMB cmd = lift cmd >>= pureMB
+{-# INLINE liftMB #-}
+
+pureMB :: Maybe a -> CmdMB a
+pureMB = maybe mzero return
+{-# INLINE pureMB #-}
 
 -- ----------------------------------------

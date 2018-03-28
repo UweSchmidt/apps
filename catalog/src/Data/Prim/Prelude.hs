@@ -45,6 +45,8 @@ module Data.Prim.Prelude
        , module Data.Semigroup
          -- Data.Function
        , on
+         -- Data.Read
+       , readMaybe
          -- System.FilePath
        , FilePath
        , (</>)
@@ -112,6 +114,7 @@ import           Data.Vector (Vector)
 import           Numeric (readHex)
 import           System.FilePath
 import           Text.Printf (printf, PrintfArg)
+import           Text.Read (readMaybe)
 
 type LazyByteString = LB.ByteString
 type LazyText       = LT.Text

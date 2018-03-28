@@ -3,6 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE StandaloneDeriving #-}
+
 module Catalog.Workflow
 where
 
@@ -30,9 +31,9 @@ data ReqType = RPage    -- deliver HTML col-, img-, blog page   text/html
              | RImg     -- deliver JPG image                    image/jpg
              | RBlog    -- ???
              | RVideo   -- deliver mp4 video                    ???/mp4
-             | RStatic  -- deliver static page                  text/css, ...
+--           | RStatic  -- deliver static page                  text/css, ...
              | RNull    -- error case
-               deriving (Eq, Ord, Show)
+               deriving (Eq, Ord, Show, Read)
 
 data Req' a
   = Req' { _rType    :: ReqType      -- type
@@ -43,7 +44,6 @@ data Req' a
 
 type Req'IdNode                a = Req'              (IdNode,  a)
 type Req'IdNode'ImgRef         a = Req'IdNode        (ImgRef,  a)
-type Req'IdNode'ImgRef'ImgType a = Req'IdNode'ImgRef (ImgType, a)
 
 -- --------------------
 
@@ -54,7 +54,7 @@ instance IsEmpty (Req' a) where
 
 instance Semigroup (Req' a) where
   Req'{_rType = RNull} <> r2 = r2
-  r1                  <> _  = r1
+  r1                   <> _  = r1
 
 -- instance Semi (Req' a) where
 
@@ -65,6 +65,9 @@ emptyReq'
          , _rGeo     = geo'org
          , _rVal     = ()
          }
+
+emptyReq :: Req' a -> Req' a
+emptyReq r = r & rType .~ RNull
 
 -- --------------------
 
@@ -98,8 +101,14 @@ rColNode = rIdNode . _2
 rImgRef :: Lens' (Req'IdNode'ImgRef a) ImgRef
 rImgRef = rVal . _2 . _1
 
-rImgType :: Lens' (Req'IdNode'ImgRef'ImgType a)  ImgType
-rImgType = rVal . _2 . _2 . _1
+instance IsoString ReqType where
+  isoString = iso toS frS
+    where
+      toS = drop 1 . map toLower . show
+      frS = fromMaybe RNull .
+            readMaybe .
+            (\ (x : xs) -> 'R' : toUpper x : xs) .
+            (++ " ")
 
 -- --------------------
 
@@ -126,17 +135,220 @@ normPathPos r =
     Nothing
       -> return r
 
+denormPathPos :: Req'IdNode a -> Cmd (Req'IdNode a)
+denormPathPos r =
+  case r ^. rPos of
+    Just _pos
+      -> return r
+
+    Nothing
+      -> do parent'i <- getImgParent $ r ^.rColId
+            parent'n <- getImgVal parent'i
+            case lookupOId (r ^. rColId) parent'n of
+              Just x
+                -> do parent'p <- objid2path parent'i
+                      return
+                        (r & rPathPos .~ (parent'p, Nothing)
+                           & rIdNode .~ (parent'i, parent'n)
+                        )
+              Nothing
+                -> return
+                     (emptyReq r)
+  where
+    lookupOId oid pnd =
+      searchPos
+      ((== oid) . (^. theColObjId))
+      (pnd ^. theColEntries)
+
 -- check the existence of a path
 -- and add (objid, imgnode) to the request
 
 setIdNode :: Req' a -> Cmd (Req'IdNode a)
-setIdNode r = do
-  (i, n) <- getIdNode' (r ^. rPath)
-  unless (isCOL n) $
-    abortR "processHtmlPage: path not found: " r
+setIdNode r
+  | isempty r =
+      abortR "setIdNode: illegal request" r
 
-  return (r & rVal %~ ((i, n), ))
+  | otherwise = do
+      (i, n) <- getIdNode' (r ^. rPath)
+      unless (isCOL n) $
+        abortR "setIdNode: path not found: " r
 
+      return (r & rVal %~ ((i, n), ))
+
+-- --------------------
+
+normAndSetIdNode' :: Req' a -> CmdMB (Req'IdNode a)
+normAndSetIdNode' = setIdNode' >=> normPathPos'
+
+setIdNode' :: Req' a -> CmdMB (Req'IdNode a)
+setIdNode' r = do
+  i'n <- lift $ getIdNode' (r ^. rPath)
+  return (r & rVal %~ (i'n, ))
+
+normPathPos' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+normPathPos' r =
+  ( do pos <- pureMB (r ^. rPos)
+       ce  <- lift $ colEntryAt pos (r ^. rColNode)
+       colEntry'
+         (const $ return r)
+         (normPathPosC r)
+         ce
+  )
+  <|>
+  return r
+
+normPathPosC :: Req'IdNode a -> ObjId -> CmdMB (Req'IdNode a)
+normPathPosC r c' =
+  do p' <- lift $ objid2path c'
+     setIdNode' (r & rVal     %~ snd
+                   & rPathPos .~ (p', mzero)
+                )
+
+-- compute a req with a path and pos
+-- this is id when an image is requested
+-- in case of a collection the parent col and the pos there are
+-- computed
+
+denormPathPos' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+denormPathPos' r =
+  (pureMB (r ^. rPos) >>= (const $ return r))
+  <|>
+  ( do par'i <- lift   $ getImgParent (r ^.rColId)
+       par'n <- lift   $ getImgVal    par'i
+       par'p <- lift   $ objid2path   par'i
+       par'x <- pureMB $ lookupOId    (r ^. rColId) par'n
+       return
+         (r & rPathPos .~ (par'p, Just par'x)
+            & rIdNode  .~ (par'i, par'n)
+         )
+  )
+  where
+    lookupOId oid pnd =
+      searchPos
+      ((== oid) . (^. theColObjId))
+      (pnd ^. theColEntries)
+
+-- --------------------
+--
+-- navigation ops
+
+toParent' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toParent' r = do
+  p <- denormPathPos' r
+  return (p & rPos .~ Nothing)
+
+toPos' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
+toPos' f r = do
+  p <- denormPathPos' r
+  x <- pureMB (p ^. rPos)
+  let x' = f x
+  _ <- pureMB (p ^? rColNode . theColEntries . ix x')
+  normPathPos' (p & rPos .~ Just x')
+
+toPrev' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toPrev' = toPos' pred
+
+toNext' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toNext' = toPos' succ
+
+toFirst' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toFirst' = toPos' (const 0)
+
+-- normalization must be done before
+toChildren' :: Req'IdNode a -> CmdMB [Req'IdNode a]
+toChildren' r =
+  mapM normC $ zip [0..] (r ^. rColNode . theColEntries)
+  where
+    normC (i, ce) =
+      colEntry'
+        (const $ return (r & rPos .~ Just i))
+        (normPathPosC r)
+        ce
+
+-- --------------------
+
+setImgRef' :: Req'IdNode a -> CmdMB (Req'IdNode'ImgRef a)
+setImgRef' r = do
+  pos <- pureMB (r ^. rPos)
+  ce  <- lift $ colEntryAt pos (r ^. rColNode)
+  colEntry'
+      (\ ir -> return (r & rVal . _2 %~ (ir, )))
+      (const mzero)
+      ce
+
+setColImgRef' :: Req'IdNode a -> CmdMB (Req'IdNode'ImgRef a)
+setColImgRef' = setColRef'' theColImg
+
+setColBlogRef' :: Req'IdNode a -> CmdMB (Req'IdNode'ImgRef a)
+setColBlogRef' = setColRef'' theColBlog
+
+setColRef'' :: Traversal' ImgNode (Maybe ImgRef)
+            -> Req'IdNode a
+            -> CmdMB (Req'IdNode'ImgRef a)
+setColRef'' theC r =
+  do ir <- pureMB $ r ^? rColNode . theC . traverse
+     return (r & rVal . _2 %~ (ir, ))
+
+-- --------------------
+--
+-- compute the source path of an image ref
+
+toSourcePath' :: Req'IdNode'ImgRef a -> CmdMB FilePath
+toSourcePath' r = lift $ do
+  p <- objid2path i
+  return $ (tailPath $ substPathName nm p) ^. isoString
+  where
+    ImgRef i nm = r ^. rImgRef
+
+-- --------------------
+--
+-- handle an icon reguest
+
+processReqIcon' :: Req' a -> CmdMB FilePath
+processReqIcon' r0 = do
+  r1 <- normAndSetIdNode' r0
+  let dp = toUrlPath r1
+  lift $ trc $ "processReqIcon: dp=" ++ show dp
+
+  case r1 ^. rPos of
+    -- create an icon from a media file
+    Just _pos -> do
+      r2 <- setImgRef'    r1
+      sp <- toSourcePath' r2
+      lift $ genReqIcon r2 sp dp
+      return dp
+
+    -- create an icon for a collection
+    Nothing ->
+      ( do r2 <- setColImgRef'  r1
+                 <|>
+                 setColBlogRef' r1
+           sp <- toSourcePath'  r2
+           lift $ genReqIcon r2 sp dp
+           return dp
+      )
+      <|>
+      ( do lift $ createIconFromObj r1 dp
+           return dp
+      )
+
+-- ----------------------------------------
+--
+-- main entry points
+
+processReqIcon ::  Req' a -> Cmd FilePath
+processReqIcon = processReq processReqIcon'
+
+processReq :: (Req' a -> CmdMB b) -> Req' a -> Cmd b
+processReq cmd r0 =
+  runMaybeT (cmd r0)
+  >>=
+  maybe (abortR "processReq: error in processing " r0) return
+
+-- ----------------------------------------
+
+-- --------------------
+--
 -- check whether an image ref is legal
 -- and add the image ref to the result
 -- in case of a ref to a collection, the empty ImgRef is set
@@ -148,15 +360,14 @@ setImgRef = setRef . toImgRef
       case r ^. rPos of
         Just pos
           -> do ce <- colEntryAt pos (r ^. rColNode)
-                colEntry'
-                  (\ ir -> return (r & rImgRef .~ ir))
-                  (const $ return r')
+                return $
+                  colEntry'
+                  (\ ir -> r & rImgRef .~ ir)
+                  (const $ emptyReq r)
                   ce
 
         Nothing
-          -> return r'
-      where
-        r' =  r & rType .~ RNull
+          -> return $ emptyReq r
 
 -- add the col image ref or col blog ref to the request
 
@@ -179,40 +390,6 @@ setColRef' theC =
 
 toImgRef :: Req'IdNode a -> Req'IdNode'ImgRef a
 toImgRef r = r & rVal . _2 %~ (emptyImgRef, )
-
-
--- --------------------
---
--- really needed? Type of an ImgRef can be computed
--- by looking at the extension of the name
---
--- compute the type of the image/blog/video/...
-
-setImgType :: Req'IdNode'ImgRef a
-           -> Cmd (Req'IdNode'ImgRef'ImgType a)
-setImgType = setType . toImgType
-  where
-    setType =
-      processReq'IdNode'ImgRef
-      (\   r -> return (r & rType    .~ RNull))
-      (\ p r -> return (r & rImgType .~ (p ^. theImgType)))
-
-toImgType :: Req'IdNode'ImgRef a -> Req'IdNode'ImgRef'ImgType a
-toImgType r = r & rVal . _2 . _2 %~ (IMGother, )
-
-
--- compute the request type from a media entry
--- needed when generating URL's for media files
-
-imgType2ReqType :: Req'IdNode'ImgRef'ImgType a -> Req'IdNode'ImgRef'ImgType a
-imgType2ReqType r = r & rType .~ rt (r ^. rImgType)
-  where
-    rt IMGcopy  = RImg
-    rt IMGimg   = RImg
-    rt IMGjpg   = RImg
-    rt IMGtxt   = RBlog
-    rt IMGvideo = RVideo
-    rt _        = RNull
 
 -- --------------------
 --
@@ -237,7 +414,7 @@ toRawPath :: Req' a -> FilePath
 toRawPath r =
   case r ^. rType of
     RNull   -> mempty
-    RStatic -> path'
+--  RStatic -> path'
     _       -> "/" ++ geo' ++ path' ++ pos'
   where
     path' = r ^. rPath . isoString
@@ -259,13 +436,13 @@ toUrlPath :: Req' a -> FilePath
 toUrlPath r =
   case ty of
     RNull   -> mempty
-    RStatic -> fp
+--  RStatic -> fp
     _       -> rt ++ px ++ fp ++ ex ty
   where
     ty = r ^. rType
     fp = toRawPath r
-    px = "/" ++ drop 1 (map toLower $ show ty)
-    rt = "/docroot"
+    px = "/" ++ ty ^. isoString
+    rt = ps'docroot
 
     ex RPage  = ".html"
     ex RIcon  = ".jpg"
@@ -301,9 +478,11 @@ toCachedImgPath :: Req'IdNode'ImgRef a -> Cmd FilePath
 toCachedImgPath r =
   addP <$> toSourcePath r
   where
-    addP fp = rt ++ geo ++ fp ++ ".jpg"
-    rt      = "/docroot"
-    geo     = "/" ++ r ^. rGeo .isoString
+    addP fp =
+      ps'docroot </>
+      r ^. rType . isoString </>
+      r ^. rGeo  . isoString ++
+      fp ++ ".jpg"
 
 -- --------------------
 --
@@ -348,9 +527,11 @@ processReq'IdNode'ImgRef pNull pNode r
     ImgRef oid nm = r ^. rImgRef
 
 -- --------------------
+--
+-- handle an icon reguest
 
-processReqIcon :: Show a => Req' a -> Cmd FilePath
-processReqIcon r0 = do
+processReqIconOld ::  Req' a -> Cmd FilePath
+processReqIconOld r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
   trc $ "processReqIcon: dp=" ++ show dp
@@ -381,7 +562,9 @@ processReqIcon r0 = do
 
   return dp
 
+
 -- dispatch icon generation over media type (jpg, txt, md, video)
+
 genReqIcon :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
 genReqIcon r sp dp = do
   trc $ "genReqIcon sp=" ++ show sp ++ ", dp=" ++ show dp
@@ -414,6 +597,26 @@ genReqIcon r sp dp = do
     ity = fileName2ImgType (r ^. rImgRef . to _iname . isoString)
 
 
+-- read text from a file (blog entry) to generate an icon
+
+getTxtFromFile :: FilePath -> Cmd String
+getTxtFromFile sp = do
+  txt <- cut 32 . T.concat . take 1 .
+         filter (not . T.null) . map cleanup . T.lines <$>
+         (toSysPath sp >>= readFileT')
+  return (txt ^. isoString)
+  where
+    cleanup :: Text -> Text
+    cleanup = T.dropWhile (not . isAlphaNum)
+
+    cut :: Int -> Text -> Text
+    cut l t
+      | T.length t <= l = t
+      | otherwise       = T.take (l - 3) t <> "..."
+
+
+-- --------------------
+--
 -- create an icon from the title of the path of a collection
 
 createIconFromObj :: Req'IdNode a -> FilePath -> Cmd ()
@@ -490,27 +693,12 @@ createRawIconFromString str = do
   genIcon fn str
   return fn
     where
-      fn = ps'iconsgen </> str2fn str ++ ".jpg"
+      fn = ps'gen'icon </> str2fn str ++ ".jpg"
       str2fn = concatMap urlEnc
         where
           urlEnc c
             | isAlphaNum c = [c]
             | otherwise    = "-" ++ show (fromEnum c) ++ "-"
-
-getTxtFromFile :: FilePath -> Cmd String
-getTxtFromFile sp = do
-  txt <- cut 32 . T.concat . take 1 .
-         filter (not . T.null) . map cleanup . T.lines <$>
-         (toSysPath sp >>= readFileT')
-  return (txt ^. isoString)
-  where
-    cleanup :: Text -> Text
-    cleanup = T.dropWhile (not . isAlphaNum)
-
-    cut :: Int -> Text -> Text
-    cut l t
-      | T.length t <= l = t
-      | otherwise       = T.take (l - 3) t <> "..."
 
 -- --------------------
 --

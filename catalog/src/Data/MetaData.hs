@@ -15,7 +15,6 @@ import qualified Data.Scientific     as SC
 import qualified Text.SimpleParser   as SP
 import           Text.SimpleParser
 import           Text.Printf         ( printf )
-import           Text.Read           ( readMaybe )
 -- import Debug.Trace
 
 -- ----------------------------------------
