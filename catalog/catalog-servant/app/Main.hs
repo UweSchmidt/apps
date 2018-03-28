@@ -143,6 +143,8 @@ catalogServer env runR runM =
   ziparchive
   :<|>
   ( get'icon
+    :<|>
+    get'img
   )
 
   where
@@ -212,18 +214,25 @@ catalogServer env runR runM =
             cx = fn' ^. from isoPicNo
 
     -- handle icon request
-
     get'icon :: Geo' -> [Text] -> Handler LazyByteString
-    get'icon (Geo' geo) ts@(_ : _)
+    get'icon = get'img' RIcon
+
+    get'img  :: Geo' -> [Text] -> Handler LazyByteString
+    get'img  = get'img' RImg
+
+
+    get'img' :: ReqType -> Geo' -> [Text] -> Handler LazyByteString
+    get'img' rt (Geo' geo) ts@(_ : _)
       | Just ppos <- path2colPath ".jpg" ts =
           runR $
           do let req =
-                   emptyReq' & rType    .~ RIcon
+                   emptyReq' & rType    .~ rt
                              & rGeo     .~ geo
                              & rPathPos .~ ppos
-             processReqIcon req >>= toSysPath >>= readFileLB
 
-    get'icon (Geo' geo) ts =
+             processReqImg req >>= toSysPath >>= readFileLB
+
+    get'img' _ (Geo' geo) ts =
           throwError $
           err404 { errBody =
                      ( "icon not found: " ++ backToPath "icon" geo ts )

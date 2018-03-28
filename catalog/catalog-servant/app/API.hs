@@ -12,27 +12,9 @@ module API where
 import Prelude ()
 import Prelude.Compat
 
--- import Control.Monad.Except
--- import Control.Monad.Reader
--- import Data.Aeson.Compat
--- import Data.Aeson.Types
--- import Data.Attoparsec.ByteString
--- import Data.ByteString.Lazy (ByteString)
--- import Data.List
--- import Data.Maybe
--- import Data.String.Conversions
--- import Data.Time.Calendar
--- import GHC.Generics
--- import Lucid
 import Network.HTTP.Media ((//), (/:))
--- import Network.Wai
--- import Network.Wai.Handler.Warp
 import Servant
 import Servant.HTML.Blaze
--- import System.Directory
--- import Text.Blaze
--- import Text.Blaze.Html.Renderer.Utf8
--- import qualified Data.Aeson.Parser
 import qualified Text.Blaze.Html as Blaze
 
 import System.FilePath (FilePath)
@@ -98,7 +80,10 @@ type ZipAPI
 --
 -- new URL API
 
-type NewDocAPI = IconAPI
+type NewDocAPI
+  = IconAPI
+    :<|>
+    ImgAPI
 --
 -- icons: /icon/<w>x<h>/collections/<path>.jpg           -- collection icon
 --        /icon/<w>x<h>/collections/<path>/pic-<ix>.jpg  -- col entry  icon
@@ -108,6 +93,10 @@ type NewDocAPI = IconAPI
 
 type IconAPI
   = "icon" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Get '[JPEG] LazyByteString
+
+type ImgAPI
+  = "img" :> Capture "geo" Geo':> CaptureAll "path" Text :>
     Get '[JPEG] LazyByteString
 
 -- ----------------------------------------

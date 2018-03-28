@@ -224,8 +224,8 @@ setColBlogRef :: Req'IdNode a -> CmdMB (Req'IdNode'ImgRef a)
 setColBlogRef = setColRef' theColBlog
 
 setColRef' :: Traversal' ImgNode (Maybe ImgRef)
-           -> Req'IdNode a
-           -> CmdMB (Req'IdNode'ImgRef a)
+            -> Req'IdNode a
+            -> CmdMB (Req'IdNode'ImgRef a)
 setColRef' theC r =
   do ir <- pureMB $ r ^? rColNode . theC . traverse
      return (r & rVal . _2 %~ (ir, ))
@@ -234,18 +234,18 @@ setColRef' theC r =
 --
 -- handle an icon reguest
 
-processReqIcon' :: Req' a -> CmdMB FilePath
-processReqIcon' r0 = do
+processReqImg' :: Req' a -> CmdMB FilePath
+processReqImg' r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
-  lift $ trc $ "processReqIcon: dp=" ++ show dp
+  lift $ trc $ "processReqImg: dp=" ++ show dp
 
   case r1 ^. rPos of
     -- create an icon from a media file
     Just _pos -> do
       r2 <- setImgRef    r1
       sp <- lift $ toSourcePath r2
-      lift $ genReqIcon r2 sp dp
+      lift $ genReqImg r2 sp dp
       return dp
 
     -- create an icon for a collection
@@ -254,7 +254,7 @@ processReqIcon' r0 = do
                  <|>
                  setColBlogRef r1
            sp <- lift $ toSourcePath r2
-           lift $ genReqIcon r2 sp dp
+           lift $ genReqImg r2 sp dp
            return dp
       )
       <|>
@@ -266,8 +266,8 @@ processReqIcon' r0 = do
 --
 -- main entry points
 
-processReqIcon ::  Req' a -> Cmd FilePath
-processReqIcon = processReq processReqIcon'
+processReqImg ::  Req' a -> Cmd FilePath
+processReqImg = processReq processReqImg'
 
 processReq :: (Req' a -> CmdMB b) -> Req' a -> Cmd b
 processReq cmd r0 =
@@ -371,14 +371,8 @@ checkMedia checkExt r =
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
 
-genReqIcon :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genReqIcon = genReqImg' Fix
-
 genReqImg :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genReqImg = genReqImg' Pad
-
-genReqImg' :: AspectRatio ->  Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genReqImg' ar r sp dp = do
+genReqImg r sp dp = do
   trc $ "genReqIcon sp=" ++ show sp ++ ", dp=" ++ show dp
 
   ip <- toCachedImgPath r
@@ -405,9 +399,14 @@ genReqImg' ar r sp dp = do
     _ ->
       abortR "genReqIcon: no icon for image type" r
   where
-    geo = mkGeoAR (r ^. rGeo) ar
+    geo = mkGeoAR (r ^. rGeo) (reqType2AR $ r ^. rType)
     ity = fileName2ImgType (r ^. rImgRef . to _iname . isoString)
 
+
+reqType2AR :: ReqType -> AspectRatio
+reqType2AR RIcon = Fix
+reqType2AR RImg  = Pad
+reqType2AR _     = Pad -- default
 
 -- read text from a file (blog entry) to generate an icon
 
@@ -449,7 +448,7 @@ createIconFromObj r dp = do
 
   createIconFromString geo str2 dp
     where
-      geo = mkGeoAR (r ^. rGeo) Fix
+      geo = mkGeoAR (r ^. rGeo) (reqType2AR $ r ^. rType)
 
       path2str :: String -> String
       path2str f
