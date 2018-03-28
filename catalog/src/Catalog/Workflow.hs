@@ -111,7 +111,7 @@ instance IsoString ReqType where
             (++ " ")
 
 -- --------------------
-
+{-
 normAndSetIdNode :: Req' a -> Cmd (Req'IdNode a)
 normAndSetIdNode = setIdNode >=> normPathPos
 
@@ -176,6 +176,10 @@ setIdNode r
       return (r & rVal %~ ((i, n), ))
 
 -- --------------------
+-}
+-- ----------------------------------------
+--
+-- commands working in MaybeT Cmd
 
 normAndSetIdNode' :: Req' a -> CmdMB (Req'IdNode a)
 normAndSetIdNode' = setIdNode' >=> normPathPos'
@@ -289,6 +293,7 @@ setColRef'' theC r =
   do ir <- pureMB $ r ^? rColNode . theC . traverse
      return (r & rVal . _2 %~ (ir, ))
 
+{-
 -- --------------------
 --
 -- compute the source path of an image ref
@@ -299,7 +304,7 @@ toSourcePath' r = lift $ do
   return $ (tailPath $ substPathName nm p) ^. isoString
   where
     ImgRef i nm = r ^. rImgRef
-
+-}
 -- --------------------
 --
 -- handle an icon reguest
@@ -314,7 +319,7 @@ processReqIcon' r0 = do
     -- create an icon from a media file
     Just _pos -> do
       r2 <- setImgRef'    r1
-      sp <- toSourcePath' r2
+      sp <- lift $ toSourcePath r2
       lift $ genReqIcon r2 sp dp
       return dp
 
@@ -323,7 +328,7 @@ processReqIcon' r0 = do
       ( do r2 <- setColImgRef'  r1
                  <|>
                  setColBlogRef' r1
-           sp <- toSourcePath'  r2
+           sp <- lift $ toSourcePath r2
            lift $ genReqIcon r2 sp dp
            return dp
       )
@@ -346,7 +351,7 @@ processReq cmd r0 =
   maybe (abortR "processReq: error in processing " r0) return
 
 -- ----------------------------------------
-
+{-
 -- --------------------
 --
 -- check whether an image ref is legal
@@ -390,7 +395,7 @@ setColRef' theC =
 
 toImgRef :: Req'IdNode a -> Req'IdNode'ImgRef a
 toImgRef r = r & rVal . _2 %~ (emptyImgRef, )
-
+-}
 -- --------------------
 --
 -- abort processing of a request
@@ -463,7 +468,15 @@ toUrlPath r =
 --                genBlogPage r (toSourcePath r) (toUrlPath r)
 
 toSourcePath :: Req'IdNode'ImgRef a -> Cmd FilePath
-toSourcePath =
+toSourcePath r = do
+  p <- objid2path i
+  return $ (tailPath $ substPathName nm p) ^. isoString
+  where
+    ImgRef i nm = r ^. rImgRef
+
+{-
+toSourcePathOld :: Req'IdNode'ImgRef a -> Cmd FilePath
+toSourcePathOld =
   processReq'IdNode'ImgRef
   (const $ return mempty)
   srcPath
@@ -473,7 +486,7 @@ toSourcePath =
       return $ (tailPath $ substPathName n p) ^. isoString
       where
         ImgRef i n = r ^. rImgRef
-
+-}
 toCachedImgPath :: Req'IdNode'ImgRef a -> Cmd FilePath
 toCachedImgPath r =
   addP <$> toSourcePath r
@@ -501,6 +514,7 @@ checkMedia checkExt r =
   &&
   checkExt (r ^. rImgRef . to _iname . isoString)
 
+{-
 -- --------------------
 --
 -- process a request with image ref
@@ -561,7 +575,7 @@ processReqIconOld r0 = do
                 genReqIcon r2 sp dp
 
   return dp
-
+-}
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
 
