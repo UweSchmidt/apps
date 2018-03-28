@@ -84,6 +84,9 @@ type NewDocAPI
   = IconAPI
     :<|>
     ImgAPI
+    :<|>
+    PageAPI
+
 --
 -- icons: /icon/<w>x<h>/collections/<path>.jpg           -- collection icon
 --        /icon/<w>x<h>/collections/<path>/pic-<ix>.jpg  -- col entry  icon
@@ -98,6 +101,10 @@ type IconAPI
 type ImgAPI
   = "img" :> Capture "geo" Geo':> CaptureAll "path" Text :>
     Get '[JPEG] LazyByteString
+
+type PageAPI
+  = "page" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Get '[HTML] Blaze.Html
 
 -- ----------------------------------------
 --

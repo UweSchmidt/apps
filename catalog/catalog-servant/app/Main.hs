@@ -145,6 +145,8 @@ catalogServer env runR runM =
   ( get'icon
     :<|>
     get'img
+    :<|>
+    get'html
   )
 
   where
@@ -180,14 +182,17 @@ catalogServer env runR runM =
         fp = mountPath ++ dirPath ++ "/" ++ n ^. isoString
 
     -- --------------------
-    --
     -- new URL handlers
 
     -- parsed URL -> org URL, for error messages
 
-    backToPath :: String -> Geo -> [Text] -> String
+    backToPath :: ReqType -> Geo -> [Text] -> String
     backToPath req geo path =
-      mconcat $ map ('/' :) (req  : geo ^. isoString : map (^. isoString) path)
+      mconcat . map ('/' :) $
+      ( reqType2AR req ^. isoString
+        : geo ^. isoString
+        : map (^. isoString) path
+      )
 
     -- parser for object path
     --
@@ -213,31 +218,52 @@ catalogServer env runR runM =
           where
             cx = fn' ^. from isoPicNo
 
+    -- --------------------
     -- handle icon request
+
     get'icon :: Geo' -> [Text] -> Handler LazyByteString
     get'icon = get'img' RIcon
 
     get'img  :: Geo' -> [Text] -> Handler LazyByteString
     get'img  = get'img' RImg
 
-
     get'img' :: ReqType -> Geo' -> [Text] -> Handler LazyByteString
     get'img' rt (Geo' geo) ts@(_ : _)
       | Just ppos <- path2colPath ".jpg" ts =
-          runR $
-          do let req =
-                   emptyReq' & rType    .~ rt
-                             & rGeo     .~ geo
-                             & rPathPos .~ ppos
+          runR $ processReqImg (mkReq rt geo ppos)
+                 >>= toSysPath
+                 >>= readFileLB
 
-             processReqImg req >>= toSysPath >>= readFileLB
+    get'img' rt (Geo' geo) ts =
+      notThere rt geo ts
 
-    get'img' _ (Geo' geo) ts =
-          throwError $
-          err404 { errBody =
-                     ( "icon not found: " ++ backToPath "icon" geo ts )
-                     ^. from isoString
-                 }
+    -- --------------------
+    -- handle html pages
+
+    get'html :: Geo' -> [Text] -> Handler Blaze.Html
+    get'html (Geo' geo) ts@(_ : _)
+      | Just ppos <- path2colPath ".html" ts =
+          runR $ processReqPage (mkReq RPage geo ppos) >>= undefined
+
+    get'html (Geo' geo) ts =
+      notThere RPage geo ts
+
+    -- --------------------
+    -- aux ops
+
+    mkReq rt geo ppos' =
+      emptyReq' & rType    .~ rt
+                & rGeo     .~ geo
+                & rPathPos .~ ppos'
+
+    notThere :: ReqType -> Geo -> [Text] -> Handler a
+    notThere rt geo ts =
+      throwError $
+      err404 { errBody =
+                 ( "document not found: " ++ backToPath rt geo ts )
+                 ^. from isoString
+             }
+
 
     -- --------------------
 

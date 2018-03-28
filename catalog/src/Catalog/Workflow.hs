@@ -18,7 +18,7 @@ import Catalog.System.Convert (createResizedImage, genIcon)
 import Text.SimpleParser      (parseMaybe)
 
 import qualified Data.Text            as T
--- import qualified Text.Blaze.Html      as Blaze
+import qualified Text.Blaze.Html      as Blaze
 
 -- ----------------------------------------
 
@@ -165,43 +165,6 @@ denormPathPos r =
 
 -- --------------------
 --
--- navigation ops
-
-toParent :: Req'IdNode a -> CmdMB (Req'IdNode a)
-toParent r = do
-  p <- denormPathPos r
-  return (p & rPos .~ Nothing)
-
-toPos' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
-toPos' f r = do
-  p <- denormPathPos r
-  x <- pureMB (p ^. rPos)
-  let x' = f x
-  _ <- pureMB (p ^? rColNode . theColEntries . ix x')
-  normPathPos (p & rPos .~ Just x')
-
-toPrev :: Req'IdNode a -> CmdMB (Req'IdNode a)
-toPrev = toPos' pred
-
-toNext :: Req'IdNode a -> CmdMB (Req'IdNode a)
-toNext = toPos' succ
-
-toFirst :: Req'IdNode a -> CmdMB (Req'IdNode a)
-toFirst = toPos' (const 0)
-
--- normalization must be done before
-toChildren :: Req'IdNode a -> CmdMB [Req'IdNode a]
-toChildren r =
-  mapM normC $ zip [0..] (r ^. rColNode . theColEntries)
-  where
-    normC (i, ce) =
-      colEntry'
-        (const $ return (r & rPos .~ Just i))
-        (normPathPosC r)
-        ce
-
--- --------------------
---
 -- check whether an image ref is legal
 -- and add the image ref to the result
 -- in case of a ref to a collection, the empty ImgRef is set
@@ -232,20 +195,19 @@ setColRef' theC r =
 
 -- --------------------
 --
--- handle an icon reguest
+-- handle an img/icon request
 
 processReqImg' :: Req' a -> CmdMB FilePath
 processReqImg' r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
-  lift $ trc $ "processReqImg: dp=" ++ show dp
+  lift $ trc $ "processReqImg: " ++ show dp
 
   case r1 ^. rPos of
     -- create an icon from a media file
     Just _pos -> do
-      r2 <- setImgRef    r1
-      sp <- lift $ toSourcePath r2
-      lift $ genReqImg r2 sp dp
+      r2 <- setImgRef  r1
+      lift $ genReqImg r2 dp
       return dp
 
     -- create an icon for a collection
@@ -253,8 +215,7 @@ processReqImg' r0 = do
       ( do r2 <- setColImgRef  r1
                  <|>
                  setColBlogRef r1
-           sp <- lift $ toSourcePath r2
-           lift $ genReqImg r2 sp dp
+           lift $ genReqImg r2 dp
            return dp
       )
       <|>
@@ -264,10 +225,33 @@ processReqImg' r0 = do
 
 -- ----------------------------------------
 --
+-- handle a html page request
+
+processReqPage' :: Req' a -> CmdMB Blaze.Html
+processReqPage' r0 = do
+  r1 <- normAndSetIdNode r0
+  let dp = toUrlPath r1
+  lift $ trc $ "processReqPage: " ++ show dp
+
+  case r1 ^. rPos of
+    -- create an image page
+    Just _pos -> do
+      r2 <- setImgRef      r1
+      lift $ genReqImgPage r2 dp
+
+    -- create a collection page
+    Nothing -> do
+      lift $ genReqColPage r1 dp
+
+-- ----------------------------------------
+--
 -- main entry points
 
 processReqImg ::  Req' a -> Cmd FilePath
 processReqImg = processReq processReqImg'
+
+processReqPage :: Req' a -> Cmd Blaze.Html
+processReqPage = processReq processReqPage'
 
 processReq :: (Req' a -> CmdMB b) -> Req' a -> Cmd b
 processReq cmd r0 =
@@ -371,8 +355,9 @@ checkMedia checkExt r =
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
 
-genReqImg :: Req'IdNode'ImgRef a -> FilePath -> FilePath -> Cmd ()
-genReqImg r sp dp = do
+genReqImg :: Req'IdNode'ImgRef a -> FilePath -> Cmd ()
+genReqImg r dp = do
+  sp <- toSourcePath r
   trc $ "genReqIcon sp=" ++ show sp ++ ", dp=" ++ show dp
 
   ip <- toCachedImgPath r
@@ -510,6 +495,18 @@ createRawIconFromString str = do
             | isAlphaNum c = [c]
             | otherwise    = "-" ++ show (fromEnum c) ++ "-"
 
+-- ----------------------------------------
+--
+-- html page generation
+
+genReqImgPage :: Req'IdNode'ImgRef a -> FilePath -> Cmd Blaze.Html
+genReqImgPage r dp = do
+  abortR ("genReqImgPage: TODO") r
+
+genReqColPage :: Req'IdNode a -> FilePath -> Cmd Blaze.Html
+genReqColPage r dp = do
+  abortR ("genReqColPage: TODO") r
+
 -- --------------------
 --
 -- cache generated files, e.g. icons, scaled down images, ...
@@ -544,5 +541,42 @@ abortR :: String -> (Req' a) -> Cmd b
 abortR msg r =
   abort (msg ++ ": req = " ++ toUrlPath r)
 
+
+-- --------------------
+--
+-- navigation ops
+
+toParent :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toParent r = do
+  p <- denormPathPos r
+  return (p & rPos .~ Nothing)
+
+toPos' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
+toPos' f r = do
+  p <- denormPathPos r
+  x <- pureMB (p ^. rPos)
+  let x' = f x
+  _ <- pureMB (p ^? rColNode . theColEntries . ix x')
+  normPathPos (p & rPos .~ Just x')
+
+toPrev :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toPrev = toPos' pred
+
+toNext :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toNext = toPos' succ
+
+toFirst :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toFirst = toPos' (const 0)
+
+-- normalization must be done before
+toChildren :: Req'IdNode a -> CmdMB [Req'IdNode a]
+toChildren r =
+  mapM normC $ zip [0..] (r ^. rColNode . theColEntries)
+  where
+    normC (i, ce) =
+      colEntry'
+        (const $ return (r & rPos .~ Just i))
+        (normPathPosC r)
+        ce
 
 -- ----------------------------------------
