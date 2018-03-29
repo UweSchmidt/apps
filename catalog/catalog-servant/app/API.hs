@@ -104,7 +104,7 @@ type ImgAPI
 
 type PageAPI
   = "page" :> Capture "geo" Geo':> CaptureAll "path" Text :>
-    Get '[HTML] Blaze.Html
+    Get '[HTMLStatic] LazyByteString
 
 -- ----------------------------------------
 --

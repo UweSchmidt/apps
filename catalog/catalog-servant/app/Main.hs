@@ -190,7 +190,7 @@ catalogServer env runR runM =
     backToPath req geo path =
       mconcat . map ('/' :) $
       ( reqType2AR req ^. isoString
-        : geo ^. isoString
+        : geo  ^. isoString
         : map (^. isoString) path
       )
 
@@ -240,10 +240,12 @@ catalogServer env runR runM =
     -- --------------------
     -- handle html pages
 
-    get'html :: Geo' -> [Text] -> Handler Blaze.Html
+    get'html :: Geo' -> [Text] -> Handler LazyByteString
     get'html (Geo' geo) ts@(_ : _)
       | Just ppos <- path2colPath ".html" ts =
-          runR $ processReqPage (mkReq RPage geo ppos) >>= undefined
+          runR $ processReqPage (mkReq RPage geo ppos)
+                 >>= toSysPath
+                 >>= readFileLB
 
     get'html (Geo' geo) ts =
       notThere RPage geo ts

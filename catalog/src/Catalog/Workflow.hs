@@ -11,11 +11,15 @@ import Data.Prim
 import Data.ImgNode
 import Data.ImgTree
 import Data.MetaData
+
 import Catalog.Cmd
-import Catalog.FilePath       (fileName2ImgType)
-import Catalog.Html.Basic     (baseNameParser, ymdParser)
-import Catalog.System.Convert (createResizedImage, genIcon)
-import Text.SimpleParser      (parseMaybe)
+import Catalog.FilePath        (fileName2ImgType, isoPicNo)
+import Catalog.Html.Basic      (baseNameParser, ymdParser)
+import Catalog.Html.Templates.Blaze2
+import Catalog.System.ExifTool (getMetaData)
+import Catalog.System.Convert  (createResizedImage, genIcon, genBlogHtml)
+
+import Text.SimpleParser       (parseMaybe)
 
 import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
@@ -194,6 +198,18 @@ setColRef' theC r =
      return (r & rVal . _2 %~ (ir, ))
 
 -- --------------------
+-- compute the .jpg url (if there) of a request
+-- used in page generation for prefetching the next image
+-- before moving to the next image page
+
+toMediaUrl :: Req'IdNode a -> CmdMB FilePath
+toMediaUrl r = do
+  r' <- toMediaReq <$> setImgRef r
+  case r' ^. rType of
+    RImg -> return $ toUrlPath r'
+    _    -> mzero
+
+-- --------------------
 --
 -- handle an img/icon request
 
@@ -227,7 +243,7 @@ processReqImg' r0 = do
 --
 -- handle a html page request
 
-processReqPage' :: Req' a -> CmdMB Blaze.Html
+processReqPage' :: Req' a -> CmdMB FilePath
 processReqPage' r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
@@ -238,10 +254,12 @@ processReqPage' r0 = do
     Just _pos -> do
       r2 <- setImgRef      r1
       lift $ genReqImgPage r2 dp
+      return dp
 
     -- create a collection page
     Nothing -> do
       lift $ genReqColPage r1 dp
+      return dp
 
 -- ----------------------------------------
 --
@@ -250,7 +268,7 @@ processReqPage' r0 = do
 processReqImg ::  Req' a -> Cmd FilePath
 processReqImg = processReq processReqImg'
 
-processReqPage :: Req' a -> Cmd Blaze.Html
+processReqPage :: Req' a -> Cmd FilePath
 processReqPage = processReq processReqPage'
 
 processReq :: (Req' a -> CmdMB b) -> Req' a -> Cmd b
@@ -332,6 +350,21 @@ toCachedImgPath r =
       r ^. rType . isoString </>
       r ^. rGeo  . isoString ++
       fp ++ ".jpg"
+
+
+-- the url for a media file, *.jpg or *.mp4 or ...
+-- is determined by the request type
+
+toMediaReq :: Req'IdNode'ImgRef a -> Req'IdNode'ImgRef a
+toMediaReq r =
+  r & rType .~ t
+  where
+    t = case fileName2ImgType (r ^. rImgRef . to _iname . isoString) of
+      IMGjpg   -> RImg
+      IMGimg   -> RImg
+      IMGvideo -> RVideo
+      IMGtxt   -> RPage
+      _        -> RPage  -- should not occur
 
 -- --------------------
 --
@@ -497,18 +530,6 @@ createRawIconFromString str = do
 
 -- ----------------------------------------
 --
--- html page generation
-
-genReqImgPage :: Req'IdNode'ImgRef a -> FilePath -> Cmd Blaze.Html
-genReqImgPage r dp = do
-  abortR ("genReqImgPage: TODO") r
-
-genReqColPage :: Req'IdNode a -> FilePath -> Cmd Blaze.Html
-genReqColPage r dp = do
-  abortR ("genReqColPage: TODO") r
-
--- --------------------
---
 -- cache generated files, e.g. icons, scaled down images, ...
 --
 -- the cached entry gets the same time stamp as the source
@@ -540,7 +561,6 @@ withCache cmd sp dp = do
 abortR :: String -> (Req' a) -> Cmd b
 abortR msg r =
   abort (msg ++ ": req = " ++ toUrlPath r)
-
 
 -- --------------------
 --
@@ -578,5 +598,167 @@ toChildren r =
         (const $ return (r & rPos .~ Just i))
         (normPathPosC r)
         ce
+
+data PrevNextPar a =
+  PrevNextPar { _prev :: a
+         , _next :: a
+         , _par  :: a
+         }
+  deriving (Functor, Show)
+
+toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
+toPrevNextPar r =
+  PrevNextPar
+  <$> runMaybeT (toPrev   r)
+  <*> runMaybeT (toNext   r)
+  <*> runMaybeT (toParent r)
+
+data NavCol a =
+  NavCol { _children :: [Req'IdNode a]
+         , _child1   :: Maybe (Req'IdNode a)
+         }
+
+toNavCol :: Req'IdNode a -> Cmd (NavCol a)
+toNavCol r = do
+  cs <- fromMaybe [] <$> runMaybeT (toChildren r)
+  return $ NavCol cs (listToMaybe $ take 1 cs)
+
+-- ----------------------------------------
+
+thePageCnfs :: [(Geo, (Geo, Int))]
+thePageCnfs =
+  [ (Geo 2560 1440, (Geo  160  120, 14))
+  , (Geo 1920 1200, (Geo  160  120, 11))
+  , (Geo 1600 1200, (Geo  160  120,  9))
+  , (Geo 1400 1050, (Geo  140  105,  9))
+  , (Geo 1280  800, (Geo  120   90,  9))
+  ]
+
+lookupPageCnfs :: Geo -> (Geo, Int)
+lookupPageCnfs geo
+  = fromMaybe (Geo 160 120, 9) $ lookup geo thePageCnfs
+
+-- ----------------------------------------
+-- image attributes
+
+data ImgAttr =
+  ImgAttr { _imgMediaUrl :: Text -- FilePath
+          , _imgMeta     :: MetaData
+          , _imgTitle    :: Text
+          , _imgSubTitle :: Text
+          , _imgComment  :: Text
+          , _imgDuration :: Text
+          }
+  deriving Show
+
+collectImgAttr :: Req'IdNode'ImgRef a -> Cmd ImgAttr
+collectImgAttr r = do
+  theMeta <- getMetaData iOid
+
+  return $
+    ImgAttr
+    { _imgMediaUrl = toUrlPath (toMediaReq r) ^. isoText
+    , _imgMeta     = theMeta
+    , _imgTitle    = take1st
+                     [ theMeta ^. metaDataAt descrTitle
+                     , nm ^. isoText
+                     ]
+    , _imgSubTitle = theMeta ^. metaDataAt descrSubtitle
+    , _imgComment  = theMeta ^. metaDataAt descrComment
+    , _imgDuration = take1st
+                     [ theMeta ^. metaDataAt descrDuration
+                     , "1.0"
+                     ]
+    }
+  where
+    ImgRef iOid nm = r ^. rImgRef
+
+-- --------------------
+
+data ColAttr =
+  ColAttr { _colMeta     :: MetaData
+          , _colTitle    :: Text
+          , _colSubTitle :: Text
+          , _colComment  :: Text
+          }
+  deriving Show
+
+collectColAttr :: Req'IdNode'ImgRef a -> Cmd ColAttr
+collectColAttr r = do
+  let theMeta = r ^. rColNode . theMetaData
+
+  return $
+    ColAttr
+    { _colMeta     = theMeta
+    , _colTitle    = theMeta ^. metaDataAt descrTitle
+    , _colSubTitle = theMeta ^. metaDataAt descrSubtitle
+    , _colComment  = theMeta ^. metaDataAt descrComment
+    }
+
+-- ----------------------------------------
+--
+-- html page generation
+
+genReqImgPage :: Req'IdNode'ImgRef a -> FilePath -> Cmd ()
+genReqImgPage r dp = do
+  trc $ "genReqImgPage: " ++ show dp
+  page <- genReqImgPage' r
+  trc $ "genReqImgPage: " ++ (renderPage page) ^. isoString
+  dp'  <- toSysPath dp
+  createDir (takeDirectory <$> dp')
+  writeFileLT dp' (renderPage page)
+
+genReqImgPage' :: Req'IdNode'ImgRef a -> Cmd Blaze.Html
+genReqImgPage' r = do
+  now <- show <$> atThisMoment
+  ia <- collectImgAttr r
+  trc $ "genReqImgPage: " ++ show ia
+
+  nav <- toPrevNextPar r
+
+  let m2url = maybe mempty ((^. isoText) . toUrlPath)
+
+  -- the urls of the siblings
+  let PrevNextPar prevUrl nextUrl parUrl = m2url <$> nav
+
+  let tomu mr = (^. isoText)
+                <$> fromMaybe mempty
+                <$> runMaybeT (pureMB mr >>= toMediaUrl)
+  nextImgRef <- tomu (_next nav)
+  prevImgRef <- tomu (_prev nav)
+
+  case rm ^. rType of
+    RImg -> do
+      abortR ("genReqImgPage: TODO") r
+
+    RVideo -> do
+      abortR ("genReqImgPage: TODO") r
+
+    RPage -> do
+      blogContents <- toSourcePath r >>= genBlogHtml
+      trc $ "genReqImgPage: " ++ blogContents ^. isoString
+
+      return $
+        txtPage'
+        (_imgTitle ia)
+        (now ^. isoText)
+        (_imgDuration ia)
+        (toUrlPath r ^. isoText)
+        (fromMaybe 0 (r ^. rPos) ^. isoPicNo . isoText)
+        prevUrl
+        nextUrl
+        parUrl
+        (r ^. rGeo . isoText) -- _theImgGeoDir TODO
+        nextImgRef
+        prevImgRef
+        blogContents
+
+    _ -> return mempty
+  where
+    rm  = toMediaReq r
+
+genReqColPage :: Req'IdNode a -> FilePath -> Cmd ()
+genReqColPage r dp = do
+  abortR ("genReqColPage: TODO") r
 
 -- ----------------------------------------

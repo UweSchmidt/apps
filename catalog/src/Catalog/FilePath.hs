@@ -334,7 +334,7 @@ isoPicNo :: Iso' Int String
 isoPicNo = iso toS frS
   where
     toS =
-      ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ). show
+      ("pic-" ++ ) . reverse . take 4 . reverse . ("0000" ++ ) . show
     frS s =
       fromMaybe (-1) $ parseMaybe picNoParser s
 

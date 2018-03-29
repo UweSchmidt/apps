@@ -13,6 +13,7 @@ module Catalog.System.IO
   , setModiTime
   , writeFileLB
   , writeFileT
+  , writeFileLT
   , readFileLB
   , readFileT
   , readFileT'
@@ -33,16 +34,18 @@ where
 
 import           Catalog.Cmd.Types
 import           Catalog.Cmd.Basic (toSysPath)
+
 import qualified Data.ByteString.Lazy.Char8 as LB
 import           Data.Prim.Prelude
 import           Data.Prim.SysPath
 import           Data.Prim.TimeStamp
-import qualified Data.Text.IO     as T
+import qualified Data.Text.IO      as T
+import qualified Data.Text.Lazy.IO as LT
 import           Data.Time.Clock (UTCTime)
-import qualified Data.Time.Clock  as C
-import qualified Data.Time.Format as C
-import qualified System.Directory as D
-import qualified System.Posix     as X
+import qualified Data.Time.Clock   as C
+import qualified Data.Time.Format  as C
+import qualified System.Directory  as D
+import qualified System.Posix      as X
 
 -- ----------------------------------------
 
@@ -94,6 +97,9 @@ readFileT' fp = do
 
 writeFileT :: SysPath -> Text -> Cmd ()
 writeFileT sp = io . T.writeFile (sp ^. isoFilePath)
+
+writeFileLT :: SysPath -> LazyText -> Cmd ()
+writeFileLT sp = io . LT.writeFile (sp ^. isoFilePath)
 
 removeFile :: SysPath -> Cmd ()
 removeFile sp = io . D.removeFile $ sp ^. isoFilePath
