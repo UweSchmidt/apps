@@ -190,7 +190,7 @@ picPage' :: Text -> Text ->
             Geo  -> Maybe Text   ->
             Text -> Text -> Text ->
             Text -> Text -> Text ->
-            Text -> Text -> Text -> Text ->
+            Text -> Text -> Text -> Text -> Text ->
             MetaData ->
             Html
 picPage'
@@ -199,7 +199,7 @@ picPage'
   theImgGeo thePanoGeoDir
   theDuration thisHref thisPos
   theNextHref thePrevHref theParentHref
-  theImgGeoDir thisImgRef nextImgRef prevImgRef
+  theImgGeoDir thisImgRef nextImgRef prevImgRef orgImgRef
   metaData
   = picPage
     theHeadTitle
@@ -216,7 +216,10 @@ picPage'
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
       ( imgRef theImgGeoDir thisImgRef )
-      ( imgRef orgGeoDir    thisImgRef )
+      ( if T.null orgImgRef  -- hack to work with old and new url scheme
+        then imgRef orgGeoDir    thisImgRef
+        else orgImgRef
+      )
       ( maybe mempty (flip imgRef thisImgRef) thePanoGeoDir )
     )
     ( picImg
@@ -661,10 +664,16 @@ picMeta md = mconcat $ map toMarkup mdTab
 -- ----------------------------------------
 
 imgRef :: Text -> Text -> Text
-imgRef theImgGeoDir theImgRef = "/" <> theImgGeoDir <> theImgRef
+imgRef theImgGeoDir theImgRef =
+  cond ("/" <>) theImgGeoDir <> theImgRef
 
 orgGeoDir :: Text
 orgGeoDir = geoar'org ^. isoText
+
+cond :: (Text -> Text) -> Text -> Text
+cond f s
+  | T.null s  = s
+  | otherwise = f s
 
 infixr 6 <:>
 

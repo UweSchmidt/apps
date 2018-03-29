@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
@@ -17,8 +18,11 @@ import Catalog.FilePath        (fileName2ImgType, isoPicNo)
 import Catalog.Html.Basic      (baseNameParser, ymdParser)
 import Catalog.Html.Templates.Blaze2
 import Catalog.System.ExifTool (getMetaData)
-import Catalog.System.Convert  (createResizedImage, genIcon, genBlogHtml)
-
+import Catalog.System.Convert  ( createResizedImage
+                               , genIcon
+                               , genBlogHtml
+                               , getImageSize
+                               )
 import Text.SimpleParser       (parseMaybe)
 
 import qualified Data.Text            as T
@@ -601,10 +605,10 @@ toChildren r =
 
 data PrevNextPar a =
   PrevNextPar { _prev :: a
-         , _next :: a
-         , _par  :: a
-         }
-  deriving (Functor, Show)
+              , _next :: a
+              , _par  :: a
+              }
+  deriving (Functor, Foldable, Traversable, Show)
 
 toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
 toPrevNextPar r =
@@ -702,63 +706,141 @@ collectColAttr r = do
 genReqImgPage :: Req'IdNode'ImgRef a -> FilePath -> Cmd ()
 genReqImgPage r dp = do
   trc $ "genReqImgPage: " ++ show dp
-  page <- genReqImgPage' r
-  trc $ "genReqImgPage: " ++ (renderPage page) ^. isoString
-  dp'  <- toSysPath dp
-  createDir (takeDirectory <$> dp')
-  writeFileLT dp' (renderPage page)
+  genReqImgPage' r >>= writeHtmlPage dp
 
 genReqImgPage' :: Req'IdNode'ImgRef a -> Cmd Blaze.Html
 genReqImgPage' r = do
-  now <- show <$> atThisMoment
-  ia <- collectImgAttr r
-  trc $ "genReqImgPage: " ++ show ia
+  now' <- whatTimeIsIt
 
-  nav <- toPrevNextPar r
+  ImgAttr this'mediaUrl
+          this'meta
+          this'title
+          this'subTitle
+          this'comment
+          this'duration <- collectImgAttr r
+  let     this'url       = toUrlPath r ^. isoText
+  let     this'pos       = fromMaybe 0 (r ^. rPos) ^. isoPicNo . isoText
+  let     this'geo       = r ^. rGeo
 
-  let m2url = maybe mempty ((^. isoText) . toUrlPath)
+  nav  <- toPrevNextPar r
+
+  let     m2url          = maybe mempty ((^. isoText) . toUrlPath)
 
   -- the urls of the siblings
-  let PrevNextPar prevUrl nextUrl parUrl = m2url <$> nav
+  let PrevNextPar
+          prev'url
+          next'url
+          par'url        = m2url <$> nav
 
-  let tomu mr = (^. isoText)
-                <$> fromMaybe mempty
-                <$> runMaybeT (pureMB mr >>= toMediaUrl)
-  nextImgRef <- tomu (_next nav)
-  prevImgRef <- tomu (_prev nav)
+  let tomu mr            = (^. isoText)
+                           <$> fromMaybe mempty
+                           <$> runMaybeT (pureMB mr >>= toMediaUrl)
 
-  case rm ^. rType of
+  -- the image urls of the siblings
+  PrevNextPar
+          prev'imgRef
+          next'imgRef
+          _par'imgRef   <- traverse tomu nav
+
+  case toMediaReq r ^. rType of
+
+    --image page
     RImg -> do
-      abortR ("genReqImgPage: TODO") r
+      let star           = '\9733'
+      let rating         = (\ x -> replicate x star ^. isoText) $
+                           getRating this'meta
+      let metaData       = this'meta -- add jpg filename and rating
+                           & metaDataAt "File:RefJpg" .~ (this'mediaUrl ^. isoText)
+                           & metaDataAt "Img:Rating"  .~ rating
+      org'imgpath       <- toSourcePath r
+      org'geo           <- getImageSize org'imgpath
+      let org'mediaUrl   = toUrlPath (r & rType .~ RImg
+                                        & rGeo  .~ geo'org
+                                     ) ^. isoText
+      let pano'mediaUrl  = (^. isoText)
+                           <$> (\ geo -> toUrlPath (r & rGeo .~ geo))
+                           <$> (isPano this'geo org'geo)
 
+      return $
+        picPage'
+        this'title
+        now'
+        this'title
+        this'subTitle
+        this'comment
+        this'geo
+        pano'mediaUrl -- thePanoGeoDir
+        this'duration
+        this'url
+        this'pos
+        next'url
+        prev'url
+        par'url
+        mempty -- theImgGeoDir
+        this'mediaUrl
+        next'imgRef
+        prev'imgRef
+        org'mediaUrl
+        metaData
+
+    -- mp4 video
     RVideo -> do
-      abortR ("genReqImgPage: TODO") r
+      abortR ("genReqImgPage: not yet implemented") r
 
+    -- blog page
     RPage -> do
       blogContents <- toSourcePath r >>= genBlogHtml
-      trc $ "genReqImgPage: " ++ blogContents ^. isoString
 
       return $
         txtPage'
-        (_imgTitle ia)
-        (now ^. isoText)
-        (_imgDuration ia)
-        (toUrlPath r ^. isoText)
-        (fromMaybe 0 (r ^. rPos) ^. isoPicNo . isoText)
-        prevUrl
-        nextUrl
-        parUrl
-        (r ^. rGeo . isoText) -- _theImgGeoDir TODO
-        nextImgRef
-        prevImgRef
+        this'title
+        now'
+        this'duration
+        this'url
+        this'pos
+        next'url
+        prev'url
+        par'url
+        mempty
+        next'imgRef
+        prev'imgRef
         blogContents
 
     _ -> return mempty
-  where
-    rm  = toMediaReq r
+
+
+-- ----------------------------------------
 
 genReqColPage :: Req'IdNode a -> FilePath -> Cmd ()
 genReqColPage r dp = do
   abortR ("genReqColPage: TODO") r
+
+-- ----------------------------------------
+
+whatTimeIsIt :: Cmd Text
+whatTimeIsIt = ((^. isoText) . show) <$> atThisMoment
+
+writeHtmlPage :: FilePath -> Blaze.Html -> Cmd ()
+writeHtmlPage dp page = do
+  trc $ "writeHtmlPage: " ++ (renderPage page) ^. isoString
+  dp'  <- toSysPath dp
+  createDir (takeDirectory <$> dp')
+  writeFileLT dp' (renderPage page)
+
+-- ----------------------------------------
+
+isPano :: Geo -> Geo -> Maybe Geo
+isPano (Geo _w' h') img@(Geo w h)
+  | h >= h'        -- height of original >= height of destination image
+    &&
+    isPano2 img = Just g
+  | otherwise   = Nothing
+  where
+    g  = Geo w2 h'
+    w1 = (h' * w + h' - 1) `div` h
+    w2 = (w1 + h' - 1) `div` h' * h'
+
+    isPano2 (Geo w1 h1) =
+      w1 >= 2 * h1    -- w / h >= 2.0
 
 -- ----------------------------------------

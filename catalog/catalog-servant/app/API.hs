@@ -81,12 +81,13 @@ type ZipAPI
 -- new URL API
 
 type NewDocAPI
-  = IconAPI
-    :<|>
-    ImgAPI
-    :<|>
-    PageAPI
-
+  = "docs" :>
+    ( IconAPI
+      :<|>
+      ImgAPI
+      :<|>
+      PageAPI
+    )
 --
 -- icons: /icon/<w>x<h>/collections/<path>.jpg           -- collection icon
 --        /icon/<w>x<h>/collections/<path>/pic-<ix>.jpg  -- col entry  icon

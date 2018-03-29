@@ -102,7 +102,7 @@ ps'javascript   = ps'assets </> "javascript"
 ps'css          = ps'assets </> "css"
 ps'exifcache    = ps'cache  </> "exif-meta"
 ps'zipcache     = ps'cache  </> "zip-cache"
-ps'docroot      = "/docroot"
+ps'docroot      = "/docs"
 ps'gen'icon     = ps'docroot </> "generated/icon"
 
 -- ----------------------------------------

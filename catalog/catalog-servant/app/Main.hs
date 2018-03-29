@@ -242,7 +242,8 @@ catalogServer env runR runM =
 
     get'html :: Geo' -> [Text] -> Handler LazyByteString
     get'html (Geo' geo) ts@(_ : _)
-      | Just ppos <- path2colPath ".html" ts =
+      | Just ppos <- path2colPath ".html" ts
+      , exPageConf geo =
           runR $ processReqPage (mkReq RPage geo ppos)
                  >>= toSysPath
                  >>= readFileLB
@@ -252,6 +253,8 @@ catalogServer env runR runM =
 
     -- --------------------
     -- aux ops
+
+    exPageConf geo = isJust $ lookup geo thePageCnfs
 
     mkReq rt geo ppos' =
       emptyReq' & rType    .~ rt

@@ -397,7 +397,7 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
         theImgGeo thePanoGeoDir
         theDuration thisHref thisPos
         theNextHref thePrevHref theParentHref
-        theImgGeoDir thisImgRef nextImgRef prevImgRef
+        theImgGeoDir thisImgRef nextImgRef prevImgRef ""
         metaData
 
 -- ----------------------------------------
