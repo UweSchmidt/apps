@@ -721,6 +721,7 @@ genReqImgPage' r = do
   let     this'url       = toUrlPath r ^. isoText
   let     this'pos       = fromMaybe 0 (r ^. rPos) ^. isoPicNo . isoText
   let     this'geo       = r ^. rGeo
+  let     base'ref       = "/"  -- will be changed when working with relative urls
 
   nav  <- toPrevNextPar r
 
@@ -757,30 +758,33 @@ genReqImgPage' r = do
       let org'mediaUrl   = toUrlPath (r & rType .~ RImg
                                         & rGeo  .~ geo'org
                                      ) ^. isoText
-      let pano'mediaUrl  = (^. isoText)
-                           <$> (\ geo -> toUrlPath (r & rGeo .~ geo))
-                           <$> (isPano this'geo org'geo)
+      let pano'mediaUrl  = maybe
+                           mempty
+                           (\ geo -> toUrlPath (r & rGeo .~ geo) ^. isoText)
+                           (isPano this'geo org'geo)
 
       return $
         picPage'
+        base'ref
         this'title
         now'
         this'title
         this'subTitle
         this'comment
         this'geo
-        pano'mediaUrl -- thePanoGeoDir
+        Nothing    -- old url scheme: thePanoGeoDir
         this'duration
         this'url
         this'pos
         next'url
         prev'url
         par'url
-        mempty -- theImgGeoDir
+        ""    -- old url scheme: theImgGeoDir
         this'mediaUrl
         next'imgRef
         prev'imgRef
         org'mediaUrl
+        pano'mediaUrl
         metaData
 
     -- mp4 video
@@ -793,6 +797,7 @@ genReqImgPage' r = do
 
       return $
         txtPage'
+        base'ref
         this'title
         now'
         this'duration
@@ -813,6 +818,53 @@ genReqImgPage' r = do
 
 genReqColPage :: Req'IdNode a -> FilePath -> Cmd ()
 genReqColPage r dp = do
+  trc $ "genReqColPage: " ++ show dp
+  genReqColPage' r >>= writeHtmlPage dp
+
+genReqColPage' :: Req'IdNode a -> Cmd Blaze.Html
+genReqColPage' r = do
+  now'                  <- whatTimeIsIt
+  let   this'meta        = r ^. rColNode . theMetaData
+  let   this'title       = this'meta ^. metaDataAt descrTitle
+  let   this'subTitle    = this'meta ^. metaDataAt descrSubtitle
+  let   this'comment     = this'meta ^. metaDataAt descrComment
+  let   this'url         = toUrlPath r ^. isoText
+  let   this'geo         = r ^. rGeo
+  let   base'ref         = "/"  -- will be changed when working with relative urls
+
+  -- the req of the siblings and the children
+  nav                   <- toPrevNextPar r
+  cs                    <- fromMaybe [] <$> runMaybeT (toChildren r)
+
+  -- the urls of the siblings and childen
+  let PrevNextPar
+        prev'url
+        next'url
+        par'url          = maybe mempty
+                           ((^. isoText) . toUrlPath) <$> nav
+  let   cs'urls          = map
+                           ((^. isoText) . toUrlPath) cs
+  let   c1'url           = T.concat . take 1 $ cs'urls
+
+  -- the urls for the icons of the siblings and childen
+  let ( icon'geo
+        , icon'no )      = lookupPageCnfs this'geo
+
+  let toIconUrl          = (^. isoText)
+                           . toUrlPath
+                           . (\ r' -> (r' & rType .~ RIcon
+                                        & rGeo  .~ icon'geo
+                                      )
+                             )
+  let PrevNextPar
+        prev'iconurl
+        next'iconurl
+        par'iconurl      = maybe mempty
+                           toIconUrl <$> nav
+  let   cs'iconurls      = map
+                           toIconUrl cs
+  let   c1'iconurl       = T.concat . take 1 $ cs'iconurls
+
   abortR ("genReqColPage: TODO") r
 
 -- ----------------------------------------

@@ -355,6 +355,7 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
 
       return $
         colPage'
+        "/"
         theTitle theDate
         theTitle theSubTitle theComment
         theImgGeo
@@ -371,6 +372,7 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
 
       return $
         txtPage'
+        "/"
         theTitle theDate
         theDuration thisHref thisPos
         theNextHref thePrevHref theParentHref
@@ -392,12 +394,13 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
 
       return $
         picPage'
+        "/"
         theTitle theDate
         theTitle theSubTitle theComment
         theImgGeo thePanoGeoDir
         theDuration thisHref thisPos
         theNextHref thePrevHref theParentHref
-        theImgGeoDir thisImgRef nextImgRef prevImgRef ""
+        theImgGeoDir thisImgRef nextImgRef prevImgRef "" ""
         metaData
 
 -- ----------------------------------------

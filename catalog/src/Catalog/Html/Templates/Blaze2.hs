@@ -120,19 +120,19 @@ p3 = txtPage'
 
 type IconDescr = (Text, Text, Text, Text)
 
-colPage' :: Text -> Text ->
-            Text -> Text -> Text ->
-            Geo  ->
-            Text -> Text -> Text ->
-            Text -> Text -> Text -> Text ->
-            Text -> Text -> Text -> Text -> Text -> Text ->
-            Text ->
-            Text -> Text ->
-            Text -> Text -> Text ->
-            Int  -> [IconDescr] ->
-            Html
+colPage' :: Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Geo
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text -> Text -> Text
+         -> Text
+         -> Text -> Text
+         -> Text -> Text -> Text
+         -> Int  -> [IconDescr]
+         -> Html
 colPage'
-  theHeadTitle theDate
+  theBaseRef theHeadTitle theDate
   theTitle theSubTitle theComment
   theImgGeo
   theDuration thisHref thisPos
@@ -144,6 +144,7 @@ colPage'
   no'cols icons
 
   = colPage
+    theBaseRef
     theHeadTitle
     theDate
     theImgGeo
@@ -185,23 +186,26 @@ colPage'
       ( map (colIcon theIconGeoDir) icons )
     )
 
-picPage' :: Text -> Text ->
-            Text -> Text -> Text ->
-            Geo  -> Maybe Text   ->
-            Text -> Text -> Text ->
-            Text -> Text -> Text ->
-            Text -> Text -> Text -> Text -> Text ->
-            MetaData ->
-            Html
+picPage' :: Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Geo  -> Maybe Text
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text -> Text
+         -> MetaData
+         -> Html
 picPage'
-  theHeadTitle theDate
+  theBaseRef theHeadTitle theDate
   theTitle theSubTitle theComment
   theImgGeo thePanoGeoDir
   theDuration thisHref thisPos
   theNextHref thePrevHref theParentHref
-  theImgGeoDir thisImgRef nextImgRef prevImgRef orgImgRef
+  theImgGeoDir thisImgRef nextImgRef prevImgRef
+  orgImgRef panoImgRef
   metaData
   = picPage
+    theBaseRef
     theHeadTitle
     theDate
     theImgGeo
@@ -216,11 +220,16 @@ picPage'
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
       ( imgRef theImgGeoDir thisImgRef )
-      ( if T.null orgImgRef  -- hack to work with old and new url scheme
+      -- hack to work with old and new url scheme
+      ( if T.null orgImgRef
         then imgRef orgGeoDir    thisImgRef
         else orgImgRef
       )
-      ( maybe mempty (flip imgRef thisImgRef) thePanoGeoDir )
+      -- hack to work with old and new url scheme
+      ( if T.null panoImgRef
+        then maybe mempty (flip imgRef thisImgRef) thePanoGeoDir
+        else panoImgRef
+      )
     )
     ( picImg
       theImgGeo
@@ -239,19 +248,20 @@ picPage'
       metaData
     )
 
-txtPage' :: Text -> Text ->
-            Text -> Text -> Text ->
-            Text -> Text -> Text ->
-            Text -> Text -> Text ->
-            Text ->
-            Html
+txtPage' :: Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Text
+         -> Html
 txtPage'
-  theHeadTitle theDate
+  theBaseRef theHeadTitle theDate
   theDuration thisHref thisPos
   theNextHref thePrevHref theParentHref
   theImgGeoDir nextImgRef prevImgRef
   blogContents
   = txtPage
+    theBaseRef
     theHeadTitle
     theDate
     ( jsCode
@@ -270,14 +280,15 @@ txtPage'
 
 -- ----------------------------------------
 
-picPage :: Text -> Text ->
-           Geo  ->
-           Html -> Html -> Html -> Html -> Html ->
-           Html
-picPage theHeadTitle theDate theImgGeo
+picPage :: Text -> Text -> Text
+        -> Geo
+        -> Html -> Html -> Html -> Html -> Html
+        -> Html
+picPage theBaseRef theHeadTitle theDate
+        theImgGeo
         jsCode picImg picTitle picNav picInfo
   = htmlPage
-    ( headPage theHeadTitle theDate jsCode ) $ do
+    ( headPage theBaseRef theHeadTitle theDate jsCode ) $ do
   body
     ! onload "initPicture();"
     ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
@@ -288,23 +299,27 @@ picPage theHeadTitle theDate theImgGeo
 
 -- ----------------------------------------
 
-txtPage :: Text -> Text -> Html -> Text -> Html
-txtPage theHeadTitle theDate jsCode blogContents
+txtPage :: Text -> Text -> Text
+        -> Html -> Text
+        -> Html
+txtPage theBaseRef theHeadTitle theDate
+        jsCode blogContents
   = htmlPage
-    ( headPage theHeadTitle theDate jsCode ) $ do
+    ( headPage theBaseRef theHeadTitle theDate jsCode ) $ do
   body
     ! onload "initPicture();"
     ! class_ "text" $ preEscapedText blogContents
 
 -- ----------------------------------------
 
-colPage :: Text -> Text -> Geo ->
-           Html -> Html -> Html -> Html -> Html -> Html ->
-           Html
-colPage theHeadTitle theDate theImgGeo
+colPage :: Text
+        -> Text -> Text -> Geo
+        -> Html -> Html -> Html -> Html -> Html -> Html
+        -> Html
+colPage theBaseRef theHeadTitle theDate theImgGeo
         jsCode colImg colTitle colNav colBlog colContents
   = htmlPage
-    ( headPage theHeadTitle theDate jsCode ) $ do
+    ( headPage theBaseRef theHeadTitle theDate jsCode ) $ do
   body
     ! onload "initAlbum();"
     ! class_ (toValue $ "album album-" <> theImgGeo ^. isoText)
@@ -327,14 +342,15 @@ colPage theHeadTitle theDate theImgGeo
 
 -- ----------------------------------------
 
-headPage :: Text -> Text -> Html -> Html
-headPage theHeadTitle theDate theJS
+headPage :: Text -> Text -> Text -> Html -> Html
+headPage theBaseRef theHeadTitle theDate theJS
   = H.head $ do
   title $ toHtml theHeadTitle
   meta ! name "description" ! content "Web Photo Album"
   meta ! name "author"      ! content "Uwe Schmidt"
   meta ! name "generator"   ! content "catalog-server"
   meta ! name "date"        ! content (toValue theDate)
+  base ! href (toValue theBaseRef)
   link
     ! rel   "shortcut icon"
     ! href  "/favicon.ico"
