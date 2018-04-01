@@ -163,7 +163,7 @@ colPage'
       mempty
     )
     ( colImg
-      theIconGeoDir
+      theImgGeoDir theIconGeoDir
       thisImgRef
       theHeadTitle
     )
@@ -173,17 +173,18 @@ colPage'
       theComment
     )
     ( colNav
-      ( parentNav theParentTitle parentImgRef               theIconGeoDir)
-      ( prevNav   thePrevTitle   prevImgRef                 theIconGeoDir)
-      ( child1Nav theChild1Title child1ImgRef theChild1Href theIconGeoDir)
-      ( nextNav   theNextTitle   nextImgRef                 theIconGeoDir)
+      ( parentNav theParentTitle parentImgRef  theImgGeoDir theIconGeoDir)
+      ( prevNav   thePrevTitle   prevImgRef    theImgGeoDir theIconGeoDir)
+      ( child1Nav theChild1Title child1ImgRef
+                                 theChild1Href theImgGeoDir theIconGeoDir)
+      ( nextNav   theNextTitle   nextImgRef    theImgGeoDir theIconGeoDir)
     )
     ( colBlog
       cBlogContents
     )
     ( colContents
       no'cols
-      ( map (colIcon theIconGeoDir) icons )
+      ( map (colIcon theImgGeoDir theIconGeoDir) icons )
     )
 
 picPage' :: Text -> Text -> Text
@@ -425,9 +426,9 @@ colTitle theTitle theSubTitle theComment = do
       | T.null t = mempty
       | otherwise =   H.div ! class_ (toValue c) $ toHtml t
 
-colImg :: Text -> Text -> Text -> Html
-colImg theIconGeoDir thisImgRef theHeadTitle =
-  img ! src     (toValue $ imgRef theIconGeoDir thisImgRef)
+colImg :: Text -> Text -> Text -> Text -> Html
+colImg theImgGeoDir theIconGeoDir thisImgRef theHeadTitle =
+  img ! src     (toValue $ imgRef' theImgGeoDir theIconGeoDir thisImgRef)
       ! class_  (toValue $ "icon-" <> theIconGeoDir)
       ! A.title (toValue theHeadTitle)
       ! alt     (toValue theHeadTitle)
@@ -444,42 +445,43 @@ colNav parentNav prevNav child1Nav nextNav = do
       td ! class_ "icon2" ! A.id "theChild1Nav" $ child1Nav
       td ! class_ "icon2" ! A.id "theNextNav"   $ nextNav
 
-parentNav :: Text -> Text -> Text -> Html
-parentNav theParentTitle parentImgRef theIconGeoDir =
+parentNav :: Text -> Text -> Text -> Text -> Html
+parentNav theParentTitle parentImgRef theImgGeoDir theIconGeoDir =
   nav' "javascript:parentPage();"
        ("Album" <:> theParentTitle)
        parentImgRef
-       theIconGeoDir
+       theImgGeoDir theIconGeoDir
 
-nextNav :: Text -> Text -> Text -> Html
-nextNav theNextTitle nextImgRef theIconGeoDir =
+nextNav :: Text -> Text -> Text -> Text -> Html
+nextNav theNextTitle nextImgRef theImgGeoDir theIconGeoDir =
   nav' "javascript:nextPage();"
        ("weiter" <:> theNextTitle)
        nextImgRef
-       theIconGeoDir
+       theImgGeoDir theIconGeoDir
 
-prevNav :: Text -> Text -> Text -> Html
-prevNav thePrevTitle prevImgRef theIconGeoDir =
+prevNav :: Text -> Text -> Text -> Text -> Html
+prevNav thePrevTitle prevImgRef theImgGeoDir theIconGeoDir =
   nav' "javascript:prevPage();"
        ("zur\252ck" <:> thePrevTitle)
        prevImgRef
-       theIconGeoDir
+       theImgGeoDir theIconGeoDir
 
-child1Nav :: Text -> Text -> Text -> Text -> Html
-child1Nav theChild1Title child1ImgRef theChild1Href theIconGeoDir =
+child1Nav :: Text -> Text -> Text -> Text -> Text -> Html
+child1Nav theChild1Title child1ImgRef
+                         theChild1Href theImgGeoDir theIconGeoDir =
   nav' ("javascript:childPage('" <> theChild1Href <> "');")
        ("1. Bild" <:> theChild1Title)
        child1ImgRef
-       theIconGeoDir
+       theImgGeoDir theIconGeoDir
 
 
-nav' :: Text -> Text -> Text -> Text -> Html
-nav' theHref theTitle theImgRef theIconGeoDir
+nav' :: Text -> Text -> Text -> Text -> Text -> Html
+nav' theHref theTitle theImgRef theImgGeoDir theIconGeoDir
   | T.null theImgRef = mempty
   | otherwise        = do
       a ! href (toValue theHref)
         ! A.title (toValue theTitle) $ do
-        img ! src    (toValue $ imgRef theIconGeoDir theImgRef)
+        img ! src    (toValue $ imgRef' theImgGeoDir theIconGeoDir theImgRef)
             ! class_ (toValue $ "icon2-" <> theIconGeoDir)
             ! alt    (toValue theTitle)
 
@@ -494,14 +496,15 @@ colContents no'cols colIcons = do
     toRow r = do
       tr ! class_ "col-row" $ mconcat r
 
-colIcon :: Text -> IconDescr -> Html
-colIcon theIconGeoDir (theChildHref, theChildImgRef, theChildTitle, theChildId) = do
+colIcon :: Text -> Text -> IconDescr -> Html
+colIcon theImgGeoDir theIconGeoDir
+       (theChildHref, theChildImgRef, theChildTitle, theChildId) = do
   td ! class_ (toValue $ "icon-" <> theIconGeoDir)
      ! A.id   (toValue theChildId)
      ! A.name (toValue theChildId) $ do
     H.a ! href    (toValue $ "javascript:childPage('" <> theChildHref <> "');")
         ! A.title (toValue theChildTitle) $ do
-      img ! src    (toValue $ imgRef theIconGeoDir theChildImgRef)
+      img ! src    (toValue $ imgRef' theImgGeoDir theIconGeoDir theChildImgRef)
           ! class_ (toValue $ "icon-" <> theIconGeoDir)
           ! alt    (toValue theChildTitle)
 
@@ -682,6 +685,11 @@ picMeta md = mconcat $ map toMarkup mdTab
 imgRef :: Text -> Text -> Text
 imgRef theImgGeoDir theImgRef =
   cond ("/" <>) theImgGeoDir <> theImgRef
+
+imgRef' :: Text -> Text -> Text -> Text
+imgRef' theImgGeoDir theIconGeoDir theIconRef
+  | T.null theImgGeoDir = theIconRef
+  | otherwise           = theIconGeoDir <> theIconRef
 
 orgGeoDir :: Text
 orgGeoDir = geoar'org ^. isoText

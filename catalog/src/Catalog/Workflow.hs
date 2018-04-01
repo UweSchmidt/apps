@@ -213,6 +213,17 @@ toMediaUrl r = do
     RImg -> return $ toUrlPath r'
     _    -> mzero
 
+-- compute the metadata of an img reg
+
+toImgMeta :: Req'IdNode a -> CmdMB MetaData
+toImgMeta r =
+  case r ^. rPos of
+    Just _pos
+      -> do ImgRef iOid _nm <- (^. rImgRef) <$> setImgRef r
+            lift $ getMetaData iOid
+    Nothing
+      -> return $ r ^. rColNode . theMetaData
+
 -- --------------------
 --
 -- handle an img/icon request
@@ -595,7 +606,7 @@ toFirst = toPos' (const 0)
 -- normalization must be done before
 toChildren :: Req'IdNode a -> CmdMB [Req'IdNode a]
 toChildren r =
-  mapM normC $ zip [0..] (r ^. rColNode . theColEntries)
+  traverse normC $ zip [0..] (r ^. rColNode . theColEntries)
   where
     normC (i, ce) =
       colEntry'
@@ -616,16 +627,6 @@ toPrevNextPar r =
   <$> runMaybeT (toPrev   r)
   <*> runMaybeT (toNext   r)
   <*> runMaybeT (toParent r)
-
-data NavCol a =
-  NavCol { _children :: [Req'IdNode a]
-         , _child1   :: Maybe (Req'IdNode a)
-         }
-
-toNavCol :: Req'IdNode a -> Cmd (NavCol a)
-toNavCol r = do
-  cs <- fromMaybe [] <$> runMaybeT (toChildren r)
-  return $ NavCol cs (listToMaybe $ take 1 cs)
 
 -- ----------------------------------------
 
@@ -679,25 +680,11 @@ collectImgAttr r = do
 
 -- --------------------
 
-data ColAttr =
-  ColAttr { _colMeta     :: MetaData
-          , _colTitle    :: Text
-          , _colSubTitle :: Text
-          , _colComment  :: Text
-          }
-  deriving Show
-
-collectColAttr :: Req'IdNode'ImgRef a -> Cmd ColAttr
-collectColAttr r = do
-  let theMeta = r ^. rColNode . theMetaData
-
-  return $
-    ColAttr
-    { _colMeta     = theMeta
-    , _colTitle    = theMeta ^. metaDataAt descrTitle
-    , _colSubTitle = theMeta ^. metaDataAt descrSubtitle
-    , _colComment  = theMeta ^. metaDataAt descrComment
-    }
+thePos :: Req'IdNode a -> Cmd Text
+thePos r =
+  runMB $
+  do r' <- denormPathPos r
+     return (r' ^. rPos . traverse . isoPicNo . isoText)
 
 -- ----------------------------------------
 --
@@ -718,8 +705,9 @@ genReqImgPage' r = do
           this'subTitle
           this'comment
           this'duration <- collectImgAttr r
+  this'pos              <- thePos r
+
   let     this'url       = toUrlPath r ^. isoText
-  let     this'pos       = fromMaybe 0 (r ^. rPos) ^. isoPicNo . isoText
   let     this'geo       = r ^. rGeo
   let     base'ref       = "/"  -- will be changed when working with relative urls
 
@@ -734,8 +722,7 @@ genReqImgPage' r = do
           par'url        = m2url <$> nav
 
   let tomu mr            = (^. isoText)
-                           <$> fromMaybe mempty
-                           <$> runMaybeT (pureMB mr >>= toMediaUrl)
+                           <$> runMB (pureMB mr >>= toMediaUrl)
 
   -- the image urls of the siblings
   PrevNextPar
@@ -816,6 +803,24 @@ genReqImgPage' r = do
 
 -- ----------------------------------------
 
+type IconDescr3 = (Text, Text, Text)
+
+toIconDescr :: Geo -> Req'IdNode a -> Cmd IconDescr3
+toIconDescr icon'geo r = do
+  let r'url         = toUrlPath  r ^. isoText
+  let r'iconurl     = toUrlPath (r & rType .~ RIcon
+                                   & rGeo  .~ icon'geo
+                                )  ^. isoText
+  r'meta           <- runMB (toImgMeta r)
+  let r'title       = r'meta ^. metaDataAt descrTitle
+
+  return (r'url, r'iconurl, r'title)
+
+emptyIconDescr :: IconDescr3
+emptyIconDescr = (mempty, mempty, mempty)
+
+-- --------------------
+
 genReqColPage :: Req'IdNode a -> FilePath -> Cmd ()
 genReqColPage r dp = do
   trc $ "genReqColPage: " ++ show dp
@@ -823,49 +828,93 @@ genReqColPage r dp = do
 
 genReqColPage' :: Req'IdNode a -> Cmd Blaze.Html
 genReqColPage' r = do
-  now'                  <- whatTimeIsIt
+  now'  <- whatTimeIsIt
+  let   this'geo         = r ^. rGeo
+  let ( icon'geo,
+        icon'no )        = lookupPageCnfs this'geo
+
   let   this'meta        = r ^. rColNode . theMetaData
-  let   this'title       = this'meta ^. metaDataAt descrTitle
   let   this'subTitle    = this'meta ^. metaDataAt descrSubtitle
   let   this'comment     = this'meta ^. metaDataAt descrComment
-  let   this'url         = toUrlPath r ^. isoText
-  let   this'geo         = r ^. rGeo
+  (     this'url,
+        this'iconurl,
+        this'title )    <- toIconDescr icon'geo r
+
   let   base'ref         = "/"  -- will be changed when working with relative urls
 
-  -- the req of the siblings and the children
-  nav                   <- toPrevNextPar r
-  cs                    <- fromMaybe [] <$> runMaybeT (toChildren r)
+  this'pos              <- thePos r
 
-  -- the urls of the siblings and childen
-  let PrevNextPar
-        prev'url
-        next'url
-        par'url          = maybe mempty
-                           ((^. isoText) . toUrlPath) <$> nav
-  let   cs'urls          = map
-                           ((^. isoText) . toUrlPath) cs
-  let   c1'url           = T.concat . take 1 $ cs'urls
+  -- the icons descr of the siblings
+  nav   <- toPrevNextPar r
+  PrevNextPar
+        (prev'url, prev'iconurl, prev'title)
+        (next'url, next'iconurl, next'title)
+        (par'url,  par'iconurl,  par'title )
+                        <- traverse
+                           (\ r' -> fromMaybe emptyIconDescr <$>
+                                    traverse (toIconDescr icon'geo ) r'
+                           )
+                           nav
 
-  -- the urls for the icons of the siblings and childen
-  let ( icon'geo
-        , icon'no )      = lookupPageCnfs this'geo
+  -- the icon descr of the children
+  cs                    <- runMB (toChildren r)
+  cs'descr              <- traverse (toIconDescr icon'geo) cs
+  let ( c1'url,
+        c1'iconurl,
+        c1'title )       = fromMaybe emptyIconDescr
+                           . listToMaybe
+                           . take 1
+                           $ cs'descr
 
-  let toIconUrl          = (^. isoText)
-                           . toUrlPath
-                           . (\ r' -> (r' & rType .~ RIcon
-                                        & rGeo  .~ icon'geo
-                                      )
-                             )
-  let PrevNextPar
-        prev'iconurl
-        next'iconurl
-        par'iconurl      = maybe mempty
-                           toIconUrl <$> nav
-  let   cs'iconurls      = map
-                           toIconUrl cs
-  let   c1'iconurl       = T.concat . take 1 $ cs'iconurls
+  let   cs'descr4        = zipWith
+                           ( \ (x1, x2, x3) i ->
+                               ( x1
+                               , x2
+                               , if T.null x3
+                                 then (show i ++ ". Bild") ^. isoText
+                                 else x3
+                               , i ^. isoPicNo . isoText
+                               )
+                           )
+                           cs'descr
+                           [1..]
 
-  abortR ("genReqColPage: TODO") r
+  this'blogContents     <- runMB
+                           ( do r' <- setColBlogRef r
+                                lift $ toSourcePath r'
+                                       >>= genBlogHtml
+                           )
+
+  return $
+    colPage'
+    base'ref
+    this'title
+    now'
+    this'title
+    this'subTitle
+    this'comment
+    this'geo
+    "1.0"   -- theDuration
+    this'url
+    this'pos
+    next'url
+    prev'url
+    par'url
+    c1'url
+    "" -- theImgGeoDir
+    (icon'geo ^. isoText)
+    this'iconurl
+    next'iconurl
+    prev'iconurl
+    c1'iconurl
+    this'blogContents
+    par'title
+    par'iconurl
+    next'title
+    prev'title
+    c1'title
+    icon'no
+    cs'descr4
 
 -- ----------------------------------------
 
@@ -892,7 +941,7 @@ isPano (Geo _w' h') img@(Geo w h)
     w1 = (h' * w + h' - 1) `div` h
     w2 = (w1 + h' - 1) `div` h' * h'
 
-    isPano2 (Geo w1 h1) =
-      w1 >= 2 * h1    -- w / h >= 2.0
+    isPano2 (Geo wx hy) =
+      wx >= 2 * hy   -- w / h >= 2.0
 
 -- ----------------------------------------

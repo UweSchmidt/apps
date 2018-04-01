@@ -30,6 +30,7 @@ module Catalog.Cmd.Types
        , liftMB
        , pureMB
        , runMaybeT
+       , runMB
        )
 where
 
@@ -161,5 +162,8 @@ liftMB cmd = lift cmd >>= pureMB
 pureMB :: Maybe a -> CmdMB a
 pureMB = maybe mzero return
 {-# INLINE pureMB #-}
+
+runMB :: Monoid a => CmdMB a -> Cmd a
+runMB cmd = fromMaybe mempty <$> runMaybeT cmd
 
 -- ----------------------------------------
