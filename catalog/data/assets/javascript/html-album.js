@@ -177,7 +177,7 @@ function togglePanoramaPicture() {
             // add @keyframes for animation
             var pw = img[0].naturalWidth;
             var ph = img[0].naturalHeight;
-            var du = 5.0 * (pw / ph);
+            var du = 8.0 * (pw / ph);
             var sw = dv.width();
             console.log("PanoGeo=" + pw + "x" + ph);
             console.log("DisplayWidth=" + sw);
