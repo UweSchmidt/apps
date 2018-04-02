@@ -323,9 +323,10 @@ toRawPath r =
 --          /page/1920x1200/archive/pictures/abc.html
 
 toUrlPath :: Req' a -> FilePath
-toUrlPath r =
+toUrlPath r0 =
   rt ++ px ++ fp ++ ex ty
   where
+    r  = unifyIconPath r0
     ty = r ^. rType
     fp = toRawPath r
     px = "/" ++ ty ^. isoString
@@ -338,6 +339,15 @@ toUrlPath r =
     ex RVideo = ".mp4"
     ex _      = ""
 
+    -- scaling of icons smaller than 160x120
+    -- is done in browser, so the # icons used
+    -- is reduced
+
+    unifyIconPath r'
+      | RIcon   <- r' ^. rType
+      , Geo w h <- r' ^. rGeo
+      , w < 160 && h < 120    = r' & rGeo .~ Geo 160 120
+      | otherwise             = r'
 
 -- --------------------
 --
