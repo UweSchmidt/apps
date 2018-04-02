@@ -144,6 +144,8 @@ catalogServer env runR runM =
   :<|>
   ( get'icon
     :<|>
+    get'iconp
+    :<|>
     get'img
     :<|>
     get'html
@@ -223,6 +225,9 @@ catalogServer env runR runM =
 
     get'icon :: Geo' -> [Text] -> Handler LazyByteString
     get'icon = get'img' RIcon
+
+    get'iconp :: Geo' -> [Text] -> Handler LazyByteString
+    get'iconp = get'img' RIconp
 
     get'img  :: Geo' -> [Text] -> Handler LazyByteString
     get'img  = get'img' RImg
@@ -315,7 +320,7 @@ catalogServer env runR runM =
             <|>
             -- generate a jpg copy from a jpg source
             -- the usual case
-            ( do (dn, bn, ex) <- splitDirFileExt fp
+            ( do (_dn, _bn, ex) <- splitDirFileExt fp
                  jpgType <- extJpg ex
                  return (jpgType, fp)
             )

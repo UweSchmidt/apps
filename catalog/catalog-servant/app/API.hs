@@ -84,6 +84,8 @@ type NewDocAPI
   = "docs" :>
     ( IconAPI
       :<|>
+      IconpAPI
+      :<|>
       ImgAPI
       :<|>
       PageAPI
@@ -97,6 +99,10 @@ type NewDocAPI
 
 type IconAPI
   = "icon" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Get '[JPEG] LazyByteString
+
+type IconpAPI
+  = "iconp" :> Capture "geo" Geo':> CaptureAll "path" Text :>
     Get '[JPEG] LazyByteString
 
 type ImgAPI

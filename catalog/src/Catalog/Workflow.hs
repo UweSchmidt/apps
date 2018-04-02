@@ -35,7 +35,8 @@ type IdNode  = (ObjId, ImgNode)
 type Pos     = Maybe Int
 
 data ReqType = RPage    -- deliver HTML col-, img-, blog page   text/html
-             | RIcon    -- deliver JPG icon                     image/jpg
+             | RIcon    -- deliver JPG icon, fixed aspectratio  image/jpg
+             | RIconp   -- like RIcon with org img aspectratio  image/jpg
              | RImg     -- deliver JPG image                    image/jpg
              | RBlog    -- ???
              | RVideo   -- deliver mp4 video                    ???/mp4
@@ -334,12 +335,13 @@ toUrlPath r0 =
 
     ex RPage  = ".html"
     ex RIcon  = ".jpg"
+    ex RIconp = ".jpg"
     ex RImg   = ".jpg"
     ex RBlog  = ".html"
     ex RVideo = ".mp4"
     ex _      = ""
 
-    -- scaling of icons smaller than 160x120
+    -- scaling of icons smaller than 160x120 with fixed aspect ratio
     -- is done in browser, so the # icons used
     -- is reduced
 
@@ -447,9 +449,10 @@ genReqImg r dp = do
 
 
 reqType2AR :: ReqType -> AspectRatio
-reqType2AR RIcon = Fix
-reqType2AR RImg  = Pad
-reqType2AR _     = Pad -- default
+reqType2AR RIcon  = Fix    -- fixed aspect ratio
+reqType2AR RIconp = Pad    -- aspect ratio of org img
+reqType2AR RImg   = Pad
+reqType2AR _      = Pad    -- default
 
 -- read text from a file (blog entry) to generate an icon
 
@@ -812,6 +815,9 @@ genReqImgPage' r = do
 
 
 -- ----------------------------------------
+--
+-- icons in a collection page
+-- the icons are generated with a fixed aspect ratio (RIcon, not RIconp)
 
 type IconDescr3 = (Text, Text, Text)
 
