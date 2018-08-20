@@ -9,8 +9,8 @@ module Catalog.System.Convert
   , genImage
   , genImageGeo
   , createImageFromTxt
-  -- , genImageFromTxt
-  -- , genImageFromTxtGeo
+  , genImageFromTxt
+  , genImageFromTxtGeo
   , genIcon
   , genAssetIcon
   , genBlogText
