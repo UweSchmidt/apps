@@ -126,6 +126,8 @@ catalogServer env runR runM =
     :<|>
     ( root'html
       :<|>
+      favicon'ico
+      :<|>
       rpc'js
     )
   )
@@ -165,6 +167,12 @@ catalogServer env runR runM =
 
     root'html :: BaseName HTMLStatic -> Handler LazyByteString
     root'html bn = staticFile ps'html bn
+
+    favicon'ico :: Handler LazyByteString
+    favicon'ico = staticFile ps'icons bn
+      where
+        bn :: BaseName ICO
+        bn = BaseName "favicon.ico"
 
     rpc'js :: Handler LazyByteString
     rpc'js = staticFile ps'javascript bn
