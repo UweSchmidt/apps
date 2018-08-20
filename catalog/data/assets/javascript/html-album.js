@@ -124,8 +124,9 @@ function cssKeyFrames(leftPos) {
         .prop("type", "text/css")
         .html("@keyframes moveToLeft {\
                  0% {left: 0px);}\
-                50% {left: " + leftPos + "px;}\
-               100% {left: " + leftPos + "px;}\
+                40% {left: " + leftPos + "px;}\
+                60% {left: " + leftPos + "px;}\
+               100% {left: 0px);}\
                }"
              )
         .appendTo("head");
@@ -178,7 +179,7 @@ function togglePanoramaPicture() {
             // add @keyframes for animation
             var pw = img[0].naturalWidth;
             var ph = img[0].naturalHeight;
-            var du = 2.0 * 8.0 * (pw / ph); /* 50% animation and 50% pause on right side */
+            var du = 2.5 * 7.0 * (pw / ph); /* 40% move to right, 20% pause, 40% move back */
             var sw = dv.width();
             console.log("PanoGeo=" + pw + "x" + ph);
             console.log("DisplayWidth=" + sw);
