@@ -187,6 +187,7 @@ function togglePanoramaPicture() {
             cssKeyFrames(sw - pw);
             // set anim duration relative to aspect ratio
             img.css('animation-duration', "" + du + "s");
+            img.css('top', "0px");
             // image ready: make it visible
             togglePanoramaPicture();
         });
