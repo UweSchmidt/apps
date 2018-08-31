@@ -119,14 +119,19 @@ function toggleOriginalPicture() {
     }
 }
 
-function cssKeyFrames(leftPos) {
+function cssKeyFrames(isHorizontalPano, pos) {
+    var dir = isHorizontalPano ? "left" : "bottom";
+    var keyframes
+            = "@keyframes moveRightOrUp {\
+                 0% {" + dir + ": 0px;}\
+                40% {" + dir + ": " + pos + "px;}\
+                60% {" + dir + ": " + pos + "px;}\
+               100% {" + dir + ": 0px;}\
+               }";
+
     $("<style>")
         .prop("type", "text/css")
-        .html("@keyframes moveToLeft {\
-               from {left: 0px);}\
-               to   {left: " + leftPos + "px;}\
-               }"
-             )
+        .html(keyframes)
         .appendTo("head");
 }
 
@@ -177,14 +182,29 @@ function togglePanoramaPicture() {
             // add @keyframes for animation
             var pw = img[0].naturalWidth;
             var ph = img[0].naturalHeight;
-            var du = 8.0 * (pw / ph);
-            var sw = dv.width();
+            var isHorizontalPano = pw > ph;
             console.log("PanoGeo=" + pw + "x" + ph);
-            console.log("DisplayWidth=" + sw);
+
+            var sw = dv.width();
+            var sh = dv.height();
+            console.log("DisplayGeo=" + sw + "x" + sh);
+
+
+            var du = 2.5 *  // 40% move to right, 20% pause, 40% move back
+                     7.0 *  // anim duration is 7 sec
+                            // scale anim duration with aspect ratio
+                     (isHorizontalPano ? pw / ph : ph / pw);
             console.log("AnimDuration=" + du);
-            cssKeyFrames(sw - pw);
-            // set anim duration relative to aspect ratio
             img.css('animation-duration', "" + du + "s");
+
+            if ( isHorizontalPano ) {
+                cssKeyFrames(isHorizontalPano, sw - pw);
+                img.css('top',   "0px");
+            } else {
+                cssKeyFrames(isHorizontalPano, sh - ph);
+                img.css('bottom', "0px");
+            }
+
             // image ready: make it visible
             togglePanoramaPicture();
         });
@@ -198,6 +218,7 @@ function togglePanoramaPicture() {
         img.css('animation-play-state', 'running');
     }
 }
+
 function hideDiv(s) {
     $(s).css('display', 'none');
 }

@@ -129,20 +129,35 @@ iconRef i = do
 -- ----------------------------------------
 -- test: is picture a panorama
 
-isPanorama' :: Geo -> Bool
-isPanorama' (Geo w h) =
+isPanoramaH :: Geo -> Bool
+isPanoramaH (Geo w h) =
   w >= 2 * h    -- w / h >= 2.0
 
+isPanoramaV :: Geo -> Bool
+isPanoramaV (Geo w h) =
+  h >= 2 * w    -- h / w >= 2.0
+
 isPanorama :: Geo -> Geo -> Maybe GeoAR
-isPanorama (Geo _w' h') img@(Geo w h)
-  | h >= h'        -- height of original >= height of destination image
+isPanorama (Geo w' h') img@(Geo w h)
+  -- vertival panorama: landscape
+  | h >= h'
     &&
-    isPanorama' img = Just $ mkGeoAR g Pad
+    isPanoramaH img = Just $ mkGeoAR gh Pad
+
+  -- horizontal panorama: trees
+  | w >= w'
+    &&
+    isPanoramaV img = Just $ mkGeoAR gv Pad
+
   | otherwise       = Nothing
   where
-    g  = Geo w2 h'
+    gh = Geo w2 h'
     w1 = (h' * w + h' - 1) `div` h
     w2 = (w1 + h' - 1) `div` h' * h'
+
+    gv = Geo w' h2
+    h1 = (w' * h + w' - 1) `div` w
+    h2 = (h1 + w' -1) `div` w' * w'
 
 -- ----------------------------------------
 

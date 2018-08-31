@@ -71,6 +71,8 @@ type AssetsAPI
 type RootAPI
   = Capture "root" (BaseName HTMLStatic) :> Get '[HTMLStatic] LazyByteString
     :<|>
+    "favicon.ico" :> Get '[ICO] LazyByteString
+    :<|>
     "rpc.js" :> Get '[JSStatic] LazyByteString
 
 type ZipAPI
@@ -258,7 +260,13 @@ defaultParseError input = Left ("could not parse: `" <> input <> "'")
 
 -- ----------------------------------------
 --
--- JPEG handler
+-- the static handlers are a bit clumsy
+-- but no idea, how to deliver static files with right mimetype
+-- with servant, no good example found yet
+
+-- ----------------------------------------
+--
+-- JPEG static handler
 
 data JPEG
 
@@ -270,6 +278,21 @@ instance MimeRender JPEG LazyByteString where
 
 instance HasExt JPEG where
   theExt _ = ".jpg"
+
+-- ----------------------------------------
+--
+-- ICO static handler
+
+data ICO
+
+instance Accept ICO where
+  contentType _ = "image" // "x-icon"
+
+instance MimeRender ICO LazyByteString where
+  mimeRender _ = id
+
+instance HasExt ICO where
+  theExt _ = ".ico"
 
 -- ----------------------------------------
 --
@@ -287,6 +310,8 @@ instance HasExt JSStatic where
   theExt _ = ".js"
 
 -- --------------------
+--
+-- HTML static handler
 
 data HTMLStatic
 
