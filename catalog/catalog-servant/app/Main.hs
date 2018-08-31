@@ -299,7 +299,7 @@ catalogServer env runR runM =
 
     imgcopy' :: GeoAR -> Path -> Handler LazyByteString
     imgcopy' geo path = do
-      let fp  = path ^. isoString
+      let fp = path ^. isoString
       let parsePath =
             -- generate an icon for a text file
             -- "/photos/.../index.md.jpg"
@@ -471,7 +471,7 @@ main' env st = do
 -- so the mvar is not emptied when starting an action
 --
 -- the 2. is for modifying the store, those operations run sequentially
--- and at the end they update both mvars wit the new state
+-- and at the end they update both mvars with the new state
 
 runReadCmd :: Env -> MVar ImgStore -> Cmd a -> Handler a
 runReadCmd env mvs cmd = do
