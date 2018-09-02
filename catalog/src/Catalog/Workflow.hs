@@ -59,7 +59,7 @@ deriving instance Show a => Show (Req' a)
 
 emptyReq' :: Req' ()
 emptyReq' =
-  Req' { _rType = RRef
+  Req' { _rType    = RRef
        , _rPathPos = (mempty, Nothing)
        , _rGeo     = geo'org
        , _rVal     = ()
@@ -106,9 +106,18 @@ instance IsoString ReqType where
             (\ (x : xs) -> 'R' : toUpper x : xs) .
             (++ " ")
 
+toReq'IdNode :: Req'IdNode a -> Req'IdNode ()
+toReq'IdNode r = r & rVal . _2 .~ ()
+
 -- ----------------------------------------
 --
 -- commands working in MaybeT Cmd
+
+-- invariant fpr Req'IdNode:
+--
+-- if pos isn't there, the IdNode is the collection itself
+-- if pos is there, IdNode is the collection, where pos determines the img
+-- if pos is there, it's an image page, else it's a collection page
 
 normAndSetIdNode :: Req' a -> CmdMB (Req'IdNode a)
 normAndSetIdNode = setIdNode >=> normPathPos
@@ -141,9 +150,9 @@ normPathPos r =
 normPathPosC :: Req'IdNode a -> ObjId -> CmdMB (Req'IdNode a)
 normPathPosC r c' =
   do p' <- lift $ objid2path c'
-     setIdNode (r & rVal     %~ snd
-                  & rPathPos .~ (p', mzero)
-               )
+     setIdNode (r & rVal     %~ snd         -- forget IdNode
+                  & rPathPos .~ (p', mzero) -- set path and no pos
+               )                            -- set new id and node
 
 
 -- compute a req with a path and pos
@@ -596,11 +605,26 @@ abortR msg r =
 
 toParent :: Req'IdNode a -> CmdMB (Req'IdNode a)
 toParent r = do
-  p <- denormPathPos r
-  return (p & rPos .~ Nothing)
+  lift $ trc "toParent'"
+  v <- toParent' r
+  lift $ trc ("toParent: " ++ show (toReq'IdNode v))
+  return v
+
+toParent' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toParent' r = do
+  r' <- denormPathPos r            -- r' has always a pos
+  return ( r' & rPos .~ Nothing )  -- forget the pos
+                                   -- the result is normalized
 
 toPos' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
 toPos' f r = do
+  lift $ trc "toPos'"
+  v <- toPos'' f r
+  lift $ trc ("toPos': " ++ show (toReq'IdNode v))
+  return v
+
+toPos'' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
+toPos'' f r = do
   p <- denormPathPos r
   x <- pureMB (p ^. rPos)
   let x' = f x
@@ -630,8 +654,17 @@ toChildOrNextOrUp r =
 
 toFirstChild :: Req'IdNode a -> CmdMB (Req'IdNode a)
 toFirstChild r = do
- (c0 : _) <- toChildren r
- return c0
+  lift $ trc "toFirstChild"
+  v <- toFirstChild' r
+  lift $ trc ("toFirstChild: " ++ show (toReq'IdNode v))
+  return v
+
+toFirstChild' :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toFirstChild' r
+  | isJust (r ^. rPos) = mzero                -- a picture doesn't have children
+  | null   (r ^. rColNode . theColEntries)    -- empty collection
+                       = mzero
+  | otherwise          = normPathPos (r & rPos .~ Just 0)
 
 -- normalization must be done before
 toChildren :: Req'IdNode a -> CmdMB [Req'IdNode a]
@@ -653,7 +686,13 @@ data PrevNextPar a =
   deriving (Functor, Foldable, Traversable, Show)
 
 toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
-toPrevNextPar r =
+toPrevNextPar r = do
+  v <- toPrevNextPar' r
+  trc $ "toPrevNextPar: " ++ show (fmap (fmap toReq'IdNode) v)
+  return v
+
+toPrevNextPar' :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
+toPrevNextPar' r =
   PrevNextPar
   <$> runMaybeT (toPrev            r)
   <*> runMaybeT (toNext            r)
