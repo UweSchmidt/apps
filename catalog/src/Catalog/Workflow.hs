@@ -15,7 +15,7 @@ import Data.MetaData
 
 import Catalog.Cmd
 import Catalog.FilePath        (fileName2ImgType, isoPicNo)
-import Catalog.Html.Basic      (baseNameParser, ymdParser)
+import Catalog.Html.Basic      (baseNameParser, ymdParser, isPano)
 import Catalog.Html.Templates.Blaze2
 import Catalog.System.ExifTool (getMetaData)
 import Catalog.System.Convert  ( createResizedImage
@@ -605,9 +605,9 @@ abortR msg r =
 
 toParent :: Req'IdNode a -> CmdMB (Req'IdNode a)
 toParent r = do
-  lift $ trc "toParent'"
+  -- lift $ trc "toParent'"
   v <- toParent' r
-  lift $ trc ("toParent: " ++ show (toReq'IdNode v))
+  -- lift $ trc ("toParent: " ++ show (toReq'IdNode v))
   return v
 
 toParent' :: Req'IdNode a -> CmdMB (Req'IdNode a)
@@ -618,9 +618,9 @@ toParent' r = do
 
 toPos' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
 toPos' f r = do
-  lift $ trc "toPos'"
+  -- lift $ trc "toPos'"
   v <- toPos'' f r
-  lift $ trc ("toPos': " ++ show (toReq'IdNode v))
+  -- lift $ trc ("toPos': " ++ show (toReq'IdNode v))
   return v
 
 toPos'' :: (Int -> Int) -> Req'IdNode a -> CmdMB (Req'IdNode a)
@@ -654,9 +654,9 @@ toChildOrNextOrUp r =
 
 toFirstChild :: Req'IdNode a -> CmdMB (Req'IdNode a)
 toFirstChild r = do
-  lift $ trc "toFirstChild"
+  -- lift $ trc "toFirstChild"
   v <- toFirstChild' r
-  lift $ trc ("toFirstChild: " ++ show (toReq'IdNode v))
+  -- lift $ trc ("toFirstChild: " ++ show (toReq'IdNode v))
   return v
 
 toFirstChild' :: Req'IdNode a -> CmdMB (Req'IdNode a)
@@ -826,7 +826,7 @@ genReqImgPage' r = do
       return $
         picPage'
         base'ref
-        ("Workflow ImgPage: " <> this'title)
+        this'title
         now'
         this'title
         this'subTitle
@@ -860,7 +860,7 @@ genReqImgPage' r = do
       return $
         txtPage'
         base'ref
-        ( "Workflow BlogPage: " <> this'title)
+        this'title
         now'
         this'duration
         this'url
@@ -969,7 +969,7 @@ genReqColPage' r = do
   return $
     colPage'
     base'ref
-    ( "Workflow ColPage: " <> this'title)
+    this'title
     now'
     this'title
     this'subTitle
@@ -1006,25 +1006,9 @@ whatTimeIsIt = ((^. isoText) . show) <$> atThisMoment
 
 writeHtmlPage :: FilePath -> Blaze.Html -> Cmd ()
 writeHtmlPage dp page = do
-  trc $ "writeHtmlPage: " ++ (renderPage page) ^. isoString
+  -- trc $ "writeHtmlPage: " ++ (renderPage page) ^. isoString
   dp'  <- toSysPath dp
   createDir (takeDirectory <$> dp')
   writeFileLT dp' (renderPage page)
-
--- ----------------------------------------
-
-isPano :: Geo -> Geo -> Maybe Geo
-isPano (Geo _w' h') img@(Geo w h)
-  | h >= h'        -- height of original >= height of destination image
-    &&
-    isPano2 img = Just g
-  | otherwise   = Nothing
-  where
-    g  = Geo w2 h'
-    w1 = (h' * w + h' - 1) `div` h
-    w2 = (w1 + h' - 1) `div` h' * h'
-
-    isPano2 (Geo wx hy) =
-      wx >= 2 * hy   -- w / h >= 2.0
 
 -- ----------------------------------------

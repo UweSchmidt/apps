@@ -138,16 +138,20 @@ isPanoramaV (Geo w h) =
   h >= 2 * w    -- h / w >= 2.0
 
 isPanorama :: Geo -> Geo -> Maybe GeoAR
-isPanorama (Geo w' h') img@(Geo w h)
+isPanorama geo' geo =
+  flip mkGeoAR Pad <$> isPano geo' geo
+
+isPano :: Geo -> Geo -> Maybe Geo
+isPano (Geo w' h') img@(Geo w h)
   -- vertival panorama: landscape
   | h >= h'
     &&
-    isPanoramaH img = Just $ mkGeoAR gh Pad
+    isPanoramaH img = Just gh
 
   -- horizontal panorama: trees
   | w >= w'
     &&
-    isPanoramaV img = Just $ mkGeoAR gv Pad
+    isPanoramaV img = Just gv
 
   | otherwise       = Nothing
   where
