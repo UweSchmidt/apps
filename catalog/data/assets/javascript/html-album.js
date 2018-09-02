@@ -24,28 +24,33 @@ var slideShow = 0;
 var speed     = 1000;
 
 function initState() {
-  var s = window.location.search;
-  s = s.slice(1);
-  var params = s.split("+");
+    var s = window.location.search;
+    s = s.slice(1);
+    var params = s.split("+");
 
-  /* set default param values */
-  slideShow = 0;
+    /* set default param values */
+    slideShow     = 0;
+    slideShowType = "";
 
-  for (var i = 0; i < params.length; ++i) {
-    var kv = params[i].split("=");
-    var k = kv[0];
-    var v = kv[1];
-    if ( k == "slideShow" ) { slideShow = parseInt(v); }
-    if ( k == "speed" )     { speed = parseInt(v); }
-  }
-  trc(0, "init: " + "slideShow=" + slideShow);
+    for (var i = 0; i < params.length; ++i) {
+        var kv = params[i].split("=");
+        var k = kv[0];
+        var v = kv[1];
+        if ( k == "slideShow" ) { slideShow     = parseInt(v); }
+        if ( k == "speed" )     { speed         = parseInt(v); }
+        if ( k == "stype" )     { slideShowType = v; }
+    }
+    trc(0, "init: " + "slideShow=" + slideShow + " (" + slideShowType + ")");
 }
 
 function stateToString () {
-  var res = "?";
-  res += "slideShow=" + slideShow;
-  res += "+speed=" + speed;
-  return res;
+    var res = "?";
+    res += "slideShow=" + slideShow;
+    res += "+speed=" + speed;
+    if (slideShow > 0) {
+        res += "+stype=" + slideShowType;
+    }
+    return res;
 }
 
 // ----------------------------------------
@@ -237,19 +242,25 @@ function switchToScaledPicture() {
 // ----------------------------------------
 
 var slideShowTimer;
+var slideShowType = "";
 
 function advanceSlideShow() {
-  trc(1, "advance SlideShow");
-  nextPage();
+    trc(1, "advance SlideShow");
+    if ( slideShowType == "allColls") {
+        fwrdPage();
+    } else {
+        nextPage();
+    }
 }
 
 function stopSlideShow () {
-  if (typeof slideShowTimer != "undefined") {
-    window.clearTimeout(slideShowTimer);
-    trc(1, "timer cleared");
-  }
-  slideShow = 0;
-  trc(1, "slideShow stopped");
+    if (typeof slideShowTimer != "undefined") {
+        window.clearTimeout(slideShowTimer);
+        trc(1, "timer cleared");
+    }
+    slideShow     = 0;
+    slideShowType = "";
+    trc(1, "slideShow stopped");
 }
 
 function startSlideShow () {
@@ -260,12 +271,13 @@ function startSlideShow () {
     d = (d * speed) / 1000;
     slideShowTimer = window.setTimeout(advanceSlideShow, d);
     slideShow = 1;
-    trc(1, "SlideShow started with msec: " + d);
+    trc(1, "SlideShow started with msec: " + d + " (" + slideShowType + ")");
 }
 
-function startStopSlideShow() {
-  duration = 1000;
-  toggleSlideShow();
+function startStopSlideShow(stype) {
+    duration = 1000;
+    slideShowType=stype;
+    toggleSlideShow();
 }
 
 function toggleSlideShow() {
@@ -290,14 +302,16 @@ function speedUpSlideShow() {
 }
 
 function initSlideShow () {
-  if (slideShow > 0) {
-    slideShow = 0;
-  } else {
-    slideShow = 1;
-  }
-  if ( isPicture ) {
-    toggleSlideShow();
-  }
+    if ( isPicture || slideShowType == "allColls" ) {
+        if (slideShow > 0) {
+            slideShow = 0;
+        } else {
+            slideShow = 1;
+        }
+        toggleSlideShow();
+    } else {
+        stopSlideShow();
+    }
 }
 
 var opacity         = "0.6";
@@ -451,7 +465,12 @@ function keyPressed (e) {
     }
 
     if ( isKey(e, 115, "s") ) {
-        startStopSlideShow();
+        startStopSlideShow("thisColl");
+        return false;
+    }
+
+    if ( isKey(e,  83, "S") ) {
+        startStopSlideShow("allColls");
         return false;
     }
 
@@ -506,6 +525,12 @@ function nextPage() {
     }
 }
 
+function fwrdPage() {
+    nextp   = fwrdp;
+    nextimg = fwrdimg;
+    nextPage();
+}
+
 function prevPage() {
     if ( prevp != '' ) {
         changePicPage(prevp,previmg);
@@ -541,6 +566,7 @@ function initPicture () {
 function initAlbum () {
     isPicture = false;
     initState();
+    initSlideShow();
 }
 
 document.onkeypress = keyPressed;
