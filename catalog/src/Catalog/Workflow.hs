@@ -688,7 +688,7 @@ data PrevNextPar a =
 toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
 toPrevNextPar r = do
   v <- toPrevNextPar' r
-  trc $ "toPrevNextPar: " ++ show (fmap (fmap toReq'IdNode) v)
+  -- trc $ "toPrevNextPar: " ++ show (fmap (fmap toReq'IdNode) v)
   return v
 
 toPrevNextPar' :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))

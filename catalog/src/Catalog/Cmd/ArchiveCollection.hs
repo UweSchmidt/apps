@@ -14,6 +14,7 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
+import           Catalog.Cmd.CopyRemove (removeEmptyColls)
 import           Catalog.FilePath (pathToBreadCrump)
 import           Catalog.System.ExifTool
 import           Catalog.System.IO
@@ -387,6 +388,9 @@ updateCollectionsByDate rs = do
             ++ show rs
   dm <- colEntries2dateMap rs
   dateMap2Collections p'bycreatedate dm
+
+  verbose "cleanup bydate collections"
+  removeEmptyColls p'bycreatedate
 
 
 -- group col entries by create date

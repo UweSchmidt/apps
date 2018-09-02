@@ -131,6 +131,31 @@ rmRec = foldMT imgA dirA rootA colA
         rmImgNode i                             -- remove node unless it's the top collection
 
 -- ----------------------------------------
+--
+-- delete all empty subcollections in a given collection
+-- used for generated collection "bycreatedate"
+
+removeEmptyColls :: Path -> Cmd ()
+removeEmptyColls p = do
+  i <- fst <$> getIdNode "removeEntry: entry not found " p
+  rmEmptyRec i
+
+rmEmptyRec :: ObjId -> Cmd ()
+rmEmptyRec i0 = foldCollections colA i0
+  where
+    colA go i _md _im _be cs = do
+      trc $ "rmEmptyRec: recurse into subdirs"
+      mapM_ go (cs ^.. traverse . theColColRef)
+
+      cs' <- getImgVals i theColEntries
+      if null cs' && i /= i0
+        then do
+             p <- objid2path i
+             trc $ "rmEmptyRec: remove empty collection " ++ show p
+             rmImgNode i
+        else return ()
+
+-- ----------------------------------------
 
 -- traverse all collections and
 -- remove entries of images not longer there
