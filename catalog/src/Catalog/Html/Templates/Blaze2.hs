@@ -123,9 +123,10 @@ type IconDescr = (Text, Text, Text, Text)
 colPage' :: Text -> Text -> Text
          -> Text -> Text -> Text
          -> Geo
-         -> Text -> Text -> Text
          -> Text -> Text -> Text -> Text
-         -> Text -> Text -> Text -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text -> Text
+         -> Text -> Text -> Text -> Text -> Text
          -> Text
          -> Text -> Text
          -> Text -> Text -> Text
@@ -136,8 +137,9 @@ colPage'
   theTitle theSubTitle theComment
   theImgGeo
   theDuration thisHref thisPos
-  theNextHref thePrevHref theParentHref theChild1Href
-  theImgGeoDir theIconGeoDir thisImgRef nextImgRef prevImgRef child1ImgRef
+  theNextHref thePrevHref theParentHref theChild1Href theFwrdHref
+  theImgGeoDir theIconGeoDir
+  thisImgRef nextImgRef prevImgRef child1ImgRef fwrdImgRef
   cBlogContents
   theParentTitle parentImgRef
   theNextTitle thePrevTitle theChild1Title
@@ -156,8 +158,10 @@ colPage'
       thePrevHref
       theParentHref
       theChild1Href
+      theFwrdHref
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      ( imgRef theImgGeoDir fwrdImgRef )
       mempty
       mempty
       mempty
@@ -191,7 +195,8 @@ picPage' :: Text -> Text -> Text
          -> Text -> Text -> Text
          -> Geo  -> Maybe Text
          -> Text -> Text -> Text
-         -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text
          -> Text -> Text -> Text -> Text
          -> Text -> Text
          -> MetaData
@@ -201,8 +206,9 @@ picPage'
   theTitle theSubTitle theComment
   theImgGeo thePanoGeoDir
   theDuration thisHref thisPos
-  theNextHref thePrevHref theParentHref
-  theImgGeoDir thisImgRef nextImgRef prevImgRef
+  theNextHref thePrevHref theParentHref theFwrdHref
+  theImgGeoDir
+  thisImgRef nextImgRef prevImgRef fwrdImgRef
   orgImgRef panoImgRef
   metaData
   = picPage
@@ -217,13 +223,15 @@ picPage'
       theNextHref
       thePrevHref
       theParentHref
-      ""
+      mempty -- child1 href
+      theFwrdHref
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      ( imgRef theImgGeoDir fwrdImgRef )
       ( imgRef theImgGeoDir thisImgRef )
       -- hack to work with old and new url scheme
       ( if T.null orgImgRef
-        then imgRef orgGeoDir    thisImgRef
+        then imgRef orgGeoDir thisImgRef
         else orgImgRef
       )
       -- hack to work with old and new url scheme
@@ -251,15 +259,17 @@ picPage'
 
 txtPage' :: Text -> Text -> Text
          -> Text -> Text -> Text
-         -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text
          -> Text -> Text -> Text
          -> Text
          -> Html
 txtPage'
   theBaseRef theHeadTitle theDate
   theDuration thisHref thisPos
-  theNextHref thePrevHref theParentHref
-  theImgGeoDir nextImgRef prevImgRef
+  theNextHref thePrevHref theParentHref theFwrdHref
+  theImgGeoDir
+  nextImgRef prevImgRef fwrdImgRef
   blogContents
   = txtPage
     theBaseRef
@@ -273,8 +283,10 @@ txtPage'
       thePrevHref
       theParentHref
       mempty
+      theFwrdHref
       ( imgRef theImgGeoDir nextImgRef )
       ( imgRef theImgGeoDir prevImgRef )
+      ( imgRef theImgGeoDir fwrdImgRef )
       mempty mempty mempty
     )
     blogContents
@@ -387,14 +399,16 @@ colBlog cBlogContents
       H.div ! class_ "ruler" $ mempty
       H.div ! class_ "blog-contents" $ preEscapedText cBlogContents
 
-jsCode :: Text -> Text -> Text ->
-          Text -> Text -> Text ->
-          Text -> Text -> Text ->
-          Text -> Text -> Text ->
-          Html
+jsCode :: Text -> Text -> Text
+       -> Text -> Text -> Text
+       -> Text -> Text
+       -> Text -> Text -> Text
+       -> Text -> Text -> Text
+       -> Html
 jsCode theDuration thisHref thisPos
       theNextHref thePrevHref theParentHref
-      theChild1Href theNextImgRef thePrevImgRef
+      theChild1Href theFwrdHref
+      theNextImgRef thePrevImgRef theFwrdImgRef
       thisImgRef thisOrgRef thisPanoRef
   = do
   script ! type_ "text/javascript" $ preEscapedText $ T.unlines $
@@ -405,10 +419,12 @@ jsCode theDuration thisHref thisPos
     , "var thispos  = '#" <> thisPos <> "';"
     , "var nextp    = '" <> theNextHref   <> "';"
     , "var prevp    = '" <> thePrevHref   <> "';"
+    , "var fwrdp    = '" <> theFwrdHref   <> "';"
     , "var parentp  = '" <> theParentHref <> "';"
     , "var childp   = '" <> theChild1Href <> "';"
     , "var nextimg  = '" <> theNextImgRef <> "';"
     , "var previmg  = '" <> thePrevImgRef <> "';"
+    , "var fwrdimg  = '" <> theFwrdImgRef <> "';"
     , "var thisimg  = '" <> thisImgRef    <> "';"
     , "var orgimg   = '" <> thisOrgRef    <> "';"
     , "var panoimg  = '" <> thisPanoRef   <> "';"
@@ -683,8 +699,9 @@ picMeta md = mconcat $ map toMarkup mdTab
 -- ----------------------------------------
 
 imgRef :: Text -> Text -> Text
-imgRef theImgGeoDir theImgRef =
-  cond ("/" <>) theImgGeoDir <> theImgRef
+imgRef theImgGeoDir theImgRef
+  | isempty theImgRef = mempty
+  | otherwise         = cond ("/" <>) theImgGeoDir <> theImgRef
 
 imgRef' :: Text -> Text -> Text -> Text
 imgRef' theImgGeoDir theIconGeoDir theIconRef

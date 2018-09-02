@@ -134,13 +134,13 @@ parseImgGeoPathPic fp = do
 -- if the result sub index is Nothing, the ref points to a collection
 -- else the ref points to an image
 
-normColRef :: ColRef -> Cmd (Maybe ColRef)
+normColRef :: ColRef -> CmdMB ColRef
 normColRef = maybeColRef cref iref
   where
-    cref i = return $ Just $ mkColRefC i
+    cref i     = return $ mkColRefC i
     iref i pos = do
-      val <- getImgVal i
-      return
+      val <- lift $ getImgVal i
+      pureMB
         ( ( colEntry'
             (\ _  -> mkColRefI i pos) -- ref to an image
             mkColRefC                 -- ref to a sub collection
@@ -156,73 +156,93 @@ normColRef = maybeColRef cref iref
 -- 1 step up, 1 step down (indexed),
 -- and to the left or right by an offset
 
-parentColRef :: ColRef -> Cmd (Maybe ColRef)
+parentColRef :: ColRef -> CmdMB ColRef
 parentColRef = maybeColRef cref iref
   where
-    cref i = do
-      parent'i <- getImgParent i
-      iscol    <- isCOL <$> getImgVal parent'i
-      return $
-        if iscol
-        then Just $ mkColRefC parent'i
-        else Nothing
-    iref i _pos = return $ Just $ mkColRefC i
+    cref i =  do
+      parent'i <- lift $ getImgParent i
+      iscol    <- lift $ isCOL <$> getImgVal parent'i
+      if iscol
+        then return $ mkColRefC parent'i
+        else mzero
 
-childColRef :: Int -> ColRef -> Cmd (Maybe ColRef)
+    iref i _pos = return $ mkColRefC i
+
+childColRef :: Int -> ColRef -> CmdMB ColRef
 childColRef pos = maybeColRef cref iref
   where
     cref i = do
-      cs <- getImgVals i theColEntries
-      case cs ^? ix pos of
-        Just _ ->
-          normColRef $ mkColRefI i pos
-        Nothing ->  -- index out of bounds
-          return Nothing
-    iref _i _pos = return Nothing -- img ref
+      _ix <- (^? ix pos) <$> lift (getImgVals i theColEntries)
+      normColRef $ mkColRefI i pos
 
+    iref _i _pos = mzero -- pictures don't have children
 
-ixColRef :: ColRef -> Cmd (Maybe Int)
+ixColRef :: ColRef -> CmdMB Int
 ixColRef = maybeColRef cref iref
   where
     cref i = do
-      mp'i <- parentColRef $ mkColRefC i
-      case mp'i of
-        Nothing ->
-          return $ Nothing
-        Just (j, _) -> do
-          cs <- getImgVals j theColEntries
-          return $
-            searchPos ((== i) . (^. theColObjId)) cs
-    iref _i pos = return $ Just pos
+      (j, _) <- parentColRef $ mkColRefC i
+      cs     <- lift $ getImgVals j theColEntries
+      pureMB $  searchPos ((== i) . (^. theColObjId)) cs
 
+    iref _i pos = return pos
 
-neighborColRef :: Int -> ColRef -> Cmd (Maybe ColRef)
+neighborColRef :: Int -> ColRef -> CmdMB ColRef
 neighborColRef offset = maybeColRef cref iref
   where
     cref i = do
       let cr = mkColRefC i
-      -- position in parent col
-      mpos <- ixColRef cr
-      case mpos of
-        Nothing ->
-          return Nothing
-        Just pos -> do
-          x <- parentColRef cr       -- 1 level up
-          case x of
-            Just parent'cr ->
-              childColRef (pos + offset) parent'cr -- 1 level down
-            _ ->
-              return Nothing
+      pos       <- ixColRef     cr         -- position in parent col
+      parent'cr <- parentColRef cr         -- 1 level up
+      childColRef (pos + offset) parent'cr -- 1 level down
 
     iref i pos = normColRef $ mkColRefI i (pos + offset)
 
-prevColRef, nextColRef :: ColRef -> Cmd (Maybe ColRef)
+
+prevColRef :: ColRef -> CmdMB ColRef
 prevColRef = neighborColRef (-1)
+
+nextColRef :: ColRef -> CmdMB ColRef
 nextColRef = neighborColRef   1
+
+-- right traversal through the whole tree
+
+nextOrUpColRef :: ColRef -> CmdMB ColRef
+nextOrUpColRef ref =
+  nextColRef ref
+  <|>
+  ( parentColRef ref
+    >>=
+    nextOrUpColRef
+  )
+
+fwrdColRef :: ColRef -> CmdMB ColRef
+fwrdColRef ref =
+      childColRef 0 ref  -- down to the 1. child
+      <|>                -- or if empty collection
+      nextOrUpColRef ref -- to the right or up
 
 -- ----------------------------------------
 
 data PageType = IsCol | IsPic | IsTxt
+
+thePageType :: ColRef -> Cmd PageType
+thePageType cr@(_i, pos)
+  | isNothing pos =
+      return IsCol
+
+  | otherwise = do
+      ty <- colImgType cr
+      return $ case ty of
+        IMGtxt -> IsTxt
+        _      -> IsPic
+
+colImgPath' :: ColRef -> Cmd (Maybe FilePath)
+colImgPath' cr = do
+      ty <- thePageType cr
+      case ty of
+        IsPic -> colImgPath cr
+        _     -> return mempty
 
 -- ----------------------------------------
 --
@@ -260,29 +280,30 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
   this'fname  <- ((^. from isoMaybe) . fmap (^. isoString)) <$>
                  colImgName               this'cr
 
-  let pageType
-        | isNothing pos       = IsCol
-        | this'type == IMGtxt = IsTxt
-        | otherwise           = IsPic
+  pageType    <- thePageType this'cr
 
   -- for a col: get the entries, for an img: empty
   this'cs     <- getImgVals this'i theColEntries
-  this'meta   <- colImgMeta               this'cr
-  this'ix     <- maybe "" (^. isoPicNo)
-                             <$> ixColRef this'cr
+  this'meta   <- colImgMeta                 this'cr
+  this'ix     <- runMB $
+                (^. isoPicNo) <$> ixColRef  this'cr
 
-  parent'cr   <- parentColRef             this'cr
-  parent'href <- colHref pageConf   `bmb` parent'cr
+  parent'cr   <- runMaybeT $ parentColRef   this'cr
+  parent'href <- colHref pageConf   `appMB` parent'cr
 
-  prev'cr     <- prevColRef               this'cr
-  prev'href   <- colHref pageConf   `bmb` prev'cr
-  prev'img    <- colImgPath         `bmb` prev'cr
-  prev'meta   <- colImgMeta0        `bmb` prev'cr
+  prev'cr     <- runMaybeT $ prevColRef     this'cr
+  prev'href   <- colHref pageConf   `appMB` prev'cr
+  prev'img    <- colImgPath'        `appMB` prev'cr
+  prev'meta   <- colImgMeta0        `appMB` prev'cr
 
-  next'cr     <- nextColRef               this'cr
-  next'href   <- colHref pageConf   `bmb` next'cr
-  next'img    <- colImgPath         `bmb` next'cr
-  next'meta   <- colImgMeta0        `bmb` next'cr
+  next'cr     <- runMaybeT $ nextColRef     this'cr
+  next'href   <- colHref pageConf   `appMB` next'cr
+  next'img    <- colImgPath'        `appMB` next'cr
+  next'meta   <- colImgMeta0        `appMB` next'cr
+
+  fwrd'cr     <- runMaybeT $ fwrdColRef     this'cr
+  fwrd'href   <- colHref pageConf   `appMB` fwrd'cr
+  fwrd'img    <- colImgPath'        `appMB` fwrd'cr
 
   let getMD md n    = md ^. metaDataAt n
   let getTitle md   = getMD md descrTitle
@@ -299,13 +320,20 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
   let thisPos        = this'ix       ^. isoText
   let theNextHref    = next'href     ^. isoText
   let thePrevHref    = prev'href     ^. isoText
+  let theFwrdHref    = fwrd'href     ^. isoText
   let theParentHref  = parent'href   ^. isoText
   let theImgGeo      = geo1 ^. theGeo
   let theImgGeoDir   = geo1 ^. isoText
 
+  let iscol cr' = maybe False (isNothing . snd ) cr'
+
   thisImgRef        <- (^. isoText) <$> blankIcon (Just this'cr) this'img
   nextImgRef        <- (^. isoText) <$> blankIcon next'cr        next'img
   prevImgRef        <- (^. isoText) <$> blankIcon prev'cr        prev'img
+  fwrdImgRef        <- if iscol fwrd'cr
+                          then return mempty
+                          else (^. isoText) <$>
+                               blankIcon fwrd'cr fwrd'img
 
   let theNextTitle   = getTitle next'meta
   let thePrevTitle   = getTitle prev'meta
@@ -314,24 +342,26 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
     IsCol -> do
       let theIconGeoDir  = geo2 ^. isoString ^. isoText
 
-      theParentTitle <- getTitle <$> (colImgMeta0 `bmb` parent'cr)
-      parent'img     <- colImgPath `bmb` parent'cr
+      theParentTitle <- getTitle <$>
+                        (colImgMeta0 `appMB`       parent'cr)
+      parent'img     <-  colImgPath  `appMB`       parent'cr
       parentImgRef   <- (^. isoText) <$> blankIcon parent'cr parent'img
 
-      child1'cr      <- childColRef 0            this'cr
-      child1'img     <- colImgPath         `bmb` child1'cr
+      child1'cr      <- runMaybeT $ childColRef 0 this'cr
+      child1'img     <- colImgPath         `appMB` child1'cr
 
       child1ImgRef   <- (^. isoText) <$> blankIcon child1'cr child1'img
-      theChild1Href  <- (^. isoText) <$> (colHref pageConf `bmb` child1'cr)
-      theChild1Title <- getTitle     <$> (colImgMeta0      `bmb` child1'cr)
+      theChild1Href  <- (^. isoText) <$> (colHref pageConf `appMB` child1'cr)
+      theChild1Title <- getTitle     <$> (colImgMeta0      `appMB` child1'cr)
 
       cBlogContents  <- (^. isoText) <$> colImgBlog this'cr
 
-      children'crs   <- mapM (flip childColRef this'cr) $
-                         [0 .. length this'cs - 1]
-      children'hrefs <- mapM (colHref pageConf `bmb`) children'crs
-      children'imgs  <- mapM (colImgPath       `bmb`) children'crs
-      children'meta  <- mapM (colImgMeta0      `bmb`) children'crs
+      children'crs   <- mapM
+                        (\ i -> runMaybeT $ childColRef i this'cr)
+                        [0 .. length this'cs - 1]
+      children'hrefs <- mapM (colHref pageConf `appMB`) children'crs
+      children'imgs  <- mapM (colImgPath       `appMB`) children'crs
+      children'meta  <- mapM (colImgMeta0      `appMB`) children'crs
 
       let children'titles = map getTitle children'meta
       let children'5      = zip5
@@ -361,7 +391,10 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
         theImgGeo
         theDuration thisHref thisPos
         theNextHref thePrevHref theParentHref theChild1Href
-        theImgGeoDir theIconGeoDir thisImgRef nextImgRef prevImgRef child1ImgRef
+        theFwrdHref
+        theImgGeoDir theIconGeoDir
+        thisImgRef nextImgRef prevImgRef child1ImgRef
+        fwrdImgRef
         cBlogContents
         theParentTitle parentImgRef
         theNextTitle thePrevTitle theChild1Title
@@ -375,8 +408,9 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
         "/"
         theTitle theDate
         theDuration thisHref thisPos
-        theNextHref thePrevHref theParentHref
-        theImgGeoDir nextImgRef prevImgRef
+        theNextHref thePrevHref theParentHref theFwrdHref
+        theImgGeoDir
+        nextImgRef prevImgRef fwrdImgRef
         blogContents
 
     IsPic -> do
@@ -399,16 +433,11 @@ genBlazeHtmlPage' (geo1, geo2, no'cols)
         theTitle theSubTitle theComment
         theImgGeo thePanoGeoDir
         theDuration thisHref thisPos
-        theNextHref thePrevHref theParentHref
-        theImgGeoDir thisImgRef nextImgRef prevImgRef "" ""
+        theNextHref thePrevHref theParentHref theFwrdHref
+        theImgGeoDir
+        thisImgRef nextImgRef prevImgRef fwrdImgRef
+        mempty mempty
         metaData
-
--- ----------------------------------------
---
--- a little helper for avoiding MaybeT transformer monad
-
-bmb :: (Monad m, Monoid b) => (a -> m b) -> Maybe a -> m b
-bmb cmd = maybe (return mempty) cmd
 
 -- ----------------------------------------
 

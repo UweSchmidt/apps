@@ -27,6 +27,7 @@ module Catalog.Cmd.Types
        , runCmd'
        -- CmdMB
        , CmdMB
+       , appMB
        , liftMB
        , pureMB
        , runMaybeT
@@ -165,5 +166,8 @@ pureMB = maybe mzero return
 
 runMB :: Monoid a => CmdMB a -> Cmd a
 runMB cmd = fromMaybe mempty <$> runMaybeT cmd
+
+appMB :: (Monad m, Monoid b) => (a -> m b) -> (Maybe a -> m b)
+appMB = maybe (return mempty)
 
 -- ----------------------------------------

@@ -616,6 +616,23 @@ toNext = toPos' succ
 toFirst :: Req'IdNode a -> CmdMB (Req'IdNode a)
 toFirst = toPos' (const 0)
 
+toNextOrUp :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toNextOrUp r =
+  toNext r
+  <|>
+  ( toParent r >>= toNextOrUp )
+
+toChildOrNextOrUp :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toChildOrNextOrUp r =
+  toFirstChild r
+  <|>
+  toNextOrUp r
+
+toFirstChild :: Req'IdNode a -> CmdMB (Req'IdNode a)
+toFirstChild r = do
+ (c0 : _) <- toChildren r
+ return c0
+
 -- normalization must be done before
 toChildren :: Req'IdNode a -> CmdMB [Req'IdNode a]
 toChildren r =
@@ -631,15 +648,17 @@ data PrevNextPar a =
   PrevNextPar { _prev :: a
               , _next :: a
               , _par  :: a
+              , _fwrd :: a
               }
   deriving (Functor, Foldable, Traversable, Show)
 
 toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
 toPrevNextPar r =
   PrevNextPar
-  <$> runMaybeT (toPrev   r)
-  <*> runMaybeT (toNext   r)
-  <*> runMaybeT (toParent r)
+  <$> runMaybeT (toPrev            r)
+  <*> runMaybeT (toNext            r)
+  <*> runMaybeT (toParent          r)
+  <*> runMaybeT (toChildOrNextOrUp r)
 
 -- ----------------------------------------
 
@@ -732,7 +751,8 @@ genReqImgPage' r = do
   let PrevNextPar
           prev'url
           next'url
-          par'url        = m2url <$> nav
+          par'url
+          fwrd'url       = m2url <$> nav
 
   let tomu mr            = (^. isoText)
                            <$> runMB (pureMB mr >>= toMediaUrl)
@@ -741,7 +761,8 @@ genReqImgPage' r = do
   PrevNextPar
           prev'imgRef
           next'imgRef
-          _par'imgRef   <- traverse tomu nav
+          _par'imgRef
+          fwrd'imgRef   <- traverse tomu nav
 
   case toMediaReq r ^. rType of
 
@@ -766,7 +787,7 @@ genReqImgPage' r = do
       return $
         picPage'
         base'ref
-        this'title
+        ("Workflow ImgPage: " <> this'title)
         now'
         this'title
         this'subTitle
@@ -779,10 +800,12 @@ genReqImgPage' r = do
         next'url
         prev'url
         par'url
+        fwrd'url
         ""    -- old url scheme: theImgGeoDir
         this'mediaUrl
         next'imgRef
         prev'imgRef
+        fwrd'imgRef
         org'mediaUrl
         pano'mediaUrl
         metaData
@@ -798,7 +821,7 @@ genReqImgPage' r = do
       return $
         txtPage'
         base'ref
-        this'title
+        ( "Workflow BlogPage: " <> this'title)
         now'
         this'duration
         this'url
@@ -806,9 +829,11 @@ genReqImgPage' r = do
         next'url
         prev'url
         par'url
+        fwrd'url
         mempty
         next'imgRef
         prev'imgRef
+        fwrd'imgRef
         blogContents
 
     _ -> return mempty
@@ -865,7 +890,8 @@ genReqColPage' r = do
   PrevNextPar
         (prev'url, prev'iconurl, prev'title)
         (next'url, next'iconurl, next'title)
-        (par'url,  par'iconurl,  par'title )
+        ( par'url,  par'iconurl,  par'title)
+        (fwrd'url, fwrd'iconurl, _wrd'title)
                         <- traverse
                            (\ r' -> fromMaybe emptyIconDescr <$>
                                     traverse (toIconDescr icon'geo ) r'
@@ -904,7 +930,7 @@ genReqColPage' r = do
   return $
     colPage'
     base'ref
-    this'title
+    ( "Workflow ColPage: " <> this'title)
     now'
     this'title
     this'subTitle
@@ -917,12 +943,14 @@ genReqColPage' r = do
     prev'url
     par'url
     c1'url
+    fwrd'url
     "" -- theImgGeoDir
     (icon'geo ^. isoText)
     this'iconurl
     next'iconurl
     prev'iconurl
     c1'iconurl
+    fwrd'iconurl
     this'blogContents
     par'title
     par'iconurl

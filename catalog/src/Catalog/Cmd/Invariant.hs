@@ -16,7 +16,7 @@ import           Control.Monad.Trans.Maybe
 
 -- ----------------------------------------
 
-type CmdMaybe a = MaybeT Cmd a
+-- type CmdMB a = MaybeT Cmd a  -- in Catalog.Cmd.Types
 
 -- ----------------------------------------
 
@@ -112,18 +112,18 @@ cleanupImgRefs i0 = do
     -- kill the case-Nothing-Just code with monad transformer MaybeT
     -- check whether the ref i exists and points to an IMG value
 
-    checkRef :: ObjId -> CmdMaybe ImgNode
+    checkRef :: ObjId -> CmdMB ImgNode
     checkRef i =
       (^. nodeVal) <$> (MaybeT $ getTree (entryAt i))
 
-    checkDirRef :: ObjId -> CmdMaybe ImgNode
+    checkDirRef :: ObjId -> CmdMB ImgNode
     checkDirRef i = do
       n <- checkRef i
       if isIMG n || isDIR n
         then return n
         else empty
 
-    checkImgRef :: ObjId -> CmdMaybe ImgNode
+    checkImgRef :: ObjId -> CmdMB ImgNode
     checkImgRef i = do
       n <- checkRef i
       if isIMG n
@@ -131,7 +131,7 @@ cleanupImgRefs i0 = do
         else empty
 
     -- check whether both the ref and the part in an ImgRef exist
-    checkImgPart :: ImgRef -> CmdMaybe ImgNode
+    checkImgPart :: ImgRef -> CmdMB ImgNode
     checkImgPart (ImgRef i nm) = do
       n <- checkImgRef i
       _ <- return $ n ^? theParts . isoImgPartsMap . at nm
@@ -139,7 +139,7 @@ cleanupImgRefs i0 = do
 
     -- check a ColEntry ref for existence
     -- only the ImgRef's are checked, not the ColRef's
-    checkColEntry :: ColEntry -> CmdMaybe ColEntry
+    checkColEntry :: ColEntry -> CmdMB ColEntry
     checkColEntry ce =
       colEntry' imgRef colRef ce
       where
@@ -148,7 +148,7 @@ cleanupImgRefs i0 = do
         imgRef ir =
           checkImgPart ir >> return ce
 
-    isOK :: (b -> CmdMaybe a) -> b -> Cmd Bool
+    isOK :: (b -> CmdMB a) -> b -> Cmd Bool
     isOK cmd i =
       isJust <$> runMaybeT (cmd i)
 
