@@ -38,6 +38,9 @@ Executable find-grep-sed
 
   Main-Is: Find.hs
 
+  Other-modules:
+    System.FindGrepSed
+
   build-depends: HUnit >= 1.2
                , find-grep-sed
 

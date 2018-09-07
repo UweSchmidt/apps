@@ -24,7 +24,7 @@ main
     = do
       al <- getArgs
       let fct = head . (++ ["-h"]) $ al
-      let dir = head . (++ [""]) . drop 1 $ al 
+      let dir = head . (++ [""]) . drop 1 $ al
       ( fromMaybe usage . lookup fct $ actions) dir
       return ()
 
@@ -69,7 +69,7 @@ actions
       , ("grepTexLatin1",               grepFiles isUmlaut      texLatin1Files          )
       , ("grepTexUtf8",                 grepFiles isUtfUmlaut   texUtf8Files            )
       , ("grepTrailingSpace",           grepFiles hasTrailingWS progFiles               )
-      , ("grepTabs",			grepFiles hasTabs       progFiles'              )
+      , ("grepTabs",                    grepFiles hasTabs       progFiles'              )
 
       , ("sedHtmlLatin1",               sedFiles substXhtmlChars     htmlLatin1Files       )
       , ("sedHtmlUtf8",                 sedFiles substXhtmlUtf8Chars htmlUtf8Files         )
@@ -79,7 +79,7 @@ actions
       , ("sedTexLatin1",                sedFiles substLatin1Tex      texLatin1Files        )
       , ("sedTexUtf8",                  sedFiles substUtf8Tex        texUtf8Files          )
       , ("sedTrailingSpace",            sedFiles removeTrailingWS    textFiles             )
-      , ("sedTabs",			sedFiles removeTabs	     progFiles'		   )
+      , ("sedTabs",                     sedFiles removeTabs          progFiles'            )
 
       , ("renameUppercaseImgFiles",     moveFiles uppercaseImgFiles     )
 
