@@ -316,3 +316,10 @@ table.metadata-table th {
     right: 0;
     margin: auto;
 }
+
+#EditBlogContents {
+}
+
+#PreviewModalBlog {
+  max-width : 64em;
+}
