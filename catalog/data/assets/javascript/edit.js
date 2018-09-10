@@ -4,6 +4,10 @@
 
 var openCollections = {};
 
+// debugging
+
+var newScheme = true;
+
 /*
 // ----------------------------------------
 //
@@ -873,6 +877,7 @@ function newEntry(colId, colPath, entry, i) {
 
     setDiaNo(p, i);
 
+    // old url scheme
     var sc = iconSize('');
     var mk = '';
     var tt = '';
@@ -934,20 +939,30 @@ function newEntry(colId, colPath, entry, i) {
                                  function (ro) {
                                      setDiaColAccess(p, ro);
                                  });
-        // set the icon url
-        // url is computed on server and added in callback
-        getIconRefFromServer(ref.path,
-                             iconSize(),
-                             function (ref) {
-                                 p.find("img.dia-src")
-                                     .attr('src', ref);
-                             });
-    }
 
-    if ( entry.ColEntry === "IMG" ) {
-        // set the icon url
+        if ( ! newScheme ) {
+            // set the icon url
+            // url is computed on server and added in callback
+            getIconRefFromServer(ref.path,
+                                 iconSize(),
+                                 function (ref) {
+                                     p.find("img.dia-src")
+                                         .attr('src', ref);
+                                 });
+        }
+    }
+    if ( newScheme ) {
+        // url for entry icon with new url scheme
+        var newIconRef = iconRef(iconSize(), colPath, entry, i);
         p.find("img.dia-src")
-            .attr('src', sc);
+            .attr('src', newIconRef);
+    }
+    else {
+        if ( entry.ColEntry === "IMG" ) {
+            // set the icon url
+            p.find("img.dia-src")
+                .attr('src', sc);
+        }
     }
 
     removeMarkCount(p);
@@ -1075,7 +1090,7 @@ function checkArchiveConsistency() {
 // for remove, move and rename commands
 // check whether subcollections are still there
 // maybe sometimes there are subcollections,
-// which were also moved removed
+// which were also moved or removed
 
 function refreshCollection1(path, colVal) {
     refreshCollection(path, colVal);
@@ -2468,11 +2483,22 @@ function getRatingsFromServer(path, setRating) {
 }
 
 function getPreviewRef(args) {
-    readServer1('previewref',
-                args.path,
-                [args.pos, args.fmt],
-                function (res) { insertPreviewRef(res, args); }
-               );
+    if ( newScheme ) {
+        var entry =
+                { ColEntry : args.iscol ? "COL" : "IMG",
+                  ref : args.path + "/" + args.name
+                };
+        var res =
+                iconRef(args.fmt, args.path, entry, args.pos);
+        insertPreviewRef(res, args);
+    }
+    else {
+        readServer1('previewref',
+                    args.path,
+                    [args.pos, args.fmt],
+                    function (res) { insertPreviewRef(res, args); }
+                   );
+    }
 }
 
 function getBlogText(args) {
@@ -2866,8 +2892,35 @@ function idCollections() { return path2id(pathCollections()); }
 function idClipboard()   { return path2id(pathClipboard()); }
 function idTrash()       { return path2id(pathTrash()); }
 
-function iconSize()    { return "pad-160x160"; }
+function iconSize() { return "pad-160x160"; }
 
+// ----------------------------------------
+//
+// new URL scheme functions
+
+function iconPrefix(padSize) {
+    return "/docs/iconp/" + padSize.slice(4);
+}
+
+function iconRef(padSize, colPath, entry, ix) {
+    return iconPrefix(padSize) + toRef(colPath, entry, ix) + ".jpg";
+}
+
+function toRef(colPath, entry, ix) {
+    if (entry.ColEntry == "IMG") {
+        return colPath + "/pic-" + fmtIx(ix);
+    }
+    if (entry.ColEntry == "COL") {
+        return entry.ref;
+    }
+}
+
+function fmtIx(ix) {
+    return ("0000" + ix).slice(-4);
+}
+
+// ----------------------------------------
+//
 // one of 1600x1200, 1400x1050, 1280x800, 900x60
 // else edit.css must be extended
 // .modal-preview, .modal-carousel, .img-box
