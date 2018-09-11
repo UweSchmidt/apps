@@ -2115,27 +2115,36 @@ function buildImgCarousel(args, colVal) {
 
 
         // insert the icon ref into cimg
-        if ( iscol ) {
-            // for a collection this is done asynchronously by the callback fct
-            getIconRefFromServer(eref.path,
-                                 previewGeo().img,
-                                 function (ref) {
-                                     console.log("iconref: " + ref);
-                                     cimg.find("div.img-box img")
-                                         .attr('src', ref)
-                                         .attr('alt', eref.name);
-                                 });
-        } else {
-            var iref = "/" + g.img + eref.cpath1 + "/" + e.part;
-            var notJpg = splitPath(e.part).ext !== "jpg";
-            if ( notJpg ) {
-                iref = iref + ".jpg";
-            }
-            console.log("iconref: " + iref);
+        if ( newScheme ) {
+            var iref = iconRef(previewGeo().img, args.path, e, i);
+
+            console.log("new iconref: " + iref);
             cimg.find("div.img-box img")
                 .attr('src', iref)
                 .attr('alt', eref.name);
-
+        }
+        else {
+            if ( iscol ) {
+                // for a collection this is done asynchronously by the callback fct
+                getIconRefFromServer(eref.path,
+                                     previewGeo().img,
+                                     function (ref) {
+                                         console.log("iconref: " + ref);
+                                         cimg.find("div.img-box img")
+                                             .attr('src', ref)
+                                             .attr('alt', eref.name);
+                                     });
+            } else {
+                var iref = "/" + g.img + eref.cpath1 + "/" + e.part;
+                var notJpg = splitPath(e.part).ext !== "jpg";
+                if ( notJpg ) {
+                    iref = iref + ".jpg";
+                }
+                console.log("iconref: " + iref);
+                cimg.find("div.img-box img")
+                    .attr('src', iref)
+                    .attr('alt', eref.name);
+            }
         }
         c.find('div.carousel-inner').append(cimg);
 
