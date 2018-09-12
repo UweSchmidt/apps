@@ -385,8 +385,11 @@ toCachedImgPath r =
       ps'docroot </>
       r ^. rType . isoString </>
       r ^. rGeo  . isoString ++
-      fp ++ ".jpg"
-
+      fp ++ jpg
+      where
+        jpg
+          | ".jpg" `isSuffixOf` fp = ""
+          | otherwise              = ".jpg"
 
 -- the url for a media file, *.jpg or *.mp4 or ...
 -- is determined by the request type
@@ -815,12 +818,17 @@ genReqImgPage' r = do
                            & metaDataAt "Img:Rating"  .~ rating
       org'imgpath       <- toSourcePath r
       org'geo           <- getImageSize org'imgpath
-      let org'mediaUrl   = toUrlPath (r & rType .~ RImg
-                                        & rGeo  .~ geo'org
-                                     ) ^. isoText
+      let org'mediaUrl   = toUrlPath
+                           (r & rType .~ RImg
+                              & rGeo  .~ geo'org
+                           ) ^. isoText
       let pano'mediaUrl  = maybe
                            mempty
-                           (\ geo -> toUrlPath (r & rGeo .~ geo) ^. isoText)
+                           (\ geo -> toUrlPath
+                                     (r & rType .~ RImg
+                                        & rGeo  .~ geo
+                                     ) ^. isoText
+                           )
                            (isPano this'geo org'geo)
 
       return $
