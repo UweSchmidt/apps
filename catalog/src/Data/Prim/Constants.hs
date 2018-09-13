@@ -69,6 +69,7 @@ ps'archive
   , ps'collections
   , ps'bycreatedate
   , ps'cache
+  , ps'iconsgen
   , ps'clipboard
   , ps'trash
   , ps'photos
@@ -76,33 +77,35 @@ ps'archive
   , ps'html
   , ps'bootstrap
   , ps'icons
-  , ps'iconsgen
+  , ps'blank
   , ps'javascript
   , ps'css
+  , ps'docroot
   , ps'exifcache
   , ps'zipcache
-  , ps'blank
-  , ps'docroot
   , ps'gen'icon :: FilePath
 
 ps'archive      = p'archive      ^. isoString
-ps'bootstrap    = "/bootstrap"
 ps'clipboard    = p'clipboard    ^. isoString
-ps'trash        = p'trash        ^. isoString
-ps'cache        = "/cache"
 ps'collections  = p'collections  ^. isoString
 ps'bycreatedate = p'bycreatedate ^. isoString
 ps'photos       = p'photos       ^. isoString
+ps'trash        = p'trash        ^. isoString
+
+ps'bootstrap    = "/bootstrap"
+ps'cache        = "/cache"                               -- old url scheme
+ps'iconsgen     = ps'cache ++ ps'icons  </> "generated"  -- old url scheme
+
 ps'assets       = "/assets"
-ps'html         = ps'assets </> "html"
-ps'icons        = ps'assets </> "icons"
-ps'iconsgen     = ps'cache ++ ps'icons  </> "generated"
-ps'blank        = ps'icons  </> "blank.jpg"
-ps'javascript   = ps'assets </> "javascript"
-ps'css          = ps'assets </> "css"
-ps'exifcache    = ps'cache  </> "exif-meta"
-ps'zipcache     = ps'cache  </> "zip-cache"
+ps'html         = ps'assets  </> "html"
+ps'icons        = ps'assets  </> "icons"
+ps'javascript   = ps'assets  </> "javascript"
+ps'css          = ps'assets  </> "css"
+ps'blank        = ps'icons   </> "blank.jpg"
+
 ps'docroot      = "/docs"
+ps'exifcache    = ps'docroot </> "exif-meta"
+ps'zipcache     = ps'docroot </> "zip-cache"
 ps'gen'icon     = ps'docroot </> "generated/icon"
 
 -- ----------------------------------------

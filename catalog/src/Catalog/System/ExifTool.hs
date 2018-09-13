@@ -23,9 +23,10 @@ import qualified Data.Text as T
 -- update MetaData with exif data
 -- contained in the .nef, .png, .jpg, .xmp files
 
-syncMD :: (ImgPart -> Bool) ->
-          Path -> SysPath -> ImgPart -> Cmd ()
-syncMD p ip fp pt =
+{-
+syncMD' :: (ImgPart -> Bool) ->
+           Path -> SysPath -> ImgPart -> Cmd ()
+syncMD' p ip fp pt =
   when ( p pt ) $ do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
                         -- parts used by exif tool
     sp <- path2SysPath (substPathName tn ip)
@@ -33,6 +34,30 @@ syncMD p ip fp pt =
     m1 <- readMetaData fp
     m2 <- filterMetaData ty <$> getExifTool sp
     writeMetaData fp (m2 <> m1)
+  where
+    ty = pt ^. theImgType
+    tn = pt ^. theImgName
+-- -}
+
+syncMD :: (ImgPart -> Bool)
+       -> Path -> SysPath -> ImgPart -> Cmd ()
+syncMD p ip fp pt =
+  when ( p pt ) $ do
+  m1 <- readMetaData fp
+  m2 <- addMD (const True) ip pt m1
+  writeMetaData fp m2
+
+addMD :: (ImgPart -> Bool)
+      -> Path -> ImgPart
+      -> MetaData -> Cmd MetaData
+addMD p ip pt m1
+  | p pt = do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
+      sp <- path2SysPath (substPathName tn ip)
+      verbose $ "syncMD: syncing with " ++ show sp
+      m2 <- filterMetaData ty <$> getExifTool sp
+      return (m2 <> m1)
+  | otherwise =
+      return m1
   where
     ty = pt ^. theImgType
     tn = pt ^. theImgName
