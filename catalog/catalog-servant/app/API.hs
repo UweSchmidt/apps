@@ -14,14 +14,11 @@ import Prelude.Compat
 
 import Network.HTTP.Media ((//), (/:))
 import Servant
-import Servant.HTML.Blaze
-import qualified Text.Blaze.Html as Blaze
 
 import System.FilePath (FilePath)
 import Data.Prim
 import Data.ImgTree (ImgNodeP)
 import Data.MetaData
-import Web.HttpApiData (parseUrlPieceWithPrefix)
 import qualified Data.Text as T
 
 
@@ -34,11 +31,6 @@ type CatalogAPI
       AssetsAPI
       :<|>
       RootAPI
-    )
-    :<|>
-    ( BlazeAPI
-      :<|>
-      ImgCopyAPI
     )
     :<|>
     JsonAPI
@@ -121,23 +113,7 @@ type PageAPI
 
 -- generate blaze-1920x1200 and other geometry HTML pages
 
-newtype BlazeHTML = BlazeHTML Geo'
 newtype Geo'      = Geo'      Geo
-newtype GeoAR'    = GeoAR'    GeoAR
-
--- gen page for paths like "/blaze-1920x1200/archive/collections/photos.html""
-type BlazeAPI
-  = Capture    "blaze" BlazeHTML :>
-    CaptureAll "path"  Text      :> Get '[HTML] Blaze.Html
-
--- generate image copies (fix-123x456, pad-123x456, ...)
-type ImgCopyAPI
-  = Capture    "geoar" GeoAR' :>
-    ( "archive" :>
-      CaptureAll "path"  Text  :> Get '[JPEG] LazyByteString
-      :<|>
-      CaptureAll "path"  Text  :> Get '[JPEG] LazyByteString
-    )
 
 -- ----------------------------------------
 --
@@ -175,13 +151,9 @@ type JsonGetAPI
       :<|>
       "isCollection"  :> SimplePost Bool
       :<|>
-      "iconref"       :> ParamPost GeoAR FilePath
-      :<|>
       "blogcontents"  :> ParamPost Int Text
       :<|>
       "blogsource"    :> ParamPost Int Text
-      :<|>
-      "previewref"    :> ParamPost (Int, GeoAR) FilePath
       :<|>
       "metadata"      :> ParamPost Int MetaData
       :<|>
@@ -243,16 +215,6 @@ instance FromHttpApiData Geo' where
     maybe (defaultParseError s) Right $ g
     where
       g = Geo' <$> readGeo' (s ^. isoString)
-
-instance FromHttpApiData GeoAR' where
-  parseUrlPiece s =
-    maybe (defaultParseError s) Right $ g
-    where
-      g = GeoAR' <$> readGeoAR (s ^. isoString)
-
-instance FromHttpApiData BlazeHTML where
-  parseUrlPiece input
-    = BlazeHTML <$> parseUrlPieceWithPrefix "blaze-" input
 
 -- | Default parsing error.
 defaultParseError :: Text -> Either Text a

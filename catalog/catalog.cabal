@@ -44,8 +44,6 @@ library
                      Catalog.Cmd.List
                      Catalog.Cmd.Types
                      Catalog.Html.Basic
-                     Catalog.Html.Blaze2
-                     Catalog.Html.Cache
                      Catalog.Html.Templates.Blaze2
                      Catalog.JsonCommands
                      Catalog.Journal

@@ -3,6 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Catalog.Html.Basic
+  ( isPano
+  , baseNameParser
+  , ymdParser
+  , colImgRef
+  , getColBlogSource
+  , putColBlogSource
+  , getColBlogCont
+  )
 where
 
 import Data.ImgTree
@@ -24,7 +32,6 @@ import Text.SimpleParser
 
 type ColRef' a   = (a, Maybe Int)
 type ColRef      = ColRef' ObjId
-type ColRefPath  = ColRef' Path
 
 -- ----------------------------------------
 
@@ -33,12 +40,6 @@ maybeColRef cref iref (i, p) =
   case p of
     Nothing  -> cref i
     Just pos -> iref i pos
-
-mkColRefC :: ObjId -> ColRef
-mkColRefC i = (i, Nothing)
-
-mkColRefI :: ObjId -> Int -> ColRef
-mkColRefI i pos = (i, Just pos)
 
 colImgOp :: Monoid a =>
             (ObjId -> Name -> Cmd a) ->
@@ -53,24 +54,6 @@ colImgOp iop cop = maybeColRef cop iref
         _ -> return mempty
 
 -- ----------------------------------------
-
-colImgType :: ColRef -> Cmd ImgType
-colImgType = colImgOp iop cop
-  where
-    iop i _n = do
-      ity <$> getImgVals i theParts
-      where
-        ity ps
-          | thePartNames' (`elem` [IMGimg, IMGjpg]) `has` ps = IMGjpg
-          | thePartNames' (== IMGtxt)               `has` ps = IMGtxt
-          | otherwise                                        = IMGother
-    cop _i = return IMGjpg
-
-colImgName :: ColRef -> Cmd (Maybe Name)
-colImgName =
-  colImgOp
-  (\ _i n -> return $ Just n)
-  (\ _i   -> return Nothing)
 
 colImgPath0 :: ColRef -> Cmd (Maybe FilePath)
 colImgPath0 = colImgOp iop cop
@@ -136,10 +119,6 @@ isPanoramaH (Geo w h) =
 isPanoramaV :: Geo -> Bool
 isPanoramaV (Geo w h) =
   h >= 2 * w    -- h / w >= 2.0
-
-isPanorama :: Geo -> Geo -> Maybe GeoAR
-isPanorama geo' geo =
-  flip mkGeoAR Pad <$> isPano geo' geo
 
 isPano :: Geo -> Geo -> Maybe Geo
 isPano (Geo w' h') img@(Geo w h)
@@ -218,14 +197,6 @@ baseNameParser =
   char '/' *> many (try $ anyStringThen' (char '/')) *> some anyChar
 
 -- ----------------------------------------
-
-colBlogCont :: ImgType -> ColRef -> Cmd Text
-colBlogCont IMGtxt cr = do
-  colImgOp iop cop cr
-  where
-    iop i n     = getColBlogCont (ImgRef i n)
-    cop _       = return mempty
-colBlogCont _ _ = return mempty
 
 getColBlogCont   :: ImgRef -> Cmd Text
 getColBlogCont   = processBlog genBlogHtml

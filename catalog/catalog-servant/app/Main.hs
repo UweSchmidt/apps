@@ -22,7 +22,6 @@ import System.Directory       (doesFileExist)
 import System.Exit            (die)
 import System.IO              (hPutStrLn, stderr, hFlush)
 
-import qualified Text.Blaze.Html      as Blaze
 import qualified Data.ByteString.Lazy as LBS
 
 -- catalog modules
@@ -32,10 +31,8 @@ import Data.ImageStore (ImgStore)
 
 import Catalog.Cmd
 import Catalog.FilePath
-import Catalog.Html.Blaze2
 import Catalog.JsonCommands
 import Catalog.Options        (mainWithArgs)
-import Catalog.System.Convert (genImageFrom)
 import Catalog.Workflow
 
 -- servant interface
@@ -130,11 +127,6 @@ catalogServer env runR runM =
       :<|>
       rpc'js
     )
-  )
-  :<|>
-  ( blaze
-    :<|>
-    imgcopy
   )
   :<|>
   ( json'read
@@ -285,73 +277,11 @@ catalogServer env runR runM =
 
     -- --------------------
 
-    blaze :: BlazeHTML -> [Text] -> Handler Blaze.Html
-    blaze (BlazeHTML (Geo' geo)) ts = do
-      case parseImgGeoPath geo fp of
-        Nothing ->
-          throwError $
-          err404 { errBody = ("album page not found: " ++ fp) ^. from isoString }
-        Just (pconf, colref) ->
-          runR $ genBlazeHtmlPage' pconf colref
-
-      where
-        fp = concatMap (('/' :) . (^. isoString)) ts
-
-    imgcopy (GeoAR' geo) =
-      imgcopy'archive geo
-      :<|>
-      imgcopy'others  geo
-      where
-        imgcopy'archive = ttp2 imgcopy'
-        imgcopy'others  = ttp2 imgcopy'
-
-    imgcopy' :: GeoAR -> Path -> Handler LazyByteString
-    imgcopy' geo path = do
-      let fp = path ^. isoString
-      let parsePath =
-            -- generate an icon for a text file
-            -- "/photos/.../index.md.jpg"
-            --
-            -- or for a none jpg image file, e.g.
-            -- "/photos/.../index.png.jpg"
-            ( do (dn, bn, ex2, ex1) <- splitDirFileExt2 fp
-                 _IMGjpg <- extJpg ex1
-                 let fp' = dn </> bn ++ ex2
-                 ( do srcType <- extTxt ex2
-                      return (srcType, fp')
-                   )
-                   <|>
-                   ( do srcType <- extImg ex2
-                        return (srcType, fp')
-                   )
-            )
-            <|>
-            -- generate a jpg copy from a jpg source
-            -- the usual case
-            ( do (_dn, _bn, ex) <- splitDirFileExt fp
-                 jpgType <- extJpg ex
-                 return (jpgType, fp)
-            )
-
-      let (srcType, srcPath) =
-            fromMaybe (IMGother, fp) parsePath
-      ex <- liftIO $
-            doesFileExist $ mountPath ++ srcPath
-
-      if ex && srcType /= IMGother
-        then
-          runR $ genImageFrom srcType geo srcPath fp
-                 >>= toSysPath
-                 >>= readFileLB
-        else
-          throwError $
-          err404 { errBody = ("image not found: " ++ fp) ^. from isoString }
-
     mkR0  = mkcmd0  runR
 --  mkR1  = mkcmd1  runR
     mkR1n = mkcmd1n runR
     mkR2  = mkcmd2  runR
-    mkR2i = mkcmd2i runR
+--  mkR2i = mkcmd2i runR
     mkR2n = mkcmd2n runR
 
     json'read =
@@ -365,13 +295,9 @@ catalogServer env runR runM =
       :<|>
       mkR0  read'isCollection
       :<|>
-      mkR2i read'iconref
-      :<|>
       mkR2n read'blogcontents
       :<|>
       mkR2n read'blogsource
-      :<|>
-      mkR2n (uncurry read'previewref)
       :<|>
       mkR2n read'metadata
       :<|>
@@ -467,9 +393,6 @@ main' env st = do
 -- curl -v http://localhost:8081/bootstrap/dist/css/bootstrap-theme.css
 -- curl -v http://localhost:8081/assets/javascript/html-album.js
 -- curl -v http://localhost:8081/edit.html
--- curl -v http://localhost:8081/blaze-1920x1200/archive/photos.html
--- curl -v http://localhost:8081/pad-1920x1200/archive/photos.jpg
--- curl -v http://localhost:8081/pad-1920x1200/cache/assets/icons/photos.jpg
 
 -- ----------------------------------------
 

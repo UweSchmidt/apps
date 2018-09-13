@@ -14,16 +14,25 @@ module Catalog.Html.Templates.Blaze2
   )
 where
 
-import           Data.MetaData -- (MetaData, metaDataAt, loc2googleMapsUrl)
+import           Data.MetaData ( MetaData, metaDataAt
+                               , loc2googleMapsUrl
+                               , descrComment
+                               , descrSubtitle
+                               , descrTitle
+                               , descrTitleEnglish
+                               , descrTitleLatin
+                               , descrWeb
+                               , descrWikipedia
+                               )
 import           Data.Prim
-import qualified Data.Text as T
-import           Text.Blaze.Html5 hiding (map, head)
-import qualified Text.Blaze.Html5 as H
-import           Text.Blaze.Html5.Attributes hiding (title, rows, accept)
-import qualified Text.Blaze.Html5.Attributes as A
+import qualified Data.Text                       as T
+import           Text.Blaze.Html5                hiding (map, head)
+import qualified Text.Blaze.Html5                as H
+import           Text.Blaze.Html5.Attributes     hiding (title, rows, accept)
+import qualified Text.Blaze.Html5.Attributes     as A
 import qualified Text.Blaze.Html.Renderer.Pretty as R
 import qualified Text.Blaze.Html.Renderer.Text   as T
-import qualified Text.SimpleParser as SP
+import qualified Text.SimpleParser               as SP
 
 renderPage' :: Html -> LazyText
 renderPage' p = T.renderHtml p
@@ -31,90 +40,6 @@ renderPage' p = T.renderHtml p
 -- indent HTML
 renderPage :: Html -> LazyText
 renderPage p = R.renderHtml p ^. isoText . lazy
-
-{- just a test
-
-t1 :: IO ()
-t1 = putStr $ renderHtml $ p1
-
-t2 :: IO ()
-t2 = putStr $ renderHtml $ p2
-
-t3 :: IO ()
-t3 = putStr $ renderHtml $ p3
-
-p1 :: Html
-p1 = picPage'
-  "A Picture"
-  "today"
-  "The Pic Title"
-  "The Pic Subtitle"
-  "A pic comment"
-  (readGeo "1920x1200") Nothing
-  "1.5"
-  "/this/ref"
-  "42"
-  "/next/href"
-  "/prev/href"
-  "/parent/href"
-  "pad-900x600"
-  "/this/img.jpg"
-  "/next/img.jpg"
-  "/prev/img.jpg"
-  mempty
-
-p2 :: Html
-p2 = colPage'
-  "A Collection"
-  "today"
-  "The Title"
-  "The Subtitle"
-  "A comment"
-  (readGeo "1920x1200")
-  "1.0"
-  "/this/ref"
-  "43"
-  "/next/href"
-  "/prev/href"
-  "/parent/href"
-  "/child1/href"
-  "pad-900x600"
-  "fix-160x120"
-  "/this/img.jpg"
-  "/next/img.jpg"
-  "/prev/img.jpg"
-  "/child1/img.jpg"
-  "the <em>blog text</em> is here"
-  "The Parent Title"
-  "/parent/img.jpg"
-  "The next title"
-  "the prev title"
-  "the 1. image title"
-  3
-  (let l = ["abc", "123", "xyz", "789", "emil", "hilde", "otto"]
-       l1 = map ("/href/" <>) l
-       l2 = map ("/imgref/" <>) l
-       l3 = map ("Title of " <>) l
-       l4 = map (("id"<>) . T.pack . show) [1..]
-   in
-     zip4 l1 l2 l3 l4
-  )
-
-p3 :: Html
-p3 = txtPage'
-  "A Text page"
-  "today"
-  "5"
-  "/this/ref"
-  "44"
-  "/next/href"
-  "/prev/href"
-  "/parent/href"
-  "pad-900x600"
-  "/next/img.jpg"
-  "/prev/img.jpg"
-  "The blog entry"
--- -}
 
 -- ----------------------------------------
 

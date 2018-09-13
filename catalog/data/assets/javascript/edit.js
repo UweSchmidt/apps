@@ -4,10 +4,6 @@
 
 var openCollections = {};
 
-// debugging
-
-var newScheme = true;
-
 /*
 // ----------------------------------------
 //
@@ -940,29 +936,12 @@ function newEntry(colId, colPath, entry, i) {
                                      setDiaColAccess(p, ro);
                                  });
 
-        if ( ! newScheme ) {
-            // set the icon url
-            // url is computed on server and added in callback
-            getIconRefFromServer(ref.path,
-                                 iconSize(),
-                                 function (ref) {
-                                     p.find("img.dia-src")
-                                         .attr('src', ref);
-                                 });
-        }
     }
-    if ( newScheme ) {
-        // url for entry icon with new url scheme
-        var newIconRef = iconRef(iconSize(), colPath, entry, i);
-        p.find("img.dia-src")
-            .attr('src', newIconRef);
-    }
-    else {
-        if ( entry.ColEntry === "IMG" ) {
-            // set the icon url
-            p.find("img.dia-src")
-                .attr('src', sc);
-        }
+
+    // url for entry icon with new url scheme
+    var newIconRef = iconRef(iconSize(), colPath, entry, i);
+    p.find("img.dia-src")
+        .attr('src', newIconRef);
     }
 
     removeMarkCount(p);
@@ -2115,37 +2094,13 @@ function buildImgCarousel(args, colVal) {
 
 
         // insert the icon ref into cimg
-        if ( newScheme ) {
-            var iref = iconRef(previewGeo().img, args.path, e, i);
 
-            console.log("new iconref: " + iref);
-            cimg.find("div.img-box img")
-                .attr('src', iref)
-                .attr('alt', eref.name);
-        }
-        else {
-            if ( iscol ) {
-                // for a collection this is done asynchronously by the callback fct
-                getIconRefFromServer(eref.path,
-                                     previewGeo().img,
-                                     function (ref) {
-                                         console.log("iconref: " + ref);
-                                         cimg.find("div.img-box img")
-                                             .attr('src', ref)
-                                             .attr('alt', eref.name);
-                                     });
-            } else {
-                var iref = "/" + g.img + eref.cpath1 + "/" + e.part;
-                var notJpg = splitPath(e.part).ext !== "jpg";
-                if ( notJpg ) {
-                    iref = iref + ".jpg";
-                }
-                console.log("iconref: " + iref);
-                cimg.find("div.img-box img")
-                    .attr('src', iref)
-                    .attr('alt', eref.name);
-            }
-        }
+        var iref = iconRef(previewGeo().img, args.path, e, i);
+
+        console.log("new iconref: " + iref);
+        cimg.find("div.img-box img")
+            .attr('src', iref)
+            .attr('alt', eref.name);
         c.find('div.carousel-inner').append(cimg);
 
     }); // end forEach loop
@@ -2268,7 +2223,6 @@ function insertPreviewRef(ref, args) {
 }
 
 function insertBlogText(txt, args) {
-    // come from: previewImage and getPreviewRef
     console.log('insertBlogText');
     console.log(txt);
     console.log(args);
@@ -2445,10 +2399,6 @@ function getIsColFromServer(path, cleanupCol) {
     readServer('isCollection', path, cleanupCol);
 }
 
-function getIconRefFromServer(path, fmt, insertSrcRef) {
-    readServer1('iconref', path, fmt, insertSrcRef);
-}
-
 function createColOnServer(path, name, showCol) {
     modifyServer("newcol", path, name,
                  function () {
@@ -2492,22 +2442,11 @@ function getRatingsFromServer(path, setRating) {
 }
 
 function getPreviewRef(args) {
-    if ( newScheme ) {
-        var entry =
-                { ColEntry : args.iscol ? "COL" : "IMG",
+    var entry = { ColEntry : args.iscol ? "COL" : "IMG",
                   ref : args.path + "/" + args.name
                 };
-        var res =
-                iconRef(args.fmt, args.path, entry, args.pos);
-        insertPreviewRef(res, args);
-    }
-    else {
-        readServer1('previewref',
-                    args.path,
-                    [args.pos, args.fmt],
-                    function (res) { insertPreviewRef(res, args); }
-                   );
-    }
+    var res = iconRef(args.fmt, args.path, entry, args.pos);
+    insertPreviewRef(res, args);
 }
 
 function getBlogText(args) {
