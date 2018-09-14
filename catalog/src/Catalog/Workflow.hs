@@ -11,19 +11,27 @@ where
 import Data.Prim
 import Data.ImgNode
 import Data.ImgTree
-import Data.MetaData
+import Data.MetaData                  ( MetaData, metaDataAt
+                                      , descrComment
+                                      , descrDuration
+                                      , descrSubtitle
+                                      , descrTitle
+                                      , getRating
+                                      )
 
 import Catalog.Cmd
-import Catalog.FilePath        (fileName2ImgType, isoPicNo)
-import Catalog.Html.Basic      (baseNameParser, ymdParser, isPano)
-import Catalog.Html.Templates.Blaze2
-import Catalog.System.ExifTool (getMetaData)
-import Catalog.System.Convert  ( createResizedImage
-                               , genIcon
-                               , genBlogHtml
-                               , getImageSize
-                               )
-import Text.SimpleParser       (parseMaybe)
+import Catalog.FilePath               ( fileName2ImgType, isoPicNo )
+import Catalog.Html.Basic             ( baseNameParser, ymdParser, isPano )
+import Catalog.Html.Templates.Blaze2  ( renderPage
+                                      , colPage', txtPage', picPage'
+                                      )
+import Catalog.System.ExifTool        ( getMetaData )
+import Catalog.System.Convert         ( createResizedImage
+                                      , genIcon
+                                      , genBlogHtml
+                                      , getImageSize
+                                      )
+import Text.SimpleParser              ( parseMaybe )
 
 import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
@@ -385,8 +393,11 @@ toCachedImgPath r =
       ps'docroot </>
       r ^. rType . isoString </>
       r ^. rGeo  . isoString ++
-      fp ++ ".jpg"
-
+      fp ++ jpg
+      where
+        jpg
+          | ".jpg" `isSuffixOf` fp = ""
+          | otherwise              = ".jpg"
 
 -- the url for a media file, *.jpg or *.mp4 or ...
 -- is determined by the request type
@@ -815,12 +826,17 @@ genReqImgPage' r = do
                            & metaDataAt "Img:Rating"  .~ rating
       org'imgpath       <- toSourcePath r
       org'geo           <- getImageSize org'imgpath
-      let org'mediaUrl   = toUrlPath (r & rType .~ RImg
-                                        & rGeo  .~ geo'org
-                                     ) ^. isoText
+      let org'mediaUrl   = toUrlPath
+                           (r & rType .~ RImg
+                              & rGeo  .~ geo'org
+                           ) ^. isoText
       let pano'mediaUrl  = maybe
                            mempty
-                           (\ geo -> toUrlPath (r & rGeo .~ geo) ^. isoText)
+                           (\ geo -> toUrlPath
+                                     (r & rType .~ RImg
+                                        & rGeo  .~ geo
+                                     ) ^. isoText
+                           )
                            (isPano this'geo org'geo)
 
       return $

@@ -526,9 +526,14 @@ function nextPage() {
 }
 
 function fwrdPage() {
-    nextp   = fwrdp;
-    nextimg = fwrdimg;
-    nextPage();
+    if ( fwrdp != '' ) {
+        nextp   = fwrdp;
+        nextimg = fwrdimg;
+        nextPage();
+    }
+    else {
+        stopSlideShow();
+    }
 }
 
 function prevPage() {

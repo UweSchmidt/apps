@@ -22,13 +22,11 @@ module Catalog.JsonCommands
   , read'blogcontents
   , read'blogsource
   , read'collection
-  , read'iconref
   , read'isCollection
   , read'isRemovable
   , read'isSortable
   , read'isWriteable
   , read'metadata
-  , read'previewref
   , read'rating
   , read'ratings
   , read'zipcollection
@@ -41,8 +39,7 @@ import Data.ImgTree
 import Data.MetaData
 
 import Catalog.Cmd
-import Catalog.Html.Basic ( colImgRef
-                          , getColBlogSource
+import Catalog.Html.Basic ( getColBlogSource
                           , putColBlogSource
                           , getColBlogCont
                           )
@@ -420,15 +417,6 @@ read'isCollection p = do
 
 -- --------------------
 --
--- read the src path for a collection icon
--- result is an url pointing to the icon src
-
-read'iconref :: GeoAR -> ObjId -> Cmd FilePath
-read'iconref geo i =
-  (("/" ++ geo ^. isoString) ++) <$> colImgRef i
-
--- --------------------
---
 -- get the contents of a blog entry, already converted to HTML
 
 read'blogcontents :: Int -> ImgNode -> Cmd Text
@@ -459,7 +447,7 @@ read'blogsource =
               (n ^? theColBlog . traverse)
         getColBlogSource br
     )
-
+{-
 -- --------------------
 --
 -- compute the image ref of a collection entry
@@ -472,7 +460,7 @@ read'previewref pos geo n =
     buildImgPath
     colImgRef
     pos n
-
+--}
 -- --------------------
 --
 -- get the meta data of a collection entry
