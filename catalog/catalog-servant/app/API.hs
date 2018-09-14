@@ -15,7 +15,6 @@ import Prelude.Compat
 import Network.HTTP.Media ((//), (/:))
 import Servant
 
-import System.FilePath (FilePath)
 import Data.Prim
 import Data.ImgTree (ImgNodeP)
 import Data.MetaData
@@ -160,8 +159,6 @@ type JsonGetAPI
       "rating"        :> ParamPost Int Rating
       :<|>
       "ratings"       :> SimplePost [Rating]
-      :<|>
-      "zipcollection" :> ParamPost GeoAR FilePath
     )
 
 -- the modifying ops

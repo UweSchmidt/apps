@@ -3,12 +3,7 @@
 module Catalog.System.Convert
 -- {-
   ( getImageSize
-  -- , getColImgSize
-  -- , createImageCopy
   , createResizedImage
-  -- , genImageFrom
-  , genImage
-  -- , createImageFromTxt
   , genIcon
   , genAssetIcon
   , genBlogText
@@ -21,13 +16,9 @@ module Catalog.System.Convert
 where
 
 import           Catalog.Cmd
-import           Catalog.FilePath
 import           Catalog.System.ExifTool (getExifTool)
 import           Data.Prim
-import           Data.ImgNode
-import           Data.MetaData
-import qualified Data.Text as T
-import           Text.SimpleParser
+import           Data.MetaData           (getOrientation)
 
 -- import Debug.Trace
 
@@ -99,81 +90,6 @@ genIcon path t = do
 
 -- ----------------------------------------
 
-genImage :: GeoAR -> ImgRef -> Cmd FilePath
-genImage geo (ImgRef oid nm) = do
-  n       <- getImgVal oid
-  let ityp = fromMaybe IMGother $
-             n ^? theParts . isoImgPartsMap . ix nm . theImgType
-  srcPath <- buildImgPath (ImgRef oid nm)
-  genImageFrom ityp geo srcPath (addJpg srcPath)
-
-
-genImageFrom :: ImgType -> GeoAR -> String -> String -> Cmd FilePath
-
-genImageFrom IMGjpg geo src path =
-  fillCache geo src path createImageCopy
-
-genImageFrom IMGimg geo src path =
-  fillCache geo src path createImageCopy
-
-genImageFrom IMGtxt geo src path =
-  fillCache geo src path createImageFromTxt
-
-genImageFrom srcType _g  _s path =
-  abort $
-  unwords [ "genImageFrom: unsupported media type"
-          ,  show srcType
-          , "for"
-          , show path
-          ]
-
--- ----------------------------------------
-
-fillCache :: GeoAR -> FilePath -> FilePath
-      -> (GeoAR -> FilePath -> FilePath -> Cmd FilePath)
-      -> Cmd FilePath
-fillCache geo sfp path genImg = do
-  let dfp = ps'cache </> (geo ^. isoString) ++ path
-  trc $ "fillCache: " ++ show (geo, sfp, path)
-  sp <- toSysPath sfp
-  dp <- toSysPath dfp
-  sx <- fileExist sp
-  if sx
-    then do
-    sw <- getModiTime sp
-    dx <- fileExist dp
-    dw <- if dx
-          then getModiTime dp
-          else return mempty
-    if dw <= sw
-      then
-      ( do
-          createDir (takeDirectory <$> dp)
-          trc $ "fillCache: cache miss: " ++ show (geo, dfp, sfp)
-          genImg geo dfp sfp
-      )
-      `catchError`      -- if the org image is broken
-      ( const $ do      -- a "broken image" icon is generated
-          warn $ "image couldn't be converted or resized: " ++ show path
-          broken <-
-            fromMaybe ps'blank <$>
-            genAssetIcon "brokenImage" "broken\nimage"
-          warn $ "generate a substitute: " ++ show broken
-          fillCache geo broken broken createImageCopy
-      )
-      else
-      return dfp
-    else
-    notThere path
-
-notThere :: FilePath -> Cmd FilePath
-notThere url =
-  runDry msg (abort msg) >> return url
-  where
-    msg = "image not found: " ++ url
-
--- ----------------------------------------
-
 getImageSize    :: FilePath -> Cmd Geo
 getImageSize fp =
   (fromMaybe geo'org . readGeo'') <$>
@@ -193,34 +109,6 @@ scaleWidth :: Int -> Geo -> Geo
 scaleWidth h' (Geo w h) = Geo w' h'
   where
     w' = (w * h' + (h - 1)) `div` h
-
--- ----------------------------------------
-
--- try to create an icon from some text found in the file path
--- if s is a .md or .txt file, take the 1. line of that file contents
-
-createImageFromTxt :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageFromTxt d'geo d s =
-  go
-  where
-    go = do
-      headline <-
-        T.concat . take 1 . filter (not . T.null) . map cleanup . T.lines <$>
-        (toSysPath s >>= readFileT')
-      let str1 = headline ^. isoString
-      let str2 = sedP (const "") (many (noneOf' "/") >> char '/') s
-      let str  = concat . take 1 . filter (not . null) $ [str1, str2]
-      trc $ unwords ["createImageFromTxt:", show d'geo, d, s, str]
-      icon <-
-        fromMaybe ps'blank <$>
-        genAssetIcon (mapBad $ dropWhile (== '.') s) str
-      genImageFrom IMGjpg d'geo icon icon
-
-    mapBad :: String -> String
-    mapBad = sedP (const "_") (oneOf' " /$")
-
-    cleanup :: Text -> Text
-    cleanup = T.dropWhile (not . isAlphaNum)
 
 -- ----------------------------------------
 
@@ -245,33 +133,6 @@ createResizedImage d'geo src dst = do
       where
         shellCmd =
           buildCmd rot d'geo s'geo dp sp
-
--- rot == 0:  no rotate
--- rot == 1:  90 degrees clockwise
--- rot == 2: 180 degrees clockwise
--- rot == 3: 270 degrees clockwise
-
-createImageCopy :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageCopy d'geo d s = do
-  sp  <- toSysPath s
-  ori <- getOrientation <$> getExifTool sp
-  createImageCopy' ori d'geo d s
-
-createImageCopy' :: Int -> GeoAR -> FilePath -> FilePath -> Cmd FilePath
-createImageCopy' rot d'geo d s = do
-  trc $ "createImageCopy': " ++ show (rot, d'geo, d, s)
-  s'geo <- getImageSize s
-  cmd   <- buildCmd rot d'geo s'geo <$> toSysPath d <*> toSysPath s
-  go cmd
-  where
-    go shellCmd
-      | "#" `isPrefixOf` shellCmd = do
-          trc $ "createImageCopy: " ++ shellCmd
-          return s
-      | otherwise = do
-          runDry ("create image copy: " ++ show shellCmd) $
-            execProcess "bash" [] shellCmd  >> return ()
-          return d
 
 buildCmd :: Int -> GeoAR -> Geo -> SysPath -> SysPath -> String
 buildCmd rot d'g s'geo d s =

@@ -29,7 +29,6 @@ module Catalog.JsonCommands
   , read'metadata
   , read'rating
   , read'ratings
-  , read'zipcollection
   )
 where
 
@@ -50,7 +49,6 @@ import Catalog.System.ExifTool
                           ( getMetaData
                           , forceSyncAllMetaData
                           )
-import Catalog.Zip        ( zipCollection1 )
 
 -- ----------------------------------------
 --
@@ -493,11 +491,5 @@ read'ratings n =
     f = colEntry' (getR . _iref) getR
       where
         getR i' = getRating <$> getImgVals i' theMetaData
-
--- zip all .jpg images of a collection into a zip archive
--- and return the archive path
-
-read'zipcollection :: GeoAR -> ObjId -> ImgNode -> Cmd FilePath
-read'zipcollection = zipCollection1
 
 -- ----------------------------------------

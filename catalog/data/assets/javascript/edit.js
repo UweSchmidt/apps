@@ -1038,20 +1038,6 @@ function exifCollectionWithFilesystem(path) {
                 });
 }
 
-function zipActiveCollection(geo) {
-    var cid  = activeCollectionId();
-    var path = collectionPath(cid);
-    console.log("zipActiveCollection: " + path);
-    readServer1('zipcollection', path, geo,
-                function(url) {
-                    statusMsg('zip archive created, starting download');
-                    console.log(url);
-                    // start download by writing url into an iframe
-                    $('#download').attr('src', url);
-                }
-               );
-}
-
 function checkArchiveConsistency() {
     console.log("checkArchiveConsistency");
     statusMsg('checking/repairing archive consistency');
@@ -2799,20 +2785,6 @@ $(document).ready(function () {
             statusClear();
             // statusMsg('refreshing all open collections');
             checkAllColAreThere(true, true);
-        });
-
-    $('#ExportCollection')
-        .on('click', function () {
-            statusClear();
-            statusMsg('preparing zip archive for export of current collection');
-            zipActiveCollection("pad-1x1");
-        });
-
-    $('#ExportCollectionWeb')
-        .on('click', function () {
-            statusClear();
-            statusMsg('preparing zip archive for export of current collection');
-            zipActiveCollection("pad-1024x768");
         });
 
     $('#ConsistencyCheck')
