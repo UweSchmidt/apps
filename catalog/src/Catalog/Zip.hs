@@ -67,6 +67,12 @@ zipCollection1 geo i e
       abort $  "zipCollection: not a collection"
 
 
+-- TODO simplify
+-- check for images to be generated in the required size
+-- by calling genReqImg from Workflow and zip the appropriate directory
+--
+-- then genimage can be removed, which simplifes convert considerably
+
 zipEntries :: GeoAR -> FilePath -> ImgNode -> Cmd ()
 zipEntries geoar px e =
   mapM_ (uncurry zipE) $ zip cs [0..]

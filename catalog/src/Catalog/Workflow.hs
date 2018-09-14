@@ -546,6 +546,8 @@ createIconFromObj r dp = do
 createCopyFromImg :: GeoAR -> FilePath -> FilePath -> FilePath -> Cmd ()
 createCopyFromImg geo sp0 ip dp0 =
   withCache resizeAndLink sp0 dp0
+  `catchError`
+  (\ _e -> createIconFromString geo "broken\nimage" dp0)
   where
     resizeAndLink sp dp = do
       withCache (createResizedImage geo) sp ip

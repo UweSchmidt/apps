@@ -3,12 +3,12 @@
 module Catalog.System.Convert
 -- {-
   ( getImageSize
-  , getColImgSize
-  , createImageCopy
+  -- , getColImgSize
+  -- , createImageCopy
   , createResizedImage
-  , genImageFrom
+  -- , genImageFrom
   , genImage
-  , createImageFromTxt
+  -- , createImageFromTxt
   , genIcon
   , genAssetIcon
   , genBlogText
@@ -188,15 +188,6 @@ getImageSize fp =
                    show sp
             return ""
         )
-
--- get the geo from an absolut path in catalog
---
--- imgRef:   /archive/photos/pic-30.jpg
--- fs path:  "mountPath/photos/pic-30.jpg"
-
-getColImgSize :: FilePath -> Cmd Geo
-getColImgSize imgRef = do
-   getImageSize $ drop (length ps'archive) imgRef
 
 scaleWidth :: Int -> Geo -> Geo
 scaleWidth h' (Geo w h) = Geo w' h'
