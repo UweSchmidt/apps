@@ -942,7 +942,6 @@ function newEntry(colId, colPath, entry, i) {
     var newIconRef = iconRef(iconSize(), colPath, entry, i);
     p.find("img.dia-src")
         .attr('src', newIconRef);
-    }
 
     removeMarkCount(p);
 
