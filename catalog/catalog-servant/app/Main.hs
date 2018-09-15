@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -134,8 +135,6 @@ catalogServer env runR runM =
     json'modify
   )
   :<|>
-  ziparchive
-  :<|>
   ( get'icon
     :<|>
     get'iconp
@@ -153,7 +152,6 @@ catalogServer env runR runM =
     assets'css        = static ps'css
     assets'icons      = static ps'icons
     assets'javascript = static ps'javascript
-    ziparchive        = static "/cache/zip-cache"
 
     -- root html files are located under /assets/html
 
@@ -221,23 +219,39 @@ catalogServer env runR runM =
             cx = fn' ^. from isoPicNo
 
     -- --------------------
+
+    cachedResponse :: Int -> LazyByteString -> CachedByteString
+    cachedResponse sec bs =
+      addHeader (cval ^. isoText) bs
+      where
+        cval = "public, max-age=" ++ show (sec `max` 0)
+
+    aDay :: Int
+    aDay = 24 * 60 * 60
+
+    -- --------------------
     -- handle icon request
 
-    get'icon :: Geo' -> [Text] -> Handler LazyByteString
-    get'icon = get'img' RIcon
+    get'icon  :: Geo' -> [Text]  -> Handler CachedByteString
+    get'icon  = get'img' RIcon
 
-    get'iconp :: Geo' -> [Text] -> Handler LazyByteString
+    get'iconp :: Geo' -> [Text] -> Handler CachedByteString
     get'iconp = get'img' RIconp
 
-    get'img  :: Geo' -> [Text] -> Handler LazyByteString
+    get'img  :: Geo' -> [Text]  -> Handler CachedByteString
     get'img  = get'img' RImg
 
-    get'img' :: ReqType -> Geo' -> [Text] -> Handler LazyByteString
+    get'img' :: ReqType
+             -> Geo' -> [Text]  -> Handler CachedByteString
     get'img' rt (Geo' geo) ts@(_ : _)
+
+      -- check for collection path with .jpg extension
       | Just ppos <- path2colPath ".jpg" ts =
-          runR $ processReqImg (mkReq rt geo ppos)
-                 >>= toSysPath
-                 >>= readFileLB
+          do
+            res <- runR $ processReqImg (mkReq rt geo ppos)
+                          >>= toSysPath
+                          >>= readFileLB
+            return $ cachedResponse aDay res
 
     get'img' rt (Geo' geo) ts =
       notThere rt geo ts

@@ -34,8 +34,6 @@ type CatalogAPI
     :<|>
     JsonAPI
     :<|>
-    ZipAPI
-    :<|>
     NewDocAPI
 
 -- ----------------------------------------
@@ -66,9 +64,6 @@ type RootAPI
     :<|>
     "rpc.js" :> Get '[JSStatic] LazyByteString
 
-type ZipAPI
-  = "cache" :> "zip-cache" :> Raw
-
 -- ----------------------------------------
 --
 -- new URL API
@@ -83,6 +78,12 @@ type NewDocAPI
       :<|>
       PageAPI
     )
+
+-- a lazy bytestring as response  with a cache control header
+
+type CachedByteString
+  = Headers '[Header "Cache-Control" Text] LazyByteString
+
 --
 -- icons: /icon/<w>x<h>/collections/<path>.jpg           -- collection icon
 --        /icon/<w>x<h>/collections/<path>/pic-<ix>.jpg  -- col entry  icon
@@ -92,15 +93,15 @@ type NewDocAPI
 
 type IconAPI
   = "icon" :> Capture "geo" Geo':> CaptureAll "path" Text :>
-    Get '[JPEG] LazyByteString
+    Get '[JPEG] CachedByteString
 
 type IconpAPI
   = "iconp" :> Capture "geo" Geo':> CaptureAll "path" Text :>
-    Get '[JPEG] LazyByteString
+    Get '[JPEG] CachedByteString
 
 type ImgAPI
   = "img" :> Capture "geo" Geo':> CaptureAll "path" Text :>
-    Get '[JPEG] LazyByteString
+    Get '[JPEG] CachedByteString
 
 type PageAPI
   = "page" :> Capture "geo" Geo':> CaptureAll "path" Text :>

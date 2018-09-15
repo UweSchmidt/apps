@@ -298,7 +298,7 @@ function slowDownSlideShow() {
 
 function speedUpSlideShow() {
   speed = Math.round(speed / 1.2);
-  if ( speed < 100 ) { speed = 100; }
+  if ( speed < 50 ) { speed = 50; }
 }
 
 function initSlideShow () {
