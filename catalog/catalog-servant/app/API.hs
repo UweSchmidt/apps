@@ -93,14 +93,17 @@ type CachedByteString
 
 type IconAPI
   = "icon" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Header "Referer" Text :>
     Get '[JPEG] CachedByteString
 
 type IconpAPI
   = "iconp" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Header "Referer" Text :>
     Get '[JPEG] CachedByteString
 
 type ImgAPI
   = "img" :> Capture "geo" Geo':> CaptureAll "path" Text :>
+    Header "Referer" Text :>
     Get '[JPEG] CachedByteString
 
 type PageAPI

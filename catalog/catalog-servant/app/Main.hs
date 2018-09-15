@@ -220,30 +220,38 @@ catalogServer env runR runM =
 
     -- --------------------
 
-    cachedResponse :: Int -> LazyByteString -> CachedByteString
-    cachedResponse sec bs =
+    cachedResponse :: Maybe Text -> LazyByteString -> CachedByteString
+    cachedResponse mbref bs =
       addHeader (cval ^. isoText) bs
       where
-        cval = "public, max-age=" ++ show (sec `max` 0)
+        cval = "public, max-age=" ++ sec
 
-    aDay :: Int
-    aDay = 24 * 60 * 60
+        sec
+          | isEditRef = "no-store"
+          | otherwise = show aDay
+
+        ref = fromMaybe mempty mbref ^. isoString
+
+        isEditRef = "/edit.html" `isSuffixOf` ref
+
+        aDay :: Int
+        aDay = 24 * 60 * 60
 
     -- --------------------
     -- handle icon request
 
-    get'icon  :: Geo' -> [Text]  -> Handler CachedByteString
+    get'icon  :: Geo' -> [Text] -> Maybe Text -> Handler CachedByteString
     get'icon  = get'img' RIcon
 
-    get'iconp :: Geo' -> [Text] -> Handler CachedByteString
+    get'iconp :: Geo' -> [Text] -> Maybe Text -> Handler CachedByteString
     get'iconp = get'img' RIconp
 
-    get'img  :: Geo' -> [Text]  -> Handler CachedByteString
+    get'img  :: Geo' -> [Text] -> Maybe Text  -> Handler CachedByteString
     get'img  = get'img' RImg
 
     get'img' :: ReqType
-             -> Geo' -> [Text]  -> Handler CachedByteString
-    get'img' rt (Geo' geo) ts@(_ : _)
+             -> Geo' -> [Text] -> Maybe Text  -> Handler CachedByteString
+    get'img' rt (Geo' geo) ts@(_ : _) referer
 
       -- check for collection path with .jpg extension
       | Just ppos <- path2colPath ".jpg" ts =
@@ -251,9 +259,9 @@ catalogServer env runR runM =
             res <- runR $ processReqImg (mkReq rt geo ppos)
                           >>= toSysPath
                           >>= readFileLB
-            return $ cachedResponse aDay res
+            return $ cachedResponse referer res
 
-    get'img' rt (Geo' geo) ts =
+    get'img' rt (Geo' geo) ts _ref =
       notThere rt geo ts
 
     -- --------------------
