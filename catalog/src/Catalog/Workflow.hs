@@ -22,9 +22,7 @@ import Data.MetaData                  ( MetaData, metaDataAt
 import Catalog.Cmd
 import Catalog.FilePath               ( fileName2ImgType, isoPicNo )
 import Catalog.Html.Basic             ( baseNameParser, ymdParser, isPano )
-import Catalog.Html.Templates.Blaze2  ( renderPage
-                                      , colPage', txtPage', picPage'
-                                      )
+import Catalog.Html.Templates.Blaze2  ( colPage', txtPage', picPage' )
 import Catalog.System.ExifTool        ( getMetaData )
 import Catalog.System.Convert         ( createResizedImage
                                       , genIcon
@@ -35,6 +33,7 @@ import Text.SimpleParser              ( parseMaybe )
 
 import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
+import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 
 -- ----------------------------------------
 
@@ -215,9 +214,9 @@ setColBlogRef = setColRef' theColBlog
 setColRef' :: Traversal' ImgNode (Maybe ImgRef)
             -> Req'IdNode a
             -> CmdMB (Req'IdNode'ImgRef a)
-setColRef' theC r =
-  do ir <- pureMB $ r ^? rColNode . theC . traverse
-     return (r & rVal . _2 %~ (ir, ))
+setColRef' theC r = do
+  ir <- pureMB $ r ^? rColNode . theC . traverse
+  return (r & rVal . _2 %~ (ir, ))
 
 -- --------------------
 -- compute the .jpg url (if there) of a request
@@ -256,16 +255,14 @@ processReqImg' r0 = do
     -- create an icon from a media file
     Just _pos -> do
       r2 <- setImgRef  r1
-      lift $ genReqImg r2 dp
-      return dp
+      lift $ genReqImg r2
 
     -- create an icon for a collection
     Nothing ->
       ( do r2 <- setColImgRef  r1
                  <|>
                  setColBlogRef r1
-           lift $ genReqImg r2 dp
-           return dp
+           lift $ genReqImg r2
       )
       <|>
       ( do lift $ createIconFromObj r1 dp
@@ -276,7 +273,7 @@ processReqImg' r0 = do
 --
 -- handle a html page request
 
-processReqPage' :: Req' a -> CmdMB FilePath
+processReqPage' :: Req' a -> CmdMB LazyByteString
 processReqPage' r0 = do
   r1 <- normAndSetIdNode r0
   let dp = toUrlPath r1
@@ -286,13 +283,11 @@ processReqPage' r0 = do
     -- create an image page
     Just _pos -> do
       r2 <- setImgRef      r1
-      lift $ genReqImgPage r2 dp
-      return dp
+      lift $ genReqImgPage r2
 
     -- create a collection page
     Nothing -> do
-      lift $ genReqColPage r1 dp
-      return dp
+      lift $ genReqColPage r1
 
 -- ----------------------------------------
 --
@@ -301,7 +296,7 @@ processReqPage' r0 = do
 processReqImg ::  Req' a -> Cmd FilePath
 processReqImg = processReq processReqImg'
 
-processReqPage :: Req' a -> Cmd FilePath
+processReqPage :: Req' a -> Cmd LazyByteString
 processReqPage = processReq processReqPage'
 
 processReq :: (Req' a -> CmdMB b) -> Req' a -> Cmd b
@@ -393,7 +388,7 @@ toCachedImgPath r =
       ps'docroot </>
       r ^. rType . isoString </>
       r ^. rGeo  . isoString ++
-      fp ++ jpg
+      ps'archive ++ fp ++ jpg
       where
         jpg
           | ".jpg" `isSuffixOf` fp = ""
@@ -435,18 +430,18 @@ checkMedia checkExt r =
 
 -- dispatch icon generation over media type (jpg, txt, md, video)
 
-genReqImg :: Req'IdNode'ImgRef a -> FilePath -> Cmd ()
-genReqImg r dp = do
+genReqImg :: Req'IdNode'ImgRef a -> Cmd FilePath
+genReqImg r = do
   sp <- toSourcePath r
-  trc $ "genReqIcon sp=" ++ show sp ++ ", dp=" ++ show dp
+  trc $ "genReqIcon sp=" ++ show sp
 
   ip <- toCachedImgPath r
   case ity of
     IMGjpg ->
-      createCopyFromImg geo sp ip dp
+      createCopyFromImg geo sp ip
 
     IMGimg ->
-      createCopyFromImg geo sp ip dp
+      createCopyFromImg geo sp ip
 
     IMGvideo ->
       abortR "genReqIcon: icon for video not yet implemented" r
@@ -458,8 +453,8 @@ genReqImg r dp = do
 
       str <- getTxtFromFile sp
       if isempty str
-        then createIconFromObj    r       dp
-        else createIconFromString geo str dp
+        then createIconFromObj    r       ip
+        else createIconFromString geo str ip
 
     _ ->
       abortR "genReqIcon: no icon for image type" r
@@ -494,7 +489,7 @@ getTxtFromFile sp = do
 
 -- create an icon from the title of the path of a collection
 
-createIconFromObj :: Req'IdNode a -> FilePath -> Cmd ()
+createIconFromObj :: Req'IdNode a -> FilePath -> Cmd FilePath
 createIconFromObj r dp = do
   trc $ "createIconFromObj: " ++ dp
 
@@ -538,32 +533,26 @@ createIconFromObj r dp = do
 -- create an image copy with a given geometry
 -- from a source image sp0
 --
--- the copy is stored under the path of the image, not the col entry
+-- the copy is stored unde the path of the image, not the col entry
 -- and then a link to this file is created with the col entry path
 -- with this 2 step process all copies in all collection of the same
 -- image share the same physical image file
 
-createCopyFromImg :: GeoAR -> FilePath -> FilePath -> FilePath -> Cmd ()
-createCopyFromImg geo sp0 ip dp0 =
-  withCache resizeAndLink sp0 dp0
+createCopyFromImg :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
+createCopyFromImg geo sp ip =
+  ( do withCache (createResizedImage geo) sp ip
+       return ip
+  )
   `catchError`
-  (\ _e -> createIconFromString geo "broken\nimage" dp0)
-  where
-    resizeAndLink sp dp = do
-      withCache (createResizedImage geo) sp ip
-      withCache linkCopy                 ip dp
-        where
-          linkCopy s d = do
-            s' <- toSysPath s
-            d' <- toSysPath d
-            linkFile s' d'
+  (\ _e -> createIconFromString geo "broken\nimage" ip)
 
 -- --------------------
 
-createIconFromString :: GeoAR -> String -> FilePath -> Cmd ()
+createIconFromString :: GeoAR -> String -> FilePath -> Cmd FilePath
 createIconFromString geo str dp = do
   sp <- createRawIconFromString str
   withCache (createResizedImage geo) sp dp
+  return dp
 
 createRawIconFromString :: String -> Cmd FilePath
 createRawIconFromString str = do
@@ -774,10 +763,9 @@ thePos r =
 --
 -- html page generation
 
-genReqImgPage :: Req'IdNode'ImgRef a -> FilePath -> Cmd ()
-genReqImgPage r dp = do
-  trc $ "genReqImgPage: " ++ show dp
-  genReqImgPage' r >>= writeHtmlPage dp
+genReqImgPage :: Req'IdNode'ImgRef a -> Cmd LazyByteString
+genReqImgPage r =
+  renderHtml <$> genReqImgPage' r
 
 genReqImgPage' :: Req'IdNode'ImgRef a -> Cmd Blaze.Html
 genReqImgPage' r = do
@@ -919,10 +907,9 @@ emptyIconDescr = (mempty, mempty, mempty)
 
 -- --------------------
 
-genReqColPage :: Req'IdNode a -> FilePath -> Cmd ()
-genReqColPage r dp = do
-  trc $ "genReqColPage: " ++ show dp
-  genReqColPage' r >>= writeHtmlPage dp
+genReqColPage :: Req'IdNode a -> Cmd LazyByteString
+genReqColPage r =
+  renderHtml <$> genReqColPage' r
 
 genReqColPage' :: Req'IdNode a -> Cmd Blaze.Html
 genReqColPage' r = do
@@ -1021,12 +1008,5 @@ genReqColPage' r = do
 
 whatTimeIsIt :: Cmd Text
 whatTimeIsIt = ((^. isoText) . show) <$> atThisMoment
-
-writeHtmlPage :: FilePath -> Blaze.Html -> Cmd ()
-writeHtmlPage dp page = do
-  -- trc $ "writeHtmlPage: " ++ (renderPage page) ^. isoString
-  dp'  <- toSysPath dp
-  createDir (takeDirectory <$> dp')
-  writeFileLT dp' (renderPage page)
 
 -- ----------------------------------------

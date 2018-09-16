@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -224,11 +223,9 @@ catalogServer env runR runM =
     cachedResponse mbref bs =
       addHeader (cval ^. isoText) bs
       where
-        cval = "public, max-age=" ++ sec
-
-        sec
+        cval
           | isEditRef = "no-store"
-          | otherwise = show aDay
+          | otherwise = "public, max-age=" ++ show aDay
 
         ref = fromMaybe mempty mbref ^. isoString
 
@@ -272,8 +269,6 @@ catalogServer env runR runM =
       | Just ppos <- path2colPath ".html" ts
       , exPageConf geo =
           runR $ processReqPage (mkReq RPage geo ppos)
-                 >>= toSysPath
-                 >>= readFileLB
 
     get'html (Geo' geo) ts =
       notThere RPage geo ts
