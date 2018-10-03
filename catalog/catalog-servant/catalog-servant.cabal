@@ -39,6 +39,8 @@ executable catalog-servant
 
   default-language:    Haskell2010
 
+  GHC-Options: -Wall -fwarn-tabs -funbox-strict-fields -threaded
+
 source-repository head
   type:     git
   location: https://github.com/UweSchmidt/apps/catalog
