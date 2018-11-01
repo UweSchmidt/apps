@@ -220,14 +220,14 @@ getCreateMeta parse' md =
   parse' cd
   where
     cd = lookupByNames
-      [ "Composite:SubSecCreateDate"
-      , "EXIF:CreateDate"
+      [ compositeSubSecCreateDate
+      , exifCreateDate
       ] md
       ^. isoString
 
 getFileName :: MetaData -> Maybe Text
 getFileName md =
-  md ^. metaDataAt "File:Filename" . isoMaybe
+  md ^. metaDataAt fileFileName . isoMaybe
 {-# INLINE getFileName #-}
 
 getOrientation :: MetaData -> Int
@@ -251,7 +251,7 @@ getRating :: MetaData -> Rating
 getRating md =
   lookupByNames
   [ descrRating     -- descr:Rating has priority over
-  , "XMP:Rating"    -- XMP:Rating from LR
+  , xmpRating       -- XMP:Rating from LR
   ] md
   ^. isoString . isoRating
 
@@ -486,6 +486,7 @@ allAttrGroups =
   , attrComposite
   , attrXmp
   , attrCol
+  , attrImg
   ]
 
 attrFile :: AttrGroup
@@ -653,6 +654,7 @@ attrComposite =
     , "LightValue"
     , "Megapixels"
     , "ShutterSpeed"
+    , "SubSecCreateDate"
     , "SubSecDateTimeOriginal"
     ]
   )
@@ -675,6 +677,7 @@ compositeAperture
   , compositeLightValue
   , compositeMegapixels
   , compositeShutterSpeed
+  , compositeSubSecCreateDate
   , compositeSubSecDateTimeOriginal :: Name
 
 [   compositeAperture
@@ -695,6 +698,7 @@ compositeAperture
   , compositeLightValue
   , compositeMegapixels
   , compositeShutterSpeed
+  , compositeSubSecCreateDate
   , compositeSubSecDateTimeOriginal
   ] = attrGroup2attrName attrComposite
 
@@ -709,6 +713,21 @@ attrXmp =
     , "Rating"
     ]
   )
+
+xmpGPSLatitude
+  , xmpGPSLongitude
+  , xmpGPSAltitude
+  , xmpFormat
+  , xmpRawFileName
+  , xmpRating :: Name
+
+[   xmpGPSLatitude
+  , xmpGPSLongitude
+  , xmpGPSAltitude
+  , xmpFormat
+  , xmpRawFileName
+  , xmpRating
+  ] = attrGroup2attrName attrXmp
 
 attrCol :: AttrGroup
 attrCol =

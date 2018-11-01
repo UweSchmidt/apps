@@ -47,6 +47,7 @@ import           Data.MetaData ( MetaData
                                , exifModel
                                , exifWhiteBalance
 
+                               , fileDirectory
                                , fileFileModifyDate
                                , fileFileName
                                , fileRefJpg
@@ -607,7 +608,7 @@ picMeta md = mconcat $ map toMarkup mdTab
     mdFile v =
       toHtml $ d <> "/" <> v
       where
-        d = md ^. metaDataAt "File:Directory"
+        d = md ^. metaDataAt fileDirectory
 
     mdLoc :: Text -> Html
     mdLoc v = toHtml $ formatDegree v

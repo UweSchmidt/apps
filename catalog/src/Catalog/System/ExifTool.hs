@@ -6,7 +6,12 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
-import           Catalog.System.IO
+import           Catalog.System.IO ( createDir
+                                   , fileExist
+                                   , getModiTime
+                                   , readFileLB
+                                   , writeFileLB
+                                   )
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImgTree
@@ -196,7 +201,7 @@ syncRating i = do
     -- rating not yet set in catalog
     -- try to take rating from .xmp file
     md2 <- getMetaData i
-    unless (T.null $ md2 ^. metaDataAt "XMP:Rating") $
+    unless (T.null $ md2 ^. metaDataAt xmpRating) $
       adjustMetaData ((mkRating $ getRating md2) <>) i
 
 -- ----------------------------------------
