@@ -14,8 +14,19 @@ module Catalog.Html.Templates.Blaze2
   )
 where
 
-import           Data.MetaData ( MetaData, metaDataAt
+import           Data.MetaData ( MetaData
+                               , metaDataAt
                                , loc2googleMapsUrl
+
+                               , compositeDOF
+                               , compositeGPSAltitude
+                               , compositeGPSLatitude
+                               , compositeGPSLongitude
+                               , compositeGPSPosition
+                               , compositeImageSize
+                               , compositeLensID
+                               , compositeLensSpec
+
                                , descrComment
                                , descrSubtitle
                                , descrTitle
@@ -23,6 +34,28 @@ import           Data.MetaData ( MetaData, metaDataAt
                                , descrTitleLatin
                                , descrWeb
                                , descrWikipedia
+
+                               , exifCreateDate
+                               , exifExposureCompensation
+                               , exifExposureMode
+                               , exifExposureProgram
+                               , exifExposureTime
+                               , exifFNumber
+                               , exifFocalLength
+                               , exifFocalLengthIn35mmFormat
+                               , exifISO
+                               , exifModel
+                               , exifWhiteBalance
+
+                               , fileFileModifyDate
+                               , fileFileName
+                               , fileRefJpg
+
+                               , imgRating
+
+                               , makerNotesFocusDistance
+                               , makerNotesShootingMode
+                               , makerNotesShutterCount
                                )
 import           Data.Prim
 import qualified Data.Text                       as T
@@ -593,32 +626,32 @@ picMeta md = mconcat $ map toMarkup mdTab
       , ("Kommentar",            descrComment,                   mdv )
       , ("Web",                  descrWeb,                       mdWeb )
       , ("Wikipedia",            descrWikipedia,                 mdWiki )
-      , ("Karte",                "Composite:GPSPosition",        mdMap )
-      , ("Breitengrad",          "XMP:GPSLatitude",              mdLoc)
-      , ("Längengrad",           "XMP:GPSLongitude",             mdLoc)
-                                 -- disabled, Lightroom delivers nonsense data
-      , ("Höhe",                 "???:GPSAltitude",              mdv)
-      , ("Aufnahmedatum",        "EXIF:CreateDate",              mdv)
-      , ("Kamera",               "EXIF:Model",                   mdv)
-      , ("Objektiv",             "Composite:Lens",               mdv)
-      , ("Objektiv Typ",         "Composite:LensID",             mdv)
-      , ("Brennweite",           "EXIF:FocalLength",             mdv)
-      , ("Brennweite in 35mm",   "EXIF:FocalLengthIn35mmFormat", mdv)
-      , ("Belichtungszeit",      "EXIF:ExposureTime",            mdv)
-      , ("Blende",               "EXIF:FNumber",                 mdv)
-      , ("Belichtungskorrektur", "EXIF:ExposureCompensation",    mdv)
-      , ("ISO",                  "EXIF:ISO",                     mdv)
-      , ("Belichtungsmessung",   "EXIF:ExposureMode",            mdv)
-      , ("Aufnahmebetriebsart",  "EXIF:ExposureProgram",         mdv)
-      , ("Entfernung",           "EXIF:FocusDistance",           mdv)
-      , ("Tiefenschärfe",        "Composite:DOF",                mdv)
-      , ("Aufnahmemodus",        "EXIF:ShootingMode",            mdv)
-      , ("Weißabgleich",         "EXIF:WhiteBalance",            mdv)
-      , ("Geometrie",            "Composite:ImageSize",          mdv)
-      , ("Raw-Datei",            "File:FileName",                mdFile)
-      , ("Bild-Datei",           "File:RefJpg",                  mdv)
-      , ("Bearbeitet",           "File:FileModifyDate",          mdv)
-      , ("Bewertung",            "Img:Rating",                   mdRating)
+      , ("Karte",                compositeGPSPosition,           mdMap )
+      , ("Breitengrad",          compositeGPSLatitude,           mdLoc)
+      , ("Längengrad",           compositeGPSLongitude,          mdLoc)
+      , ("Höhe",                 compositeGPSAltitude,           mdv)
+      , ("Aufnahmedatum",        exifCreateDate,                 mdv)
+      , ("Kamera",               exifModel,                      mdv)
+      , ("Objektiv",             compositeLensSpec,              mdv)
+      , ("Objektiv Typ",         compositeLensID,                mdv)
+      , ("Brennweite",           exifFocalLength,                mdv)
+      , ("Brennweite in 35mm",   exifFocalLengthIn35mmFormat,    mdv)
+      , ("Belichtungszeit",      exifExposureTime,               mdv)
+      , ("Blende",               exifFNumber,                    mdv)
+      , ("Belichtungskorrektur", exifExposureCompensation,       mdv)
+      , ("ISO",                  exifISO,                        mdv)
+      , ("Belichtungsmessung",   exifExposureMode,               mdv)
+      , ("Aufnahmebetriebsart",  exifExposureProgram,            mdv)
+      , ("Entfernung",           makerNotesFocusDistance,        mdv)
+      , ("Tiefenschärfe",        compositeDOF,                   mdv)
+      , ("Aufnahmemodus",        makerNotesShootingMode,         mdv)
+      , ("Weißabgleich",         exifWhiteBalance,               mdv)
+      , ("Aufnahmezähler",       makerNotesShutterCount,         mdv)
+      , ("Geometrie",            compositeImageSize,             mdv)
+      , ("Raw-Datei",            fileFileName,                   mdFile)
+      , ("Bild-Datei",           fileRefJpg,                     mdv)
+      , ("Bearbeitet",           fileFileModifyDate,             mdv)
+      , ("Bewertung",            imgRating,                      mdRating)
       ]
 
 -- ----------------------------------------

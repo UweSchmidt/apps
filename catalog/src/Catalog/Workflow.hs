@@ -11,12 +11,18 @@ where
 import Data.Prim
 import Data.ImgNode
 import Data.ImgTree
-import Data.MetaData                  ( MetaData, metaDataAt
+import Data.MetaData                  ( MetaData
+                                      , metaDataAt
+                                      , getRating
+
                                       , descrComment
                                       , descrDuration
                                       , descrSubtitle
                                       , descrTitle
-                                      , getRating
+
+                                      , fileRefJpg
+
+                                      , imgRating
                                       )
 
 import Catalog.Cmd
@@ -265,7 +271,7 @@ processReqImg' r0 = do
            lift $ genReqImg r2
       )
       <|>
-      ( do lift $ createIconFromObj r1 dp
+      ( do _ <- lift $ createIconFromObj r1 dp
            return dp
       )
 
@@ -812,8 +818,8 @@ genReqImgPage' r = do
       let rating         = (\ x -> replicate x star ^. isoText) $
                            getRating this'meta
       let metaData       = this'meta -- add jpg filename and rating
-                           & metaDataAt "File:RefJpg" .~ (this'mediaUrl ^. isoText)
-                           & metaDataAt "Img:Rating"  .~ rating
+                           & metaDataAt fileRefJpg .~ (this'mediaUrl ^. isoText)
+                           & metaDataAt imgRating  .~ rating
       org'imgpath       <- toSourcePath r
       org'geo           <- getImageSize org'imgpath
       let org'mediaUrl   = toUrlPath

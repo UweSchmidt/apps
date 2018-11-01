@@ -373,7 +373,7 @@ dateTimeParser = do
 
 -- ----------------------------------------
 
--- the old regex for matchSubRE was much short, but error phrone
+-- the old regex for matchSubRE was much shorter, but error phrone
 -- no parse in read::Double and other bugs
 
 degParser :: String -> SP (Int, Int, Double, Char)
@@ -496,8 +496,26 @@ attrFile =
     , "FileModifyDate"
     , "FileName"
     , "MIMEType"
+    , "RefJpg"
     ]
   )
+
+fileDirectory
+  , fileFileSize
+  , fileFileModifyDate
+  , fileFileName
+  , fileMIMEType
+  , fileRefJpg :: Name
+
+[   fileDirectory
+  , fileFileSize
+  , fileFileModifyDate
+  , fileFileName
+  , fileMIMEType
+  , fileRefJpg
+  ] = attrGroup2attrName attrFile
+
+
 
 attrExif :: AttrGroup
 attrExif =
@@ -528,6 +546,55 @@ attrExif =
     ]
   )
 
+exifArtist
+  , exifBitsPerSample
+  , exifCopyright
+  , exifCreateDate
+  , exifExposureCompensation
+  , exifExposureMode
+  , exifExposureProgram
+  , exifExposureTime
+  , exifFlash
+  , exifFNumber
+  , exifFocalLength
+  , exifFocalLengthIn35mmFormat
+  , exifGPSVersionID
+  , exifImageHeight
+  , exifImageWidth
+  , exifISO
+  , exifMake
+  , exifMaxApertureValue
+  , exifMeteringMode
+  , exifModel
+  , exifOrientation
+  , exifUserComment
+  , exifWhiteBalance :: Name
+
+[   exifArtist
+  , exifBitsPerSample
+  , exifCopyright
+  , exifCreateDate
+  , exifExposureCompensation
+  , exifExposureMode
+  , exifExposureProgram
+  , exifExposureTime
+  , exifFlash
+  , exifFNumber
+  , exifFocalLength
+  , exifFocalLengthIn35mmFormat
+  , exifGPSVersionID
+  , exifImageHeight
+  , exifImageWidth
+  , exifISO
+  , exifMake
+  , exifMaxApertureValue
+  , exifMeteringMode
+  , exifModel
+  , exifOrientation
+  , exifUserComment
+  , exifWhiteBalance
+  ] = attrGroup2attrName attrExif
+
 attrMaker :: AttrGroup
 attrMaker =
   ( "MakerNotes"
@@ -543,6 +610,27 @@ attrMaker =
     ]
   )
 
+makerNotesColorSpace
+  , makerNotesDaylightSavings
+  , makerNotesFocusDistance
+  , makerNotesFocusMode
+  , makerNotesQuality
+  , makerNotesSerialNumber
+  , makerNotesShootingMode
+  , makerNotesShutterCount
+  , makerNotesTimeZone :: Name
+
+[   makerNotesColorSpace
+  , makerNotesDaylightSavings
+  , makerNotesFocusDistance
+  , makerNotesFocusMode
+  , makerNotesQuality
+  , makerNotesSerialNumber
+  , makerNotesShootingMode
+  , makerNotesShutterCount
+  , makerNotesTimeZone
+  ] = attrGroup2attrName attrMaker
+
 
 attrComposite :: AttrGroup
 attrComposite =
@@ -554,8 +642,9 @@ attrComposite =
     , "Flash"
     , "FocalLength35efl"
     , "FOV"
-    , "GPSLatitudeRef"
-    , "GPSLongitudeRef"
+    , "GPSAltitude"
+    , "GPSLatitude"
+    , "GPSLongitude"
     , "GPSPosition"
     , "HyperfocalDistance"
     , "ImageSize"
@@ -567,6 +656,47 @@ attrComposite =
     , "SubSecDateTimeOriginal"
     ]
   )
+
+compositeAperture
+  , compositeAutoFocus
+  , compositeCircleOfConfusion
+  , compositeDOF
+  , compositeFlash
+  , compositeFocalLength35efl
+  , compositeFOV
+  , compositeGPSAltitude
+  , compositeGPSLatitude
+  , compositeGPSLongitude
+  , compositeGPSPosition
+  , compositeHyperfocalDistance
+  , compositeImageSize
+  , compositeLensID
+  , compositeLensSpec
+  , compositeLightValue
+  , compositeMegapixels
+  , compositeShutterSpeed
+  , compositeSubSecDateTimeOriginal :: Name
+
+[   compositeAperture
+  , compositeAutoFocus
+  , compositeCircleOfConfusion
+  , compositeDOF
+  , compositeFlash
+  , compositeFocalLength35efl
+  , compositeFOV
+  , compositeGPSAltitude
+  , compositeGPSLatitude
+  , compositeGPSLongitude
+  , compositeGPSPosition
+  , compositeHyperfocalDistance
+  , compositeImageSize
+  , compositeLensID
+  , compositeLensSpec
+  , compositeLightValue
+  , compositeMegapixels
+  , compositeShutterSpeed
+  , compositeSubSecDateTimeOriginal
+  ] = attrGroup2attrName attrComposite
 
 attrXmp :: AttrGroup
 attrXmp =
@@ -614,7 +744,7 @@ descrTitle
   , descrDuration
   , descrRating :: Name
 
-[descrTitle
+[   descrTitle
   , descrSubtitle
   , descrTitleEnglish
   , descrTitleLatin
@@ -629,5 +759,17 @@ descrTitle
   , descrDuration
   , descrRating
   ] = attrGroup2attrName attrCol
+
+attrImg :: AttrGroup
+attrImg =
+  ( "Img"
+  , [ "Rating"
+    ]
+  )
+
+imgRating :: Name
+
+[imgRating
+  ] = attrGroup2attrName attrImg
 
 -- ----------------------------------------
