@@ -26,8 +26,13 @@ deriving instance Ord  TimeStamp
 deriving instance Show TimeStamp
 
 instance IsoString TimeStamp where
-  isoString = iso (\ (TS t) -> show t) (TS . read)
+  isoString = iso
+              (\ (TS t) -> show t)
+              (\ s -> fromMaybe zeroTimeStamp $ TS <$> readMaybe s)
   {-# INLINE isoString #-}
+
+instance IsoText TimeStamp where
+  isoText = isoString . isoText
 
 instance Semigroup TimeStamp where
   (<>) = max
@@ -47,11 +52,12 @@ instance ToJSON TimeStamp where
 instance FromJSON TimeStamp where
   parseJSON (J.String t) =
     return (t ^. isoString . from isoString)
+
   parseJSON _ =
     mzero
 
 zeroTimeStamp :: TimeStamp
-zeroTimeStamp = TS $ read "0"
+zeroTimeStamp = TS 0
 {-# INLINE zeroTimeStamp #-}
 
 now :: MonadIO m => m TimeStamp

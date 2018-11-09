@@ -270,6 +270,14 @@ isoStars = iso (flip replicate '*')
 mkRating :: Rating -> MetaData
 mkRating r = mempty & metaDataAt descrRating .~ (r ^. isoString . isoText)
 
+getEXIFUpdateTime :: MetaData -> TimeStamp
+getEXIFUpdateTime md =
+  md ^. metaDataAt imgEXIFUpdate . from isoText
+
+setEXIFUpdateTime :: TimeStamp -> MetaData -> MetaData
+setEXIFUpdateTime ts md =
+    md & metaDataAt imgEXIFUpdate .~ (ts ^. isoText)
+
 -- ----------------------------------------
 --
 -- compare function on meta data
@@ -783,12 +791,15 @@ attrImg :: AttrGroup
 attrImg =
   ( "Img"
   , [ "Rating"
+    , "EXIFUpdate"
     ]
   )
 
-imgRating :: Name
+imgRating
+  , imgEXIFUpdate :: Name
 
-[imgRating
+[   imgRating
+  , imgEXIFUpdate
   ] = attrGroup2attrName attrImg
 
 -- ----------------------------------------

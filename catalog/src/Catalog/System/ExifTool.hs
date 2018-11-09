@@ -24,32 +24,45 @@ import qualified Data.Text as T
 -- the low level ops
 -- working on file system paths
 
+-- add or update metadata of an image
+-- by extracting exif data form a raw image
+-- a jpg or a sidecar and merge it with given
+-- metadata
 
--- update MetaData with exif data
--- contained in the .nef, .png, .jpg, .xmp files
-
-syncMD :: (ImgPart -> Bool)
-       -> Path -> SysPath -> ImgPart -> Cmd ()
-syncMD p ip fp pt =
-  when ( p pt ) $ do
-  m1 <- readMetaData fp
-  m2 <- addMD (const True) ip pt m1
-  writeMetaData fp m2
-
-addMD :: (ImgPart -> Bool)
-      -> Path -> ImgPart
-      -> MetaData -> Cmd MetaData
-addMD p ip pt m1
+getMDpart :: (ImgPart -> Bool)
+          -> Path -> ImgPart
+          -> Cmd MetaData
+getMDpart p ip pt
   | p pt = do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
       sp <- path2SysPath (substPathName tn ip)
-      verbose $ "syncMD: syncing with " ++ show sp
+      verbose $ "getMDpart: update metadata with " ++ show sp
       m2 <- filterMetaData ty <$> getExifTool sp
-      return (m2 <> m1)
+      return m2
   | otherwise =
-      return m1
+      return mempty
   where
     ty = pt ^. theImgType
     tn = pt ^. theImgName
+
+
+setMD :: (ImgPart -> Bool)
+      -> ObjId
+      -> [ImgPart]
+      -> Cmd ()
+setMD p i ps = do
+  ip <- objid2path i
+  verbose $
+    "setMD: syncing exif data "
+    ++ show ip ++ " " ++ show ps ++ " " ++ i ^. isoString
+
+  -- exif update time as metadata
+  mdt <- flip setEXIFUpdateTime mempty <$> now
+
+  -- merge metadata of all image parts
+  mds <- (mconcat . (mdt :)) <$> mapM (getMDpart p ip) ps
+
+  -- set new image metadata
+  adjustMetaData (mergeMD mds) i
 
 -- ----------------------------------------
 
@@ -76,29 +89,6 @@ execExifTool args sp = do
   trc $ unwords ["exiftool", show (args ++ [sp ^. isoFilePath]), ""]
   execProcess "exiftool" (args ++ [sp ^. isoFilePath]) ""
 
-writeMetaData :: SysPath -> MetaData -> Cmd ()
-writeMetaData f m =
-  runDry ("write metadata to file " ++ show f) $
-    writeFileLB f (J.encodePretty' conf m)
-  where
-    conf = J.defConfig {J.confCompare = compare}
-
-readMetaData :: SysPath -> Cmd MetaData
-readMetaData f = do
-  trc $ "readMetadata from " ++ show f
-  whenM (do ex <- fileExist f
-            unless ex $
-              warn $ "readMetaData: metadata file not found: " ++ show f
-            return ex
-        ) $ do
-      bs <- readFileLB f
-      case J.decode' bs of
-        Nothing -> do
-          warn $ "readMetaData: no metadata, JSON input corrupted: " ++ show f
-          return mempty
-        Just m ->
-          return m
-
 -- ----------------------------------------
 
 buildMetaData :: ByteString -> Cmd MetaData
@@ -108,10 +98,7 @@ buildMetaData =
   J.eitherDecodeStrict'
 
 getMetaData :: ObjId -> Cmd MetaData
-getMetaData i = do
-  md1 <- getImgVals i theMetaData
-  md2 <- objid2path i >>= path2ExifSysPath >>= readMetaData
-  return $ md1 `mergeMD` md2
+getMetaData i = getImgVals i theMetaData
 
 -- ----------------------------------------
 
@@ -148,36 +135,23 @@ syncMetaData i = do
   ps <- getImgVals i (theParts . isoImgParts)
   unless (null ps) $ do
     syncMetaData' i ps
-    syncRating i
+    -- redundant: getRating looks up descr:rating and xmp:rating
+    -- syncRating i
 
 
 syncMetaData' :: ObjId -> [ImgPart] -> Cmd ()
 syncMetaData' i ps = do
-  ip <- objid2path i
-
-  sp <- path2ExifSysPath ip
-  px <- fileExist sp
-  unless px $                -- the dir for the exif file
-    createDir (takeDirectory <$> sp)
-
-  ts <- if px
-        then getModiTime sp   -- the time stamp
-        else return mempty
-
+  ts <- getEXIFUpdateTime <$> getImgVals i theMetaData
   fu <- view envForceMDU
   let update = fu || (ts <= ps ^. traverse . theImgTimeStamp)
 
-  trc $
-    "syncMetaData: syncing exif data "
-    ++ show sp ++ " " ++ show ps ++ " " ++ i ^. isoString
-
   -- collect meta data from raw and xmp parts
   when update $ do
-    mapM_ (syncMD isRawMeta ip sp) ps
+    setMD isRawMeta i ps
 
     -- if neither raw, png, ... nor xmp there, collect meta from jpg files
     unless (has (traverse . isA isRawMeta) ps) $
-      mapM_ (syncMD isJpg ip sp) ps
+      setMD isJpg i ps
 
 isRawMeta :: ImgPart -> Bool
 isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGimg, IMGmeta]
@@ -185,7 +159,7 @@ isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGimg, IMGmeta]
 isJpg :: ImgPart -> Bool
 isJpg pt = pt ^. theImgType == IMGjpg
 
-
+{-
 -- rating is stored in image node, not in exif data file
 -- but rating is imported from LR xmp file with keyword "XMP:Rating"
 -- if rating in .xmp is set, but not rating in image node
@@ -203,5 +177,6 @@ syncRating i = do
     md2 <- getMetaData i
     unless (T.null $ md2 ^. metaDataAt xmpRating) $
       adjustMetaData ((mkRating $ getRating md2) <>) i
+-}
 
 -- ----------------------------------------
