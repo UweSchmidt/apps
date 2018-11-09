@@ -17,7 +17,7 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver
 extra-deps:
 - git: https://github.com/UweSchmidt/monad-reader-state-err-io.git
-  commit: abbf19aac8159a646a6c58f850250287c3e2049d
+  commit: 05ce94349caa154b56cad9767dcc146b96b59ea1
 
 # Override default flag values for local packages and extra-deps
 flags: {}
