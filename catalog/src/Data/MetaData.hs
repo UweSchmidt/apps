@@ -7,8 +7,10 @@ where
 
 import           Data.Prim
 import qualified Data.Aeson          as J
+import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List           as L
+import qualified Data.Map            as M
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
@@ -43,8 +45,17 @@ instance ToJSON MetaData where
 instance FromJSON MetaData where
   parseJSON = J.withArray "MetaData" $ \ v ->
     case V.length v of
-      1 -> J.withObject "MetaData" (return . MD) (V.head v)
+      1 -> J.withObject "MetaData" (return . shareAttrKeys . MD) (V.head v)
       _ -> mzero
+
+-- share keys of MD maps deserialized in FromJSON instance
+shareAttrKeys :: MetaData -> MetaData
+shareAttrKeys (MD m) = MD $ HM.foldlWithKey' ins HM.empty m
+  where
+    ins m' k v = HM.insert k' v m'
+      where
+        k' = fromMaybe k $ HM.lookup k allAttrKeys
+
 
 foldWithKeyMD :: (Name -> Text -> a -> a) -> a -> MetaData -> a
 foldWithKeyMD f acc m@(MD hm) =
@@ -497,6 +508,26 @@ allAttrGroups =
   , attrImg
   ]
 
+-- used for optimizing space for MetaData tables,
+-- with a lookup all keys can share the same Text value
+-- see FromJSON instance for MetaData
+
+allAttrKeys :: HashMap Text Text
+allAttrKeys = foldl' ins HM.empty $
+  concat
+  [ keysAttrFile
+  , keysAttrExif
+  , keysAttrMaker
+  , keysAttrComposite
+  , keysAttrXmp
+  , keysAttrCol
+  , keysAttrImg
+  ]
+  where
+    ins m k = HM.insert k' k' m
+      where
+        k' = k ^. isoText
+
 attrFile :: AttrGroup
 attrFile =
   ( "File"
@@ -516,7 +547,9 @@ fileDirectory
   , fileMIMEType
   , fileRefJpg :: Name
 
-[   fileDirectory
+keysAttrFile :: [Name]
+keysAttrFile @
+  [ fileDirectory
   , fileFileSize
   , fileFileModifyDate
   , fileFileName
@@ -579,7 +612,9 @@ exifArtist
   , exifUserComment
   , exifWhiteBalance :: Name
 
-[   exifArtist
+keysAttrExif :: [Name]
+keysAttrExif @
+  [ exifArtist
   , exifBitsPerSample
   , exifCopyright
   , exifCreateDate
@@ -603,6 +638,7 @@ exifArtist
   , exifUserComment
   , exifWhiteBalance
   ] = attrGroup2attrName attrExif
+
 
 attrMaker :: AttrGroup
 attrMaker =
@@ -629,7 +665,9 @@ makerNotesColorSpace
   , makerNotesShutterCount
   , makerNotesTimeZone :: Name
 
-[   makerNotesColorSpace
+keysAttrMaker :: [Name]
+keysAttrMaker @
+  [ makerNotesColorSpace
   , makerNotesDaylightSavings
   , makerNotesFocusDistance
   , makerNotesFocusMode
@@ -688,7 +726,9 @@ compositeAperture
   , compositeSubSecCreateDate
   , compositeSubSecDateTimeOriginal :: Name
 
-[   compositeAperture
+keysAttrComposite :: [Name]
+keysAttrComposite @
+  [ compositeAperture
   , compositeAutoFocus
   , compositeCircleOfConfusion
   , compositeDOF
@@ -710,6 +750,7 @@ compositeAperture
   , compositeSubSecDateTimeOriginal
   ] = attrGroup2attrName attrComposite
 
+
 attrXmp :: AttrGroup
 attrXmp =
   ("XMP"
@@ -729,13 +770,16 @@ xmpGPSLatitude
   , xmpRawFileName
   , xmpRating :: Name
 
-[   xmpGPSLatitude
+keysAttrXmp :: [Name]
+keysAttrXmp @
+  [ xmpGPSLatitude
   , xmpGPSLongitude
   , xmpGPSAltitude
   , xmpFormat
   , xmpRawFileName
   , xmpRating
   ] = attrGroup2attrName attrXmp
+
 
 attrCol :: AttrGroup
 attrCol =
@@ -756,6 +800,7 @@ attrCol =
     , "Rating"
     ]
   )
+
 descrTitle
   , descrSubtitle
   , descrTitleEnglish
@@ -771,7 +816,9 @@ descrTitle
   , descrDuration
   , descrRating :: Name
 
-[   descrTitle
+keysAttrCol :: [Name]
+keysAttrCol @
+  [ descrTitle
   , descrSubtitle
   , descrTitleEnglish
   , descrTitleLatin
@@ -787,6 +834,7 @@ descrTitle
   , descrRating
   ] = attrGroup2attrName attrCol
 
+
 attrImg :: AttrGroup
 attrImg =
   ( "Img"
@@ -798,7 +846,9 @@ attrImg =
 imgRating
   , imgEXIFUpdate :: Name
 
-[   imgRating
+keysAttrImg :: [Name]
+keysAttrImg @
+  [ imgRating
   , imgEXIFUpdate
   ] = attrGroup2attrName attrImg
 

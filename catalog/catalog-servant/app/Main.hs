@@ -8,9 +8,7 @@ import Prelude ()
 import Prelude.Compat
 
 import Control.Concurrent.MVar
-import Control.Concurrent.QSem
 import Control.Exception      (SomeException, catch) -- , try, toException)
-import Control.Exception.Base (bracket_)
 import Control.Monad.Except
 import Control.Monad.ReaderStateErrIO (Msg(..))
 
@@ -375,7 +373,7 @@ catalogServer env runR runM =
 main :: IO ()
 main = mainWithArgs "servant" $ \ env -> do
   -- create a semaphore for syncing log output
-  sem  <- newQSem 0
+  sem  <- newMVar ()
   let env' = env & envLogOp .~ logCmd sem
 
   est  <- initState env'
@@ -383,12 +381,10 @@ main = mainWithArgs "servant" $ \ env -> do
   where
     -- a log command that syncronizes
     -- output of messages to stderr
-    logCmd :: QSem -> (String -> IO ())
+    logCmd :: MVar () -> (String -> IO ())
     logCmd sem s =
-      bracket_ (waitQSem sem) (signalQSem sem)
-      ( do hPutStrLn stderr s
-           hFlush    stderr
-      )
+      withMVar sem $ \ _ -> do hPutStrLn stderr s
+                               hFlush    stderr
 
 main' :: Env -> ImgStore -> IO ()
 main' env st = do
