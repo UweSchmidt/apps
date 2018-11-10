@@ -50,19 +50,25 @@ setMD :: (ImgPart -> Bool)
       -> [ImgPart]
       -> Cmd ()
 setMD p i ps = do
-  ip <- objid2path i
-  verbose $
-    "setMD: syncing exif data "
-    ++ show ip ++ " " ++ show ps ++ " " ++ i ^. isoString
+  ip  <- objid2path i
 
-  -- exif update time as metadata
-  mdt <- flip setEXIFUpdateTime mempty <$> now
+  -- get old metadata
+  md0 <- getMetaData i
 
-  -- merge metadata of all image parts
-  mds <- (mconcat . (mdt :)) <$> mapM (getMDpart p ip) ps
+  -- merge metadata of all image parts with old metadata
+  md1 <- ((`mergeMD` md0) . mconcat) <$> mapM (getMDpart p ip) ps
 
-  -- set new image metadata
-  adjustMetaData (mergeMD mds) i
+  if md1 /= md0
+    then
+      -- something has changed since last update
+      -- so add timestamp and store new metadata
+      do md2 <- flip setEXIFUpdateTime md1 <$> now
+         adjustMetaData (const md2) i
+         verbose $
+           "setMD: update exif data for " ++ show ip
+    else
+         verbose $
+           "setMD: no change in exif data " ++ show ip
 
 -- ----------------------------------------
 

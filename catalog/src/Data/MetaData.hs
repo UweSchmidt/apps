@@ -10,7 +10,6 @@ import qualified Data.Aeson          as J
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List           as L
-import qualified Data.Map            as M
 import qualified Data.Text           as T
 import qualified Data.Vector         as V
 import qualified Data.Scientific     as SC
@@ -25,6 +24,7 @@ newtype MetaData = MD J.Object
 
 -- ----------------------------------------
 
+deriving instance Eq   MetaData
 deriving instance Show MetaData
 
 instance Semigroup MetaData where
@@ -48,13 +48,16 @@ instance FromJSON MetaData where
       1 -> J.withObject "MetaData" (return . shareAttrKeys . MD) (V.head v)
       _ -> mzero
 
+
 -- share keys of MD maps deserialized in FromJSON instance
+-- unknown keys are removed
+
 shareAttrKeys :: MetaData -> MetaData
 shareAttrKeys (MD m) = MD $ HM.foldlWithKey' ins HM.empty m
   where
-    ins m' k v = HM.insert k' v m'
-      where
-        k' = fromMaybe k $ HM.lookup k allAttrKeys
+    ins m' k v
+      | Just k' <- HM.lookup k allAttrKeys = HM.insert k' v m'
+      | otherwise                          =                m'
 
 
 foldWithKeyMD :: (Name -> Text -> a -> a) -> a -> MetaData -> a
