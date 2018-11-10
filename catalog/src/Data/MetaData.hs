@@ -791,6 +791,7 @@ attrCol =
     , "Subtitle"
     , "TitleEnglish"
     , "TitleLatin"
+    , "Location"
     , "Keywords"
     , "Web"
     , "Wikipedia"
@@ -808,6 +809,7 @@ descrTitle
   , descrSubtitle
   , descrTitleEnglish
   , descrTitleLatin
+  , descrLocation
   , descrKeywords
   , descrWeb
   , descrWikipedia
@@ -825,6 +827,7 @@ keysAttrCol @
   , descrSubtitle
   , descrTitleEnglish
   , descrTitleLatin
+  , descrLocation
   , descrKeywords
   , descrWeb
   , descrWikipedia

@@ -6,18 +6,13 @@ where
 import           Catalog.Cmd.Basic
 import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
-import           Catalog.System.IO ( createDir
-                                   , fileExist
-                                   , getModiTime
-                                   , readFileLB
-                                   , writeFileLB
-                                   )
+import           Catalog.System.IO ( fileExist )
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Encode.Pretty as J
+-- import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 
 -- ----------------------------------------
 --
