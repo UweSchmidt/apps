@@ -85,6 +85,7 @@ mkEnv = Env
 instance Config Env where
   traceOn   e = e ^. envTrc
   verboseOn e = e ^. envVerbose
+  getLogOp  e = e ^. envLogOp
 
 type CopyGeo = ((Int, Int), AspectRatio)
 
