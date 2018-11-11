@@ -587,14 +587,13 @@ withCache cmd sp dp = do
   dp' <- toSysPath dp
   sw  <- getModiTime' sp'
   dw  <- getModiTime' dp'
-  trc $ "withCache: " ++ show ((sp, sw), (dp, dw))
 
   unless (dw == sw && not (isempty dw)) $ do
     -- no cache hit
     -- execute command and
     -- set mtime of dest to mtime of source
     -- so cache hits are those with equal mtime timestamp (dw == ws)
-    trc "withCache: cache miss"
+    trc $ "withCache: cache miss: " ++ show ((sp, sw), (dp, dw))
     createDir (takeDirectory <$> dp')
     cmd sp dp
     setModiTime sw dp'
