@@ -102,15 +102,35 @@ mergeMD m1 m2 =
       | otherwise = acc & metaDataAt n .~ v
 
 mergeKeywords :: Text -> Text -> Text
-mergeKeywords t1 t2 =
-  T.intercalate "," kw
+mergeKeywords t1 t2
+  -- clear all keywords
+  | ["-"] <- T.words t1 = ""
+
+  -- split keywords at ','
+  -- remove keywords starting with a '-'
+  -- union other keywords
+  -- intercalate keywords with ", "
+  | otherwise =
+      T.intercalate ", " newKWs
   where
-    kw = (kw2 L.\\ rmv) `L.union` nub ins
-    kws = map T.strip . T.split (== ',')
-    kw1 = kws t1
-    kw2 = kws t2
-    (rmv', ins) = partition ((== "-"). T.take 1) kw1
-    rmv = map (T.drop 1) rmv'
+    (rmv, ins) = partKWs $ splitKW t1
+    oldKWs     =           splitKW t2
+    newKWs     = sort $
+                 (oldKWs L.\\ rmv) `L.union` nub ins
+
+    -- split keywords
+    splitKW =
+      filter (not . T.null)       -- remove empty words
+      .
+      map (T.unwords . T.words)   -- normalize whitespace
+      .
+      T.split (== ',')            -- split at ","
+
+    -- partition keywords in (to be removed, added)
+    partKWs =
+      first (map (T.drop 1))
+      .
+      partition ((== "-"). T.take 1)
 
 -- ----------------------------------------
 --
