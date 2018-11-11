@@ -1798,9 +1798,9 @@ function setMetaData() {
      */
 
     var metadata = {};
-    var keys = ["Title", "Subtitle", "Comment", "Rating",
+    var keys = ["Title", "Subtitle", "Comment", "Location", "Rating",
                 "Keywords", "Web", "Wikipedia",
-                "TitleEnglish", "TitleLatin" // <-- not yet implemented in edit.html
+                "TitleEnglish", "TitleLatin"
                ];
     keys.forEach(function (e, i) {
         var k =    'descr:' + e;
@@ -1873,10 +1873,16 @@ function fillMetaData1(md0, args) {
     $('#descr-Title').val(dt);
     var ds = md["descr:Subtitle"] || "";
     $('#descr-Subtitle').val(ds);
+    var dte = md["descr:TitleEnglish"] || "";
+    $('#descr-TitleEnglish').val(dte);
+    var dtl = md["descr:TitleLatin"] || "";
+    $('#descr-TitleLatin').val(dtl);
     var dr = md["descr:Rating"] || "";
     $('#descr-Rating').val(dr);
     var dc = md["descr:Comment"] || "";
     $('#descr-Comment').val(dc);
+    var dlc = md["descr:Location"] || "";
+    $('#descr-Location').val(dlc);
     var dk = md["descr:Keywords"] || "";
     $('#descr-Keywords').val(dk);
     var dw = md["descr:Web"] || "";

@@ -28,6 +28,7 @@ import           Data.MetaData ( MetaData
                                , compositeLensSpec
 
                                , descrComment
+                               , descrLocation
                                , descrSubtitle
                                , descrTitle
                                , descrTitleEnglish
@@ -624,10 +625,11 @@ picMeta md = mconcat $ map toMarkup mdTab
       , ("Untertitel",           descrSubtitle,                  mdv)
       , ("Titel (engl.)",        descrTitleEnglish,              mdv)
       , ("Titel (lat.)",         descrTitleLatin,                mdv)
-      , ("Kommentar",            descrComment,                   mdv )
-      , ("Web",                  descrWeb,                       mdWeb )
-      , ("Wikipedia",            descrWikipedia,                 mdWiki )
-      , ("Karte",                compositeGPSPosition,           mdMap )
+      , ("Kommentar",            descrComment,                   mdv)
+      , ("Ort",                  descrLocation,                  mdv)
+      , ("Web",                  descrWeb,                       mdWeb)
+      , ("Wikipedia",            descrWikipedia,                 mdWiki)
+      , ("Karte",                compositeGPSPosition,           mdMap)
       , ("Breitengrad",          compositeGPSLatitude,           mdLoc)
       , ("Längengrad",           compositeGPSLongitude,          mdLoc)
       , ("Höhe",                 compositeGPSAltitude,           mdv)
