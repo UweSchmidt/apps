@@ -144,7 +144,7 @@ rmEmptyRec :: ObjId -> Cmd ()
 rmEmptyRec i0 = foldCollections colA i0
   where
     colA go i _md _im _be cs = do
-      trc $ "rmEmptyRec: recurse into subdirs"
+      -- trc $ "rmEmptyRec: recurse into subdirs"
       mapM_ go (cs ^.. traverse . theColColRef)
 
       cs' <- getImgVals i theColEntries
@@ -231,7 +231,7 @@ cleanupCollections i0 = do
                 _ ->
                   False
           unless ex $
-            trc  $ "exImg: image ref found in a collection for a deleted image: "
+            warn  $ "exImg: image ref found in a collection for a deleted image: "
                    ++ show (i', n')
           return ex
 
