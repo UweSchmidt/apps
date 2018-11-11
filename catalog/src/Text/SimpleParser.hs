@@ -8,10 +8,14 @@ where
 import Data.Prim.Prelude
 import Data.Void
 
-import Text.Megaparsec
-import Text.Megaparsec.Char hiding (oneOf, noneOf)
-import qualified
-       Text.Megaparsec.Char as P
+import Text.Megaparsec                ( Parsec, parseMaybe
+                                      , count
+                                      , eof
+                                      , option
+                                      , try
+                                      )
+import           Text.Megaparsec.Char hiding (oneOf, noneOf)
+import qualified Text.Megaparsec.Char as P
 
 -- --------------------
 --

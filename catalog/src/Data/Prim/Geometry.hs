@@ -5,7 +5,14 @@ module Data.Prim.Geometry
 where
 
 import Data.Prim.Prelude
-import Text.SimpleParser
+import Text.SimpleParser ( SP
+                         , parseMaybe
+                         , char
+                         , digitChar
+                         , satisfy
+                         , string
+                         , try
+                         )
 
 -- ----------------------------------------
 

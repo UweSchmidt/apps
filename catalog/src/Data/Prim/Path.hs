@@ -82,8 +82,7 @@ infixr 5 `consPath`
 infixr 5 `snocPath`
 infixr 5 `concPath`
 
-consPath :: (Monoid n, Eq n) =>
-            n -> Path' n -> Path' n
+consPath :: (Monoid n, Eq n) => n -> Path' n -> Path' n
 consPath n p
   | n == mempty = p
   | isempty p   = mkPath n
@@ -92,8 +91,7 @@ consPath n p
 snocPath :: (Monoid n, Eq n) => Path' n -> n -> Path' n
 snocPath p n = p `concPath` mkPath n
 
-concPath :: (Monoid n, Eq n) =>
-            Path' n -> Path' n -> Path' n
+concPath :: (Monoid n, Eq n) => Path' n -> Path' n -> Path' n
 concPath (BN n) p2    = consPath n p2
 concPath (DN n p1) p2 = consPath n $ concPath p1 p2
 
@@ -179,12 +177,15 @@ checkExtPath ext p
     bn   = (p ^. viewBase . _2) ^. isoText
     ext' = T.toLower . T.takeEnd ln $ bn
 
-deriving instance Eq n  => Eq  (Path' n)
+deriving instance Eq  n => Eq  (Path' n)
 deriving instance Ord n => Ord (Path' n)
+
+instance (Monoid n, Eq n) => Semigroup (Path' n) where
+  (<>) = concPath
 
 instance (Monoid n, Eq n) => Monoid (Path' n) where
   mempty = emptyPath
-  mappend = concPath
+  mappend = (<>)
   {-# INLINE mappend #-}
   {-# INLINE mempty #-}
 
