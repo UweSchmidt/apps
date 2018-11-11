@@ -1,10 +1,10 @@
-// catalog server with scotty
+// catalog server with servant
 //
 // rpc communication
 
 var serverVersion = { "server"  : "servant",
-                      "version" : "0.1.2.0",
-                      "date"    : "2018-02-15"
+                      "version" : "0.2.0.0",
+                      "date"    : "2018-11-11"
                     };
 
 // --------------------

@@ -570,8 +570,10 @@ createRawIconFromString str = do
       str2fn = concatMap urlEnc
         where
           urlEnc c
-            | isAlphaNum c = [c]
-            | otherwise    = "-" ++ show (fromEnum c) ++ "-"
+            | isAlphaNum c
+              &&
+              c <= toEnum 128 = [c]
+            | otherwise       = "-" ++ show (fromEnum c) ++ "-"
 
 -- ----------------------------------------
 --

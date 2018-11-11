@@ -44,7 +44,7 @@ genIcon path t = do
   trc $ unwords ["genIcon", show path, show t, show dst, show dx]
   unless dx $ do
     createDir (takeDirectory <$> dst)
-    trc  $ shellCmd dst fopt
+    verbose $ shellCmd dst fopt
     void $ execProcess "bash" [] (shellCmd dst fopt)
   where
     shellCmd :: SysPath -> String -> String

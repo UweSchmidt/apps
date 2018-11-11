@@ -8,11 +8,9 @@ import           Catalog.Cmd.Fold
 import           Catalog.Cmd.Types
 import           Catalog.System.IO ( fileExist )
 import qualified Data.Aeson as J
--- import qualified Data.Aeson.Encode.Pretty as J
 import           Data.ImgTree
 import           Data.MetaData
 import           Data.Prim
--- import qualified Data.Text as T
 
 -- ----------------------------------------
 --
@@ -30,7 +28,7 @@ getMDpart :: (ImgPart -> Bool)
 getMDpart p ip pt
   | p pt = do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
       sp <- path2SysPath (substPathName tn ip)
-      verbose $ "getMDpart: update metadata with " ++ show sp
+      trc $ "getMDpart: update metadata with " ++ show sp
       m2 <- filterMetaData ty <$> getExifTool sp
       return m2
   | otherwise =
@@ -62,7 +60,7 @@ setMD p i ps = do
          verbose $
            "setMD: update exif data for " ++ show ip
     else
-         verbose $
+         trc $
            "setMD: no change in exif data " ++ show ip
 
 -- ----------------------------------------
@@ -87,7 +85,7 @@ getExifTool sp = do
 
 execExifTool :: [String] -> SysPath -> Cmd String
 execExifTool args sp = do
-  trc $ unwords ["exiftool", show (args ++ [sp ^. isoFilePath]), ""]
+  verbose $ unwords ["exiftool", show (args ++ [sp ^. isoFilePath]), ""]
   execProcess "exiftool" (args ++ [sp ^. isoFilePath]) ""
 
 -- ----------------------------------------
@@ -109,7 +107,7 @@ forceSyncAllMetaData i = local (envForceMDU .~ True) (syncAllMetaData i)
 syncAllMetaData :: ObjId -> Cmd ()
 syncAllMetaData i0 = do
   p <- objid2path i0
-  verbose $ "syncAllMetaData for: " ++ show (i0, p)
+  trc $ "syncAllMetaData for: " ++ show (i0, p)
 
   foldMT imgA dirA rootA colA i0
   where
