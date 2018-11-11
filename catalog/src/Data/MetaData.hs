@@ -19,8 +19,52 @@ import           Text.Printf         ( printf )
 -- import Debug.Trace
 
 -- ----------------------------------------
+--
+-- compressed metadata represented as a gzipped bytestring
 
-newtype MetaData = MD J.Object
+newtype CompMetaData = CMD { unCMD :: ByteString }
+
+isoCompMetaData :: Iso' MetaData CompMetaData
+isoCompMetaData = isoJSONzip . isoCMD
+  where
+    isoCMD = iso CMD unCMD
+{-# INLINE isoCompMetaData #-}
+
+toMD :: CompMetaData -> MetaData
+toMD cmd = cmd ^. from isoCompMetaData
+{-# INLINE toMD #-}
+
+fromMD :: MetaData -> CompMetaData
+fromMD md = md ^. isoCompMetaData
+{-# INLINE fromMD #-}
+
+deriving instance Eq CompMetaData
+
+instance Show CompMetaData where
+  show = show . toMD
+
+instance ToJSON CompMetaData where
+  toJSON = toJSON . toMD
+
+instance FromJSON CompMetaData where
+  parseJSON x = fromMD <$> parseJSON x
+
+instance Semigroup CompMetaData where
+  c1 <> c2 = fromMD $ toMD c1 <> toMD c2
+
+instance Monoid CompMetaData where
+  mempty = compMempty
+  mappend = (<>)
+
+compMempty :: CompMetaData
+compMempty = fromMD mempty
+
+instance IsEmpty CompMetaData where
+  isempty x = x == compMempty
+
+-- ----------------------------------------
+
+newtype MetaData = MD { unMD :: J.Object }
 
 -- ----------------------------------------
 
@@ -45,9 +89,11 @@ instance ToJSON MetaData where
 instance FromJSON MetaData where
   parseJSON = J.withArray "MetaData" $ \ v ->
     case V.length v of
-      1 -> J.withObject "MetaData" (return . shareAttrKeys . MD) (V.head v)
+      1 -> J.withObject "MetaData" (return {- . shareAttrKeys -} . MD) (V.head v)
       _ -> mzero
 
+-- disabled: shareAttrkeys, optimization has no effect when
+-- working with compressed metadata
 
 -- share keys of MD maps deserialized in FromJSON instance
 -- unknown keys are removed

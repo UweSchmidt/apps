@@ -85,13 +85,13 @@ import qualified Data.Set        as S
 
 
 data ImgNode' ref = IMG  !ImgParts
-                         !MetaData               -- image meta data other
+                         !CompMetaData           -- image meta data other
                                                  -- than exif data
                   | DIR  !(DirEntries' ref)      -- the contents of an image dir
                          !TimeStamp              -- the last sync with
                                                  -- the file system
                   | ROOT !ref !ref
-                  | COL  !MetaData               -- collection meta data
+                  | COL  !CompMetaData           -- collection meta data
                          !(Maybe (ImgRef' ref))  -- optional image
                          !(Maybe (ImgRef' ref))  -- optional blog entry
                          ![ColEntry' ref]        -- the list of images
@@ -175,14 +175,16 @@ emptyImgCol = COL mempty Nothing Nothing []
 
 -- image node optics
 
-thePartsMd :: Prism' (ImgNode' ref) (ImgParts, MetaData)
-thePartsMd
-  = prism (uncurry IMG)
-          (\ x -> case x of
+thePartsMd :: Prism' (ImgNode' ref) (ImgParts, CompMetaData)
+thePartsMd =
+  prism (uncurry IMG)
+        (\ x -> case x of
                   IMG pm md -> Right (pm, md)
                   _         -> Left  x
-              )
+        )
 {-# INLINE thePartsMd #-}
+
+
 
 theParts :: Traversal' (ImgNode' ref) ImgParts
 theParts = thePartsMd . _1
@@ -210,12 +212,15 @@ theDirEntries = theDir . _1
 -- traverseWords inj (State wa wb) = State <$> inj wa <*> inj wb
 
 theMetaData :: Traversal' (ImgNode' ref) MetaData
-theMetaData inj (IMG pm md)
-  = IMG pm <$> inj md
-theMetaData inj (COL md im be es)
-  = COL <$> inj md <*> pure im <*> pure be <*> pure es
-theMetaData _   n
-  = pure n
+theMetaData = theMetaData' . from isoCompMetaData
+  where
+    theMetaData' :: Traversal' (ImgNode' ref) CompMetaData
+    theMetaData' inj (IMG pm md)
+      = IMG pm <$> inj md
+    theMetaData' inj (COL md im be es)
+      = COL <$> inj md <*> pure im <*> pure be <*> pure es
+    theMetaData' _   n
+      = pure n
 {-# INLINE theMetaData #-}
 
 theSyncTime :: Traversal' (ImgNode' ref) TimeStamp
@@ -241,7 +246,7 @@ theRootImgCol = theImgRoot . _2
 {-# INLINE theRootImgCol #-}
 
 theImgCol :: Prism' (ImgNode' ref)
-                    (MetaData, Maybe (ImgRef' ref), Maybe (ImgRef' ref), [ColEntry' ref])
+                    (CompMetaData, Maybe (ImgRef' ref), Maybe (ImgRef' ref), [ColEntry' ref])
 theImgCol =
   prism (\ (x1, x2, x3, x4) -> COL x1 x2 x3 x4)
         (\ x -> case x of
@@ -251,7 +256,7 @@ theImgCol =
 {-# INLINE theImgCol #-}
 
 theColMetaData :: Traversal' (ImgNode' ref) MetaData
-theColMetaData = theImgCol . _1
+theColMetaData = theImgCol . _1 . from isoCompMetaData
 {-# INLINE theColMetaData #-}
 
 theColImg :: Traversal' (ImgNode' ref) (Maybe (ImgRef' ref))

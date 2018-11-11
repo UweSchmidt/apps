@@ -34,13 +34,13 @@ foldMT' undefId imgA dirA' rootA' colA' i0 = do
         Just n ->
           case n ^. nodeVal of
             IMG pts md ->
-              imgA i pts md
+              imgA i pts (toMD md)
             DIR es ts ->
               dirA i es ts
             ROOT dir col ->
               rootA i dir col
             COL md im be es ->
-              colA i md im be es
+              colA i (toMD md) im be es
 
 foldMT :: (         ObjId -> ImgParts -> MetaData                -> Cmd r) ->  -- IMG
           (Act r -> ObjId -> DirEntries             -> TimeStamp -> Cmd r) ->  -- DIR

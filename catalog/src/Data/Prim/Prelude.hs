@@ -70,6 +70,9 @@ module Data.Prim.Prelude
        , isoMapElems
        , isoMapList
        , isoSetList
+       , isoCompress
+       , isoJSONlbs
+       , isoJSONzip  -- > x <-> JSON <-> LazyBytestring <-> GZip <-> ByteString
        , isA
          -- utilities
        , (.||.)
@@ -84,6 +87,7 @@ module Data.Prim.Prelude
        )
 where
 
+import qualified Codec.Compression.GZip as GZ
 import           Control.Applicative
 import           Control.Arrow
 import           Control.Lens
@@ -285,6 +289,20 @@ isA p = prism id (\ o -> (if p o then Right else Left) o)
 all3 :: Traversal (a, a, a) (b, b, b) a b
 all3 inj (x1, x2, x3) = (,,) <$> inj x1 <*> inj x2 <*> inj x3
 -- -}
+
+-- ----------------------------------------
+
+isoJSONlbs :: (FromJSON a, ToJSON a, Monoid a) => Iso' a LazyByteString
+isoJSONlbs = iso J.encode (fromMaybe mempty . J.decode)
+{-# INLINE isoJSONlbs #-}
+
+isoCompress :: Iso' LazyByteString LazyByteString
+isoCompress = iso GZ.compress GZ.decompress
+{-# INLINE isoCompress #-}
+
+isoJSONzip :: (FromJSON a, ToJSON a, Monoid a) => Iso' a ByteString
+isoJSONzip = isoJSONlbs . isoCompress . strict
+{-# INLINE isoJSONzip #-}
 
 -- ----------------------------------------
 --

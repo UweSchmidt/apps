@@ -80,7 +80,8 @@ library
                    , unordered-containers >= 0.2
                    , utf8-string          >= 1
                    , vector               >= 0.10
-
+                   , zlib
+                   
 --                   , SHA                 >= 1.5
                    
   default-language:    Haskell2010
