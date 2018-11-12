@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+-- types for image geometry
+
 module Data.Prim.Geometry
 where
 

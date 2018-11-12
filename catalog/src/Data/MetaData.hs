@@ -414,33 +414,70 @@ dateTimeParser = do
   return (ymd, hms)
 
 -- ----------------------------------------
+s1, s2 :: String
 
--- the old regex for matchSubRE was much shorter, but error phrone
+s1 = " 53.575644, -9.767767 "
+s2 = "https://www.google.com/maps/place/34%C2%B011'19.1%22N+118%C2%B040'26.5%22W/@34.1886344,-118.6762237,17z/data=!3m1!4b1!4m14!1m7!3m6!1s0x80c2c75ddc27da13:0xe22fdf6f254608f4!2sLos+Angeles,+CA,+USA!3b1!8m2!3d34.0522342!4d-118.2436849!3m5!1s0x0:0x0!7e2!8m2!3d34.1886303!4d-118.6740354"
+
+-- the old regex for matchSubRE was much shorter, but buggy
 -- no parse in read::Double and other bugs
+
+degToString :: (Int, Int, Double, Char) -> String
+degToString (d, m, s, c) = concat
+  [ show d
+  , " deg "
+  , show m
+  , "' "
+  , printf "12.9f" s
+  , " "
+  , [c]
+  ]
+
+latLongToString :: (Double, Double) -> String
+latLongToString (lat, lng) =
+  (degToString . degDec2Deg ('N', 'S') $ lat)
+  ++ ", " ++
+  (degToString . degDec2Deg ('E', 'W') $ lng)
+
 
 degParser :: String -> SP (Int, Int, Double, Char)
 degParser dirs = do
-  deg <- read <$> (some digitChar <* sp <* string "deg" <* sp)
-  mn  <- read <$> (some digitChar <* char '\''          <* sp)
-  sec <- read <$> (float          <* char '"'           <* sp)
+  deg <- read <$> (some digitChar <* ssp <* string "deg" <* ssp)
+  mn  <- read <$> (some digitChar <* char '\''           <* ssp)
+  sec <- read <$> (floatParser    <* char '"'            <* ssp)
   dir <- oneOf' dirs
   return (deg, mn, sec, dir)
-  where
-    sp :: SP String
-    sp = some (char ' ')
 
-    float :: SP String
-    float =
-      ( some digitChar
-        <++>
-        SP.option ".0"
-        ( string "."
-          <++>
-          ( SP.option "0" $ some digitChar )
-        )
-      )
-      <|>
-      (("0." ++) <$> (char '.' *> some digitChar))
+latLongDec :: SP (Double, Double)
+latLongDec = msp *> ll <* msp
+  where
+    ll     = tt <$> signedFloat <* char ',' <* msp <*> signedFloat
+    tt x y = (read x, read y)
+
+ssp :: SP String
+ssp = some (char ' ')
+
+msp :: SP String
+msp = many (char ' ')
+
+signedFloat :: SP String
+signedFloat =
+  (string "-" <|> string "+" <|> return "")
+  <++>
+  floatParser
+
+floatParser :: SP String
+floatParser =
+  ( some digitChar
+    <++>
+    SP.option ".0"
+    ( string "."
+      <++>
+      ( SP.option "0" $ some digitChar )
+    )
+  )
+  <|>
+  (("0." ++) <$> (char '.' *> some digitChar))
 
 -- parse latitute and longitude
 -- and convert to decimal degees
@@ -469,6 +506,17 @@ deg2DegDec (d, m, s, dir) =
     d' = fromIntegral d
     m' = fromIntegral m
 
+-- inverse to deg2DegDec
+degDec2Deg :: (Char, Char) -> Double -> (Int, Int, Double, Char)
+degDec2Deg (po, ne) x = (d', m', s', c')
+  where
+    s'       = r2 * 60
+    (m', r2) = properFraction (r1 * 60)
+    (d', r1) = properFraction x'
+    (x', c')
+      | x >= 0    = (x, po)
+      | otherwise = (-x, ne)
+
 latLong2googleMapsUrl :: (Double, Double) -> String
 latLong2googleMapsUrl (lat, long) =
   lat' ++ "," ++ long'
@@ -480,6 +528,10 @@ latLong2googleMapsUrl (lat, long) =
 loc2googleMapsUrl :: String -> Maybe String
 loc2googleMapsUrl loc =
   latLong2googleMapsUrl <$> parseMaybe latLongParser loc
+
+googleMapsUrlParser :: SP (Double, Double)
+googleMapsUrlParser =
+  anyStringThen "/@" *> latLongDec <* anyString
 
 -- ----------------------------------------
 
