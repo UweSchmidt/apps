@@ -21,6 +21,7 @@ module Catalog.Cmd.Types
        , envFontName
        , envLogOp
        , envUpdateCache
+       , envSaveBothIx
        -- Cmd
        , Cmd
        , runCmd
@@ -58,6 +59,7 @@ data Env = Env
   , _fontName    :: Text
   , _logOp       :: String -> IO ()
   , _updateCache :: Maybe FilePath
+  , _saveBothIx  :: Bool
   }
 
 -- the named constructor
@@ -77,6 +79,7 @@ mkEnv :: Bool
       -> Text
       -> (String -> IO ())
       -> Maybe FilePath
+      -> Bool
       -> Env
 mkEnv = Env
 
@@ -104,6 +107,7 @@ defaultEnv = Env
   , _fontName     = mempty
   , _logOp        = hPutStrLn stderr
   , _updateCache  = Nothing
+  , _saveBothIx   = False
   }
 
 envTrc :: Lens' Env Bool
@@ -144,6 +148,10 @@ envLogOp k e = (\ new -> e {_logOp = new}) <$> k (_logOp e)
 
 envUpdateCache :: Lens' Env (Maybe FilePath)
 envUpdateCache k e = (\ new -> e {_updateCache = new}) <$> k (_updateCache e)
+
+envSaveBothIx :: Lens' Env Bool
+envSaveBothIx k e = (\ new -> e {_saveBothIx = new}) <$> k (_saveBothIx e)
+
 
 -- ----------------------------------------
 

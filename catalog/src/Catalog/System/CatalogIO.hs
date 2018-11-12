@@ -55,10 +55,11 @@ snapshotImgStore cmt = do
   saveImgStore pt
   checkinImgStore cmt pt
 
-  let pt' = switchArchiveName pt
-  verbose $ "snapshotImgStore: make a snapshot into " ++ show pt'
-  saveImgStore pt'
-  checkinImgStore cmt pt'
+  whenM (view envSaveBothIx) $ do
+    let pt' = switchArchiveName pt
+    verbose $ "snapshotImgStore: make a snapshot into " ++ show pt'
+    saveImgStore pt'
+    checkinImgStore cmt pt'
 
 checkinImgStore :: String -> FilePath -> Cmd ()
 checkinImgStore cmt f = do

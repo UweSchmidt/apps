@@ -114,5 +114,9 @@ envp = mkEnv
           <> help "For catalog-sync only: Update the image cache for given image directory"
         )
       )
+  <*> switch
+      ( long "save-hash-and-path-ix"
+        <> help "Save both hash and path index version of catalog"
+      )
 
 -- ----------------------------------------
