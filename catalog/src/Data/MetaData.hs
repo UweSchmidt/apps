@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -414,10 +416,124 @@ dateTimeParser = do
   return (ymd, hms)
 
 -- ----------------------------------------
-s1, s2 :: String
+
+data GPSdir = N | E | S | W deriving (Eq, Show)
+
+data GPSdeg = GPSdeg !Int !Int !Double !GPSdir deriving (Eq, Show)
+
+data GPSpos' a =
+  GPSpos { _gpsLat :: !a
+         , _gpsLog :: !a
+         }
+  deriving Show
+
+type GPSposDeg = GPSpos' GPSdeg  -- GPS position (lat, long) in deg, min, sec, dir
+type GPSposDec = GPSpos' Double  -- GPS position (lat, long) in decimal degrees
+
+-- conversion of degree from/to decimal degree
+-- and parse/show can be implemeted by an iso and two prisms
+
+-- conversion decimal <-> degree
+
+isoDegDec :: Iso' GPSposDeg GPSposDec
+isoDegDec = iso toDec frDec
+  where
+    toDec (GPSpos lat long) = GPSpos (deg2dec       lat) (deg2dec       long)
+    frDec (GPSpos lat long) = GPSpos (dec2deg (N,S) lat) (dec2deg (E,W) long)
+
+-- parse and show positions in degree format
+
+instance StringPrism GPSposDeg where
+  stringPrism = prism' showPos
+                       (parseMaybe parserPos)
+    where
+      showPos :: GPSposDeg -> String
+      showPos (GPSpos lat long) =
+        showDeg lat
+        ++ "," ++
+        showDeg long
+
+      parserPos :: SP GPSposDeg
+      parserPos = do
+        lat  <- msp *> parserDeg [N, S] <* msp <* char ','
+        long <- msp *> parserDeg [E, W] <* msp
+        return $ GPSpos lat long
+
+-- parse and show positions in decimal form
+--
+-- "53.3, 10.0" ^? stringPrism      -> Just (GPSpos 53.3 10.0)
+-- stringPrism # (GPSpos 53.3 10.0) -> "53.3, 10.0"
+
+instance StringPrism GPSposDec where
+  stringPrism = prism' showPosDec
+                       (parseMaybe parserPos)
+    where
+      showPosDec :: GPSposDec -> String
+      showPosDec (GPSpos lat long) =
+        printf "%f" lat
+        ++ "," ++
+        printf "%f" long
+
+      parserPos :: SP GPSposDec
+      parserPos = msp *> parserPosDec <* msp
+
+instance StringPrism GPSdeg where
+  stringPrism = prism' showDeg
+                       (parseMaybe $ parserDeg [N, E, S, W])
+
+-- helper funtions
+
+parserPosDec :: SP GPSposDec
+parserPosDec = tt <$> signedFloat <* msp <* char ',' <* msp <*> signedFloat
+  where
+    tt x y = GPSpos (read x) (read y)
+
+showDeg :: GPSdeg -> String
+showDeg (GPSdeg d m s r) = unwords
+  [ show d, "deg", show m ++ "'", printf "%f" s ++ "\"", show r]
+
+parserDeg :: [GPSdir] -> SP GPSdeg
+parserDeg dirs = do
+  deg <- read <$> (some digitChar <* msp <* string "deg" <* msp)
+  mn  <- read <$> (some digitChar <* char '\''           <* msp)
+  sec <- read <$> (floatParser    <* char '"'            <* msp)
+  dir <- parserDir
+  return $ GPSdeg deg mn sec dir
+  where
+    parserDir :: SP GPSdir
+    parserDir = foldr (<|>) empty $ map parserD dirs
+      where
+        parserD :: GPSdir -> SP GPSdir
+        parserD d = string (show d) *> return d
+
+deg2dec :: GPSdeg -> Double
+deg2dec (GPSdeg d m s r) =
+  (d' + m'/60 + s/3600) *
+  ( if r == N || r == E
+    then  1
+    else -1
+  )
+  where
+    d' = fromIntegral d
+    m' = fromIntegral m
+
+dec2deg :: (GPSdir, GPSdir) -> Double -> GPSdeg
+dec2deg (po, ne) x = GPSdeg d'  m'  s'  c'
+  where
+    s'       = r2 * 60
+    (m', r2) = properFraction (r1 * 60)
+    (d', r1) = properFraction x'
+    (x', c')
+      | x >= 0    = ( x, po)
+      | otherwise = (-x, ne)
+
+-- ----------------------------------------
+
+s1, s2, s3 :: String
 
 s1 = " 53.575644, -9.767767 "
 s2 = "https://www.google.com/maps/place/34%C2%B011'19.1%22N+118%C2%B040'26.5%22W/@34.1886344,-118.6762237,17z/data=!3m1!4b1!4m14!1m7!3m6!1s0x80c2c75ddc27da13:0xe22fdf6f254608f4!2sLos+Angeles,+CA,+USA!3b1!8m2!3d34.0522342!4d-118.2436849!3m5!1s0x0:0x0!7e2!8m2!3d34.1886303!4d-118.6740354"
+s3 = "53 deg 2' 10.3\" N , 10 deg 0' 20.1\" E"
 
 -- the old regex for matchSubRE was much shorter, but buggy
 -- no parse in read::Double and other bugs

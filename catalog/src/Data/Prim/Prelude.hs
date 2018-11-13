@@ -66,6 +66,8 @@ module Data.Prim.Prelude
        , IsoInteger(..)
        , IsoHex(..)
        , IsoMaybe(..)
+       , StringPrism(..)
+       , TextPrism(..)
        , take1st
        , isoMapElems
        , isoMapList
@@ -155,6 +157,26 @@ instance IsEmpty (Map k v) where
   {-# INLINE isempty #-}
 
 -- ----------------------------------------
+--
+-- the save version of conversion to/from String
+-- when parsing is unsafe
+
+class StringPrism a where
+  stringPrism :: Prism' String a
+
+  default stringPrism :: (Read a, Show a) => Prism' String a
+  stringPrism = prism' show readMaybe
+
+
+-- the safe version of conversion to/from Text
+
+class TextPrism a where
+  textPrism :: Prism' Text a
+
+  default textPrism :: (StringPrism a) => Prism' Text a
+  textPrism = isoString . stringPrism
+
+-- ----------------------------------------
 
 class IsoString a where
   isoString :: Iso' a String
@@ -183,6 +205,7 @@ instance IsoString LazyByteString where
   isoString = iso LBU.toString LBU.fromString
   {-# INLINE isoString #-}
 
+-- unsafe conversions
 instance IsoString Int
 instance IsoString Integer
 
@@ -203,6 +226,7 @@ instance IsoText String where
   isoText = from isoString
   {-# INLINE isoText #-}
 
+-- unsafe conversions
 instance IsoText Int
 instance IsoText Integer
 
