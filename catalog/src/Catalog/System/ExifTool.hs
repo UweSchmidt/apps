@@ -49,7 +49,7 @@ setMD p i ps = do
   md0 <- getMetaData i
 
   -- merge metadata of all image parts with old metadata
-  md1 <- ((`mergeMD` md0) . mconcat) <$> mapM (getMDpart p ip) ps
+  md1 <- ((<> md0) . mconcat) <$> mapM (getMDpart p ip) ps
 
   if md1 /= md0
     then
@@ -96,9 +96,6 @@ buildMetaData =
   .
   J.eitherDecodeStrict'
 
-getMetaData :: ObjId -> Cmd MetaData
-getMetaData i = getImgVals i theMetaData
-
 -- ----------------------------------------
 
 forceSyncAllMetaData :: ObjId -> Cmd ()
@@ -140,7 +137,7 @@ syncMetaData i = do
 
 syncMetaData' :: ObjId -> [ImgPart] -> Cmd ()
 syncMetaData' i ps = do
-  ts <- getEXIFUpdateTime <$> getImgVals i theMetaData
+  ts <- getEXIFUpdateTime <$> getMetaData i
   fu <- view envForceMDU
   let update = fu || (ts <= ps ^. traverse . theImgTimeStamp)
 
@@ -169,7 +166,7 @@ isJpg pt = pt ^. theImgType == IMGjpg
 
 syncRating :: ObjId -> Cmd ()
 syncRating i = do
-  md1 <- getImgVals i theMetaData
+  md1 <- getMetaData i
   when (T.null $ md1 ^. metaDataAt descrRating) $ do
     -- rating not yet set in catalog
     -- try to take rating from .xmp file

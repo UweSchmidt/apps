@@ -5,6 +5,142 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Data.MetaData
+  ( MetaData
+  , metaDataAt
+  , partMetaData
+  , selectMetaData
+  , selectByNames
+  , selectByParser
+  , lookupByNames
+
+  , clearAccess
+  , addNoDeleteAccess
+  , addNoSortAccess
+  , addNoWriteAccess
+  , subNoDeleteAccess
+  , subNoSortAccess
+  , subNoWriteAccess
+  , getAccess
+  , isWriteable
+  , isSortable
+  , isRemovable
+
+  , getCreateMeta
+  , getFileName
+  , getOrientation
+
+  , Rating
+  , mkRating
+  , getRating
+  , isoRating
+  , isoStars
+
+  , getEXIFUpdateTime
+  , setEXIFUpdateTime
+
+  , compareByName
+  , compareByCreateDate
+
+  , filterMetaData
+
+  , parseTime
+  , parseDate
+  , isoDateInt
+
+  , AttrGroup
+  , allAttrGroups
+  , allAttrKeys
+
+    -- metadata keys
+  , fileDirectory
+  , fileFileSize
+  , fileFileModifyDate
+  , fileFileName
+  , fileMIMEType
+  , fileRefJpg
+
+  , exifArtist
+  , exifBitsPerSample
+  , exifCopyright
+  , exifCreateDate
+  , exifExposureCompensation
+  , exifExposureMode
+  , exifExposureProgram
+  , exifExposureTime
+  , exifFlash
+  , exifFNumber
+  , exifFocalLength
+  , exifFocalLengthIn35mmFormat
+  , exifGPSVersionID
+  , exifImageHeight
+  , exifImageWidth
+  , exifISO
+  , exifMake
+  , exifMaxApertureValue
+  , exifMeteringMode
+  , exifModel
+  , exifOrientation
+  , exifUserComment
+  , exifWhiteBalance
+
+  , makerNotesColorSpace
+  , makerNotesDaylightSavings
+  , makerNotesFocusDistance
+  , makerNotesFocusMode
+  , makerNotesQuality
+  , makerNotesSerialNumber
+  , makerNotesShootingMode
+  , makerNotesShutterCount
+  , makerNotesTimeZone
+
+  , compositeAperture
+  , compositeAutoFocus
+  , compositeCircleOfConfusion
+  , compositeDOF
+  , compositeFlash
+  , compositeFocalLength35efl
+  , compositeFOV
+  , compositeGPSAltitude
+  , compositeGPSLatitude
+  , compositeGPSLongitude
+  , compositeGPSPosition
+  , compositeHyperfocalDistance
+  , compositeImageSize
+  , compositeLensID
+  , compositeLensSpec
+  , compositeLightValue
+  , compositeMegapixels
+  , compositeShutterSpeed
+  , compositeSubSecCreateDate
+  , compositeSubSecDateTimeOriginal
+
+  , xmpGPSLatitude
+  , xmpGPSLongitude
+  , xmpGPSAltitude
+  , xmpFormat
+  , xmpRawFileName
+  , xmpRating
+
+  , descrTitle
+  , descrSubtitle
+  , descrTitleEnglish
+  , descrTitleLatin
+  , descrLocation
+  , descrKeywords
+  , descrWeb
+  , descrWikipedia
+  , descrGoogleMaps
+  , descrComment
+  , descrCreateDate
+  , descrOrderedBy
+  , descrAccess
+  , descrDuration
+  , descrRating
+  , descrGPSPosition
+
+  , imgRating
+  , imgEXIFUpdate
+  )
 where
 
 import           Data.Prim
@@ -101,6 +237,12 @@ mergeMD m1 m2 =
                                            .
                                            isoText
                                           )
+      | n == descrGPSPosition
+                  = let gps = v ^. isoString . isoGoogleMapsDegree . isoText in
+                      if T.null gps
+                      then acc
+                      else acc & metaDataAt n .~ gps
+
       | otherwise = acc & metaDataAt n .~ v
 
 mergeKeywords :: Text -> Text -> Text
@@ -414,240 +556,6 @@ dateTimeParser = do
   ymd <- dateParser
   hms <- some spaceChar *> timeParser <* anyString  -- maybe followed by time zone
   return (ymd, hms)
-
--- ----------------------------------------
-
-data GPSdir = N | E | S | W deriving (Eq, Show)
-
-data GPSdeg = GPSdeg !Int !Int !Double !GPSdir deriving (Eq, Show)
-
-data GPSpos' a =
-  GPSpos { _gpsLat :: !a
-         , _gpsLog :: !a
-         }
-  deriving Show
-
-type GPSposDeg = GPSpos' GPSdeg  -- GPS position (lat, long) in deg, min, sec, dir
-type GPSposDec = GPSpos' Double  -- GPS position (lat, long) in decimal degrees
-
--- conversion of degree from/to decimal degree
--- and parse/show can be implemeted by an iso and two prisms
-
--- conversion decimal <-> degree
-
-isoDegDec :: Iso' GPSposDeg GPSposDec
-isoDegDec = iso toDec frDec
-  where
-    toDec (GPSpos lat long) = GPSpos (deg2dec       lat) (deg2dec       long)
-    frDec (GPSpos lat long) = GPSpos (dec2deg (N,S) lat) (dec2deg (E,W) long)
-
--- parse and show positions in degree format
-
-instance StringPrism GPSposDeg where
-  stringPrism = prism' showPos
-                       (parseMaybe parserPos)
-    where
-      showPos :: GPSposDeg -> String
-      showPos (GPSpos lat long) =
-        showDeg lat
-        ++ "," ++
-        showDeg long
-
-      parserPos :: SP GPSposDeg
-      parserPos = do
-        lat  <- msp *> parserDeg [N, S] <* msp <* char ','
-        long <- msp *> parserDeg [E, W] <* msp
-        return $ GPSpos lat long
-
--- parse and show positions in decimal form
---
--- "53.3, 10.0" ^? stringPrism      -> Just (GPSpos 53.3 10.0)
--- stringPrism # (GPSpos 53.3 10.0) -> "53.3, 10.0"
-
-instance StringPrism GPSposDec where
-  stringPrism = prism' showPosDec
-                       (parseMaybe parserPos)
-    where
-      showPosDec :: GPSposDec -> String
-      showPosDec (GPSpos lat long) =
-        printf "%f" lat
-        ++ "," ++
-        printf "%f" long
-
-      parserPos :: SP GPSposDec
-      parserPos = msp *> parserPosDec <* msp
-
-instance StringPrism GPSdeg where
-  stringPrism = prism' showDeg
-                       (parseMaybe $ parserDeg [N, E, S, W])
-
--- helper funtions
-
-parserPosDec :: SP GPSposDec
-parserPosDec = tt <$> signedFloat <* msp <* char ',' <* msp <*> signedFloat
-  where
-    tt x y = GPSpos (read x) (read y)
-
-showDeg :: GPSdeg -> String
-showDeg (GPSdeg d m s r) = unwords
-  [ show d, "deg", show m ++ "'", printf "%f" s ++ "\"", show r]
-
-parserDeg :: [GPSdir] -> SP GPSdeg
-parserDeg dirs = do
-  deg <- read <$> (some digitChar <* msp <* string "deg" <* msp)
-  mn  <- read <$> (some digitChar <* char '\''           <* msp)
-  sec <- read <$> (floatParser    <* char '"'            <* msp)
-  dir <- parserDir
-  return $ GPSdeg deg mn sec dir
-  where
-    parserDir :: SP GPSdir
-    parserDir = foldr (<|>) empty $ map parserD dirs
-      where
-        parserD :: GPSdir -> SP GPSdir
-        parserD d = string (show d) *> return d
-
-deg2dec :: GPSdeg -> Double
-deg2dec (GPSdeg d m s r) =
-  (d' + m'/60 + s/3600) *
-  ( if r == N || r == E
-    then  1
-    else -1
-  )
-  where
-    d' = fromIntegral d
-    m' = fromIntegral m
-
-dec2deg :: (GPSdir, GPSdir) -> Double -> GPSdeg
-dec2deg (po, ne) x = GPSdeg d'  m'  s'  c'
-  where
-    s'       = r2 * 60
-    (m', r2) = properFraction (r1 * 60)
-    (d', r1) = properFraction x'
-    (x', c')
-      | x >= 0    = ( x, po)
-      | otherwise = (-x, ne)
-
--- ----------------------------------------
-
-s1, s2, s3 :: String
-
-s1 = " 53.575644, -9.767767 "
-s2 = "https://www.google.com/maps/place/34%C2%B011'19.1%22N+118%C2%B040'26.5%22W/@34.1886344,-118.6762237,17z/data=!3m1!4b1!4m14!1m7!3m6!1s0x80c2c75ddc27da13:0xe22fdf6f254608f4!2sLos+Angeles,+CA,+USA!3b1!8m2!3d34.0522342!4d-118.2436849!3m5!1s0x0:0x0!7e2!8m2!3d34.1886303!4d-118.6740354"
-s3 = "53 deg 2' 10.3\" N , 10 deg 0' 20.1\" E"
-
--- the old regex for matchSubRE was much shorter, but buggy
--- no parse in read::Double and other bugs
-
-degToString :: (Int, Int, Double, Char) -> String
-degToString (d, m, s, c) = concat
-  [ show d
-  , " deg "
-  , show m
-  , "' "
-  , printf "12.9f" s
-  , " "
-  , [c]
-  ]
-
-latLongToString :: (Double, Double) -> String
-latLongToString (lat, lng) =
-  (degToString . degDec2Deg ('N', 'S') $ lat)
-  ++ ", " ++
-  (degToString . degDec2Deg ('E', 'W') $ lng)
-
-
-degParser :: String -> SP (Int, Int, Double, Char)
-degParser dirs = do
-  deg <- read <$> (some digitChar <* ssp <* string "deg" <* ssp)
-  mn  <- read <$> (some digitChar <* char '\''           <* ssp)
-  sec <- read <$> (floatParser    <* char '"'            <* ssp)
-  dir <- oneOf' dirs
-  return (deg, mn, sec, dir)
-
-latLongDec :: SP (Double, Double)
-latLongDec = msp *> ll <* msp
-  where
-    ll     = tt <$> signedFloat <* char ',' <* msp <*> signedFloat
-    tt x y = (read x, read y)
-
-ssp :: SP String
-ssp = some (char ' ')
-
-msp :: SP String
-msp = many (char ' ')
-
-signedFloat :: SP String
-signedFloat =
-  (string "-" <|> string "+" <|> return "")
-  <++>
-  floatParser
-
-floatParser :: SP String
-floatParser =
-  ( some digitChar
-    <++>
-    SP.option ".0"
-    ( string "."
-      <++>
-      ( SP.option "0" $ some digitChar )
-    )
-  )
-  <|>
-  (("0." ++) <$> (char '.' *> some digitChar))
-
--- parse latitute and longitude
--- and convert to decimal degees
-
-latLongParser :: SP (Double, Double)
-latLongParser = do
-  lat  <- deg2DegDec <$>         degParser "NS"
-  long <- deg2DegDec <$> (del *> degParser "WE")
-  return (lat, long)
-  where
-    del = SP.option ' ' (char ',') *> some (char ' ')
-
-
--- | "degrees minutes seconds dir" to "decimal degrees" (google url format)
-
-deg2DegDec :: (Int, Int, Double, Char) -> Double
-deg2DegDec (d, m, s, dir) =
-  (d' + m'/60 + s/3600) *
-  ( if dir == 'W'
-       ||
-       dir == 'S'
-    then (0-1)
-    else 1
-  )
-  where
-    d' = fromIntegral d
-    m' = fromIntegral m
-
--- inverse to deg2DegDec
-degDec2Deg :: (Char, Char) -> Double -> (Int, Int, Double, Char)
-degDec2Deg (po, ne) x = (d', m', s', c')
-  where
-    s'       = r2 * 60
-    (m', r2) = properFraction (r1 * 60)
-    (d', r1) = properFraction x'
-    (x', c')
-      | x >= 0    = (x, po)
-      | otherwise = (-x, ne)
-
-latLong2googleMapsUrl :: (Double, Double) -> String
-latLong2googleMapsUrl (lat, long) =
-  lat' ++ "," ++ long'
-  where
-    format = printf "%12.9f"
-    lat'   = format lat
-    long'  = format long
-
-loc2googleMapsUrl :: String -> Maybe String
-loc2googleMapsUrl loc =
-  latLong2googleMapsUrl <$> parseMaybe latLongParser loc
-
-googleMapsUrlParser :: SP (Double, Double)
-googleMapsUrlParser =
-  anyStringThen "/@" *> latLongDec <* anyString
 
 -- ----------------------------------------
 
@@ -990,6 +898,7 @@ attrCol =
     , "Access"
     , "Duration"
     , "Rating"
+    , "GPSPosition"
     ]
   )
 
@@ -1007,7 +916,8 @@ descrTitle
   , descrOrderedBy
   , descrAccess
   , descrDuration
-  , descrRating :: Name
+  , descrRating
+  , descrGPSPosition :: Name
 
 keysAttrCol :: [Name]
 keysAttrCol @
@@ -1026,6 +936,7 @@ keysAttrCol @
   , descrAccess
   , descrDuration
   , descrRating
+  , descrGPSPosition
   ] = attrGroup2attrName attrCol
 
 

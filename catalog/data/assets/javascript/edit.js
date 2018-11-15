@@ -1798,7 +1798,8 @@ function setMetaData() {
      */
 
     var metadata = {};
-    var keys = ["Title", "Subtitle", "Comment", "Location", "Rating",
+    var keys = ["Title", "Subtitle", "Comment",
+                "GPSPosition", "Location", "Rating",
                 "Keywords", "Web", "Wikipedia",
                 "TitleEnglish", "TitleLatin"
                ];
@@ -1881,6 +1882,8 @@ function fillMetaData1(md0, args) {
     $('#descr-Rating').val(dr);
     var dc = md["descr:Comment"] || "";
     $('#descr-Comment').val(dc);
+    var dgp = md["descr:GPSPosition"] || "";
+    $('#descr-GPSPosition').val(dgp);
     var dlc = md["descr:Location"] || "";
     $('#descr-Location').val(dlc);
     var dk = md["descr:Keywords"] || "";

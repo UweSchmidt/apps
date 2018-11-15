@@ -29,7 +29,6 @@ import Catalog.Cmd
 import Catalog.FilePath               ( fileName2ImgType, isoPicNo )
 import Catalog.Html.Basic             ( baseNameParser, ymdParser, isPano )
 import Catalog.Html.Templates.Blaze2  ( colPage', txtPage', picPage' )
-import Catalog.System.ExifTool        ( getMetaData )
 import Catalog.System.Convert         ( createResizedImage
                                       , genIcon
                                       , genBlogHtml

@@ -16,12 +16,10 @@ where
 
 import           Data.MetaData ( MetaData
                                , metaDataAt
-                               , loc2googleMapsUrl
+                               , lookupByNames
 
                                , compositeDOF
                                , compositeGPSAltitude
-                               , compositeGPSLatitude
-                               , compositeGPSLongitude
                                , compositeGPSPosition
                                , compositeImageSize
                                , compositeLensID
@@ -35,6 +33,7 @@ import           Data.MetaData ( MetaData
                                , descrTitleLatin
                                , descrWeb
                                , descrWikipedia
+                               , descrGPSPosition
 
                                , exifCreateDate
                                , exifExposureCompensation
@@ -567,94 +566,105 @@ picInfo theImgGeo md =
           table ! class_ "info" $ picMeta md
 
 picMeta :: MetaData -> Html
-picMeta md = mconcat $ map toMarkup mdTab
+picMeta md = mconcat mdTab
   where
-    toMarkup (descr, key, process)
+    toEntry :: Text -> Name -> Text -> Html -> Html
+    toEntry descr key val val'
       | T.null val = mempty
-      | otherwise  = toEntry descr key (process val)
+      | otherwise  =
+          tr ! class_ "info"
+             ! A.id (toValue $ key ^. isoText) $ do
+          th $ toHtml descr
+          td $ val'
+
+    mdval :: Text -> Name -> Html
+    mdval descr key =
+      toEntry descr key val $
+      toHtml val
       where
         val = md ^. metaDataAt key
 
-    toEntry :: Text -> Name -> Html -> Html
-    toEntry descr key val =
-      tr ! class_ "info"
-         ! A.id (toValue $ key ^. isoText) $ do
-        th $ toHtml descr
-        td $ val
+    mdLink :: Text -> Name -> Html
+    mdLink descr key =
+      toEntry descr key val $
+      H.a ! href (toValue val) $
+      toHtml val
+      where
+        val = md ^. metaDataAt key
 
-    mdv :: Text -> Html
-    mdv v = toHtml v
+    mdRat :: Text -> Html
+    mdRat descr =
+      toEntry descr key val $
+      H.span ! A.style "color: red" $
+      toHtml val
+      where
+        key   = imgRating
+        val   = md ^. metaDataAt key
 
-    mdWeb :: Text -> Html
-    mdWeb v =
-      H.a ! href (toValue v) $ toHtml v
-
-    mdWiki :: Text -> Html
-    mdWiki v =
-      H.a ! href (toValue v) $ "--> Wikipedia"
 
     mdMap :: Text -> Html
-    mdMap pos =
-      H.a ! href (toValue gmhref) $ toHtml $ formatDegree pos
+    mdMap descr =
+      toEntry descr key2 val $
+      H.a ! href (toValue url) $
+      toHtml $ formatDegree val
       where
-        gmhref, gmloc :: Text
-        gmhref = "https://maps.google.de/maps/@" <> gmloc <> ",17z"
-        gmloc = loc2googleMapsUrl (pos ^. isoString) ^. from isoMaybe . isoText
-
-    mdRating :: Text -> Html
-    mdRating r =
-      H.span ! A.style "color: red" $ toHtml r
+        key1 =     descrGPSPosition
+        key2 = compositeGPSPosition
+        val  = lookupByNames [key1, key2] md
+        url :: Text
+        url  = "https://maps.google.de/maps/@"
+               <>
+               (val ^. isoString . from isoGoogleMapsDegree . isoText)
+               <>
+               ",17z"
 
     mdFile :: Text -> Html
-    mdFile v =
+    mdFile descr =
+      toEntry descr fileFileName v $
       toHtml $ d <> "/" <> v
       where
         d = md ^. metaDataAt fileDirectory
-
-    mdLoc :: Text -> Html
-    mdLoc v = toHtml $ formatDegree v
+        v = md ^. metaDataAt fileFileName
 
     -- subst " deg" by degree char '\176'
     formatDegree :: Text -> Text
     formatDegree t =
       (SP.sedP (const "\176") (SP.string " deg") $ t ^. isoString) ^. isoText
 
-    mdTab :: [(Text, Name, Text -> Html)]
+    mdTab :: [Html]
     mdTab =
-      [ ("Titel",                descrTitle,                     mdv)
-      , ("Untertitel",           descrSubtitle,                  mdv)
-      , ("Titel (engl.)",        descrTitleEnglish,              mdv)
-      , ("Titel (lat.)",         descrTitleLatin,                mdv)
-      , ("Kommentar",            descrComment,                   mdv)
-      , ("Ort",                  descrLocation,                  mdv)
-      , ("Web",                  descrWeb,                       mdWeb)
-      , ("Wikipedia",            descrWikipedia,                 mdWiki)
-      , ("Karte",                compositeGPSPosition,           mdMap)
-      , ("Breitengrad",          compositeGPSLatitude,           mdLoc)
-      , ("Längengrad",           compositeGPSLongitude,          mdLoc)
-      , ("Höhe",                 compositeGPSAltitude,           mdv)
-      , ("Aufnahmedatum",        exifCreateDate,                 mdv)
-      , ("Kamera",               exifModel,                      mdv)
-      , ("Objektiv",             compositeLensSpec,              mdv)
-      , ("Objektiv Typ",         compositeLensID,                mdv)
-      , ("Brennweite",           exifFocalLength,                mdv)
-      , ("Brennweite in 35mm",   exifFocalLengthIn35mmFormat,    mdv)
-      , ("Belichtungszeit",      exifExposureTime,               mdv)
-      , ("Blende",               exifFNumber,                    mdv)
-      , ("Belichtungskorrektur", exifExposureCompensation,       mdv)
-      , ("ISO",                  exifISO,                        mdv)
-      , ("Belichtungsmessung",   exifExposureMode,               mdv)
-      , ("Aufnahmebetriebsart",  exifExposureProgram,            mdv)
-      , ("Entfernung",           makerNotesFocusDistance,        mdv)
-      , ("Tiefenschärfe",        compositeDOF,                   mdv)
-      , ("Aufnahmemodus",        makerNotesShootingMode,         mdv)
-      , ("Weißabgleich",         exifWhiteBalance,               mdv)
-      , ("Aufnahmezähler",       makerNotesShutterCount,         mdv)
-      , ("Geometrie",            compositeImageSize,             mdv)
-      , ("Raw-Datei",            fileFileName,                   mdFile)
-      , ("Bild-Datei",           fileRefJpg,                     mdv)
-      , ("Bearbeitet",           fileFileModifyDate,             mdv)
-      , ("Bewertung",            imgRating,                      mdRating)
+      [ mdval  "Titel"                 descrTitle
+      , mdval  "Untertitel"            descrSubtitle
+      , mdval  "Titel engl."           descrTitleEnglish
+      , mdval  "Titel lat."            descrTitleLatin
+      , mdval  "Kommentar"             descrComment
+      , mdval  "Ort"                   descrLocation
+      , mdLink "Web"                   descrWeb
+      , mdLink "Wikipedia"             descrWikipedia
+      , mdMap  "Position"
+      , mdval  "Höhe"                  compositeGPSAltitude
+      , mdval  "Aufnahmedatum"         exifCreateDate
+      , mdval  "Kamera"                exifModel
+      , mdval  "Objektiv"              compositeLensSpec
+      , mdval  "Objektiv Typ"          compositeLensID
+      , mdval  "Brennweite"            exifFocalLength
+      , mdval  "Brennweite in 35mm"    exifFocalLengthIn35mmFormat
+      , mdval  "Belichtungszeit"       exifExposureTime
+      , mdval  "Blende"                exifFNumber
+      , mdval  "Belichtungskorrektur"  exifExposureCompensation
+      , mdval  "ISO"                   exifISO
+      , mdval  "Belichtungsmessung"    exifExposureMode
+      , mdval  "Aufnahmebetriebsart"   exifExposureProgram
+      , mdval  "Entfernung"            makerNotesFocusDistance
+      , mdval  "Tiefenschärfe"         compositeDOF
+      , mdval  "Aufnahmemodus"         makerNotesShootingMode
+      , mdval  "Weißabgleich"          exifWhiteBalance
+      , mdval  "Aufnahmezähler"        makerNotesShutterCount
+      , mdval  "Geometrie"             compositeImageSize
+      , mdFile "Raw-Datei"
+      , mdval  "Bild-Datei"            fileRefJpg
+      , mdval  "Bearbeitet"            fileFileModifyDate
+      , mdRat  "Bewertung"
       ]
 
 -- ----------------------------------------

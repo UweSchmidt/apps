@@ -89,7 +89,7 @@ colImgRef i = do
 
 iconRef :: ObjId -> Cmd FilePath
 iconRef i = do
-  t  <- getImgVals i (theMetaData . metaDataAt descrTitle . isoString)
+  t  <- (^. metaDataAt descrTitle . isoString ) <$> getMetaData i
 
   mbf <-
     if isempty t  -- no title there

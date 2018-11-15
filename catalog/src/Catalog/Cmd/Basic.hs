@@ -14,6 +14,7 @@ module Catalog.Cmd.Basic
   , getImgVal
   , getImgVals
   , getImgSubDirs
+  , getMetaData
   , getRootId
   , getRootImgDirId
   , getRootImgColId
@@ -197,6 +198,9 @@ objid2contNames i = getImgVal i >>= go
 
       | otherwise =
           return []
+
+getMetaData :: ObjId -> Cmd MetaData
+getMetaData i = getImgVals i theMetaData
 
 -- ----------------------------------------
 

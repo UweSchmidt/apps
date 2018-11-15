@@ -68,6 +68,12 @@ noneOf' = P.noneOf
 oneOf' :: String -> SP Char
 oneOf' = P.oneOf
 
+ssp :: SP String
+ssp = some (char ' ')
+
+msp :: SP String
+msp = many (char ' ')
+
 -- --------------------
 
 sedParser :: (a -> String) -> SP a -> SP String

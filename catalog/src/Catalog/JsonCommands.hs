@@ -46,9 +46,7 @@ import Catalog.Sync       ( syncDirP
                           , syncNewDirs
                           )
 import Catalog.System.ExifTool
-                          ( getMetaData
-                          , forceSyncAllMetaData
-                          )
+                          ( forceSyncAllMetaData )
 
 -- ----------------------------------------
 --
@@ -445,20 +443,7 @@ read'blogsource =
               (n ^? theColBlog . traverse)
         getColBlogSource br
     )
-{-
--- --------------------
---
--- compute the image ref of a collection entry
--- for previewing the image
 
-read'previewref :: Int -> GeoAR -> ImgNode -> Cmd FilePath
-read'previewref pos geo n =
-  (("/" ++ geo ^. isoString) ++) <$>
-  processColEntryAt
-    buildImgPath
-    colImgRef
-    pos n
---}
 -- --------------------
 --
 -- get the meta data of a collection entry
@@ -466,21 +451,14 @@ read'previewref pos geo n =
 read'metadata :: Int -> ImgNode -> Cmd MetaData
 read'metadata =
   processColEntryAt
-    (\ (ImgRef i _) -> do
-        exifMD <- getMetaData i               -- exif meta data
-        imgMD  <- getImgVals  i theMetaData   -- title, comment, ...
-        return $ imgMD <> exifMD
-    )
-    (\ i   -> getImgVals i theMetaData)
+    (\ (ImgRef i _) -> getMetaData i)
+    (\ i            -> getMetaData i)
 
 -- get the rating field of a collection entry
 
 read'rating :: Int -> ImgNode -> Cmd Rating
 read'rating pos n =
-  getRating <$>
-  processColEntryAt (\ (ImgRef i' _) -> getM i') getM pos n
-  where
-    getM i' = getImgVals i' theMetaData
+  getRating <$> read'metadata pos n
 
 -- get the rating field of all entries in a collection
 
@@ -490,6 +468,6 @@ read'ratings n =
   where
     f = colEntry' (getR . _iref) getR
       where
-        getR i' = getRating <$> getImgVals i' theMetaData
+        getR i' = getRating <$> getMetaData i'
 
 -- ----------------------------------------

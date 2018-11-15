@@ -23,6 +23,7 @@ library
                      Data.Prim
                      Data.Prim.CheckSum
                      Data.Prim.Constants
+                     Data.Prim.GPS
                      Data.Prim.Geometry
                      Data.Prim.ImageType
                      Data.Prim.Name
