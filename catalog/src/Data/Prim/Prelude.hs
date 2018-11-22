@@ -66,8 +66,8 @@ module Data.Prim.Prelude
        , IsoInteger(..)
        , IsoHex(..)
        , IsoMaybe(..)
-       , StringPrism(..)
-       , TextPrism(..)
+       , PrismString(..)
+       , PrismText(..)
        , take1st
        , isoMapElems
        , isoMapList
@@ -161,20 +161,20 @@ instance IsEmpty (Map k v) where
 -- the save version of conversion to/from String
 -- when parsing is unsafe
 
-class StringPrism a where
-  stringPrism :: Prism' String a
+class PrismString a where
+  prismString :: Prism' String a
 
-  default stringPrism :: (Read a, Show a) => Prism' String a
-  stringPrism = prism' show readMaybe
+  default prismString :: (Read a, Show a) => Prism' String a
+  prismString = prism' show readMaybe
 
 
 -- the safe version of conversion to/from Text
 
-class TextPrism a where
+class PrismText a where
   textPrism :: Prism' Text a
 
-  default textPrism :: (StringPrism a) => Prism' Text a
-  textPrism = isoString . stringPrism
+  default textPrism :: (PrismString a) => Prism' Text a
+  textPrism = isoString . prismString
 
 -- ----------------------------------------
 

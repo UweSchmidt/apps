@@ -54,8 +54,8 @@ isoDegDec = iso toDec frDec
 
 -- parse and show positions in degree format
 
-instance StringPrism GPSposDeg where
-  stringPrism = prism' showPos
+instance PrismString GPSposDeg where
+  prismString = prism' showPos
                        (parseMaybe parserPos)
     where
       showPos :: GPSposDeg -> String
@@ -72,11 +72,11 @@ instance StringPrism GPSposDeg where
 
 -- parse and show positions in decimal form
 --
--- "53.3, 10.0" ^? stringPrism      -> Just (GPSpos 53.3 10.0)
--- stringPrism # (GPSpos 53.3 10.0) -> "53.3, 10.0"
+-- "53.3, 10.0" ^? prismString      -> Just (GPSpos 53.3 10.0)
+-- prismString # (GPSpos 53.3 10.0) -> "53.3, 10.0"
 
-instance StringPrism GPSposDec where
-  stringPrism = prism' showPosDec
+instance PrismString GPSposDec where
+  prismString = prism' showPosDec
                        (parseMaybe parserPos)
     where
       showPosDec :: GPSposDec -> String
@@ -101,12 +101,12 @@ googleMapsGPSdec :: Prism' String GPSposDec
 googleMapsGPSdec = prism' pos2mapsUrl
                          (\ s -> parseMaybe parserMapsUrl s
                                  <|>
-                                 (s ^? stringPrism . isoDegDec)
+                                 (s ^? prismString . isoDegDec)
                          )
   where
     pos2mapsUrl :: GPSposDec -> String
     pos2mapsUrl pos =
-      "https://maps.google.de/maps/@" <> (stringPrism # pos) <> ",17z"
+      "https://maps.google.de/maps/@" <> (prismString # pos) <> ",17z"
 
     -- parse a Google maps url or just a GPSposDec (pair of doubles)
     parserMapsUrl :: SP GPSposDec
@@ -134,20 +134,20 @@ isoGoogleMapsDegree =
         deg = url ^? googleMapsGPSdec . from isoDegDec
 
         res :: Maybe String
-        res = (stringPrism #) <$> deg
+        res = (prismString #) <$> deg
 
     degree2googleMapsUrl :: String -> String
     degree2googleMapsUrl deg =
       res ^. from isoMaybe
       where
         dec :: Maybe GPSposDec
-        dec = deg ^? stringPrism . isoDegDec
+        dec = deg ^? prismString . isoDegDec
 
         res :: Maybe String
-        res = (stringPrism #) <$> dec
+        res = (prismString #) <$> dec
 
-instance StringPrism GPSdeg where
-  stringPrism = prism' showDeg
+instance PrismString GPSdeg where
+  prismString = prism' showDeg
                        (parseMaybe $ parserDeg [N, E, S, W])
 
 -- helper funtions
