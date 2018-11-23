@@ -139,16 +139,24 @@ catalogServer env runR runM =
     get'img
     :<|>
     get'html
+    :<|>
+    get'movie
   )
 
   where
     mountPath = env ^. envMountPath . isoFilePath
     static p  = serveDirectoryWebApp (mountPath ++ p)
 
-    bootstrap         = static "/bootstrap"
+    bootstrap         = static ps'bootstrap
     assets'css        = static ps'css
     assets'icons      = static ps'icons
     assets'javascript = static ps'javascript
+
+    -- movies are served statically to enable streaming
+    -- the original .mp4 movies are accessed
+    -- by a path prefix "/docs/movies/archive/photos/" ++ <path-to-mp4> image object
+
+    get'movie         = static ps'movies
 
     -- root html files are located under /assets/html
 

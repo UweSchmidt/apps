@@ -77,7 +77,13 @@ type NewDocAPI
       ImgAPI
       :<|>
       PageAPI
+      :<|>
+      MovieAPI
     )
+
+-- movies are found under /docs/movies/archive/.../movie.mp4"
+
+type MovieAPI = "movies" :> Raw
 
 -- a lazy bytestring as response  with a cache control header
 

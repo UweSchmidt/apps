@@ -83,7 +83,8 @@ ps'archive
   , ps'docroot
   , ps'exifcache
   , ps'zipcache
-  , ps'gen'icon :: FilePath
+  , ps'gen'icon
+  , ps'movies :: FilePath
 
 ps'archive      = p'archive      ^. isoString
 ps'clipboard    = p'clipboard    ^. isoString
@@ -107,6 +108,7 @@ ps'docroot      = "/docs"
 ps'exifcache    = ps'docroot </> "exif-meta"
 ps'zipcache     = ps'docroot </> "zip-cache"
 ps'gen'icon     = ps'docroot </> "generated/icon"
+ps'movies       = ps'docroot </> "movies/archive"
 
 -- ----------------------------------------
 
