@@ -14,7 +14,7 @@ data ImgType =
   IMGraw   | IMGmeta   | IMGjson   | IMGjpg    |
   IMGimg   | IMGcopy   | IMGimgdir | IMGjpgdir |
   IMGother | IMGboring | IMGhugin  | IMGdxo    |
-  IMGtxt   | IMGdng    | IMGvideo
+  IMGtxt   | IMGdng    | IMGmovie
 
 deriving instance Eq   ImgType
 deriving instance Ord  ImgType

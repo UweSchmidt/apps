@@ -51,7 +51,7 @@ data ReqType = RPage    -- deliver HTML col-, img-, blog page   text/html
              | RIconp   -- like RIcon with org img aspectratio  image/jpg
              | RImg     -- deliver JPG image                    image/jpg
              | RBlog    -- ???
-             | RVideo   -- deliver mp4 video                    ???/mp4
+             | RMovie   -- deliver mp4 video                    ???/mp4
              | RRef     -- deliver an url, not a content
              deriving (Eq, Ord, Show, Read)
 
@@ -355,7 +355,7 @@ toUrlPath r0 =
     ex RIconp = ".jpg"
     ex RImg   = ".jpg"
     ex RBlog  = ".html"
-    ex RVideo = ".mp4"
+    ex RMovie = ".mp4"
     ex _      = ""
 
     -- scaling of icons smaller than 160x120 with fixed aspect ratio
@@ -409,7 +409,7 @@ toMediaReq r =
     t = case fileName2ImgType (r ^. rImgRef . to _iname . isoString) of
       IMGjpg   -> RImg
       IMGimg   -> RImg
-      IMGvideo -> RVideo
+      IMGmovie -> RMovie
       IMGtxt   -> RPage
       _        -> RPage  -- should not occur
 
@@ -448,7 +448,7 @@ genReqImg r = do
     IMGimg ->
       createCopyFromImg geo sp ip
 
-    IMGvideo ->
+    IMGmovie ->
       abortR "genReqIcon: icon for video not yet implemented" r
 
     IMGtxt -> do
@@ -862,7 +862,7 @@ genReqImgPage' r = do
         metaData
 
     -- mp4 video
-    RVideo -> do
+    RMovie -> do
       abortR ("genReqImgPage: not yet implemented") r
 
     -- blog page

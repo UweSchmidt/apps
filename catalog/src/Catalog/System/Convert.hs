@@ -3,6 +3,7 @@
 module Catalog.System.Convert
 -- {-
   ( getImageSize
+  , getThumbnailImage
   , createResizedImage
   , genIcon
   , genAssetIcon
@@ -19,7 +20,6 @@ import           Catalog.Cmd
 import           Catalog.System.ExifTool (getExifTool)
 import           Data.Prim
 import           Data.MetaData           (getOrientation)
-
 -- import Debug.Trace
 
 -- ----------------------------------------
@@ -87,6 +87,38 @@ genIcon path t = do
         (t1, t2)  = splitAt len2 t
         (s1, r2)  = splitAt len3 t
         (s2, s3)  = splitAt len3 r2
+
+-- ----------------------------------------
+
+getThumbnailImage :: FilePath -> FilePath -> Cmd (Maybe FilePath)
+getThumbnailImage src dst = do
+  sp <- toSysPath src
+  dp <- toSysPath dst
+  ( extractImage sp dp >> return (Just dst) )
+    `catchError`
+    ( \ e ->
+        do warn $
+             unwords [ "getThumbnailImage: no Thumbnail found in "
+                     , show sp ++ ","
+                     , "reason:"
+                     , show e
+                     ]
+           return Nothing
+    )
+  where
+    extractImage :: SysPath -> SysPath -> Cmd ()
+    extractImage sp dp = do
+      _ <- execProcess "bash" [] $
+           unwords [ "exiftool"
+                   , "'-b'"
+                   , "'-ThumbnailImage'"
+                   , "'" ++ sp ^. isoFilePath ++ "'"
+                   , ">"
+                   , "'" ++ dp ^. isoFilePath ++ "'"
+                   ]
+      unlessM (fileNotEmpty dp) $
+        abort $ "empty thumbnail file " ++ show dp
+      return ()
 
 -- ----------------------------------------
 

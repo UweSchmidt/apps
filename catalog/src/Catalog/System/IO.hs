@@ -6,6 +6,7 @@ module Catalog.System.IO
   , FileStatus
   , toSysPath
   , fileExist
+  , fileNotEmpty
   , dirExist
   , getFileStatus
   , getModiTime
@@ -59,6 +60,16 @@ fileExist sp = io . D.doesFileExist $ sp ^. isoFilePath
 
 dirExist :: SysPath -> Cmd Bool
 dirExist sp = io . D.doesDirectoryExist $ sp ^. isoFilePath
+
+-- check whether a file is there and not empty
+
+fileNotEmpty :: SysPath -> Cmd Bool
+fileNotEmpty sp = do
+  ex <- fileExist sp
+  if not ex
+    then do st <- getFileStatus sp
+            return $ X.fileSize st == 0
+    else return True
 
 getFileStatus :: SysPath -> Cmd FileStatus
 getFileStatus sp = io . X.getFileStatus $ sp ^. isoFilePath

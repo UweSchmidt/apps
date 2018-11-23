@@ -272,7 +272,7 @@ collectDirCont i = do
   let (imgfiles, rest3) =
         partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
                                       , IMGjpg, IMGimg,  IMGcopy
-                                      , IMGtxt
+                                      , IMGtxt, IMGmovie
                                       ])) rest2
 
   mapM_ (\ n -> verbose $ "sync: fs entry ignored " ++ show (fst n)) others
@@ -308,15 +308,19 @@ syncImg ip pp xs = do
 
   -- trcObj i $ "syncImg: " ++ show (pp, xs)
 
-  -- is there at least a jpg or  raw image or a txt (something, that can be shown)?
-  -- then update, else ignore the entry
-  if has (traverse . _2 . _2 . isA (`elem` [IMGraw, IMGimg, IMGjpg, IMGtxt])) xs
+  -- is there at least a jpg or raw image,
+  -- a txt (something, that can be shown)
+  -- or a movie,
+  -- then update entry, else ignore it
+  if has ( traverse . _2 . _2 .
+           isA (`elem` [IMGraw, IMGimg, IMGjpg, IMGtxt, IMGmovie])
+         ) xs
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
     else do
       p' <- objid2path i
-      warn $ "sync: no raw, jpg or txt found for "
+      warn $ "sync: no raw, jpg, mp4, or txt found for "
              ++ quotePath p' ++ ", parts: " ++ show xs
       rmImgNode i
   where

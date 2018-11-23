@@ -310,7 +310,7 @@ imgTypeExt =
   [ (IMGimg,   [".png", ".gif", ".tif", ".tiff", ".ppm", ".pgm", ".pbm"])
   , (IMGjpg,   [".jpg"])
   , (IMGtxt,   [".txt", ".md"])
-  , (IMGvideo, [".mp4"])
+  , (IMGmovie, [".mp4"])
   , (IMGraw,   [".nef", ".rw2"])
   , (IMGdng,   [".dng"])
   , (IMGmeta,  [".xmp"])
