@@ -90,11 +90,11 @@ genIcon path t = do
 
 -- ----------------------------------------
 
-getThumbnailImage :: FilePath -> FilePath -> Cmd (Maybe FilePath)
+getThumbnailImage :: FilePath -> FilePath -> Cmd ()
 getThumbnailImage src dst = do
   sp <- toSysPath src
   dp <- toSysPath dst
-  ( extractImage sp dp >> return (Just dst) )
+  extractImage sp dp
     `catchError`
     ( \ e ->
         do warn $
@@ -103,7 +103,6 @@ getThumbnailImage src dst = do
                      , "reason:"
                      , show e
                      ]
-           return Nothing
     )
   where
     extractImage :: SysPath -> SysPath -> Cmd ()

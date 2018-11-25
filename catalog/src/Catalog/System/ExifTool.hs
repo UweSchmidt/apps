@@ -22,11 +22,12 @@ import           Data.Prim
 -- a jpg or a sidecar and merge it with given
 -- metadata
 
-getMDpart :: (ImgPart -> Bool)
-          -> Path -> ImgPart
+getMDpart :: (ImgType -> Bool)
+          -> Path
+          -> ImgPart
           -> Cmd MetaData
 getMDpart p ip pt
-  | p pt = do    -- ty `elem` [IMGraw, IMGimg, IMGmeta]
+  | p $ pt ^. theImgType  = do
       sp <- path2SysPath (substPathName tn ip)
       trc $ "getMDpart: update metadata with " ++ show sp
       m2 <- filterMetaData ty <$> getExifTool sp
@@ -38,7 +39,7 @@ getMDpart p ip pt
     tn = pt ^. theImgName
 
 
-setMD :: (ImgPart -> Bool)
+setMD :: (ImgType -> Bool)
       -> ObjId
       -> [ImgPart]
       -> Cmd ()
@@ -146,14 +147,8 @@ syncMetaData' i ps = do
     setMD isRawMeta i ps
 
     -- if neither raw, png, ... nor xmp there, collect meta from jpg files
-    unless (has (traverse . isA isRawMeta) ps) $
+    unless (has (traverse . theImgType . isA isRawMeta) ps) $
       setMD isJpg i ps
-
-isRawMeta :: ImgPart -> Bool
-isRawMeta pt = pt ^. theImgType `elem` [IMGraw, IMGimg, IMGmeta]
-
-isJpg :: ImgPart -> Bool
-isJpg pt = pt ^. theImgType == IMGjpg
 
 {-
 -- rating is stored in image node, not in exif data file

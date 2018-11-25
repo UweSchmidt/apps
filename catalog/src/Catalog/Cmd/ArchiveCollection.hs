@@ -303,7 +303,7 @@ findFstTxtEntry = findFstColEntry isTxtEntry
       (\ i n -> do
           nd <- getImgVal i
           let ty = nd ^? theParts . isoImgPartsMap . ix n . theImgType
-          return $ maybe False (== IMGtxt) ty
+          return $ maybe False isTxt ty
       )
       (const $ return False)
 

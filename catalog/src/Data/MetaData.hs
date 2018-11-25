@@ -478,11 +478,12 @@ compareByName =
 -- filter meta data enries by image type
 
 filterMetaData :: ImgType -> MetaData -> MetaData
-filterMetaData IMGraw  m = m ^. selectByParser psRaw
-filterMetaData IMGmeta m = m ^. selectByParser psXmp
-filterMetaData IMGjpg  m = m ^. selectByParser psRaw
-filterMetaData IMGimg  m = m ^. selectByParser psRaw
-filterMetaData _       _ = mempty
+filterMetaData ty md =
+  md ^. selectByParser ps
+  where
+    ps | isShowablePart ty = psRaw
+       | isMeta         ty = psXmp
+       | otherwise         = mzero
 
 -- ----------------------------------------
 --
@@ -568,6 +569,7 @@ psRaw = attrGroupsParser
   , attrComposite
   , attrMaker
   , attrFile
+  , attrQuickTime
   ]
 
 psXmp = attrGroupsParser
@@ -602,6 +604,7 @@ allAttrGroups =
   , attrExif
   , attrMaker
   , attrComposite
+  , attrQuickTime
   , attrXmp
   , attrCol
   , attrImg
@@ -618,6 +621,7 @@ allAttrKeys = foldl' ins HM.empty $
   , keysAttrExif
   , keysAttrMaker
   , keysAttrComposite
+  , keysAttrQuickTime
   , keysAttrXmp
   , keysAttrCol
   , keysAttrImg
@@ -655,7 +659,6 @@ keysAttrFile @
   , fileMIMEType
   , fileRefJpg
   ] = attrGroup2attrName attrFile
-
 
 
 attrExif :: AttrGroup
@@ -849,6 +852,29 @@ keysAttrComposite @
   , compositeSubSecDateTimeOriginal
   ] = attrGroup2attrName attrComposite
 
+
+attrQuickTime :: AttrGroup
+attrQuickTime =
+  ("QuickTime"
+  , [ "Duration"
+    , "ImageWidth"
+    , "ImageHeight"
+    , "VideoFrameRate"
+    ]
+  )
+
+quickTimeDuration
+  , quickTimeImageWidth
+  , quickTimeImageHeight
+  , quickTimeVideoFrameRate :: Name
+
+keysAttrQuickTime :: [Name]
+keysAttrQuickTime @
+  [ quickTimeDuration
+  , quickTimeImageWidth
+  , quickTimeImageHeight
+  , quickTimeVideoFrameRate
+  ] = attrGroup2attrName attrQuickTime
 
 attrXmp :: AttrGroup
 attrXmp =

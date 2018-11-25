@@ -341,7 +341,7 @@ thePartNames' typTest =
 
 -- images with 1 of the given types can be rendered
 thePartNamesI :: Traversal' ImgParts Name
-thePartNamesI = thePartNames' (`elem` [IMGjpg, IMGimg, IMGtxt])
+thePartNamesI = thePartNames' isShowablePart
 {-# INLINE thePartNamesI #-}
 
 thePartNames :: Traversal' ImgParts Name

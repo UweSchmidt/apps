@@ -68,6 +68,7 @@ filePathConfig =
       , (IMGraw,    bn rawExt)
       , (IMGimg,    bn imgExt)
       , (IMGjpg,    bn jpgExt')
+      , (IMGmovie,  bn movExt)
       , (IMGmeta,   bn xmpExt)
       , (IMGdxo,    bn dxoExt)
       , (IMGhugin,  bn ptoExt)
@@ -89,7 +90,8 @@ parseExt = foldl1 (<|>) . map (\ s -> try $ string' s)
 
 jpgExt'
   , rawExt, imgExt,  xmpExt, dxoExt
-  , ptoExt, jsonExt, dngExt, txtExt :: SP String
+  , ptoExt, jsonExt, dngExt, txtExt
+  , movExt :: SP String
 
 jpgExt' = parseExt [".jpg"]
 rawExt  = parseExt [".nef", ".rw2"]
@@ -103,6 +105,7 @@ ptoExt  = parseExt [".pto"]
 jsonExt = parseExt [".json"]
 dngExt  = parseExt [".dng"]
 txtExt  = parseExt [".txt", ".md"]
+movExt  = parseExt [".mp4"]
 
 geoExt :: SP String
 geoExt = string "." <++> p'geo

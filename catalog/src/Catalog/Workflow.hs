@@ -33,6 +33,7 @@ import Catalog.System.Convert         ( createResizedImage
                                       , genIcon
                                       , genBlogHtml
                                       , getImageSize
+                                      , getThumbnailImage
                                       )
 import Text.SimpleParser              ( parseMaybe )
 
@@ -46,13 +47,13 @@ type PathPos = (Path, Pos)
 type IdNode  = (ObjId, ImgNode)
 type Pos     = Maybe Int
 
-data ReqType = RPage    -- deliver HTML col-, img-, blog page   text/html
-             | RIcon    -- deliver JPG icon, fixed aspectratio  image/jpg
-             | RIconp   -- like RIcon with org img aspectratio  image/jpg
-             | RImg     -- deliver JPG image                    image/jpg
+data ReqType = RPage    -- deliver HTML col-, img-, movie-, blog page  text/html
+             | RIcon    -- deliver JPG icon, fixed aspectratio         image/jpg
+             | RIconp   -- like RIcon with org img aspectratio         image/jpg
+             | RImg     -- deliver JPG image                           image/jpg
              | RBlog    -- ???
-             | RMovie   -- deliver mp4 video                    ???/mp4
              | RRef     -- deliver an url, not a content
+             | RMovie   -- currently redundant, movie files are served statically
              deriving (Eq, Ord, Show, Read)
 
 data Req' a
@@ -433,7 +434,7 @@ checkMedia checkExt r =
 --
 -- commands for icon and image generation
 
--- dispatch icon generation over media type (jpg, txt, md, video)
+-- dispatch icon generation over media type (jpg, txt, md, mp4)
 
 genReqImg :: Req'IdNode'ImgRef a -> Cmd FilePath
 genReqImg r = do
@@ -449,7 +450,18 @@ genReqImg r = do
       createCopyFromImg geo sp ip
 
     IMGmovie ->
-      abortR "genReqIcon: icon for video not yet implemented" r
+      ( do
+          tp <- toCachedImgPath
+                ( r & rType .~ RMovie
+                    & rGeo  .~ geo'org
+                )
+          -- extract thumbnail from mp4
+          withCache  getThumbnailImage       sp tp
+          withCache (createResizedImage geo) tp ip
+          return ip
+        )
+        `catchError`
+        (\ _e -> createIconFromString geo "movie" ip)
 
     IMGtxt -> do
       -- read text from source file
@@ -538,10 +550,7 @@ createIconFromObj r dp = do
 -- create an image copy with a given geometry
 -- from a source image sp0
 --
--- the copy is stored unde the path of the image, not the col entry
--- and then a link to this file is created with the col entry path
--- with this 2 step process all copies in all collection of the same
--- image share the same physical image file
+-- the copy is stored under the path of the image
 
 createCopyFromImg :: GeoAR -> FilePath -> FilePath -> Cmd FilePath
 createCopyFromImg geo sp ip =

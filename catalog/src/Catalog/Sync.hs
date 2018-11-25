@@ -266,14 +266,11 @@ collectDirCont i = do
   trc $ "collectDirCont: entries found " ++ show es
 
   let (others, rest) =
-        partition (hasImgType (== IMGother)) es
+        partition (hasImgType isempty) es
   let (subdirs, rest2) =
-        partition (hasImgType (== IMGimgdir)) rest
+        partition (hasImgType isImgSubDir) rest
   let (imgfiles, rest3) =
-        partition (hasImgType (`elem` [ IMGraw, IMGmeta, IMGjson
-                                      , IMGjpg, IMGimg,  IMGcopy
-                                      , IMGtxt, IMGmovie
-                                      ])) rest2
+        partition (hasImgType isAnImgPart) rest2
 
   mapM_ (\ n -> verbose $ "sync: fs entry ignored " ++ show (fst n)) others
   realsubdirs <- filterM (isSubDir fp) subdirs
@@ -312,15 +309,13 @@ syncImg ip pp xs = do
   -- a txt (something, that can be shown)
   -- or a movie,
   -- then update entry, else ignore it
-  if has ( traverse . _2 . _2 .
-           isA (`elem` [IMGraw, IMGimg, IMGjpg, IMGtxt, IMGmovie])
-         ) xs
+  if has (traverse . _2 . _2 . isA isShowablePart) xs
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
     else do
       p' <- objid2path i
-      warn $ "sync: no raw, jpg, mp4, or txt found for "
+      warn $ "sync: no showable part found for "
              ++ quotePath p' ++ ", parts: " ++ show xs
       rmImgNode i
   where
@@ -374,17 +369,17 @@ fsFileStat = fsStat "regular file" fileExist
 parseDirCont :: SysPath -> Cmd [(Name, (Name, ImgType))]
 parseDirCont p = do
   (es, jpgdirs)  <- classifyNames <$> readDir p
-  -- trc $ "parseDirCont: " ++ show (es, jpgdirs)
+  trc $ "parseDirCont: " ++ show (es, jpgdirs)
   jss <- mapM
          (parseJpgDirCont p)                       -- process jpg subdirs
          (jpgdirs ^.. traverse . _1 . isoString)
-  -- trc $ "parseDirCont: " ++ show jss
+  trc $ "parseDirCont: " ++ show jss
   return $ es ++ concat jss
   where
     classifyNames =
-      partition (hasImgType (/= IMGjpgdir))  -- select jpg img subdirs
+      partition (hasImgType (not . isImgSubDir)) -- select jpg img subdirs
       .
-      filter    (hasImgType (/= IMGboring))  -- remove boring stuff
+      filter    (hasImgType (not . isBoring))    -- remove boring stuff
       .
       map (mkName &&& filePathToImgType)
 
@@ -393,7 +388,7 @@ parseJpgDirCont p d =
   classifyNames <$> readDir ((</> d) <$> p)
   where
     classifyNames =
-      filter (\ n -> (n ^. _2 . _2) == IMGjpg)
+      filter (\ n -> isJpg (n ^. _2 . _2))
       .
       map (\ n -> let dn = d </> n
                   in (mkName dn, filePathToImgType dn)
