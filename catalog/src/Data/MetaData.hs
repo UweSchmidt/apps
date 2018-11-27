@@ -114,6 +114,11 @@ module Data.MetaData
   , compositeSubSecCreateDate
   , compositeSubSecDateTimeOriginal
 
+  , quickTimeDuration
+  , quickTimeImageWidth
+  , quickTimeImageHeight
+  , quickTimeVideoFrameRate
+
   , xmpGPSLatitude
   , xmpGPSLongitude
   , xmpGPSAltitude

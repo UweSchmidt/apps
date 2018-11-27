@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Catalog.System.Convert
--- {-
   ( getImageSize
   , getThumbnailImage
   , createResizedImage
@@ -11,9 +10,7 @@ module Catalog.System.Convert
   , genBlogHtml
   , writeBlogText
   , selectFont
-  , scaleWidth
   )
--- -}
 where
 
 import           Catalog.Cmd
@@ -135,11 +132,6 @@ getImageSize fp =
                    show sp
             return ""
         )
-
-scaleWidth :: Int -> Geo -> Geo
-scaleWidth h' (Geo w h) = Geo w' h'
-  where
-    w' = (w * h' + (h - 1)) `div` h
 
 -- ----------------------------------------
 

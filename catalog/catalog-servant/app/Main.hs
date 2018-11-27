@@ -7,31 +7,50 @@ module Main where
 import Prelude ()
 import Prelude.Compat
 
-import Control.Concurrent.MVar
-import Control.Exception      (SomeException, catch) -- , try, toException)
-import Control.Monad.Except
-import Control.Monad.ReaderStateErrIO (Msg(..))
-
-import Network.Wai.Handler.Warp
-import Network.Wai.Logger     (withStdoutLogger)
+import Control.Concurrent.MVar ( MVar
+                               , newMVar, readMVar, takeMVar, swapMVar, putMVar
+                               , withMVar)
+import Control.Exception       ( SomeException
+                               , catch) -- , try, toException)
+import Control.Monad.ReaderStateErrIO
+                               ( Msg(..) )
+import Network.Wai.Handler.Warp( setPort
+                               , setLogger
+                               , defaultSettings
+                               , runSettings
+                               )
+import Network.Wai.Logger      ( withStdoutLogger )
 
 import Servant
-import System.Directory       (doesFileExist)
-import System.Exit            (die)
-import System.IO              (hPutStrLn, stderr, hFlush)
+
+import System.Directory        ( doesFileExist )
+import System.Exit             ( die )
+import System.IO               ( hPutStrLn, stderr, hFlush )
 
 import qualified Data.ByteString.Lazy as LBS
 
 -- catalog modules
 import Data.Prim
 import Data.ImgTree
-import Data.ImageStore (ImgStore)
+import Data.ImageStore         ( ImgStore )
 
 import Catalog.Cmd
-import Catalog.FilePath
-import Catalog.JsonCommands
-import Catalog.Options        (mainWithArgs)
-import Catalog.Workflow
+import Catalog.FilePath        ( splitDirFileExt
+                               , isoPicNo
+                               )
+import Catalog.JsonCommands    -- all read'... and modify'...
+import Catalog.Options         ( mainWithArgs )
+import Catalog.Workflow        ( ReqType(..)
+                               , PathPos
+                               , emptyReq'
+                               , reqType2AR
+                               , processReqImg
+                               , processReqPage
+                               , thePageCnfs
+                               , rType
+                               , rGeo
+                               , rPathPos
+                               )
 
 -- servant interface
 import API
