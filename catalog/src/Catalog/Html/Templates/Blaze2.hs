@@ -9,6 +9,7 @@ module Catalog.Html.Templates.Blaze2
   , picPage'
   , colPage'
   , txtPage'
+  , movPage'
   , renderPage
   , renderPage'
   )
@@ -170,6 +171,7 @@ picPage'
   thisImgRef nextImgRef prevImgRef fwrdImgRef
   orgImgRef panoImgRef
   metaData
+
   = picPage
     theBaseRef
     theHeadTitle
@@ -215,6 +217,61 @@ picPage'
       theImgGeo
       metaData
     )
+
+movPage' :: Text -> Text -> Text
+         -> Text -> Text -> Text
+         -> Geo  -> Geo
+         -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> Text -> Text -> Text -> Text
+         -> MetaData
+         -> Html
+movPage'
+  theBaseRef theHeadTitle theDate
+  theTitle theSubTitle theComment
+  theImgGeo theScreenGeo
+  thisDuration thisHref thisPos
+  theNextHref thePrevHref theParentHref theFwrdHref
+  thisImgRef nextImgRef prevImgRef fwrdImgRef
+  metaData
+
+  = movPage
+    theBaseRef
+    theHeadTitle
+    theDate
+    theImgGeo
+    ( jsCode
+      thisDuration
+      thisHref
+      thisPos
+      theNextHref
+      thePrevHref
+      theParentHref
+      mempty                         -- no child href
+      theFwrdHref
+      ( imgRef mempty nextImgRef )
+      ( imgRef mempty prevImgRef )
+      ( imgRef mempty fwrdImgRef )
+      ( imgRef mempty thisImgRef )
+      mempty                         -- no original size image
+      mempty                         -- no pano image
+    )
+    ( picMov
+      theScreenGeo
+      thisImgRef
+    )
+    ( picTitle
+      theImgGeo
+      theTitle
+      theSubTitle
+      theComment
+    )
+    picNav
+    ( picInfo
+      theImgGeo
+      metaData
+    )
+
 
 txtPage' :: Text -> Text -> Text
          -> Text -> Text -> Text
@@ -265,6 +322,25 @@ picPage theBaseRef theHeadTitle theDate
     ! onload "initPicture();"
     ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
     picImg
+    picTitle
+    picInfo
+    picNav
+
+-- ----------------------------------------
+
+movPage :: Text -> Text -> Text
+        -> Geo
+        -> Html -> Html -> Html -> Html -> Html
+        -> Html
+movPage theBaseRef theHeadTitle theDate
+        theImgGeo
+        jsCode picMov picTitle picNav picInfo
+  = htmlPage
+    ( headPage theBaseRef theHeadTitle theDate jsCode ) $ do
+  body
+    ! onload "initMovie();"
+    ! class_ (toValue $ "picture picture-" <> (theImgGeo ^. isoText)) $ do
+    picMov
     picTitle
     picInfo
     picNav
@@ -514,6 +590,24 @@ picImg theImgGeo theImgGeoDir thisImgRef = do
                 <> "width: "  <> theImgGeo ^. theW . isoText <> "px;"
                 <> "height: " <> theImgGeo ^. theH . isoText <> "px;"
               )
+
+-- ----------------------------------------
+
+picMov :: Geo  -> Text -> Html
+picMov theScreenGeo thisImgRef = do
+  -- the movie fitting into the dispay
+
+  H.div ! class_   "picture"
+        ! A.id     "pic-scaled" $
+
+    H.video ! A.width  (toValue $ theScreenGeo ^. theW . isoText)
+            ! A.height (toValue $ theScreenGeo ^. theH . isoText)
+            ! A.controls ("control") $ do
+      H.source ! A.src  (toValue thisImgRef)
+               ! A.type_ "video/mp4"
+      H.span "Your browser does not support HTML5 mp4 video"
+
+-- ----------------------------------------
 
 picTitle :: Geo -> Text -> Text -> Text -> Html
 picTitle theImgGeo theTitle theSubTitle theComment =

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -54,6 +55,8 @@ import Catalog.Workflow        ( ReqType(..)
 
 -- servant interface
 import API
+
+import Debug.Trace
 
 -- ----------------------------------------
 --
@@ -164,7 +167,9 @@ catalogServer env runR runM =
 
   where
     mountPath = env ^. envMountPath . isoFilePath
-    static p  = serveDirectoryWebApp (mountPath ++ p)
+    static p  = do
+      trace ("static: " ++ mountPath ++ p) $
+        serveDirectoryWebApp (mountPath ++ p)
 
     bootstrap         = static ps'bootstrap
     assets'css        = static ps'css
@@ -173,9 +178,11 @@ catalogServer env runR runM =
 
     -- movies are served statically to enable streaming
     -- the original .mp4 movies are accessed
-    -- by a path prefix "/docs/movies/archive/photos/" ++ <path-to-mp4> image object
+    -- by a path prefix "/docs/movies/archive/<syncdir>/" ++ <path-to-mp4>
+    -- image object
+    -- <syncdir> default is "photos"
 
-    get'movie         = static ps'movies
+    get'movie         = static $ "/" ++ env ^. envSyncDir
 
     -- root html files are located under /assets/html
 

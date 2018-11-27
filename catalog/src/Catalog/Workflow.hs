@@ -13,33 +13,41 @@ import Data.ImgNode
 import Data.ImgTree
 import Data.MetaData                  ( MetaData
                                       , metaDataAt
-                                      , getRating
-
                                       , descrComment
                                       , descrDuration
                                       , descrSubtitle
                                       , descrTitle
-
                                       , fileRefJpg
-
+                                      , getRating
                                       , imgRating
                                       )
 
 import Catalog.Cmd
-import Catalog.FilePath               ( fileName2ImgType, isoPicNo )
-import Catalog.Html.Basic             ( baseNameParser, ymdParser, isPano )
-import Catalog.Html.Templates.Blaze2  ( colPage', txtPage', picPage' )
+import Catalog.FilePath               ( fileName2ImgType
+                                      , isoPicNo
+                                      )
+import Catalog.Html.Basic             ( baseNameParser
+                                      , ymdParser
+                                      , isPano
+                                      )
+import Catalog.Html.Templates.Blaze2  ( colPage'
+                                      , txtPage'
+                                      , picPage'
+                                      , movPage'
+                                      )
 import Catalog.System.Convert         ( createResizedImage
                                       , genIcon
                                       , genBlogHtml
                                       , getImageSize
                                       , getThumbnailImage
+                                      , resizeGeo'
                                       )
 import Text.SimpleParser              ( parseMaybe )
 
 import qualified Data.Text            as T
 import qualified Text.Blaze.Html      as Blaze
-import           Text.Blaze.Html.Renderer.Utf8 (renderHtml)
+import           Text.Blaze.Html.Renderer.Utf8
+                                      ( renderHtml )
 
 -- ----------------------------------------
 
@@ -55,6 +63,7 @@ data ReqType = RPage    -- deliver HTML col-, img-, movie-, blog page  text/html
              | RRef     -- deliver an url, not a content
              | RMovie   -- currently redundant, movie files are served statically
              deriving (Eq, Ord, Show, Read)
+             -- !!! naming convention of constr RXxxx used in isoString
 
 data Req' a
   = Req' { _rType    :: ReqType      -- type
@@ -233,8 +242,9 @@ toMediaUrl :: Req'IdNode a -> CmdMB FilePath
 toMediaUrl r = do
   r' <- toMediaReq <$> setImgRef r
   case r' ^. rType of
-    RImg -> return $ toUrlPath r'
-    _    -> mzero
+    RImg -> return $ toUrlPath r'  -- .jpg images
+                                   -- toUrlPath is sufficient, no need for toUrlPath'
+    _    -> mzero                  -- .txt, .md, .mp4
 
 -- compute the metadata of an img reg
 
@@ -282,8 +292,7 @@ processReqImg' r0 = do
 processReqPage' :: Req' a -> CmdMB LazyByteString
 processReqPage' r0 = do
   r1 <- normAndSetIdNode r0
-  let dp = toUrlPath r1
-  lift $ trc $ "processReqPage: " ++ show dp
+  lift $ trc $ "processReqPage: " ++ show (toUrlPath r1)
 
   case r1 ^. rPos of
     -- create an image page
@@ -324,10 +333,10 @@ processReq cmd r0 =
 
 toRawPath :: Req' a -> FilePath
 toRawPath r =
-  "/" ++ geo' ++ path' ++ pos'
+  geo' ++ path' ++ pos'
   where
     path' = r ^. rPath . isoString
-    geo'  = r ^. rGeo  . isoString
+    geo'  = "/" ++ r ^. rGeo  . isoString
     pos'  = maybe mempty (\ i -> "/" ++ toS i) $ r ^. rPos
 
     toS =
@@ -343,21 +352,12 @@ toRawPath r =
 
 toUrlPath :: Req' a -> FilePath
 toUrlPath r0 =
-  rt ++ px ++ fp ++ ex ty
+  ps'docroot ++ px ++ fp ++ toUrlExt ty
   where
     r  = unifyIconPath r0
     ty = r ^. rType
     fp = toRawPath r
     px = "/" ++ ty ^. isoString
-    rt = ps'docroot
-
-    ex RPage  = ".html"
-    ex RIcon  = ".jpg"
-    ex RIconp = ".jpg"
-    ex RImg   = ".jpg"
-    ex RBlog  = ".html"
-    ex RMovie = ".mp4"
-    ex _      = ""
 
     -- scaling of icons smaller than 160x120 with fixed aspect ratio
     -- is done in browser, so the # icons used
@@ -368,6 +368,31 @@ toUrlPath r0 =
       , Geo w h <- r' ^. rGeo
       , w < 160 && h < 120    = r' & rGeo .~ Geo 160 120
       | otherwise             = r'
+
+-- all pages and media files are accesed by collection path and img ix
+-- except movies, these are served as static files and are
+-- referenced directly by the path to the movie
+
+toUrlPath' :: Req'IdNode'ImgRef a -> Cmd FilePath
+toUrlPath' r
+  | RMovie <- r ^. rType = toUrlImgPath r
+  | otherwise            = return $ toUrlPath r
+
+toUrlImgPath :: Req'IdNode'ImgRef a -> Cmd FilePath
+toUrlImgPath r = do
+  ip <- toSourcePath r
+  return $ ps'docroot ++ px ++ ps'archive ++ ip
+  where
+    px = "/" ++ r ^. rType . isoString
+
+toUrlExt :: ReqType -> FilePath
+toUrlExt RPage  = ".html"
+toUrlExt RIcon  = ".jpg"
+toUrlExt RIconp = ".jpg"
+toUrlExt RImg   = ".jpg"
+toUrlExt RBlog  = ".html"
+toUrlExt RMovie = ".mp4"
+toUrlExt _      = ""
 
 -- --------------------
 --
@@ -703,13 +728,7 @@ data PrevNextPar a =
   deriving (Functor, Foldable, Traversable, Show)
 
 toPrevNextPar :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
-toPrevNextPar r = do
-  v <- toPrevNextPar' r
-  -- trc $ "toPrevNextPar: " ++ show (fmap (fmap toReq'IdNode) v)
-  return v
-
-toPrevNextPar' :: Req'IdNode a -> Cmd (PrevNextPar (Maybe (Req'IdNode a)))
-toPrevNextPar' r =
+toPrevNextPar r =
   PrevNextPar
   <$> runMaybeT (toPrev            r)
   <*> runMaybeT (toNext            r)
@@ -747,10 +766,10 @@ data ImgAttr =
 collectImgAttr :: Req'IdNode'ImgRef a -> Cmd ImgAttr
 collectImgAttr r = do
   theMeta <- getMetaData iOid
-
+  theUrl  <- toUrlPath' (toMediaReq r)  -- !!! not toUrlPath due to RMovie
   return $
     ImgAttr
-    { _imgMediaUrl = toUrlPath (toMediaReq r) ^. isoText
+    { _imgMediaUrl = theUrl ^. isoText
     , _imgMeta     = theMeta
     , _imgTitle    = take1st
                      [ theMeta ^. metaDataAt descrTitle
@@ -794,7 +813,7 @@ genReqImgPage' r = do
           this'duration <- collectImgAttr r
   this'pos              <- thePos r
 
-  let     this'url       = toUrlPath r ^. isoText
+  let     this'url       = toUrlPath r ^. isoText  -- !!! no toUrlPath' due to RPage
   let     this'geo       = r ^. rGeo
   let     base'ref       = "/"  -- will be changed when working with relative urls
 
@@ -819,22 +838,27 @@ genReqImgPage' r = do
           _par'imgRef
           fwrd'imgRef   <- traverse tomu nav
 
+  let star               = '\9733'
+  let rating             = (\ x -> replicate x star ^. isoText) $
+                           getRating this'meta
+  let metaData           = this'meta -- add jpg filename and rating
+                           & metaDataAt fileRefJpg .~ (this'mediaUrl ^. isoText)
+                           & metaDataAt imgRating  .~ rating
+
   case toMediaReq r ^. rType of
 
     --image page
     RImg -> do
-      let star           = '\9733'
-      let rating         = (\ x -> replicate x star ^. isoText) $
-                           getRating this'meta
-      let metaData       = this'meta -- add jpg filename and rating
-                           & metaDataAt fileRefJpg .~ (this'mediaUrl ^. isoText)
-                           & metaDataAt imgRating  .~ rating
       org'imgpath       <- toSourcePath r
       org'geo           <- getImageSize org'imgpath
+
+      -- .jpg images may be shown in original size
       let org'mediaUrl   = toUrlPath
                            (r & rType .~ RImg
                               & rGeo  .~ geo'org
                            ) ^. isoText
+
+      -- .jpg panoramas may be shown as moving fullscreen images
       let pano'mediaUrl  = maybe
                            mempty
                            (\ geo -> toUrlPath
@@ -872,7 +896,31 @@ genReqImgPage' r = do
 
     -- mp4 video
     RMovie -> do
-      abortR ("genReqImgPage: not yet implemented") r
+      org'imgpath       <- toSourcePath r
+      org'geo           <- getImageSize org'imgpath
+
+      return $
+        movPage'
+        base'ref
+        this'title
+        now'
+        this'title
+        this'subTitle
+        this'comment
+        this'geo
+        (resizeGeo' org'geo this'geo)
+        this'duration
+        this'url
+        this'pos
+        next'url
+        prev'url
+        par'url
+        fwrd'url
+        this'mediaUrl
+        next'imgRef
+        prev'imgRef
+        fwrd'imgRef
+        metaData
 
     -- blog page
     RPage -> do

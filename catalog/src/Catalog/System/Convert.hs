@@ -10,6 +10,8 @@ module Catalog.System.Convert
   , genBlogHtml
   , writeBlogText
   , selectFont
+  , resizeGeo
+  , resizeGeo'
   )
 where
 
@@ -251,14 +253,18 @@ buildCmd3 rotate d'g s'geo d' s'
 -- ----------------------------------------
 
 resizeGeo       :: Geo -> Geo -> Geo
-resizeGeo sGeo@(Geo sw sh) (Geo dw dh)
+resizeGeo sGeo@(Geo sw sh) cGeo@(Geo dw dh)
     | sw <= dw && sh <= dh              -- source fits into display
         = sGeo                          -- no downsizing, no magnification
+    | otherwise
+        = resizeGeo' sGeo cGeo
 
+resizeGeo'       :: Geo -> Geo -> Geo
+resizeGeo' (Geo sw sh) (Geo dw dh)
     | sw * dh >= dw * sh                -- source wider than display
         = Geo dw (dw * sh `div` sw)     -- maximum width, height scaled down
 
-    | otherwise                         -- source higher than display
+    | otherwise                         -- source taler than display
         = Geo (dh * sw `div` sh) dh     -- maximum height, width scaled down
 
 

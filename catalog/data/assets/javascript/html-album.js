@@ -562,13 +562,17 @@ function childPage(ref) {
     changePage(ref);
 }
 
-function initPicture () {
+function initPicture() {
     isPicture = true;
     initState();
     initSlideShow();
 }
 
-function initAlbum () {
+function initMovie() {
+    initPicture();
+}
+
+function initAlbum() {
     isPicture = false;
     initState();
     initSlideShow();
