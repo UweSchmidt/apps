@@ -394,9 +394,9 @@ headPage :: Text -> Text -> Text -> Html -> Html
 headPage theBaseRef theHeadTitle theDate theJS
   = H.head $ do
   title $ toHtml theHeadTitle
-  meta ! name "description" ! content "Web Photo Album"
+  meta ! name "description" ! content "Web Photo Album (Version 0.2.2.0)"
   meta ! name "author"      ! content "Uwe Schmidt"
-  meta ! name "generator"   ! content "catalog-server"
+  meta ! name "generator"   ! content "catalog-servant"
   meta ! name "date"        ! content (toValue theDate)
   base ! href (toValue theBaseRef)
   link
@@ -603,9 +603,10 @@ picMov theScreenGeo thisImgRef = do
     H.video ! A.id "pic-movie"
             ! A.width  (toValue $ theScreenGeo ^. theW . isoText)
             ! A.height (toValue $ theScreenGeo ^. theH . isoText)
-            ! A.controls mempty
-            ! A.autoplay mempty
-            ! H.customAttribute  "muted"  mempty $ do
+        --  ! A.controls mempty                  -- toggled with key c
+            ! A.autoplay mempty                  -- autoplay works only with muted set (in Chrome)
+            ! H.customAttribute  "muted"  mempty -- toggled with key m
+            $ do
       H.source ! A.src  (toValue thisImgRef)
                ! A.type_ "video/mp4"
       H.span "Your browser does not support HTML5 mp4 video"
