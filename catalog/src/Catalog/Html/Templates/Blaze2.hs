@@ -600,9 +600,12 @@ picMov theScreenGeo thisImgRef = do
   H.div ! class_   "picture"
         ! A.id     "pic-scaled" $
 
-    H.video ! A.width  (toValue $ theScreenGeo ^. theW . isoText)
+    H.video ! A.id "pic-movie"
+            ! A.width  (toValue $ theScreenGeo ^. theW . isoText)
             ! A.height (toValue $ theScreenGeo ^. theH . isoText)
-            ! A.controls ("control") $ do
+            ! A.controls mempty
+            ! A.autoplay mempty
+            ! H.customAttribute  "muted"  mempty $ do
       H.source ! A.src  (toValue thisImgRef)
                ! A.type_ "video/mp4"
       H.span "Your browser does not support HTML5 mp4 video"

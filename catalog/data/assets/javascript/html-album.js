@@ -239,6 +239,22 @@ function switchToScaledPicture() {
     picstate="pic-scaled";
 }
 
+function toggleMute() {
+    var video = $('#pic-movie');
+    var mv    = ! video.prop('muted');
+
+    video.prop('muted', mv);
+    console.log("toggle video muted, value is now " + mv);
+}
+
+function toggleControls() {
+    var video = $('#pic-movie');
+    var mv    = ! video.prop('controls');
+
+    video.prop('controls', mv);
+    console.log("toggle video controls, value is now " + mv);
+}
+
 // ----------------------------------------
 
 var slideShowTimer;
@@ -511,6 +527,16 @@ function keyPressed (e) {
 
     if ( isKey(e, 113, "q") ) {
         togglePanoAnimation();
+        return false;
+    }
+
+    if ( isKey(e, 109, "m") ) {
+        toggleMute();
+        return false;
+    }
+
+    if ( isKey(e, 99, "c") ) {
+        toggleControls();
         return false;
     }
 

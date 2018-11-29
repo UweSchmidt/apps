@@ -6,6 +6,17 @@
     <meta name="author" content="Uwe Schmidt">
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" type="text/css" href="/assets/css/html-album.css">
+
+    <script type="text/javascript" src="/bootstrap/js/jquery/1.12.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/assets/javascript/html-album.js"></script>
+    <script>
+
+      function isPlaying() {
+          console.log("video is playing");
+          // toggleMute();
+      }
+    </script>
+
   </head>
   <body class="album" style="margin: 15px">
     <div class="title" style="margin: 15px">
@@ -20,18 +31,22 @@
       <button onclick="makeSmall()">Small</button>
       <button onclick="makeNormal()">Normal</button>
       <br><br>
-      <video id="video1" width="420" controls>
-        <!-- video/quicktime not supported -- >
-        <!-- ><source src="/assets/icons/uwe_7179.mov" type="video/quicktime"> -->
-        <source src="/assets/icons/p1000794.mp4" type="video/mp4">
+      <video id="pic-movie" width="420" autoplay="autoplay" muted onplaying="isPlaying();">
+        <source src="docs/movie/archive/photos/themen/Reisen/USA-2018/2018-04-03/Lumix/p1010072.mp4" type="video/mp4">
           Your browser does not support HTML5 video.
       </video>
     </div>
 
     <script>
-var myVideo = document.getElementById("video1");
+// var myVideo = document.getElementById("pic-video");
 
+      function startPlay() {
+          var myVideo = document.getElementById("pic-video");
+          console.log("playing");
+          myvideo.play();
+      }
 function playPause() {
+    var myVideo = document.getElementById("pic-video");
     if (myVideo.paused)
         myVideo.play();
     else
@@ -39,14 +54,17 @@ function playPause() {
 }
 
 function makeBig() {
+    var myVideo = document.getElementById("pic-video");
     myVideo.width = 560;
 }
 
 function makeSmall() {
+    var myVideo = document.getElementById("pic-video");
     myVideo.width = 320;
 }
 
 function makeNormal() {
+    var myVideo = document.getElementById("pic-video");
     myVideo.width = 420;
 }
     </script>
