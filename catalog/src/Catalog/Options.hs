@@ -7,6 +7,12 @@ import Data.Prim
 import Options.Applicative
 
 -- ----------------------------------------
+--
+-- version of the software
+-- version number is updated automatically
+
+version :: String
+version = "0.2.2.1"
 
 mainWithArgs :: String -> (Env -> IO ()) -> IO ()
 mainWithArgs theAppName theAppMain = do
@@ -28,7 +34,7 @@ appInfo pname =
   info (envp <**> helper)
   ( fullDesc
     <> progDesc "organize your photos"
-    <> header ("catalog-" ++ pname ++ " - 0.1.2.0")
+    <> header ("catalog-" ++ pname ++ " - " ++ version)
   )
 
 envp :: Parser Env
