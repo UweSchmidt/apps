@@ -14,6 +14,9 @@ import Options.Applicative
 version :: String
 version = "0.2.2.1"
 
+date :: String
+date = "2018-11-30"
+
 mainWithArgs :: String -> (Env -> IO ()) -> IO ()
 mainWithArgs theAppName theAppMain = do
   execParser (appInfo theAppName)
@@ -34,7 +37,7 @@ appInfo pname =
   info (envp <**> helper)
   ( fullDesc
     <> progDesc "organize your photos"
-    <> header ("catalog-" ++ pname ++ " - " ++ version)
+    <> header ("catalog-" ++ pname ++ " - " ++ version ++ " (" ++ date ++ ")")
   )
 
 envp :: Parser Env
