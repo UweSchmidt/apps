@@ -49,7 +49,12 @@ isTxt :: ImgType -> Bool
 isTxt IMGtxt = True
 isTxt _      = False
 
--- is sub dir with images developped as .jpg
+-- is sub dir with images developed as .jpg
+isJpgSubDir :: ImgType -> Bool
+isJpgSubDir IMGjpgdir = True
+isJpgSubDir _         = False
+
+-- is subdir to be traveresd for more images
 isImgSubDir :: ImgType -> Bool
 isImgSubDir IMGimgdir = True
 isImgSubDir _         = False
@@ -66,8 +71,12 @@ isAnImgPart ty = ty `elem` [ IMGraw, IMGmeta, IMGjson
                            ]
 
 -- part of an image entry which can be shown in a collection
--- a subset of isAnImgPart
+-- or a raw image
 
+isShowablePartOrRaw :: ImgType -> Bool
+isShowablePartOrRaw ty = ty `elem` [IMGraw, IMGjpg, IMGimg, IMGtxt, IMGmovie]
+
+-- part can be shown
 isShowablePart :: ImgType -> Bool
 isShowablePart ty = ty `elem` [IMGjpg, IMGimg, IMGtxt, IMGmovie]
 

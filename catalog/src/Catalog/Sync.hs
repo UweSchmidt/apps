@@ -309,7 +309,7 @@ syncImg ip pp xs = do
   -- a txt (something, that can be shown)
   -- or a movie,
   -- then update entry, else ignore it
-  if has (traverse . _2 . _2 . isA isShowablePart) xs
+  if has (traverse . _2 . _2 . isA isShowablePartOrRaw) xs
     then do
       adjustImg (<> mkImgParts ps) i
       syncParts i pp
@@ -377,16 +377,24 @@ parseDirCont p = do
   return $ es ++ concat jss
   where
     classifyNames =
-      partition (hasImgType (not . isImgSubDir)) -- select jpg img subdirs
+      partition (hasImgType (not . isJpgSubDir)) -- select jpg img subdirs
       .
       filter    (hasImgType (not . isBoring))    -- remove boring stuff
       .
       map (mkName &&& filePathToImgType)
 
 parseJpgDirCont :: SysPath -> FilePath -> Cmd [(Name, (Name, ImgType))]
-parseJpgDirCont p d =
-  classifyNames <$> readDir ((</> d) <$> p)
+parseJpgDirCont p d = do
+  ex <- dirExist sp
+  if ex
+    then
+      classifyNames <$> readDir sp
+    else do
+      verbose $ "parseJpgDirCont: not a directory: " ++ show sp
+      return []
   where
+    sp = (</> d) <$> p
+
     classifyNames =
       filter (\ n -> isJpg (n ^. _2 . _2))
       .

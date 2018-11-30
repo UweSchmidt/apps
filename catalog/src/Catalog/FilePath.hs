@@ -96,11 +96,16 @@ jpgExt'
 jpgExt' = parseExt [".jpg"]
 rawExt  = parseExt [".nef", ".rw2"]
 
+rawFiles :: [String]
+rawFiles = [".nef", ".rw2"]
+
 -- sort extensions by length: ".tiff" before ".tif"
 -- else backtracking with try does not work properly
 imgExt  = parseExt [".png", ".tiff", ".tif", ".gif", ".ppm", ".pgm", ".pbm"]
 xmpExt  = parseExt [".xmp"]
-dxoExt  = parseExt $ map (++ ".dxo") [".nef", ".rw2", ".jpg"]
+dxoExt  = parseExt ( (++) <$> (".jpg" : rawFiles)
+                          <*> [".dxo", ".dop"]
+                   ) -- lists are an Applicative
 ptoExt  = parseExt [".pto"]
 jsonExt = parseExt [".json"]
 dngExt  = parseExt [".dng"]
@@ -317,7 +322,7 @@ imgTypeExt =
   , (IMGraw,   [".nef", ".rw2"])
   , (IMGdng,   [".dng"])
   , (IMGmeta,  [".xmp"])
-  , (IMGdxo,   [".dxo"])
+  , (IMGdxo,   [".dop", ".dxo"])
   , (IMGhugin, [".pto"])
   , (IMGjson,  [".json"])
   ]
