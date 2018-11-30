@@ -53,6 +53,8 @@ setMD p i ps = do
   md1 <- ((<> md0) . mconcat) <$> mapM (getMDpart p ip) ps
 
   if md1 /= md0
+     ||
+     isempty (getEXIFUpdateTime md0)
     then
       -- something has changed since last update
       -- so add timestamp and store new metadata
@@ -140,7 +142,9 @@ syncMetaData' :: ObjId -> [ImgPart] -> Cmd ()
 syncMetaData' i ps = do
   ts <- getEXIFUpdateTime <$> getMetaData i
   fu <- view envForceMDU
-  let update = fu || (ts <= ps ^. traverse . theImgTimeStamp)
+  let update = fu || (ts < ps ^. traverse . theImgTimeStamp)
+
+  -- trc $ "syncMetadata: " ++ show (ts, ps ^. traverse . theImgTimeStamp, update)
 
   -- collect meta data from raw and xmp parts
   when update $ do
