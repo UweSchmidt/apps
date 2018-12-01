@@ -486,9 +486,9 @@ filterMetaData :: ImgType -> MetaData -> MetaData
 filterMetaData ty md =
   md ^. selectByParser ps
   where
-    ps | isShowablePart ty = psRaw
-       | isMeta         ty = psXmp
-       | otherwise         = mzero
+    ps | isShowablePartOrRaw ty = psRaw
+       | isMeta              ty = psXmp
+       | otherwise              = mzero
 
 -- ----------------------------------------
 --

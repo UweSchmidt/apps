@@ -31,6 +31,7 @@ getMDpart p ip pt
       sp <- path2SysPath (substPathName tn ip)
       trc $ "getMDpart: update metadata with " ++ show sp
       m2 <- filterMetaData ty <$> getExifTool sp
+      trc $ "getMDpart: metadata= " ++ show m2
       return m2
   | otherwise =
       return mempty
