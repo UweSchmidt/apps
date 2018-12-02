@@ -13,17 +13,6 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
-library
-  hs-source-dirs:      .
-  exposed-modules:     Util.Main1
-                                                                     
-  other-modules:
-  
-  build-depends:       base >= 4 && < 5
-                     , optparse-applicative
-
-  default-language:    Haskell2010
-
 executable 2017-01
   main-is:             Year17/Day01/Main.hs
   hs-source-dirs:      .
@@ -31,7 +20,6 @@ executable 2017-01
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -44,7 +32,6 @@ executable 2017-02
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -57,7 +44,6 @@ executable 2017-03
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -70,7 +56,6 @@ executable 2017-09
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , parsec
                      , optparse-applicative
                             
@@ -85,7 +70,6 @@ executable 2017-10
                      , Year17.Day10.TyingTheKnot
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -98,7 +82,6 @@ executable 2017-11
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -112,7 +95,6 @@ executable 2017-12
                      , Data.Relation
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , containers
                      , optparse-applicative
                             
@@ -126,7 +108,6 @@ executable 2017-13
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -141,7 +122,6 @@ executable 2017-14
                      , Year17.Day10.TyingTheKnot
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , containers
                      , optparse-applicative
                             
@@ -155,7 +135,6 @@ executable 2017-15
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                             
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
@@ -168,7 +147,6 @@ executable 2017-16.simple
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                      , split
                             
@@ -182,7 +160,6 @@ executable 2017-16
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
                      , optparse-applicative
                      , split
                      , vector
@@ -197,7 +174,32 @@ executable 2017-17
   other-modules:       Util.Main1
 
   build-depends:       base >= 4.7 && < 5
-                     , adventofcode
+                     , containers
+                     , optparse-applicative
+                            
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  default-language:   Haskell2010
+
+executable 2018-01
+  main-is:             Year18/Day01/Main.hs
+  hs-source-dirs:      .
+  
+  other-modules:       Util.Main1
+
+  build-depends:       base >= 4.7 && < 5
+                     , containers
+                     , optparse-applicative
+                            
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  default-language:   Haskell2010
+
+executable 2018-02
+  main-is:             Year18/Day02/Main.hs
+  hs-source-dirs:      .
+  
+  other-modules:       Util.Main1
+
+  build-depends:       base >= 4.7 && < 5
                      , containers
                      , optparse-applicative
                             
