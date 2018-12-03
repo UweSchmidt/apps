@@ -13,9 +13,9 @@ import           Control.Arrow ((***))
 -- ----------------------------------------
 
 main :: IO ()
-main = main12 "2018-01"
-       day02 captcha1
-       day02 captcha2
+main = main12 "2018-02"
+       inp captcha1
+       inp captcha2
 
 captcha1 :: String -> String
 captcha1 = show . solve1 . fromString
@@ -113,8 +113,8 @@ ex2 = unlines
   , "wvxyz"
   ]
 
-day02 :: String
-day02 = unlines
+inp :: String
+inp = unlines
   [ "rmyxgdlihczskunpfwbgqoeybv"
   , "rmyxgdlksczskunpfwbjqkeatv"
   , "rmybgdxibczskunpfwbjqoeatv"

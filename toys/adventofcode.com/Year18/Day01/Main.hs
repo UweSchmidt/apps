@@ -9,8 +9,8 @@ import qualified Data.IntSet as S
 
 main :: IO ()
 main = main12 "2018-01"
-       day01 captcha1
-       day01 captcha2
+       inp captcha1
+       inp captcha2
 
 captcha1 :: String -> String
 captcha1 = show . sum . fromString
@@ -33,11 +33,11 @@ fromString = map parse . lines
     parse ('+' : xs) = read xs
     parse ('-' : xs) = negate $ read xs
 
-day01' :: IO String
-day01' = readFile "./Year18/Day01/day01.txt"
+inp' :: IO String
+inp' = readFile "./Year18/Day01/day01.txt"
 
-day01 :: String
-day01 = unlines
+inp :: String
+inp = unlines
   [ "+19"
   , "-15"
   , "+6"
