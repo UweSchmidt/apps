@@ -56,7 +56,7 @@ import Catalog.Workflow        ( ReqType(..)
 -- servant interface
 import API
 
-import Debug.Trace
+-- import Debug.Trace
 
 -- ----------------------------------------
 --
@@ -168,7 +168,7 @@ catalogServer env runR runM =
   where
     mountPath = env ^. envMountPath . isoFilePath
     static p  = do
-      trace ("static: " ++ mountPath ++ p) $
+      -- trace ("static: " ++ mountPath ++ p) $
         serveDirectoryWebApp (mountPath ++ p)
 
     bootstrap         = static ps'bootstrap
