@@ -3,7 +3,7 @@
 
 module Data.Relation where
 
-import           Prelude hiding (foldr, null)
+import           Prelude hiding (foldr, null, filter)
 import qualified Prelude as P
 import           Data.Maybe (fromMaybe)
 import           Data.Set (Set)
@@ -42,6 +42,14 @@ member x y r =
 lookupS :: (Ord a) => a -> Rel a b -> Set b
 lookupS x (Rel m) = fromMaybe S.empty $ M.lookup x m
 
+apply :: (Ord a) => Rel a b -> a -> Set b
+apply = flip lookupS
+
+applyS :: (Ord a, Ord b) => Rel a b -> Set a -> Set b
+applyS r xs = S.foldl' uni S.empty xs
+  where
+    uni res x = res `S.union` (r `apply` x)
+
 findMin ::  (Ord a, Ord b) => Rel a b -> (a, b)
 findMin r =
   (x, S.findMin s)
@@ -68,6 +76,28 @@ insertS x ys r@(Rel m)
   | S.null ys = r
   | otherwise = Rel $ M.insertWith S.union x ys m
 
+deleteFst :: (Ord a) => a -> Rel a b -> Rel a b
+deleteFst x (Rel m) = Rel $ M.delete x m
+
+deleteSnd :: (Ord a, Ord b) => b -> Rel a b -> Rel a b
+deleteSnd y =
+  foldrS f empty
+  where
+    f x ys res
+      | not found        = insertS x ys  res
+      | not (S.null ys') = insertS x ys' res
+      | otherwise        =               res
+      where
+        found = y `S.member` ys
+        ys'   = S.delete y ys
+
+delete :: (Ord a) => a -> Rel' a -> Rel' a
+delete x =
+  deleteSnd x . deleteFst x
+
+deleteS :: (Ord a) => Set a -> Rel' a -> Rel' a
+deleteS xs r = S.fold delete r xs
+
 union :: (Ord a, Ord b) => Rel a b -> Rel a b -> Rel a b
 union (Rel m1) (Rel m2) =
   Rel $ M.unionWith S.union m1 m2
@@ -86,7 +116,6 @@ differenceS :: (Ord a) => Rel a b -> Set a -> Rel a b
 differenceS (Rel m1) s =
   Rel $ S.foldl' (flip M.delete) m1 s
 
-
 {-# INLINE empty      #-}
 {-# INLINE null       #-}
 {-# INLINE member     #-}
@@ -95,8 +124,11 @@ differenceS (Rel m1) s =
 {-# INLINE singletonS #-}
 {-# INLINE insert     #-}
 {-# INLINE insertS    #-}
+{-# INLINE delete     #-}
+{-# INLINE deleteS    #-}
 {-# INLINE union      #-}
 {-# INLINE difference #-}
+{-# INLINE differenceS #-}
 
 unions :: (Ord a, Ord b) => [Rel a b] -> Rel a b
 unions = foldl' union empty
@@ -109,6 +141,29 @@ dom (Rel m1) = S.fromList $ M.keys m1
 rng :: Ord b => Rel a b -> Set b
 rng r = forEachS (\_ ys acc -> ys `S.union` acc) r S.empty
 
+elems :: Ord a => Rel' a -> Set a
+elems r = dom r `S.union` rng r
+
+roots :: Ord a => Rel' a -> Set a
+roots r =
+  dom rcl `S.difference` rng rcl
+  where
+    rcl = trClosure r
+
+leaves :: Ord a => Rel' a -> Set a
+leaves r =
+  rng rcl `S.difference` dom rcl
+  where
+    rcl = trClosure r
+
+loops :: Ord a => Rel' a -> Set a
+loops =
+  foldrS f S.empty
+  where
+    f x ys res
+      | x `S.member` ys = S.insert x res
+      | otherwise       =            res
+
 toList :: Rel a b -> [(a, b)]
 toList r = foldr (\x y -> ((x, y) :)) [] r
 
@@ -120,7 +175,12 @@ fromList = foldl' (flip (uncurry insert)) empty
 
 {-# INLINE dom      #-}
 {-# INLINE rng      #-}
+{-# INLINE elems    #-}
+{-# INLINE roots    #-}
+{-# INLINE leaves   #-}
+{-# INLINE loops    #-}
 {-# INLINE toList   #-}
+{-# INLINE toListS  #-}
 {-# INLINE fromList #-}
 
 -- ----------------------------------------
@@ -148,6 +208,11 @@ filterS p r =
     f x ys
       | p x ys    = insertS x ys
       | otherwise = id
+
+restrict :: Ord a => Set a -> Rel' a -> Rel' a
+restrict s = filter inS
+  where
+    inS x y = x `S.member` s && y `S.member` s
 
 invert :: (Ord a, Ord b) => Rel a b -> Rel b a
 invert r =
@@ -184,6 +249,9 @@ connectedComponents r0 = part [] r1
       where
         (_x, p) = findMinS r
         r'      = differenceS r p
+
+acyclic :: Ord a => Rel' a -> Bool
+acyclic = null . filter (==) . trClosure
 
 -- ----------------------------------------
 --
