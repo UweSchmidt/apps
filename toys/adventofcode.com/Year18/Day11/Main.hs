@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 -- solution for
--- http://adventofcode.com/2018/day/9
+-- http://adventofcode.com/2018/day/11
 
 module Main where
 
