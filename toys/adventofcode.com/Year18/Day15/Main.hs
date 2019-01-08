@@ -13,7 +13,7 @@ import qualified Data.Map.Strict as M
 import           Data.List       (foldl')
 import           Util.Main1 (main12)
 
-import           Control.Arrow (first, second, (***))
+import           Control.Arrow ((***))
 import           Control.Monad.State.Strict
 import           Control.Monad.Except
 
@@ -28,10 +28,19 @@ main = do
     inp captcha2
 
 captcha1 :: String -> String
-captcha1 = toString . solve1 . fromString
+captcha1 = show . solve1 . fromString
 
 captcha2 :: String -> String
 captcha2 = toString . solve2 . fromString
+
+-- ----------------------------------------
+
+withTrace :: Bool
+withTrace = True -- False
+
+trace' s
+  | withTrace = trace s
+  | otherwise = id
 
 -- ----------------------------------------
 
@@ -45,8 +54,10 @@ data Board          = B { walls   :: Ps
                         , goblins :: Ps
                         , rounds  :: Int
                         , hits    :: HitPointMap
+                        , attacPs :: (Int, Int)
+                        , elfDead :: Action ()
                         }
-                    deriving (Show)
+                    -- deriving (Show)
 
 -- --------------------
 
@@ -56,6 +67,8 @@ emptyBoard = B { walls   = emptyPs
                , goblins = emptyPs
                , hits    = emptyHitPointMap
                , rounds  = 0
+               , attacPs = (3, 3)
+               , elfDead = return ()
                }
 
 emptyPs :: Ps
@@ -69,9 +82,6 @@ emptyHitPointMap = M.empty
 
 initHitPoints :: HitPoints
 initHitPoints = 200
-
-attacPoints :: Int
-attacPoints = 3
 
 u :: Ps -> Ps -> Ps
 u = S.union
@@ -103,11 +113,16 @@ neighbors = S.foldl' (\ ps' p -> ps' `u` neighbors1 p) emptyPs
 
 -- ----------------------------------------
 
-type Action     = ExceptT String (State Board)
+type Action     = ExceptT GameTerminated (State Board)
 
-runAction :: Action a -> Board -> (Either String a, Board)
-runAction action board0 =
-  runState (runExceptT action) board0
+data GameTerminated = AllDead | SingleElfDead deriving (Eq, Show)
+
+runAction :: Action a -> Board -> (Either GameTerminated a, Board)
+runAction action =
+  runState (runExceptT action)
+
+execAction :: Action a -> Board -> Board
+execAction action = snd . runAction action
 
 incrRounds :: Action ()
 incrRounds = modify (\ s -> s { rounds = rounds s + 1})
@@ -120,6 +135,12 @@ getElves = gets elves
 
 getGoblins :: Action Ps
 getGoblins = gets goblins
+
+getAttacPoints :: Action (Int, Int)
+getAttacPoints = gets attacPs
+
+getElfDead :: Action (Action ())
+getElfDead = gets elfDead
 
 getEGs :: Action (Ps, Ps)
 getEGs = gets (\ s -> (elves s, goblins s))
@@ -158,21 +179,20 @@ decrHitPoints :: Point -> Int -> Action ()
 decrHitPoints p d = modify (\ s -> s { hits = M.adjust (\ x -> x - d) p (hits s)})
 
 trcBoard :: Action ()
-trcBoard = return ()
-{-
 trcBoard = do
   ws <- getWalls
   (es, gs) <- getEGs
-  trace (showBoard (ws, es, gs)) $ return ()
--}
+  trace' (showBoard (ws, es, gs)) $ return ()
+
 trcRound :: Action () -> Action ()
 trcRound act = do
   i <- gets rounds
-  trace ("start round " ++ show i) (return ())
+  trace' ("start round " ++ show i) (return ())
     >> act
+    >> trcBoard
     >> do
        h <- getHitPointMap
-       trace ("finished round " ++ show i ++ "\nhitpoints " ++ show h) (return ())
+       trace' ("finished round " ++ show i ++ "\nhitpoints " ++ show h) (return ())
 
 -- ----------------------------------------
 
@@ -204,6 +224,15 @@ enemiesInRange p = do
          | otherwise = emptyPs
   return rs
 
+attacPoints :: Point -> Action Int
+attacPoints p = do
+  (es,  gs)  <- getEGs
+  (eps, gps) <- getAttacPoints
+  let ps | p `e` es = eps
+         | p `e` gs = gps
+         | otherwise = error $ show p ++ " is'nt an elf nor a goblin"
+  return ps
+
 enemyInRange :: Point -> Action (Maybe Point)
 enemyInRange p = do
   rs <- enemiesInRange p
@@ -225,21 +254,27 @@ moveToEnemy p = do
         | otherwise = (emptyPs, emptyPs)
   S.lookupMin <$> searchEnemy es' gs' (ps1 \\ es') (singlePs p)
 
+gameOver :: Action ()
+gameOver = do
+  trace' "game over, all enemies dead" $
+    throwError AllDead
+
 {-
 searchEnemy :: Ps -> Ps -> Ps -> Ps -> Action Ps
 searchEnemy buddies enemies border visited =
-  trace ("searchEnemy") $
-  trace (show buddies) $
-  trace (show enemies) $
-  trace (show border)  $
-  trace (show visited) $ do
+  trace' ("searchEnemy") $
+  trace' (show buddies) $
+  trace' (show enemies) $
+  trace' (show border)  $
+  trace' (show visited) $ do
   res <- searchEnemy' buddies enemies border visited
-  trace ("searchEnemy res=" ++ show res) $ return res
+  trace' ("searchEnemy res=" ++ show res) $ return res
 -}
 searchEnemy :: Ps -> Ps -> Ps -> Ps -> Action Ps
 searchEnemy buddies enemies border visited
   | not (nullPs enemies') =
-      return (singlePs . S.findMin $ enemies') -- the nearest enemy found
+      return enemies' -- the nearest enemies found
+      -- old: return (singlePs . S.findMin $ enemies') -- the nearest enemy found
   | otherwise = do
       walls' <- getWalls
       let border' = neighbors border \\ buddies \\ visited' \\ walls'
@@ -254,27 +289,23 @@ searchEnemy buddies enemies border visited
     enemies' = border `n` enemies
     visited' = visited `u` border
 
-allRounds :: Action ()
-allRounds = do
-  end <- oneHasDied
-  when (not end) $ do
-    trcRound singleRound
-    allRounds
-
-
 oneHasDied :: Action Bool
 oneHasDied =
   (\ (es, gs) -> nullPs es || nullPs gs) <$> getEGs
 
 singleRound :: Action ()
 singleRound = do
-  incrRounds
   ps <- getUnits
-  mapM_ (\ p -> processUnit p >> trcBoard) ps
+  mapM_ (\ p -> processUnit p {- >> trcBoard -}) ps
+  trcBoard
+  incrRounds
 
 processUnit :: Point -> Action ()
 processUnit p = do
-  trace ("processUnit p=" ++ show p) $ return ()
+  trace' ("processUnit p=" ++ show p) $ return ()
+
+  end <- oneHasDied
+  when end gameOver
 
   mp <- tryMoveUnit p
   case mp of
@@ -297,26 +328,34 @@ tryAttacUnit p = do
   mp <- enemyInRange p
   case mp of
     Just e1 -> do                    -- attac
-      decrHitPoints e1 attacPoints
+      aps <- attacPoints p
+      decrHitPoints e1 aps
       hp <- fromMaybe 1 <$> getHitPoints e1
-      when (hp <= 0) $
+      when (hp <= 0) $ do
+        es <- getElves
         removeUnit e1
+        when (e1 `e` es) $ do
+          eda <- getElfDead
+          eda
 
     Nothing -> return ()
 
 -- ----------------------------------------
 
-solve1 :: (Ps, Ps, Ps) -> Board
-solve1 (ws, es, gs) = snd . runAction (forever singleRound) $ b0
+solve1 :: (Ps, Ps, Ps) -> Int
+solve1 (ws, es, gs) =
+  rounds s * (sum . M.elems $ hits s)
   where
-    b0 = emptyBoard
+    s  = execAction act $
+         emptyBoard
          { walls   = ws
          , elves   = es
          , goblins = gs
          }
+    act = initHitPointMap 200 >> forever singleRound
 
 solve2 :: (Ps, Ps, Ps) -> Board
-solve2 (ws, es, gs) = snd . runAction (return ()) $ b0
+solve2 (ws, es, gs) = execAction (return ()) $ b0
   where
     b0 = emptyBoard
          { walls   = ws
@@ -324,21 +363,38 @@ solve2 (ws, es, gs) = snd . runAction (return ()) $ b0
          , goblins = gs
          }
 
-solve' :: (Ps, Ps, Ps) -> Int
-solve' (ws, es, gs) =
-  trace (showBoard (walls s, elves s, goblins s)) $
-  trace (show $ hits s) $
-  trace (show $ rounds s)
-  (rounds s -1) * (sum . M.elems $ hits s)
+solve' :: Int -> (Ps, Ps, Ps) -> (Bool, Int)
+solve' elfAps ss@(ws, es, gs)
+  | Left AllDead <- res =
+    trace' (showBoard (walls s, elves s, goblins s)) $
+    trace' (show $ hits s) $
+    trace' (show $ rounds s) $
+    trace' (show res) $
+    trace' ("Elf attac points= " ++ show elfAps) $
+    (S.null $ goblins s, rounds s * (sum . M.elems $ hits s))
+
+  | Left SingleElfDead <- res =
+    trace' (showBoard (walls s, elves s, goblins s)) $
+    trace' (show $ hits s) $
+    trace' (show $ rounds s) $
+    trace' (show res) $
+    trace' ("Elf attac points= " ++ show elfAps) $
+    (S.null $ goblins s, rounds s * (sum . M.elems $ hits s))
+    -- solve' (elfAps + 1) ss
+
+  | otherwise = error "infinite loop has terminated"
   where
-    s  = snd . runAction act $ b0
+    (res, s)  = runAction act $ b0
 
     b0 = emptyBoard
          { walls   = ws
          , elves   = es
          , goblins = gs
+         , attacPs = (elfAps, 3)
+         , elfDead = throwError SingleElfDead
          }
-    act = initHitPointMap 200 >> allRounds
+    act :: Action ()
+    act = initHitPointMap 200 >> forever singleRound
 
 -- ----------------------------------------
 
@@ -360,7 +416,7 @@ showBoard (ws, es, gs) =
     (maxY, maxX) = (maximum *** maximum ) . unzip $ S.elems as
 
 toString :: Board -> String
-toString = show -- x ++ "," ++ show y
+toString = undefined -- show -- x ++ "," ++ show y
 
 fromString :: String -> (Ps, Ps, Ps)
 fromString = parseLines . lines
@@ -415,8 +471,10 @@ ex2 = unlines
   , "#######"
   ]
 
-ex3 :: String
-ex3 = unlines
+-- few examples in adventofcode page:
+
+ex6 :: String   -- 36334
+ex6 = unlines
   [ "#######"
   , "#G..#E#"
   , "#E#E.E#"
@@ -426,7 +484,29 @@ ex3 = unlines
   , "#######"
   ]
 
-ex9 :: String
+ex7 :: String   -- 39514
+ex7 = unlines
+  [ "#######"
+  , "#E..EG#"
+  , "#.#G.E#"
+  , "#E.##E#"
+  , "#G..#.#"
+  , "#..E#.#"
+  , "#######"
+  ]
+
+ex8 :: String  -- 27755
+ex8 = unlines
+  [ "#######"
+  , "#E.G#.#"
+  , "#.#G..#"
+  , "#G.#.G#"
+  , "#G..#.#"
+  , "#...E.#"
+  , "#######"
+  ]
+
+ex9 :: String  -- 28944
 ex9 = unlines
   [ "#######"
   , "#.E...#"
@@ -437,7 +517,7 @@ ex9 = unlines
   , "#######"
   ]
 
-ex10 :: String
+ex10 :: String  -- 18740
 ex10 = unlines
   [ "#########"
   , "#G......#"
@@ -449,8 +529,85 @@ ex10 = unlines
   , "#.....G.#"
   , "#########"
   ]
+
+-- another complete input
+ex102 :: String  -- 257954
+ex102 = unlines
+  [ "################################"
+  , "##########..........############"
+  , "########G..................#####"
+  , "#######..G.GG...............####"
+  , "#######....G.......#......######"
+  , "########.G.G...............#E..#"
+  , "#######G.................#.....#"
+  , "########.......................#"
+  , "########G.....G....#.....##....#"
+  , "########.....#....G.........####"
+  , "#########..........##....E.E#.##"
+  , "##########G..G..........#####.##"
+  , "##########....#####G....####E.##"
+  , "######....G..#######.....#.....#"
+  , "###....#....#########......#####"
+  , "####........#########..E...#####"
+  , "###.........#########......#####"
+  , "####G....G..#########......#####"
+  , "####..#.....#########....#######"
+  , "######.......#######...E.#######"
+  , "###.G.....E.G.#####.....########"
+  , "#.....G........E.......#########"
+  , "#......#..#..####....#.#########"
+  , "#...#.........###.#..###########"
+  , "##............###..#############"
+  , "######.....E####..##############"
+  , "######...........###############"
+  , "#######....E....################"
+  , "######...####...################"
+  , "######...###....################"
+  , "###.....###..##..###############"
+  , "################################"
+  ]
+
+
+
 inp' :: IO String
 inp' = readFile "Year18/Day15/day15.txt"
 
 inp :: String
 inp = "################################\n########.#######################\n#######..#######################\n######..########################\n###....####...##################\n###.#..####G..##################\n###G#.G#####..####G#############\n##....G..###.......#############\n#G#####...#..G.....#############\n#G.###..#..G........############\n#..G.G..........G.....#.G.######\n###......GG..G............######\n#######....G..#####.G...#.######\n#######......#######....########\n#######.....#########..........#\n#######.....#########.........##\n#######...#.#########.........##\n#######.....#########........###\n#######.....#########.........##\n#######....E.#######........#..#\n#######.......#####E........####\n###.#.E..#.....G.........#..####\n###......#E......E..G...E...####\n##...........#.............#####\n#####.###..............E...#####\n#############..............#####\n#############..E.....###...#####\n###############..E...###...#####\n#################.E#.####..#####\n#################..#.###########\n#################..#.###########\n################################\n"
+
+{-
+final state of python solution
+
+('################################', '   ', '')
+('########.#######################', '   ', '')
+('#######..#######################', '   ', '')
+('######..########################', '   ', '')
+('###....####...##################', '   ', '')
+('###.#..####...##################', '   ', '')
+('###.#..#####..####.#############', '   ', '')
+('##.......###.......#############', '   ', '')
+('#.#####...#........#############', '   ', '')
+('#..###..#...........############', '   ', '')
+('#.....................#...######', '   ', '')
+('###.......................######', '   ', '')
+('#######.......#####.....#.######', '   ', '')
+('#######......#######....########', '   ', '')
+('#######.....#########..........#', '   ', '')
+('#######.G..G#########.........##', '   ', '200 20')
+('#######...#.#########.........##', '   ', '')
+('#######....G#########........###', '   ', '83')
+('#######....G#########.........##', '   ', '74')
+('#######G..G.G#######........#..#', '   ', '200 131 200')
+('#######..G.G..#####....G....####', '   ', '200 116 101')
+('###.#...G#............G.G#..####', '   ', '200 200 200')
+('###......#.G.........G.G....####', '   ', '200 23 200')
+('##...........#........G....#####', '   ', '200')
+('#####.###..................#####', '   ', '')
+('#############..............#####', '   ', '')
+('#############........###...#####', '   ', '')
+('###############......###...#####', '   ', '')
+('#################..#.####..#####', '   ', '')
+('#################..#.###########', '   ', '')
+('#################..#.###########', '   ', '')
+('################################', '   ', '')
+-}
