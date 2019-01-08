@@ -10,7 +10,7 @@ import           Data.Set        (Set, (\\))
 import qualified Data.Set        as S
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import           Data.List       (foldl')
+import           Data.List       (foldl', intercalate)
 import           Util.Main1 (main12)
 
 import           Control.Arrow ((***))
@@ -31,7 +31,7 @@ captcha1 :: String -> String
 captcha1 = show . solve1 . fromString
 
 captcha2 :: String -> String
-captcha2 = toString . solve2 . fromString
+captcha2 = undefined . solve2 . fromString
 
 -- ----------------------------------------
 
@@ -180,9 +180,10 @@ decrHitPoints p d = modify (\ s -> s { hits = M.adjust (\ x -> x - d) p (hits s)
 
 trcBoard :: Action ()
 trcBoard = do
-  ws <- getWalls
+  ws       <- getWalls
   (es, gs) <- getEGs
-  trace' (showBoard (ws, es, gs)) $ return ()
+  hpm      <- getHitPointMap
+  trace' (showBoard hpm (ws, es, gs)) $ return ()
 
 trcRound :: Action () -> Action ()
 trcRound act = do
@@ -366,7 +367,7 @@ solve2 (ws, es, gs) = execAction (return ()) $ b0
 solve' :: Int -> (Ps, Ps, Ps) -> (Bool, Int)
 solve' elfAps ss@(ws, es, gs)
   | Left AllDead <- res =
-    trace' (showBoard (walls s, elves s, goblins s)) $
+    trace' (showBoard (hits s) (walls s, elves s, goblins s)) $
     trace' (show $ hits s) $
     trace' (show $ rounds s) $
     trace' (show res) $
@@ -374,7 +375,7 @@ solve' elfAps ss@(ws, es, gs)
     (S.null $ goblins s, rounds s * (sum . M.elems $ hits s))
 
   | Left SingleElfDead <- res =
-    trace' (showBoard (walls s, elves s, goblins s)) $
+    trace' (showBoard (hits s) (walls s, elves s, goblins s)) $
     trace' (show $ hits s) $
     trace' (show $ rounds s) $
     trace' (show res) $
@@ -394,29 +395,55 @@ solve' elfAps ss@(ws, es, gs)
          , elfDead = throwError SingleElfDead
          }
     act :: Action ()
-    act = initHitPointMap 200 >> forever singleRound
+    act = initHitPointMap 200 >> trcBoard >> forever singleRound
 
 -- ----------------------------------------
 
-showBoard :: (Ps, Ps, Ps) -> String
-showBoard (ws, es, gs) =
-  unlines $ map toLine [0..maxY]
+-- showBoard :: (Ps, Ps, Ps) -> String
+-- showBoard (ws, es, gs) = undefined
+
+showBoard :: HitPointMap -> (Ps, Ps, Ps) -> String
+showBoard hpm (ws, es, gs) =
+  unlines $ zipWith (++) showBoard' showHPM'
   where
-    toLine y = map toC [0..maxX]
+    showBoard' :: [String]
+    showBoard' = map toLine [0..maxY]
       where
-        toC x
-          | p `e` ws  = '#'
-          | p `e` es  = 'E'
-          | p `e` gs  = 'G'
-          | otherwise = '.'
+        toLine y = map toC [0..maxX]
           where
-            p = (y, x)
+            toC x
+              | p `e` ws  = '#'
+              | p `e` es  = 'E'
+              | p `e` gs  = 'G'
+              | otherwise = '.'
+              where
+                p = (y, x)
+
+    showHPM' :: [String]
+    showHPM' = map px showHPM
+      where
+        px "" = ""
+        px xs = "   " ++ xs
+
+    showHPM :: [String]
+    showHPM = map toLine [0..maxY]
+      where
+        toLine :: Int -> String
+        toLine y = intercalate ", " . filter (not . null) . map toS $ [0..maxX]
+          where
+            toS x = case M.lookup (y, x) hpm of
+              Just hp -> c ++ "(" ++ show hp ++ ")"
+              Nothing -> ""
+              where
+                c | (y, x) `e` es = "E"
+                  | (y, x) `e` gs = "G"
+                  | otherwise     = "?"
 
     as = ws `u` es `u` gs
     (maxY, maxX) = (maximum *** maximum ) . unzip $ S.elems as
 
-toString :: Board -> String
-toString = undefined -- show -- x ++ "," ++ show y
+toString :: (Ps, Ps, Ps) -> String
+toString = showBoard M.empty
 
 fromString :: String -> (Ps, Ps, Ps)
 fromString = parseLines . lines
