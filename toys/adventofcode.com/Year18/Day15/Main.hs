@@ -678,9 +678,9 @@ final state of python solution
 
 with a result of 66510
 
-this result is the expected result by aoc, but it is wrong
-then computations diverge after round 25, see bug input,
-there .py does the wrong move for the 3. G
+this result is the expected result by aoc, but it is wrong.
+The computations diverge after round 25, see bug input,
+there .py does the wrong move for the 3. G, aoc.py moves it to the right
 
 cheated in aoc: .py solution filled into the form and got a star (haha)
 -}
