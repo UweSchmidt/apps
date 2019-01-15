@@ -5,12 +5,9 @@
 
 module Main where
 
-import           Data.Maybe
 import           Data.Set        (Set, (\\))
 import qualified Data.Set        as S
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.List       (foldl', intercalate)
+import           Data.List       (foldl')
 import           Util.Main1 (main12)
 
 import           Control.Arrow (first, second, (***))
@@ -27,7 +24,7 @@ import Debug.Trace
 main :: IO ()
 main = do
   inp <- inp'
-  main12 "2018-15"
+  main12 "2018-17"
     inp captcha1
     inp captcha2
 
@@ -298,13 +295,6 @@ solve1 :: Input -> Int
 solve1 = cntWater . snd . runAction overflow . inp2Board
   where
     cntWater b = S.size . move' (org b) id $ filled b `u` flow b
-
-solve' act xs = sb . snd . run . inp2Board $ xs
-  where
-    -- sb (B cl fi fl g og) = show (S.size fi + S.size fl - 1)
-    -- sb (B cl fi fl g og) = show (g, og)
-    sb (B cl fi fl g og) = S.size . move' og id $ fi `u` fl
-    run s = runAction act s
 
 inp2Board :: Input -> Board
 inp2Board inp =
