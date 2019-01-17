@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UnboxedTuples #-}
 -- solution for
@@ -7,9 +8,10 @@ module Main where
 
 import           Data.Array.IArray
 import           Data.Array.Unboxed (UArray)
-
+import           Data.List  (foldl', isPrefixOf)
 import           Util.Main1 (main12)
 
+import           Control.Arrow ((***))
 import Debug.Trace
 
 -- ----------------------------------------
@@ -22,10 +24,10 @@ main = do
     inp captcha2
 
 captcha1 :: String -> String
-captcha1 = show . solve1 . fromString
+captcha1 = show . solve1 10 . fromString
 
 captcha2 :: String -> String
-captcha2 = show . solve2 . fromString
+captcha2 = show . solve2 600 1000000000 . fromString
 
 -- ----------------------------------------
 
@@ -54,9 +56,12 @@ trees      = '|'
 lumberYard = '#'
 
 nextGen :: CAcc -> Coll -> Coll
-nextGen carr coll = listArray bds
-  [ next (x, y) | x <- [x0..x1], y <- [y0..y1]]
+nextGen carr coll =
+  -- trace (show $ cntWood coll') $
+  coll'
   where
+    coll'  = listArray bds
+             [ next (x, y) | x <- [x0..x1], y <- [y0..y1]]
     next p = -- trace' (show p) $
              nextAcre (coll ! p) ((carr ! p) coll p)
 
@@ -164,42 +169,128 @@ cArr bds = array bds $
 
 -- ----------------------------------------
 
-solve2 :: Input -> Int
-solve2 = undefined
+cntWood :: Coll -> (Int, Int)
+cntWood = foldl' cnt (0,0) . elems
+  where
+    cnt acc@(t, l) c
+      | c == trees      = (t + 1, l)
+      | c == lumberYard = (t, l + 1)
+      | otherwise       = acc
 
-solve1 :: Input -> Int
-solve1 css = trace ("initial state:\n\n" ++ showBoard coll) $
+
+iter :: (a -> a) -> (a -> b) -> a -> [b]
+iter f g = go
+  where
+    go s = g s : go (f s)
+
+findPeriod :: Eq a => [a] -> Maybe ([a], [a])
+findPeriod = go []
+  where
+    go _  []                  = Nothing
+    go ls xs@(x1 : xs1)
+      | Just (px, ps) <- findDup xs
+      , checkPeriod px ps xs = Just (reverse ls ++ px, ps)
+      | otherwise            = go (x1 : ls) xs1
+
+checkPeriod :: Eq a => [a] -> [a] -> [a] -> Bool
+checkPeriod px ps xs =
+  px `isPrefixOf` xs
+  &&
+  isPeriod (drop (length px) xs)
+  where
+    lenPs = length ps
+
+    isPeriod xs' =
+      xs' `isPrefixOf` ps
+      ||
+      ( ps `isPrefixOf` xs'
+        &&
+        isPeriod (drop lenPs xs')
+      )
+
+findDup :: Eq a => [a] -> Maybe ([a], [a])
+findDup = go []
+  where
+    go _  []                     = Nothing
+    go ls (x : xs)
+      | Just res <- lookup' x ls = Just (reverse ls, res)
+      | otherwise                = go (x : ls) xs
+
+lookup' :: Eq a => a -> [a] -> Maybe [a]
+lookup' y = go []
+  where
+    go _   []        = Nothing
+    go acc (x : xs)
+      | x == y       = Just (x : acc)
+      | otherwise    = go (x : acc) xs
+
+{-
+      , checkPeriod ps xs = Just ps
+      | otherwise = findPeriod xs'
+      where
+        lookup' _ [] _ = Nothing
+        lookup' y (l1 : ls) rs
+          | y == l1    = Just (l1 : rs)
+          | otherwise  = lookup' y ls (l1 : rs)
+        checkPeriod ps = go
+          where
+            lenPs = length ps
+            go ys =
+              ys `isPrefixOf` ps
+              ||
+              ( ps `isPrefixOf` ys
+                &&
+                go (drop lenPs ys)
+              )
+-}
+
+-- ----------------------------------------
+
+solve1 :: Int -> Input -> Int
+solve1 gen css = trace ("initial state:\n\n" ++ showBoard coll) $
              trace ("\nfinal state:\n\n" ++ showBoard res ) $
              cntLumber * cntTrees
   where
     coll = toColl css
     carr = cArr (bounds coll)
 
-    gen  = 10
     act  = foldr (.) id $ replicate gen (nextGen carr)
     res  = act coll
 
-    cntLumber = length . filter (== lumberYard) . elems $ res
-    cntTrees  = length . filter (== trees     ) . elems $ res
+    (cntLumber, cntTrees) = cntWood res
 
 -- the dev version
 
-solve' n css = (++ showRes) . showBoard . act $ coll
+i'Round :: Int -> ([(Int, Int)], [(Int, Int)]) -> (Int, Int)
+i'Round i (px, ps)
+  | i' < 0    = px !! i
+  | otherwise = ps !! r
+  where
+    i' = i - length px
+    r  = i' `mod` length ps
+
+-- after a few 100 generation the board runs into a cycle of a few 10 generations
+-- for our input about 600 rounds are sufficient
+--
+-- n is the number of generations really computed,
+-- all theses generations are computed and the #s of trees and lumber are
+-- collected in a sequence, this sequence is analysed for a period
+-- if a period is found, result for arbitrarily large # of rounds
+-- can be computed by simple modulo operation and an acces into the
+-- list for the period
+--
+-- rounds is the maybe very large # generation, e.g. 1,000,000,000
+
+solve2 :: Int -> Int -> Input -> Maybe Int
+solve2 n rounds css =
+  fmap (uncurry (*) . i'Round rounds) .
+  findPeriod .
+  take n .
+  iter (nextGen carr) cntWood
+  $ coll
   where
     coll = toColl css
     carr = cArr (bounds coll)
-
-
-
-    act  = foldr (.) id $ replicate n (nextGen carr)
-    res  = act coll
-
-    cntLumber = length . filter (== lumberYard) . elems $ res
-    cntTrees  = length . filter (== trees     ) . elems $ res
-
-    showRes   = "\n\nstate after " ++ show n ++ " generations: " ++
-                "(lumber, trees) = " ++ show (cntLumber, cntTrees) ++
-                " = " ++ show (cntLumber * cntTrees) ++ "\n\n"
 
 -- ----------------------------------------
 
