@@ -40,7 +40,7 @@ captcha2 = show . solve2 . fromString
 -- ----------------------------------------
 
 withTrace :: Bool
-withTrace = False
+withTrace = True
 
 trace' :: String -> a -> a
 trace' s
@@ -224,11 +224,38 @@ solve1 :: Input -> Int
 solve1 (bindIC, is) =
   head . snd . runMachine (toProg is) $ (replicate 6 0, bindIC)
 
-solve' (bindIC, is) =
-  runMachine (toProg is) (replicate 6 0, bindIC)
+-- this solution does not give any results, too inefficient
 
-solve2 :: Input -> Result2
-solve2  = undefined
+solve2' :: Input -> Result2
+solve2' (bindIC, is) =
+  head . snd . runMachine (toProg is) $ (1 : replicate 5 0, bindIC)
+
+
+-- reverse engineering of input prog reveals the following algorithm:
+--
+-- r3 is initialized with 973 for r0 = 0 and 10551373 for r0 = 1 (part 2)
+-- in r0 the sum of all divisors is collected
+-- by a very inefficient algorithm, here wriiten in C
+{-
+   r3 = input;
+
+   r0 = 0;
+   for (r2 = 1; r2 <= r3; r2++) {
+       for (r1 = 1; r1 <= r3; r1++) {
+           if (r2 * r1 == r3)
+               r0 += r2;
+       }
+   }
+-}
+
+solve1' :: Input -> Int
+solve1' _ = sumOfDivisors 973
+
+solve2 :: Input -> Int
+solve2 _ = sumOfDivisors 10551373
+
+sumOfDivisors :: Int -> Int
+sumOfDivisors n = sum $ filter (\ i -> n `mod` i == 0) [1..n]
 
 -- ----------------------------------------
 
