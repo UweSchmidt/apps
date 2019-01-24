@@ -444,6 +444,23 @@ executable 2018-19
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
   default-language:   Haskell2010
 
+executable 2018-20
+  main-is:             Year18/Day20/Main.hs
+  hs-source-dirs:      .
+  
+  other-modules:       Util.Main1
+                       Data.Relation
+                       
+  build-depends:       base >= 4.7 && < 5
+                     , containers
+                     , megaparsec
+                     , mtl
+                     , optparse-applicative
+                     , parser-combinators
+                            
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  default-language:   Haskell2010
+
 source-repository head
   type:     git
   location: https://github.com/UweSchmidt/apps/toys/adventofcode.com

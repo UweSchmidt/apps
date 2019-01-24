@@ -8,8 +8,8 @@ import qualified Prelude as P
 import           Data.Maybe (fromMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as S
-import           Data.Map (Map)
-import qualified Data.Map as M
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import           Data.List (foldl')
 
 -- ----------------------------------------
@@ -57,7 +57,7 @@ findMin r =
     (x, s) = findMinS r
 
 findMinS :: (Ord a) => Rel a b -> (a, Set b)
-findMinS r@(Rel m)
+findMinS (Rel m)
   | M.null m  = error "findMinS: empty relation"
   | otherwise = M.findMin m
 

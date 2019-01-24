@@ -171,7 +171,7 @@ showSt t ws jobs =
   show t ++ ".: [" ++ (intercalate "," $ map js ws) ++ "] " ++ (show $ S.toList jobs)
   where
     js Nothing       = "-"
-    js (Just (c, t)) = c : ":" ++ show t
+    js (Just (c, t')) = c : ":" ++ show t'
 
 -- ----------------------------------------
 
