@@ -231,11 +231,16 @@ trClosure =
 reflex :: Ord a => Rel' a -> Rel' a
 reflex r = S.foldl' (\ acc x -> insert x x acc) empty $ dom r `S.union` rng r
 
+symmetric :: Ord a => Rel' a -> Rel' a
+symmetric r =
+  r `union` invert r
+
 {-# INLINE comp      #-}
 {-# INLINE filter    #-}
 {-# INLINE invert    #-}
 {-# INLINE trClosure #-}
 {-# INLINE reflex    #-}
+{-# INLINE symmetric #-}
 
 connectedComponents :: Ord a => Rel' a -> [Set a]
 connectedComponents r0 = part [] r1

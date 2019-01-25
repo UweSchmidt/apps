@@ -57,67 +57,99 @@ trace' s
 
 data Dir   = N | E | S | W deriving (Show, Read, Eq)
 
-data Regex = Sym Dir
+data Regex = Unit
+           | Sym [Dir]
            | Seq [Regex]
            | Alt [Regex]
            deriving (Show)
 
-type Room  = (Int, Int)
-type Doors = Rel' Room
+type Point  = (Int, Int)
+type Rooms = Set  Point
+type Doors = Rel' Point
+
+data RegMap = RM
+              { rooms :: ! Rooms   -- the set of end points in the maze
+              , doors :: ! Doors   -- the set of connected points in the maze
+              }
+              deriving Show
 
 -- ----------------------------------------
 
-{-
+unit :: Point
+unit = (0, 0)
 
--- naive solution with memory leak
+infixl 6 .+.
+(.+.) :: Point -> Point -> Point
+(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
 
-allDoors :: [Regex] -> Room -> Doors
-allDoors []       _r = R.empty
-allDoors (x : xs)  !r =
-  case x of
-    Sym dir -> let !r' = move dir r
-               in
-                 R.insert r' r  $   -- door rel is symmetic
-                 R.insert r  r' $
-                 allDoors xs r'
+shiftRooms :: Point -> Rooms -> Rooms
+shiftRooms p = S.map (.+. p)
 
-    Seq es  -> allDoors (es ++ xs) r
+shiftDoors :: Point -> Doors -> Doors
+shiftDoors p = R.foldr shiftP R.empty
+  where
+    shiftP k v = R.insert (k .+. p) (v .+. p)
 
-    Alt es  -> R.unions $
-               map (\ e -> allDoors (e : xs) r) es
--}
+-- --------------------
+--
+-- reg map construction
 
--- naive solution without memory leak, but too inefficient
--- runs only for examples
+zeroRegMap :: RegMap
+zeroRegMap = RM S.empty R.empty
 
-allDoors :: [Regex] -> (Room, Doors) -> (Room, Doors)
-allDoors []        acc          = acc
-allDoors (x : xs)  acc@(rm, ds) =
-  case x of
-    Sym dir -> let !rm' = move dir rm
-                   !ds' = R.insert rm' rm  $   -- door rel is symmetic
-                          R.insert rm  rm' $
-                          ds
-               in
-                 trace' (show . R.size $ ds') $
-                 allDoors xs (rm', ds')
+unitRegMap :: RegMap
+unitRegMap = RM (S.singleton unit) R.empty
 
-    Seq es  -> allDoors xs . allDoors es $ acc
+dir2regMap :: Dir -> RegMap
+dir2regMap d = RM { rooms = S.singleton p1
+                  , doors = R.singleton unit p1
+                  }
+  where
+    p1 = move d unit
 
-    Alt (e : es)
-            -> let (_r1, ds1) = allDoors (e : xs) acc
-               in
-                 allDoors (Alt es : xs) (rm, ds1)
-
-    Alt []  -> allDoors xs acc
-
-move :: Dir -> Room -> Room
+move :: Dir -> Point -> Point
 move N (x, y) = (x    , y - 1)
 move E (x, y) = (x + 1, y    )
 move S (x, y) = (x    , y + 1)
 move W (x, y) = (x - 1, y)
 
-maxMinPath :: Room -> Doors -> Int
+-- --------------------
+--
+-- basic reg map combinators
+
+shiftRegMap :: Point -> RegMap -> RegMap
+shiftRegMap p (RM rs ds) = RM (shiftRooms p rs) (shiftDoors p ds)
+
+-- union of 2 RegMaps
+u :: RegMap -> RegMap -> RegMap
+RM rs1 ds1 `u` RM rs2 ds2 = RM (rs1 `S.union` rs2) (ds1 `R.union` ds2)
+
+-- composition fo 2 RegMaps
+(.>>.) :: RegMap -> RegMap -> RegMap
+rm1 .>>. rm2 = RM (rooms rm2') (doors rm1 `R.union` doors rm2')
+  where
+    rm2' = S.fold (\ p acc -> shiftRegMap p rm2 `u` acc) zeroRegMap (rooms rm1)
+
+instance Semigroup RegMap where
+  (<>) = (.>>.)
+
+instance Monoid RegMap where
+  mempty = unitRegMap
+
+-- a 2. monoid for reg map is (`u`, zeroRegMap)
+
+
+-- ----------------------------------------
+--
+-- the core operation
+
+toRegMap :: Regex -> RegMap
+toRegMap Unit     = mempty
+toRegMap (Sym ds) = mconcat  $ map dir2regMap ds
+toRegMap (Seq es) = mconcat  $ map toRegMap   es
+toRegMap (Alt es) = foldr1 u $ map toRegMap es
+
+maxMinPath :: Point -> Doors -> Int
 maxMinPath r drs = go S.empty (S.singleton r) 0
   where
     go oldRooms curRooms cnt
@@ -129,26 +161,38 @@ maxMinPath r drs = go S.empty (S.singleton r) 0
         curRooms' = (drs `R.applyS` curRooms) S.\\ oldRooms'
 
 solve1 :: Regex -> Int
-solve1 re = maxMinPath (0,0) ds
-  where
-    ds = snd $ allDoors [re] ((0,0), R.empty)
+solve1 = maxMinPath unit .  R.symmetric . doors . toRegMap
 
 solve2 :: Regex -> Int
 solve2 = undefined
 
-solve' re = -- maxMinPath (0,0)
-            drs
+solve' re = maxMinPath unit .  R.symmetric . doors . toRegMap $ re
   where
-    drs = allDoors [re] ((0,0), R.empty)
+
 
 -- ----------------------------------------
 
 showRegex :: Regex -> String
 showRegex re = "^" ++ showRegex' re ++ "$"
   where
-    showRegex' (Sym d)  = show d
+    showRegex' Unit     = ""
+    showRegex' (Sym ds) = concatMap show ds
     showRegex' (Seq es) = concatMap showRegex' es
     showRegex' (Alt es) = "(" ++ (intercalate "|" $ map showRegex' es) ++ ")"
+
+showDoors :: Doors -> String
+showDoors = show . R.toList
+
+showRooms :: Rooms -> String
+showRooms = show . S.toAscList
+
+showRegMap :: RegMap -> String
+showRegMap (RM rs ds) = unwords
+  [ "rooms ="
+  , showRooms rs ++ ","
+  , "doors ="
+  , showDoors ds
+  ]
 
 -- ----------------------------------------
 
@@ -162,10 +206,12 @@ pRegex = char '^' *> pExs <* char '$' <* optional nl
   where
     nl = char '\n'
 
+pDir :: SP Dir
+pDir = (read . (:[])) <$> oneOf "NESW"
+
 pEx :: SP Regex
-pEx = do
-  c <- oneOf "NESW"
-  return $ Sym (read [c])
+pEx =
+  (Sym <$> some pDir)
   <|>
   between (char '(') (char ')') pAlt
 
@@ -173,7 +219,7 @@ pExs :: SP Regex
 pExs = Seq <$> some pEx
 
 pExs0 :: SP Regex
-pExs0 = option (Seq []) pExs
+pExs0 = option Unit pExs
 
 pAlt :: SP Regex
 pAlt = Alt <$> sepBy1 pExs0 (char '|')
@@ -186,11 +232,12 @@ ex2 = "^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$"
 ex3 = "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$"
 ex4 = "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$"
 
-res1, res2, res3, res4 :: Int
+res, res1, res2, res3, res4 :: Int
 res1 =  3
 res2 = 10
 res3 = 23
 res4 = 31
+res  = 3644
 
 inp' :: IO String
 inp' = readFile "Year18/Day20/day20.txt"
