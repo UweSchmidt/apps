@@ -7,24 +7,15 @@
 
 module Main where
 
-import           Data.Bits       ((.&.), (.|.))
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
 import           Data.Set        (Set)
 import qualified Data.Set        as S
-import           Data.List       (foldl', intercalate, intersect, delete)
+import           Data.List       (intercalate)
 import           Data.Relation   (Rel')
 import qualified Data.Relation   as R
 
 import           Util.Main1 (main12)
 
--- import           Control.Applicative      (some, many)
-import           Control.Arrow (second)
-import           Control.Monad.State.Strict
-import           Control.Monad.Except
-import           Control.Monad.Reader
-
-import           Text.Megaparsec hiding (State)
+import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
 import Debug.Trace
@@ -41,17 +32,20 @@ captcha1 :: String -> String
 captcha1 = show . solve1 . fromString
 
 captcha2 :: String -> String
-captcha2 = show . solve2 . fromString
+captcha2 = show . solve2 1000 . fromString
 
 -- ----------------------------------------
 
 withTrace :: Bool
-withTrace = True
+withTrace = False
 
 trace' :: String -> a -> a
 trace' s
   | withTrace = trace s
   | otherwise = id
+
+trcVal :: (a -> String) -> a -> a
+trcVal f x = trace' (f x) x
 
 -- ----------------------------------------
 
@@ -152,23 +146,61 @@ toRegMap (Alt es) = foldr1 u $ map toRegMap es
 maxMinPath :: Point -> Doors -> Int
 maxMinPath r drs = go S.empty (S.singleton r) 0
   where
-    go oldRooms curRooms cnt
-      | S.null curRooms'  = trace' (show curRooms) $
-                            cnt
-      | otherwise         = go oldRooms' curRooms' (cnt + 1)
+    go !oldRooms !curRooms cnt
+      | S.null curRooms' =
+          -- descr in spec: length of path to THE point with longest min path
+          if S.size curRooms == 1
+          then
+            cnt
+          else
+            error $ "maxMinPath: no unique end point" ++ showRooms curRooms
+
+      | otherwise =
+          go oldRooms' curRooms' (cnt + 1)
       where
         oldRooms' = oldRooms `S.union` curRooms
         curRooms' = (drs `R.applyS` curRooms) S.\\ oldRooms'
 
-solve1 :: Regex -> Int
-solve1 = maxMinPath unit .  R.symmetric . doors . toRegMap
-
-solve2 :: Regex -> Int
-solve2 = undefined
-
-solve' re = maxMinPath unit .  R.symmetric . doors . toRegMap $ re
+longDistance :: Int -> Point -> Doors -> Rooms
+longDistance dist p drs = go allRooms (S.singleton p) 0   -- dist > 0
   where
+    allRooms = trcVal (\ x -> "# rooms = " ++ (show $ S.size x)) $ R.elems drs
 
+    go !remRooms !curRooms cnt
+      | cnt' == dist = remRooms'
+      | otherwise    = go remRooms' curRooms' cnt'
+      where
+        cnt'      = cnt + 1
+        remRooms' = trcVal (\ x -> show cnt ++ ". remRooms': " ++ (show $ S.size x)) $
+                    remRooms S.\\ curRooms
+        curRooms' = trcVal (\ x -> show cnt ++ ". curRooms': " ++ showRooms x) $
+                    (drs `R.applyS` curRooms) `S.intersection` remRooms'
+
+solve1 :: Regex -> Int
+solve1 = maxMinPath unit . R.symmetric . doors . toRegMap
+
+solve2 :: Int -> Regex -> Int
+solve2 dist re = S.size $
+                 trace' ("maxMinPath : " ++ show cnt) $
+                 longDistance dist unit drs
+  where
+    drs = R.symmetric . doors . toRegMap $ re
+    cnt = maxMinPath unit drs
+
+solve' dist re = trace' ("maxMinPath : " ++ show cnt) $
+                 longDistance dist unit $ drs
+  where
+    drs = R.symmetric . doors . toRegMap $ re
+    cnt = maxMinPath unit drs
+
+-- solution for part2: 8523
+-- start is (0,0) current position, not the point
+-- with longest minimal path (76?? tries)
+
+-- 7686 wrong
+-- 7690 wrong
+-- 7681 too low
+-- 7674 too low
 
 -- ----------------------------------------
 
@@ -232,12 +264,13 @@ ex2 = "^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$"
 ex3 = "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$"
 ex4 = "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$"
 
-res, res1, res2, res3, res4 :: Int
-res1 =  3
-res2 = 10
-res3 = 23
-res4 = 31
-res  = 3644
+part1, part2, res1, res2, res3, res4 :: Int
+res1  =  3
+res2  = 10
+res3  = 23
+res4  = 31
+part1 = 3644
+part2 = 8523
 
 inp' :: IO String
 inp' = readFile "Year18/Day20/day20.txt"
