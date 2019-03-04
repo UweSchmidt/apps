@@ -1,4 +1,4 @@
-mqodule Text.SimpleParser
+module Text.SimpleParser
   ( module Text.Megaparsec
   , module Text.Megaparsec.Char
   , module Text.SimpleParser

@@ -85,7 +85,7 @@ type NewDocAPI
 
 type MovieAPI = "movie" :> "archive" :> "photos" :> Raw
 
--- a lazy bytestring as response  with a cache control header
+-- a lazy bytestring as response with a cache control header
 
 type CachedByteString
   = Headers '[Header "Cache-Control" Text] LazyByteString
@@ -214,8 +214,8 @@ type JsonModifyAPI
 
 -- ----------------------------------------
 --
--- Geo' and GeoAR' are helper to avoid
--- warnings about orphan instances for Geo and GeoAR
+-- Geo' is a wrapper around Geo to avoid
+-- warnings about orphan instance
 
 instance FromHttpApiData Geo' where
   parseUrlPiece s =
