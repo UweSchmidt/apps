@@ -4,19 +4,19 @@ where
 import           Control.Arrow
 import           Control.Monad
 
-import qualified Data.ByteString                     	as B
-import qualified Data.ByteString.Char8               	as C
+import qualified Data.ByteString                        as B
+import qualified Data.ByteString.Char8                  as C
 
 import           Data.Char                              ( isSpace, toLower )
-import           Data.List                          	hiding ( find )
+import           Data.List                              hiding ( find )
 import           Data.Maybe
-import qualified Data.Map                            	as M
-import qualified Data.Set                            	as S
+import qualified Data.Map                               as M
+import qualified Data.Set                               as S
 
 import           Data.String.Unicode                    ( utf8ToUnicode
                                                         , unicodeToUtf8
                                                         )
-import           Text.Regex.XMLSchema.String            ( match )
+import           Text.Regex.XMLSchema.Generic           ( match )
 import           Text.XML.HXT.Parser.XhtmlEntities      ( xhtmlEntities )
 
 import System.IO
@@ -67,12 +67,12 @@ fe2T FF f
 
 fe2T IsFile f
     = do
-      s <- getSymbolicLinkStatus f 	-- followSymLinks: getFileStatus
+      s <- getSymbolicLinkStatus f      -- followSymLinks: getFileStatus
       return (isRegularFile s)
 
 fe2T IsDir f
     = do
-      s <- getSymbolicLinkStatus f 	-- followSymLinks: getFileStatus
+      s <- getSymbolicLinkStatus f      -- followSymLinks: getFileStatus
       return (isDirectory s)
 
 fe2T (HasCont p) f
@@ -139,7 +139,7 @@ isUmlaut                :: String -> Bool
 isUmlaut s              = not (isUtf8 s) && isLatin1 s && not (isAscii s)
 
 isUtfUmlaut             :: String -> Bool
-isUtfUmlaut		= utf8ToUnicode >>> fst >>> isUmlaut
+isUtfUmlaut             = utf8ToUnicode >>> fst >>> isUmlaut
 
 isUtf                   :: String -> Bool
 isUtf s                 = not (isAscii s) && isUtf8 s
@@ -165,8 +165,8 @@ isUtf82 _               = False
 hasTrailingWS           :: String -> Bool
 hasTrailingWS           = not . null . takeWhile isSpace . reverse
 
-hasTabs			:: String -> Bool
-hasTabs			= any (== '\t')
+hasTabs                 :: String -> Bool
+hasTabs                 = any (== '\t')
 
 -- ------------------------------------------------------------
 
@@ -299,10 +299,10 @@ xhtmlEntityMap
 
 
 substUmlauts    :: String -> String
-substUmlauts	= substUmlauts' umlautMapAscii
+substUmlauts    = substUmlauts' umlautMapAscii
 
 substUmlautsTex :: String -> String
-substUmlautsTex	= substUmlauts' umlautMapTex
+substUmlautsTex = substUmlauts' umlautMapTex
 
 substUmlauts'    :: [(Char,String)] -> String -> String
 substUmlauts' umlautMap
@@ -316,7 +316,7 @@ substUmlauts' umlautMap
                . lookup c
                $ umlautMap
 
-umlautMapAscii	:: [(Char,String)]
+umlautMapAscii  :: [(Char,String)]
 umlautMapAscii
     = [ ('\196', "Ae")
       , ('\214', "Oe")
@@ -327,7 +327,7 @@ umlautMapAscii
       , ('\252', "ue")
       ]
 
-umlautMapTex	:: [(Char,String)]
+umlautMapTex    :: [(Char,String)]
 umlautMapTex
     = [ ('\196', "\"A")
       , ('\214', "\"O")
@@ -357,8 +357,8 @@ substLatin1Tcl
 substLatin1Tex  :: String -> String
 substLatin1Tex  = substUmlautsTex
 
-substUtf8Tex	:: String -> String
-substUtf8Tex	= utf8ToUnicode
+substUtf8Tex    :: String -> String
+substUtf8Tex    = utf8ToUnicode
                   >>>
                   fst
                   >>>
@@ -381,15 +381,15 @@ removeTrailingWS        :: String -> String
 removeTrailingWS
     = unlines . map (reverse . dropWhile isSpace . reverse) . lines
 
-removeTabs		:: String -> String
+removeTabs              :: String -> String
 removeTabs
     = lines >>> map (mapAccumL rmTab 0 >>> snd >>> concat) >>> unlines
     where
-    rmTab		:: Int -> Char -> (Int, String)
-    rmTab i '\t'	= (i', replicate (i' - i) ' ')
+    rmTab               :: Int -> Char -> (Int, String)
+    rmTab i '\t'        = (i', replicate (i' - i) ' ')
                           where
                           i' = ((i + 8) `div` 8) * 8
-    rmTab i ch		= (i+1, [ch])
+    rmTab i ch          = (i+1, [ch])
 
 -- ------------------------------
 
@@ -643,7 +643,7 @@ htmlFiles
              , RE ".*/automata/.*[.]tab"        -- CB first and follow tables
              ]
 
-makeFiles	:: FindExpr
+makeFiles       :: FindExpr
 makeFiles
     = OrExpr [ Name "Makefile"
              , Name "makefile"
@@ -784,7 +784,7 @@ trailingBlankFiles
 uppercaseImgFiles       :: FindExpr
 uppercaseImgFiles
     = OrExpr [ AndExpr [ FileName "([_A-Z]+)[0-9]+(-[0-9]+)?[.](XMP|xmp|NEF|nef|JPG|jpg|MOV|mov|MP3|mp3|TIF|tif|RW2|rw2|WAV|wav|((NEF|nef)[.](DOP|dop|RWS|rws)))"
-                       , FileName ".*[A-Z].*"		-- at least 1 uppercase char
+                       , FileName ".*[A-Z].*"           -- at least 1 uppercase char
                        ]
              , FileName "[0-9]+-[0-9]+[.](WAV|MP3)"     -- zoom mic
              ]
