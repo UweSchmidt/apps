@@ -24,4 +24,3 @@ unregister	:
 	ghc-pkg list
 
 .PHONY	: all reinstall haddock clean unregister photo2
-
