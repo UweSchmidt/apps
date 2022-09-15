@@ -260,7 +260,7 @@ saveModulePuzzle pm = do
   where
     xs = printAllPuzzles pm
     -- ??? abs file path
-    mn = "/Users/uwe/haskell/apps/figure/src/Puzzles.hs"
+    mn = "/Users/uwe/haskell/apps/figure.game/src/Puzzles.hs"
 
 
 -- --------------------
