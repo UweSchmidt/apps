@@ -6,3 +6,6 @@ cabal.sandbox.config
 /catalog/TAGS
 .stack-work/
 stack.yaml.lock
+
+dist-newstyle/
+cabal.project.local~*
