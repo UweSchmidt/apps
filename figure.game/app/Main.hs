@@ -26,18 +26,21 @@ main = do
   hSetBuffering stdin  NoBuffering
   hSetBuffering stdout NoBuffering
 
-  (no, board) <- puzzleInput
+  (gno, board) <- puzzleInput
   putStrLn "\nstart solving game"
   flush
 
+  -- solve the puzzle
   let sol@(mvs, _, _) = solveBoard board
-  resOutput $ solveBoard board
+
+  resOutput sol
   gameOutput board mvs
-  saveGame no board
+  saveGame gno board
   return ()
 
 -- --------------------
 
+flush :: IO ()
 --- flush = hFlush stdout
 flush = return ()
 
@@ -265,7 +268,7 @@ saveModulePuzzle pm = do
 
 -- --------------------
 
--- {- just for testing
+{- just for testing
 
 s1 :: String  -- figure #75
 s1 = unlines $

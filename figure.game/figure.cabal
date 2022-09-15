@@ -8,9 +8,6 @@ synopsis: solving figure.com puzzles
 -- A longer description of the package.
 -- description:
 
--- A URL where users can report bugs.
--- bug-reports:
-
 -- The license under which the package is released.
 -- license:
 author:             Uwe Schmidt
@@ -57,6 +54,8 @@ library
       TypeFamilies
       TypeOperators
       TypeSynonymInstances
+    ghc-options:
+      -Wall -fwarn-tabs -O2 -funbox-strict-fields
     
 executable figure.game
     main-is:       Main.hs
@@ -97,3 +96,5 @@ executable figure.game
       TypeFamilies
       TypeOperators
       TypeSynonymInstances
+    ghc-options:
+      -Wall -fwarn-tabs -O2 -funbox-strict-fields

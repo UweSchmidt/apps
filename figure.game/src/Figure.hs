@@ -10,20 +10,13 @@ where
 
 import Data.Board
 import Algorithms.AStar
-import Data.PriorityQueue.List (sizeQ)
-
-import Data.Maybe (fromMaybe)
-import Data.Char (toUpper)
-import Data.List (intercalate, foldl')
-import Data.Map.Strict (Map)
-import Data.Set (Set, member, disjoint, union, toList, toAscList, fromList)
+import Data.PriorityQueue.List
 
 import Control.Lens
-import Linear.V2
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as S
-import qualified Data.List       as L
+-- import qualified Data.List       as L
 
 -- --------------------
 
@@ -62,7 +55,7 @@ bottomClusters = S.filter row1 . clusters
     row1 :: Coords -> Bool
     row1 cs = S.foldr f1 False cs
       where
-        f1 (V2 x y) acc = y == 1 || acc
+        f1 (V2 _x y) acc = y == 1 || acc
 
 -- maybe used as a heuristic, how many steps maybe used
 -- to clear the board
