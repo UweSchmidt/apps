@@ -23,8 +23,7 @@ import qualified Data.Set        as S
 
 main :: IO ()
 main = do
-  hSetBuffering stdin  NoBuffering
-  hSetBuffering stdout NoBuffering
+  -- hSetBuffering stdout NoBuffering
 
   (gno, board) <- puzzleInput
   putStrLn "\nstart solving game"
@@ -41,8 +40,8 @@ main = do
 -- --------------------
 
 flush :: IO ()
---- flush = hFlush stdout
-flush = return ()
+flush = hFlush stdout
+-- flush = return ()
 
 gameOutput :: Figure -> Path Pos -> IO ()
 gameOutput b mvs =
