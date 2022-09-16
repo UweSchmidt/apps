@@ -4,7 +4,16 @@ where
 
 puzzles :: [(Int, String)]
 puzzles =
-  [ ( 1
+  [ ( 0
+    , unlines
+      [ "W W W W W"
+      , "W W W W W"
+      , "W W W W W"
+      , "W W W W W"
+      , "W W W W W"
+      ]
+    )
+  , ( 1
     , unlines
       [ "G G G G G"
       , "R R R R R"

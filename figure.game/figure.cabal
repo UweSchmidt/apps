@@ -55,7 +55,7 @@ library
       TypeOperators
       TypeSynonymInstances
     ghc-options:
-      -Wall -fwarn-tabs -O2 -funbox-strict-fields
+      -Wall -Wtabs -O2 -funbox-strict-fields
     
 executable figure.game
     main-is:       Main.hs
@@ -97,4 +97,4 @@ executable figure.game
       TypeOperators
       TypeSynonymInstances
     ghc-options:
-      -Wall -fwarn-tabs -O2 -funbox-strict-fields
+      -Wall -Wno-unused-imports -Wtabs -O2 -funbox-strict-fields

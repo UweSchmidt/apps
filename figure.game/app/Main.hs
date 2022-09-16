@@ -5,6 +5,7 @@ import Data.Char
 import Data.Map.Strict ( Map )
 import Control.Monad
 import System.IO
+import Text.Read       ( readMaybe )
 
 import Data.Board
 import Algorithms.AStar
@@ -57,6 +58,15 @@ yesNo msg = do
   flush
   (== "y") . take 1 <$> getLine
 
+readInt :: String -> IO Int
+readInt msg = do
+  putStr msg >> flush
+  v <- readMaybe <$> getLine
+  case v of
+    Just i  -> return i
+    Nothing -> do
+      putStrLn "please input a number"
+      readInt msg
 
 resOutput :: (Path Pos, Int, Int) -> IO ()
 resOutput (ms, steps, opn)
@@ -77,8 +87,10 @@ resOutput (ms, steps, opn)
   where
     stats = [ "statistics:"
             , show steps ++ " moves tried"
-            , show opn ++ " moves not tried"
+            , show opn'  ++ " moves not tried"
             ]
+    opn' | null ms   = opn
+         | otherwise = opn - 1
 
 saveGame :: Int -> Figure -> IO ()
 saveGame no b =
@@ -92,10 +104,8 @@ puzzleInput :: IO (Int, Figure)
 puzzleInput = do
   putStr txt1
   flush
-  putStr "input figure # : "
-  flush
+  no <- readInt "input figure # : "
 
-  no <- read <$> getLine
   case M.lookup no allPuzzles of
     Just b -> return (no, b)
 
@@ -107,14 +117,21 @@ puzzleInput = do
   where
     readBoard :: IO Figure
     readBoard = do
-      b <- parseBoard . unlines <$> traverse read1 prompts
-      putStrLn "\nboard: "
-      putStrLn $ printBoard b
-      ok <- yesNo "board o.k."
-      if ok
-        then return b
-        else do
-          putStrLn ""
+      b' <- validateBoard 5 5 . parseBoard . unlines
+            <$>
+            traverse read1 prompts
+      case b' of
+        Right b -> do
+          putStrLn "\nboard: "
+          putStrLn $ printBoard b
+          ok <- yesNo "board o.k."
+          if ok
+            then return b
+            else do
+              putStrLn ""
+              readBoard
+        Left msg -> do
+          putStrLn msg
           readBoard
 
     read1 p = do
@@ -205,9 +222,13 @@ printGame b0 p0 = concatMap step $ playFigure b0 p0
 -- --------------------
 
 allPuzzles :: Map Int Figure
-allPuzzles = M.fromList . map toB $ puzzles
+allPuzzles = M.fromList . concatMap toB $ puzzles
   where
-    toB (i, s) = (i, parseBoard s)
+    toB (i, s) =
+      either (const []) (\ b -> [(i, b)])
+        . validateBoard 5 5
+        . parseBoard
+        $ s
 
 printAllPuzzles :: Map Int Figure -> String
 printAllPuzzles ps =

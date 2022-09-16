@@ -38,6 +38,28 @@ deriving instance Read Color
 
 -- --------------------
 
+validateBoard :: Int -> Int -> Figure -> Either String Figure
+validateBoard w h b@(Board m)
+  | out       = Left $ "there are tiles outside the "
+                       ++
+                       show w ++ "x" ++ show h
+                       ++
+                       " sized board"
+  | hole      = Left $ "board not completely filled with tiles"
+  | otherwise = Right b
+
+  where
+    out = any off $ M.keys m
+      where
+        off (V2 x y) =
+          x <= 0 || x > w
+          ||
+          y <= 0 || y > h
+
+    hole = M.size m < w * h
+
+-- --------------------
+
 -- the possible next moves
 -- the leftmost coordinate represents clusters of tiles
 

@@ -52,7 +52,7 @@ type PSC a mv = (a, Path mv, Cost)         -- state, path to state, total cost
 deriving instance (Show a, Show mv) => Show (AStarState a mv)
 
 initAStar :: a -> AStarState a mv         -- initial search state
-initAStar b = AS S.empty q0 1 0 0.5       -- open states contain the start state
+initAStar b = AS S.empty q0 0 0 0.5       -- open states contain the start state
   where
     q0 = insertQ 0 (b, [], 0) emptyQ
 
