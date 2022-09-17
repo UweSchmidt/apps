@@ -1,4 +1,4 @@
--- A*-Algorithm for searching paths
+-- A*-Algorithm for searching best paths
 -- in a (game-) graph
 
 module Algorithms.AStar
@@ -46,15 +46,24 @@ data AStarState a mv = AS
 
 type Path mv  = [mv]                      -- list of moves in reverse order
 
-type PSC a mv = (a, Path mv, Cost)         -- state, path to state, total cost
+type PSC a mv = (a, Path mv, Cost)        -- state, path to state, total cost
 
+-- --------------------
+--
+-- for debugging
 
 deriving instance (Show a, Show mv) => Show (AStarState a mv)
+
+-- --------------------
+--
+-- create initial state
 
 initAStar :: a -> AStarState a mv         -- initial search state
 initAStar b = AS S.empty q0 0 0 0.5       -- open states contain the start state
   where
     q0 = insertQ 0 (b, [], 0) emptyQ
+
+-- the working horse
 
 aStar :: forall a mv.
          (AStar a, mv ~ Move a, Ord a)
