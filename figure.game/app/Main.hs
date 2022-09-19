@@ -46,7 +46,7 @@ flush = hFlush stdout
 
 gameOutput :: Figure -> Path Pos -> IO ()
 gameOutput b mvs =
-  when (not (null mvs)) $ do
+  unless (null mvs) $ do
     ok <- yesNo "play solution"
     when ok $ do
       putStrLn ""
@@ -94,7 +94,7 @@ resOutput (ms, steps, opn)
 
 saveGame :: Int -> Figure -> IO ()
 saveGame no b =
-  when (not $ M.member no allPuzzles) $ do
+  unless (M.member no allPuzzles) $ do
     ok <- yesNo "save board"
     when ok $ do
       saveModulePuzzle (M.insert no b allPuzzles)

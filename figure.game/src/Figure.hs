@@ -45,7 +45,7 @@ validateBoard w h b@(Board m)
                        show w ++ "x" ++ show h
                        ++
                        " sized board"
-  | hole      = Left $ "board not completely filled with tiles"
+  | hole      = Left   "board not completely filled with tiles"
   | otherwise = Right b
 
   where
@@ -75,7 +75,7 @@ bottomClusters = S.filter row1 . clusters
   where
     -- search for a Coord with y == 1
     row1 :: Coords -> Bool
-    row1 cs = S.foldr f1 False cs
+    row1 = S.foldr f1 False
       where
         f1 (V2 _x y) acc = y == 1 || acc
 
@@ -138,7 +138,11 @@ instance AStar Figure where
 
   -- # moves used needs higher weight than # of clusters
   -- else search isn't broad enough
-  -- 1 and 1.5 doeas not work, 2.0 worked in test cases
+  --
+  -- @0.50 * pathCost + (1.0 - 0.50) * heuristics@ does not work
+  --
+  -- @0.66 * pathCost + (1.0 - 0.66) * heuristics@
+  -- worked fine for all puzzles solved until now
 
 initBoardAStar :: Figure -> AStarState Figure Pos
 initBoardAStar b = (initAStar b) { _weightCost = 0.66, _smax = 0 }
