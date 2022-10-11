@@ -211,5 +211,14 @@ puzzles =
       , "Y G R G Y"
       ]
     )
+  , ( 106
+    , unlines
+      [ "Y R G R W"
+      , "W R R R R"
+      , "R G G G W"
+      , "Y R W R W"
+      , "G Y W W R"
+      ]
+    )
   ]
 
