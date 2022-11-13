@@ -56,7 +56,10 @@ yesNo :: String -> IO Bool
 yesNo msg = do
   putStr $ "\n" ++ msg ++ " (y or n)? : "
   flush
-  (== "y") . take 1 <$> getLine
+  row <- getLine
+  if null row
+    then yesNo msg
+    else return ((== "y") $ take 1 row)
 
 readInt :: String -> IO Int
 readInt msg = do
@@ -144,19 +147,19 @@ puzzleInput = do
       ]
     txt2 = unlines
       [ ""
-      , "Input 5 lines with each containing 5 tiles"
-      , "top line first, bottom line last"
+      , "Input 5 rows with each containing 5 tiles"
+      , "top row first, bottom row last"
       , "colors: G (green), R (red), W (white), Y (yellow)"
       , "colors maybe separated by blanks"
       , ""
       ]
 
     prompts =
-      [ "top line   : "
-      , "4. line    : "
-      , "3. line    : "
-      , "2. line    : "
-      , "bottom line: "
+      [ "top row   : "
+      , "4. row    : "
+      , "3. row    : "
+      , "2. row    : "
+      , "bottom row: "
       ]
 
 -- --------------------
