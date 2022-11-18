@@ -377,3 +377,116 @@ fff s = (b, i, p, c, n, pb, nbs, ass)
     ass = initBoardAStar b
 -- -}
 -- --------------------
+{-
+
+#144: Solution in 10 moves rquired
+      but only a solution in 11 moves found
+      with a weightCost = 0.75
+      with a weightCost = 0.80
+      a solution in 10 moves was foud: [3,3,3,4,2,5,1,1,1,1]
+
+board:
+G W Y Y R
+Y Y W W Y
+R Y R G G
+G Y W G G
+W Y G Y R
+
+
+board o.k. (y or n)? : y
+
+start solving game
+solution in 11 moves found
+list of tiles to play: [3,4,2,1,1,1,4,1,3,3,5]
+statistics:
+41756 moves tried
+42712 moves not tried
+
+play solution (y or n)? : y
+
+initial board:
+G W Y Y R
+Y Y W W Y
+R Y R G G
+G Y W G G
+W Y G Y R
+
+1. move: tile 3
+G W . Y R
+Y Y Y W Y
+R Y W G G
+G Y R G G
+W Y W Y R
+
+2. move: tile 4
+G W . . R
+Y Y Y Y Y
+R Y W W G
+G Y R G G
+W Y W G R
+
+3. move: tile 2
+. . . . .
+G . . . R
+R . W W G
+G . R G G
+W W W G R
+
+4. move: tile 1
+. . . . .
+. . . . R
+G . . W G
+R . W G G
+G . R G R
+
+5. move: tile 1
+. . . . .
+. . . . R
+. . . W G
+G . W G G
+R . R G R
+
+6. move: tile 1
+. . . . .
+. . . . R
+. . . W G
+. . W G G
+G . R G R
+
+7. move: tile 4
+. . . . .
+. . . . .
+. . . . .
+. . W . R
+G . R W R
+
+8. move: tile 1
+. . . . .
+. . . . .
+. . . . .
+. . W . R
+. . R W R
+
+9. move: tile 3
+. . . . .
+. . . . .
+. . . . .
+. . . . R
+. . W W R
+
+10. move: tile 3
+. . . . .
+. . . . .
+. . . . .
+. . . . R
+. . . . R
+
+11. move: tile 5
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+. . . . .
+
+-}
+-- --------------------

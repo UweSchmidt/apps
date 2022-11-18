@@ -145,11 +145,20 @@ instance AStar Figure where
   -- worked fine for all puzzles solved until now
 
 initBoardAStar :: Figure -> AStarState Figure Pos
-initBoardAStar b = (initAStar b) { _weightCost = 0.75, _smax = 0 }
+initBoardAStar b = (initAStar b) { _weightCost = 0.80, _smax = 0 }
+
 -- _weightCost = 0.66 (2/3) is too small, 0.75 (3/4) worked
 -- figure98 solvable in 10 move, but solution with 11 moves found
 -- 0.66:  885 moves tried, 11 moves
 -- 0.75: 4009 moves tried, 10 moves (required)
+
+-- _weightCost = 0.75 (3/4) did work until figure144
+-- #144: (see comment at end of Main.hs)
+-- 0.75: 41756 moves tried
+--       42712 moves not tried, 11 moves (10 required)
+-- 0.80: 46027 moves tried
+--       58077 moves not tried, 10 moves [3,3,3,4,2,5,1,1,1,1]
+
 
 solveBoard :: Figure -> ([Pos], Int, Int)
 solveBoard b =
