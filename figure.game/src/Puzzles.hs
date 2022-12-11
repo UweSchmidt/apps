@@ -616,5 +616,14 @@ puzzles =
       , "Y Y W R W"
       ]
     )
+  , ( 167
+    , unlines
+      [ "R Y G W G"
+      , "Y R W R G"
+      , "R Y Y G G"
+      , "G G W R G"
+      , "G R R W W"
+      ]
+    )
   ]
 
