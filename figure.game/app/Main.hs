@@ -165,7 +165,7 @@ puzzleInput = do
       getLine
 
     txt1 = unlines
-      [ "figure.game: solve new puzzle"
+      [ "figure.game: solve puzzle"
       ]
     txt2 = unlines
       [ ""
