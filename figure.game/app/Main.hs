@@ -1,6 +1,6 @@
 module Main where
 
-import Data.Maybe
+-- import Data.Maybe
 import Data.Char
 import Data.Map.Strict ( Map )
 import Control.Monad
@@ -13,12 +13,12 @@ import Figure
 import Puzzles
 
 -- for dev. & test
-import Data.PriorityQueue.List
-import Control.Lens
+-- import Data.PriorityQueue.Heap
+-- import Control.Lens
 
 import qualified Data.Map.Strict as M
 import qualified Data.List       as L
-import qualified Data.Set        as S
+-- import qualified Data.Set        as S
 
 -- --------------------
 
@@ -39,7 +39,9 @@ ownSolution gno board = do
     Just mvs -> do
                 putStrLn ""
                 putStrLn $ printGame board mvs
+                saveGame gno board mvs
 
+solvePuzzle :: Int -> Figure -> IO ()
 solvePuzzle gno board = do
   putStrLn "\nstart solving game"
   flush
@@ -47,7 +49,7 @@ solvePuzzle gno board = do
   let sol@(mvs, _, _) = solveBoard board
   resOutput sol
   gameOutput board mvs
-  saveGame gno board
+  saveGame gno board mvs
 
 -- --------------------
 
@@ -117,13 +119,25 @@ resOutput (ms, steps, opn)
     opn' | null ms   = opn
          | otherwise = opn - 1
 
-saveGame :: Int -> Figure -> IO ()
-saveGame no b =
-  unless (M.member no allPuzzles) $ do
-    ok <- yesNo "save board"
-    when ok $ do
-      saveModulePuzzle (M.insert no b allPuzzles)
-      putStrLn "puzzle added to module Puzzles.hs"
+saveGame :: Int -> Figure -> Solution -> IO ()
+saveGame no b s =
+  maybe save1 save2 $ M.lookup no allPuzzles
+  where
+    save1 = do
+      ok <- yesNo "save board and solution"
+      when ok $ do
+        saveModulePuzzle (M.insert no (no, b, [s]) allPuzzles)
+        putStrLn "puzzle board and solution added to module Puzzles.hs"
+
+    save2 (no', b', ss') = do
+      ok <- yesNo "save solution"
+      when ok $ do
+        saveModulePuzzle (M.insert no' (no', b', ss'') allPuzzles)
+        putStrLn "solution added to puzzle in module Puzzles.hs"
+          where
+            ss''
+              | s `elem` ss' = ss'
+              | otherwise    = s : ss'
 
 puzzleInput :: IO (Bool, Int, Figure)
 puzzleInput = do
@@ -132,7 +146,7 @@ puzzleInput = do
   no <- readInt "input figure # : "
 
   case M.lookup no allPuzzles of
-    Just b -> return (False, no, b)
+    Just (no', b', _) -> return (False, no', b')
 
     Nothing -> do
       putStr txt2
@@ -246,21 +260,21 @@ printGame b0 p0 = concatMap step $ playFigure b0 p0
 
 -- --------------------
 
-allPuzzles :: Map Int Figure
+allPuzzles :: Map Int GameF
 allPuzzles = M.fromList . concatMap toB $ puzzles
   where
-    toB (i, s) =
-      either (const []) (\ b -> [(i, b)])
+    toB (i, s, ss) =
+      either (const []) (\ b -> [(i, (i, b, ss))])
         . validateBoard 5 5
         . parseBoard
         $ s
 
-printAllPuzzles :: Map Int Figure -> String
+printAllPuzzles :: Map Int GameF -> String
 printAllPuzzles ps =
   unlines $
   header
   ++
-  mkl (concatMap pp (M.toList ps))
+  mkl (concatMap pp (M.elems ps))
   ++
   footer
   where
@@ -269,18 +283,33 @@ printAllPuzzles ps =
       , "  ( puzzles )"
       , "where"
       , ""
-      , "puzzles :: [(Int, String)]"
+      , "import Figure"
+      , ""
+      , "puzzles :: [GameS]"
       , "puzzles ="
       ]
     footer = [""]
-    pp (i, b) =
+    pp (i, b, ss) =
       [ "( " ++ show i
       , ", unlines"
       ]
       ++
       mkl (map qt $ printBoard' b)
       ++
-      [ ")"]
+      ( case ss of
+          [] ->
+            [ ", []"]
+          [s1] ->
+            [ ", [" <> show s1 <> "]"]
+          (s1 : ss1) ->
+            [ ", [ " <> show s1]
+            <>
+            map (\s -> "  , " <> show s) ss1
+            <>
+            [ "  ]" ]
+      )
+      ++
+      [ ")" ]
 
 mkl :: [String] -> [String]
 mkl ls = zipWith prep il ls ++ ["  ]"]
@@ -300,7 +329,7 @@ mkl ls = zipWith prep il ls ++ ["  ]"]
 qt :: String -> String
 qt = ("\"" ++) . (++ "\"")
 
-saveModulePuzzle :: Map Int Figure -> IO ()
+saveModulePuzzle :: Map Int GameF -> IO ()
 saveModulePuzzle pm = do
   old <- readFile mn
   writeFile (mn ++ "~") old

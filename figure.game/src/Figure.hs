@@ -20,11 +20,14 @@ import qualified Data.Set        as S
 
 -- --------------------
 
-type Figure = Board Color
-
-data Color = G | R | W | Y
-
-type Pos     = Int
+type Figure    = Board Color
+data Color     = G | R | W | Y
+type Pos       = Int
+type Solution  = [Pos]
+type Solutions = [Solution]
+type Game a    = (Int, a, Solutions)
+type GameF     = Game Figure
+type GameS     = Game String
 
 -- --------------------
 --

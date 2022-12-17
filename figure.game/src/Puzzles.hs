@@ -2,7 +2,9 @@ module Puzzles
   ( puzzles )
 where
 
-puzzles :: [(Int, String)]
+import Figure
+
+puzzles :: [GameS]
 puzzles =
   [ ( 0
     , unlines
@@ -12,6 +14,7 @@ puzzles =
       , "W W W W W"
       , "W W W W W"
       ]
+    , []
     )
   , ( 1
     , unlines
@@ -21,6 +24,7 @@ puzzles =
       , "Y Y Y Y Y"
       , "G G G G G"
       ]
+    , []
     )
   , ( 2
     , unlines
@@ -30,6 +34,7 @@ puzzles =
       , "Y Y Y Y Y"
       , "G R W Y G"
       ]
+    , []
     )
   , ( 75
     , unlines
@@ -39,6 +44,7 @@ puzzles =
       , "R Y Y R R"
       , "R Y G G Y"
       ]
+    , []
     )
   , ( 76
     , unlines
@@ -48,6 +54,7 @@ puzzles =
       , "Y R R Y R"
       , "G R Y G W"
       ]
+    , []
     )
   , ( 77
     , unlines
@@ -57,6 +64,7 @@ puzzles =
       , "G R Y Y W"
       , "R Y W R Y"
       ]
+    , []
     )
   , ( 78
     , unlines
@@ -66,6 +74,7 @@ puzzles =
       , "W G Y G R"
       , "W W G R G"
       ]
+    , []
     )
   , ( 79
     , unlines
@@ -75,6 +84,7 @@ puzzles =
       , "W G G W G"
       , "W G W R W"
       ]
+    , []
     )
   , ( 80
     , unlines
@@ -84,6 +94,7 @@ puzzles =
       , "G Y R Y R"
       , "G Y G G G"
       ]
+    , []
     )
   , ( 81
     , unlines
@@ -93,6 +104,7 @@ puzzles =
       , "Y R G Y R"
       , "Y R G Y Y"
       ]
+    , []
     )
   , ( 82
     , unlines
@@ -102,6 +114,7 @@ puzzles =
       , "G W G G Y"
       , "G G Y W Y"
       ]
+    , []
     )
   , ( 83
     , unlines
@@ -111,6 +124,7 @@ puzzles =
       , "Y Y W R W"
       , "Y W G G R"
       ]
+    , []
     )
   , ( 85
     , unlines
@@ -120,6 +134,7 @@ puzzles =
       , "W Y R Y W"
       , "G Y W W G"
       ]
+    , []
     )
   , ( 92
     , unlines
@@ -129,6 +144,7 @@ puzzles =
       , "R R G G Y"
       , "Y G G Y W"
       ]
+    , []
     )
   , ( 93
     , unlines
@@ -138,6 +154,7 @@ puzzles =
       , "W W G R G"
       , "W G R G W"
       ]
+    , []
     )
   , ( 94
     , unlines
@@ -147,6 +164,7 @@ puzzles =
       , "R G R Y Y"
       , "G G Y G R"
       ]
+    , []
     )
   , ( 95
     , unlines
@@ -156,6 +174,7 @@ puzzles =
       , "G Y R G Y"
       , "Y W W W Y"
       ]
+    , []
     )
   , ( 96
     , unlines
@@ -165,6 +184,7 @@ puzzles =
       , "W R Y Y W"
       , "G G R W R"
       ]
+    , []
     )
   , ( 97
     , unlines
@@ -174,6 +194,7 @@ puzzles =
       , "R Y G W W"
       , "W G Y G W"
       ]
+    , []
     )
   , ( 98
     , unlines
@@ -183,6 +204,7 @@ puzzles =
       , "R Y W G R"
       , "Y Y G W R"
       ]
+    , []
     )
   , ( 100
     , unlines
@@ -192,6 +214,7 @@ puzzles =
       , "R W Y Y Y"
       , "G W R R R"
       ]
+    , []
     )
   , ( 102
     , unlines
@@ -201,6 +224,7 @@ puzzles =
       , "G W Y R W"
       , "W Y R Y G"
       ]
+    , []
     )
   , ( 105
     , unlines
@@ -210,6 +234,7 @@ puzzles =
       , "G R R Y G"
       , "Y G R G Y"
       ]
+    , []
     )
   , ( 106
     , unlines
@@ -219,6 +244,7 @@ puzzles =
       , "Y R W R W"
       , "G Y W W R"
       ]
+    , []
     )
   , ( 107
     , unlines
@@ -228,6 +254,7 @@ puzzles =
       , "Y Y Y W R"
       , "R Y W G G"
       ]
+    , []
     )
   , ( 109
     , unlines
@@ -237,6 +264,7 @@ puzzles =
       , "W W G Y R"
       , "Y Y W R W"
       ]
+    , []
     )
   , ( 110
     , unlines
@@ -246,6 +274,7 @@ puzzles =
       , "Y Y W Y Y"
       , "R R W R G"
       ]
+    , []
     )
   , ( 111
     , unlines
@@ -255,6 +284,7 @@ puzzles =
       , "R W Y W R"
       , "W G W Y R"
       ]
+    , []
     )
   , ( 116
     , unlines
@@ -264,6 +294,7 @@ puzzles =
       , "Y R R G Y"
       , "Y R W R W"
       ]
+    , []
     )
   , ( 117
     , unlines
@@ -273,6 +304,7 @@ puzzles =
       , "R R W G W"
       , "G Y R R W"
       ]
+    , []
     )
   , ( 118
     , unlines
@@ -282,6 +314,7 @@ puzzles =
       , "W W G R R"
       , "R G G Y G"
       ]
+    , []
     )
   , ( 119
     , unlines
@@ -291,6 +324,7 @@ puzzles =
       , "R Y W Y R"
       , "W W Y G R"
       ]
+    , []
     )
   , ( 120
     , unlines
@@ -300,6 +334,7 @@ puzzles =
       , "G Y G G W"
       , "Y G W R W"
       ]
+    , []
     )
   , ( 121
     , unlines
@@ -309,6 +344,7 @@ puzzles =
       , "Y G R R G"
       , "W G W Y R"
       ]
+    , []
     )
   , ( 122
     , unlines
@@ -318,6 +354,7 @@ puzzles =
       , "R R R G W"
       , "W R Y G Y"
       ]
+    , []
     )
   , ( 124
     , unlines
@@ -327,6 +364,7 @@ puzzles =
       , "Y R R R G"
       , "G W G G R"
       ]
+    , []
     )
   , ( 126
     , unlines
@@ -336,6 +374,7 @@ puzzles =
       , "W Y R W W"
       , "R Y G W G"
       ]
+    , []
     )
   , ( 127
     , unlines
@@ -345,6 +384,7 @@ puzzles =
       , "Y Y R R R"
       , "Y G W G R"
       ]
+    , []
     )
   , ( 128
     , unlines
@@ -354,6 +394,7 @@ puzzles =
       , "W Y G G Y"
       , "Y G W G Y"
       ]
+    , []
     )
   , ( 129
     , unlines
@@ -363,6 +404,7 @@ puzzles =
       , "W R Y R W"
       , "R R W R W"
       ]
+    , []
     )
   , ( 130
     , unlines
@@ -372,6 +414,7 @@ puzzles =
       , "Y R R G W"
       , "G G Y R W"
       ]
+    , []
     )
   , ( 132
     , unlines
@@ -381,6 +424,7 @@ puzzles =
       , "Y W R G R"
       , "G W R W G"
       ]
+    , []
     )
   , ( 133
     , unlines
@@ -390,6 +434,7 @@ puzzles =
       , "W W Y W R"
       , "G R W W R"
       ]
+    , []
     )
   , ( 134
     , unlines
@@ -399,6 +444,7 @@ puzzles =
       , "Y R W R W"
       , "W W G Y R"
       ]
+    , []
     )
   , ( 135
     , unlines
@@ -408,6 +454,7 @@ puzzles =
       , "G G W Y R"
       , "W W Y W R"
       ]
+    , []
     )
   , ( 136
     , unlines
@@ -417,6 +464,7 @@ puzzles =
       , "G W W R Y"
       , "R Y W Y G"
       ]
+    , []
     )
   , ( 137
     , unlines
@@ -426,6 +474,7 @@ puzzles =
       , "Y G R Y W"
       , "W Y R G Y"
       ]
+    , []
     )
   , ( 138
     , unlines
@@ -435,6 +484,7 @@ puzzles =
       , "Y G W W W"
       , "R W R R Y"
       ]
+    , []
     )
   , ( 139
     , unlines
@@ -444,6 +494,7 @@ puzzles =
       , "W W R Y Y"
       , "W G W W G"
       ]
+    , []
     )
   , ( 140
     , unlines
@@ -453,6 +504,7 @@ puzzles =
       , "W W Y G G"
       , "Y Y Y R Y"
       ]
+    , []
     )
   , ( 141
     , unlines
@@ -462,6 +514,7 @@ puzzles =
       , "G Y G Y W"
       , "W R R R Y"
       ]
+    , []
     )
   , ( 142
     , unlines
@@ -471,6 +524,7 @@ puzzles =
       , "G G W R R"
       , "R W Y W W"
       ]
+    , []
     )
   , ( 143
     , unlines
@@ -480,6 +534,7 @@ puzzles =
       , "G G Y R W"
       , "W W Y R Y"
       ]
+    , []
     )
   , ( 144
     , unlines
@@ -489,6 +544,7 @@ puzzles =
       , "G Y W G G"
       , "W Y G W R"
       ]
+    , []
     )
   , ( 145
     , unlines
@@ -498,6 +554,7 @@ puzzles =
       , "W G R G G"
       , "G R Y R G"
       ]
+    , []
     )
   , ( 146
     , unlines
@@ -507,6 +564,7 @@ puzzles =
       , "W G Y W W"
       , "G R Y G Y"
       ]
+    , []
     )
   , ( 147
     , unlines
@@ -516,6 +574,7 @@ puzzles =
       , "W W G G G"
       , "W W R Y W"
       ]
+    , []
     )
   , ( 153
     , unlines
@@ -525,6 +584,7 @@ puzzles =
       , "W Y Y R W"
       , "Y W G G W"
       ]
+    , []
     )
   , ( 154
     , unlines
@@ -534,6 +594,7 @@ puzzles =
       , "Y W R G W"
       , "W G Y R W"
       ]
+    , []
     )
   , ( 155
     , unlines
@@ -543,6 +604,7 @@ puzzles =
       , "R G R Y W"
       , "Y W R W R"
       ]
+    , []
     )
   , ( 156
     , unlines
@@ -552,6 +614,7 @@ puzzles =
       , "G G G W Y"
       , "G W R Y G"
       ]
+    , []
     )
   , ( 157
     , unlines
@@ -561,6 +624,7 @@ puzzles =
       , "Y Y R R Y"
       , "G Y G Y W"
       ]
+    , []
     )
   , ( 158
     , unlines
@@ -570,6 +634,7 @@ puzzles =
       , "G W G Y W"
       , "G R G R W"
       ]
+    , []
     )
   , ( 160
     , unlines
@@ -579,6 +644,7 @@ puzzles =
       , "Y R W R G"
       , "W Y Y W R"
       ]
+    , []
     )
   , ( 161
     , unlines
@@ -588,6 +654,7 @@ puzzles =
       , "R G G G R"
       , "Y R W G G"
       ]
+    , []
     )
   , ( 162
     , unlines
@@ -597,6 +664,7 @@ puzzles =
       , "G G W Y Y"
       , "Y W R W Y"
       ]
+    , []
     )
   , ( 163
     , unlines
@@ -606,6 +674,7 @@ puzzles =
       , "W R R W Y"
       , "G Y R G W"
       ]
+    , []
     )
   , ( 164
     , unlines
@@ -615,6 +684,7 @@ puzzles =
       , "G Y R R W"
       , "Y Y W R W"
       ]
+    , []
     )
   , ( 167
     , unlines
@@ -624,6 +694,7 @@ puzzles =
       , "G G W R G"
       , "G R R W W"
       ]
+    , []
     )
   , ( 168
     , unlines
@@ -633,6 +704,7 @@ puzzles =
       , "W Y G G Y"
       , "W R G R G"
       ]
+    , []
     )
   , ( 169
     , unlines
@@ -642,6 +714,7 @@ puzzles =
       , "G G Y W W"
       , "Y W W G G"
       ]
+    , []
     )
   , ( 170
     , unlines
@@ -651,6 +724,7 @@ puzzles =
       , "R R Y R R"
       , "R W R W G"
       ]
+    , []
     )
   , ( 171
     , unlines
@@ -660,6 +734,7 @@ puzzles =
       , "W Y W R R"
       , "R Y G W G"
       ]
+    , []
     )
   , ( 172
     , unlines
@@ -668,6 +743,9 @@ puzzles =
       , "G Y W G Y"
       , "G R G R G"
       , "Y R W Y W"
+      ]
+    , [ [5,2,5,3,4,3,4,4,3,1,1]
+      , [5,2,5,1,4,4,4,3,1,1,1]
       ]
     )
   , ( 173
@@ -678,6 +756,7 @@ puzzles =
       , "W R Y W W"
       , "R G Y R R"
       ]
+    , [[1,1,1,1,4,2,4,5,5]]
     )
   ]
 
