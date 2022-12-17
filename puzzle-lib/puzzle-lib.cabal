@@ -11,6 +11,7 @@ build-type:         Simple
 
 library
     exposed-modules:  Data.Board
+                      Data.PriorityQueue.Heap
                       Data.PriorityQueue.List
                       Algorithms.AStar
                                             

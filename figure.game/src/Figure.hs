@@ -10,7 +10,7 @@ where
 
 import Data.Board
 import Algorithms.AStar
-import Data.PriorityQueue.List
+import Data.PriorityQueue.Heap
 
 import Control.Lens
 
@@ -136,16 +136,16 @@ instance AStar Figure where
   estimatedCost b = toEnum $  numberOfClusters b
 
 
-  -- # moves used needs higher weight than # of clusters
-  -- else search isn't broad enough
-  --
-  -- @0.50 * pathCost + (1.0 - 0.50) * heuristics@ does not work
-  --
-  -- @0.66 * pathCost + (1.0 - 0.66) * heuristics@
-  -- worked fine for all puzzles solved until now
-
 initBoardAStar :: Figure -> AStarState Figure Pos
-initBoardAStar b = (initAStar b) { _weightCost = 0.80, _smax = 0 }
+initBoardAStar b = (initAStar b) { _weightCost = 0.75, _smax = 0 }
+
+-- # moves used needs higher weight than # of clusters
+-- else search isn't broad enough
+--
+-- @0.50 * pathCost + (1.0 - 0.50) * heuristics@ does not work
+--
+-- @0.66 * pathCost + (1.0 - 0.66) * heuristics@
+-- worked fine for all puzzles solved until figure97
 
 -- _weightCost = 0.66 (2/3) is too small, 0.75 (3/4) worked
 -- figure98 solvable in 10 move, but solution with 11 moves found

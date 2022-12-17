@@ -26,17 +26,28 @@ main :: IO ()
 main = do
   -- hSetBuffering stdout NoBuffering
 
-  (gno, board) <- puzzleInput
+  (newpuzzle, gno, board) <- puzzleInput
+  if newpuzzle
+    then solvePuzzle gno board
+    else ownSolution gno board
+
+ownSolution :: Int -> Figure -> IO ()
+ownSolution gno board = do
+  ms <- readMoves
+  case ms of
+    Nothing  -> solvePuzzle gno board
+    Just mvs -> do
+                putStrLn ""
+                putStrLn $ printGame board mvs
+
+solvePuzzle gno board = do
   putStrLn "\nstart solving game"
   flush
-
   -- solve the puzzle
   let sol@(mvs, _, _) = solveBoard board
-
   resOutput sol
   gameOutput board mvs
   saveGame gno board
-  return ()
 
 -- --------------------
 
@@ -61,6 +72,20 @@ yesNo msg = do
     then yesNo msg
     else return ((== "y") $ take 1 row)
 
+readMoves :: IO (Maybe [Pos])
+readMoves = do
+  ok <- yesNo "play own solution"
+  if ok
+    then do
+         putStr "list of moves : " >> flush
+         row <- getLine
+         if null row
+           then readMoves
+           else case readMaybe row of
+                  Nothing -> readMoves
+                  res     -> return res
+    else return Nothing
+
 readInt :: String -> IO Int
 readInt msg = do
   putStr msg >> flush
@@ -75,22 +100,19 @@ resOutput :: (Path Pos, Int, Int) -> IO ()
 resOutput (ms, steps, opn)
   | null ms = do
       putStr $
-        unlines $
-        [ "sorry, no solution found"
-        ]
-        ++ stats
+        unlines $ ["sorry, no solution found"] <> stats
 
   | otherwise = do
       putStr $
         unlines $
-        [ "solution in " ++ show (length ms) ++ " moves found"
-        , "list of tiles to play: " ++ show ms
+        [ "solution in " <> show (length ms) <> " moves found"
+        , "list of tiles to play: " <> show ms
         ]
         ++ stats
   where
     stats = [ "statistics:"
-            , show steps ++ " moves tried"
-            , show opn'  ++ " moves not tried"
+            , show steps <> " moves tried"
+            , show opn'  <> " moves not tried"
             ]
     opn' | null ms   = opn
          | otherwise = opn - 1
@@ -103,19 +125,19 @@ saveGame no b =
       saveModulePuzzle (M.insert no b allPuzzles)
       putStrLn "puzzle added to module Puzzles.hs"
 
-puzzleInput :: IO (Int, Figure)
+puzzleInput :: IO (Bool, Int, Figure)
 puzzleInput = do
   putStr txt1
   flush
   no <- readInt "input figure # : "
 
   case M.lookup no allPuzzles of
-    Just b -> return (no, b)
+    Just b -> return (False, no, b)
 
     Nothing -> do
       putStr txt2
       board <- readBoard
-      return (no, board)
+      return (True, no, board)
 
   where
     readBoard :: IO Figure
@@ -155,11 +177,11 @@ puzzleInput = do
       ]
 
     prompts =
-      [ "top row   : "
-      , "4. row    : "
-      , "3. row    : "
-      , "2. row    : "
-      , "bottom row: "
+      [ "   top row : "
+      , "    4. row : "
+      , "    3. row : "
+      , "    2. row : "
+      , "bottom row : "
       ]
 
 -- --------------------

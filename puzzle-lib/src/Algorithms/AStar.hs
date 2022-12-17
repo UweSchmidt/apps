@@ -4,11 +4,13 @@
 module Algorithms.AStar
 where
 
-import Data.PriorityQueue.List   -- to be substituted by a more efficient impl.
+import Data.PriorityQueue.Heap
 import Data.Set                  (Set)
 
 import qualified Data.Set        as S
 import qualified Data.List       as L
+
+import Debug.Trace
 
 import Data.Kind (Type)
 
@@ -35,9 +37,9 @@ type Cost = Double
 data AStarState a mv = AS
   { _closedStates :: Set a                -- set of processed states
   , _openStates   :: PQueue Cost (PSC a mv) -- set of states to be processed
-  , _scnt         :: Int                  -- step counter
-  , _smax         :: Int                  -- max # of steps
-  , _weightCost   :: Cost                 -- weight of cost/estimatedCost
+  , _scnt         :: !Int                 -- step counter
+  , _smax         :: !Int                 -- max # of steps
+  , _weightCost   :: !Cost                -- weight of cost/estimatedCost
   }                                       -- range from 0.0 to 1.0
                                           -- 0.0: path costs are irrelevant
                                           -- 1.0: estimated cost is irrelevant
@@ -82,7 +84,11 @@ aStar s@(AS cls opn cnt mx cw)
       | mx > 0
         &&
         cnt' `mod` mx == 0 = (Nothing,)   -- terminate when max steps reached
-      | otherwise          = aStar        -- repeat
+                                          -- trace
+      | cnt `mod` 10000 == 0 = aStar . trace ("aStar: " <> show cnt <> " steps done")
+
+      | otherwise            = aStar      -- repeat
+
 
     (pbc@(b, p, c), opn') = splitMin opn  -- get best open state
 
@@ -93,10 +99,10 @@ aStar s@(AS cls opn cnt mx cw)
 
     ins acc (mv', b')
       | b' `S.member` cls' = acc            -- ignore duplicates in open states
-      | otherwise        = insertQ q' (b', mv' : p, c') acc
+      | otherwise          = insertQ q' (b', mv' : p, c') acc
       where
-        c' = c + moveCost  mv' b'           -- accumulate path costs
-        h' =     estimatedCost b'
-        q' = cw * c' + (1 - cw) * h'
+        !c' = c + moveCost  mv' b'           -- accumulate path costs
+        !h' =     estimatedCost b'
+        !q' = cw * c' + (1 - cw) * h'
 
 -- --------------------

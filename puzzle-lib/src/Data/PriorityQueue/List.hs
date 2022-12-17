@@ -1,4 +1,5 @@
 module Data.PriorityQueue.List
+  (PQueue, emptyQ, nullQ, sizeQ, splitMin, minElem, deleteMin, insertQ, toListQ)
 where
 
 -- --------------------
