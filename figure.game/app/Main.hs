@@ -107,7 +107,7 @@ resOutput (ms, steps, opn)
   | otherwise = do
       putStr $
         unlines $
-        [ "solution in " <> show (length ms) <> " moves found"
+        [ "solution with " <> show (length ms) <> " moves found"
         , "list of tiles to play: " <> show ms
         ]
         ++ stats
