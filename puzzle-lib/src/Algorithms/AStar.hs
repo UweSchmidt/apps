@@ -83,19 +83,21 @@ aStar s@(AS cls opn cnt mx cw)
     go
       | mx > 0
         &&
-        cnt' `mod` mx == 0 = (Nothing,)   -- terminate when max steps reached
-                                          -- trace
-      | cnt `mod` 10000 == 0 = aStar . trace ("aStar: " <> show cnt <> " steps done")
+        cnt' `mod` mx == 0   = (Nothing,)   -- terminate when max steps reached
+                                            -- trace
+      | cnt `mod` 10000 == 0
+        &&
+        cnt /= 0             = aStar . trace ("aStar: " <> show cnt <> " steps done")
 
-      | otherwise            = aStar      -- repeat
+      | otherwise            = aStar        -- repeat
 
 
-    (pbc@(b, p, c), opn') = splitMin opn  -- get best open state
+    (pbc@(b, p, c), opn') = splitMin opn    -- get best open state
 
-    cls'   = S.insert b cls               -- close current state
-    news   = nextMoves b                  -- get next possible states
+    cls'   = S.insert b cls                 -- close current state
+    news   = nextMoves b                    -- get next possible states
 
-    opn'' = L.foldl' ins opn' news        -- insert new next states into open
+    opn'' = L.foldl' ins opn' news          -- insert new next states into open
 
     ins acc (mv', b')
       | b' `S.member` cls' = acc            -- ignore duplicates in open states
