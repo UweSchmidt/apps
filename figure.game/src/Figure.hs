@@ -13,6 +13,7 @@ import Algorithms.AStar
 import Data.PriorityQueue.Heap
 
 import Control.Lens
+import Data.Maybe
 
 import qualified Data.Map.Strict as M
 import qualified Data.Set        as S
@@ -101,7 +102,44 @@ nextBoards b = S.foldr' move [] cs
         m' = minCoord c ^. _1
         b' = removeAndDrop c b
 
--- estimated cost (# of moves) until board is cleared
+move1 :: Pos -> Figure -> Figure
+move1 p f =
+  fromMaybe f . listToMaybe . map snd . filter ((== p) . fst) $ nextBoards f
+
+movesCommute :: Pos -> Pos -> Figure -> Bool
+movesCommute p1 p2 b =
+   b1 == b2
+   &&
+   b1 /= b
+   &&
+   b2 /= b
+  where
+    b1 = move1 p2 . move1 p1 $ b
+    b2 = move1 p1 . move1 p2 $ b
+
+normMove :: Pos -> Pos -> Figure -> (Pos, Pos)
+normMove p1 p2 f
+  | p1 == p2             = (p1, p2)
+  | p1 >  p2
+    &&
+    movesCommute p1 p2 f = (p2, p1)
+  | otherwise            = (p1, p2)
+
+normPath1 :: Figure -> Path Pos -> Path Pos
+normPath1 f (p1 : p2 : pt) =
+  p1' : normPath1 f' (p2' : pt)
+  where
+    (p1', p2') = normMove p1 p2 f
+    f'         = move1 p1' f
+
+normPath1 _f pt = pt
+
+normPath :: Figure -> Path Pos -> Path Pos
+normPath f pt0
+  | pt1 == pt0 = pt0
+  | otherwise  = normPath f pt1
+  where
+    pt1 = normPath1 f pt0
 
 numberOfClusters :: Figure -> Int
 numberOfClusters = S.size . clusters . partBoard . invertBoard
@@ -175,6 +213,6 @@ solveBoard b =
     mvs       = case res of
       Nothing                -> []
       Just Nothing           -> []
-      Just (Just (_, ms, _)) -> reverse ms
+      Just (Just (_, ms, _)) -> normPath b (reverse ms)
 
 -- --------------------
