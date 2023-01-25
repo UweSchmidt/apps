@@ -134,6 +134,20 @@ normPath1 f (p1 : p2 : pt) =
 
 normPath1 _f pt = pt
 
+-- Normalization of solution
+-- if two moves commute (lead to same state
+-- independent of sequence), the left
+-- move is prefered. This transformation
+-- may be applied multiple times.
+
+-- In figure212 the 2. solution is the
+-- normalized version of the 1. one and
+-- the 4. is normalized from the 3.
+-- In 4. the move at position 4 (in 3. the first move)
+-- is delayed until all moves at position 1 are played
+-- and the last move at position 4 is delaed until
+-- move at 3 has been played
+
 normPath :: Figure -> Path Pos -> Path Pos
 normPath f pt0
   | pt1 == pt0 = pt0
