@@ -43,7 +43,7 @@ deriving instance Read Color
 -- --------------------
 
 validateBoard :: Int -> Int -> Figure -> Either String Figure
-validateBoard w h b@(Board m)
+validateBoard w h b
   | out       = Left $ "there are tiles outside the "
                        ++
                        show w ++ "x" ++ show h
@@ -53,14 +53,14 @@ validateBoard w h b@(Board m)
   | otherwise = Right b
 
   where
-    out = any off $ M.keys m
+    out = any off $ toCoords b
       where
         off (V2 x y) =
           x <= 0 || x > w
           ||
           y <= 0 || y > h
 
-    hole = M.size m < w * h
+    hole = noOfCoords b < w * h
 
 -- --------------------
 
@@ -157,10 +157,6 @@ normPath f pt0
 
 numberOfClusters :: Figure -> Int
 numberOfClusters = S.size . clusters . partBoard . invertBoard
-
--- final state reached
-nullBoard :: Figure -> Bool
-nullBoard (Board b) = M.null b
 
 playFigure :: Figure -> Path Pos -> [(Int, Pos, Figure)]
 playFigure b0 p0 = scanl step (0, 0, b0) (zip [1..] p0)

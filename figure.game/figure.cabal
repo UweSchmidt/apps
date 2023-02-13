@@ -30,6 +30,7 @@ library
                     , containers
                     , lens
                     , linear
+                    , mtl
                     , puzzle-lib
                                         
     hs-source-dirs:   src

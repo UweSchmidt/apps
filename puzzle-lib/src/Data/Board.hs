@@ -8,6 +8,7 @@ module Data.Board
   )
 where
 
+import Data.Maybe
 import Data.Map.Strict (Map)
 import Data.Set        (Set)
 
@@ -23,7 +24,7 @@ import qualified Data.List       as L
 --
 -- a game board
 -- a mapping from coordinates to tiles
-newtype Board a  = Board (Map Coord a)
+newtype Board a  = Board {_board :: Map Coord a}
 
 -- coord is a 2-dim vector of Ints
 type Coord       = V2 Int
@@ -50,6 +51,63 @@ deriving instance Functor Board
 deriving instance Eq   a => Eq   (Board a)
 deriving instance Ord  a => Ord  (Board a)
 deriving instance Show a => Show (Board a)
+
+instance Semigroup a => Semigroup (Board a) where
+  Board m1 <> Board m2 =
+    Board $ M.unionWith (<>) m1 m2
+
+instance Semigroup a => Monoid (Board a) where
+  mempty = Board M.empty
+
+-- --------------------
+--
+-- basic Board ops
+
+nullBoard :: Board a -> Bool
+nullBoard = M.null . _board
+
+noOfCoords :: Board a -> Int
+noOfCoords = M.size . _board
+
+coords :: Board a -> [Coord]
+coords = M.keys . _board
+
+toCoords :: Board a -> Coords
+toCoords = S.fromList . coords
+
+tiles :: Board a -> [a]
+tiles = M.elems . _board
+
+boardToList :: Board a -> [(Coord, a)]
+boardToList = M.toAscList . _board
+
+boardFromList :: (Eq a, Monoid a) => [(Coord, a)] -> Board a
+boardFromList = L.foldl' ins mempty
+  where
+    ins m (p, x) = setBoardAt p x m
+
+boardAt :: Monoid a => Coord -> Board a -> a
+boardAt p b = fromMaybe mempty $ M.lookup p (_board b)
+
+setBoardAt :: (Eq a, Monoid a) => Coord -> a -> Board a -> Board a
+setBoardAt p x
+  | x == mempty = Board . M.delete p   . _board
+  | otherwise   = Board . M.insert p x . _board
+
+clearBoardAt :: (Eq a, Monoid a) => Coord -> Board a -> Board a
+clearBoardAt p = setBoardAt p mempty
+
+filterBoard :: (a -> Bool) -> Board a -> Board a
+filterBoard p = Board . M.filter p . _board
+
+bboxBoard :: Board a -> (Coord, Coord)
+bboxBoard b =
+  case coords b of
+    []       -> (V2 0 0, V2 0 0)
+    (c1 : cs) -> L.foldl' mm (c1, c1) cs
+  where
+    mm (V2 xmi ymi, V2 xma yma) (V2 x y) =
+      (V2 (xmi `min` x) (ymi `min` y), V2 (xma `max` x) (yma `max` y))
 
 -- --------------------
 --
