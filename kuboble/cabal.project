@@ -1,0 +1,6 @@
+packages: .
+          ../puzzle-lib
+
+profiling: False
+           
+-- documentation: False

@@ -1,0 +1,101 @@
+cabal-version:      2.4
+name:               kuboble
+version:            0.1.0.0
+
+-- A short (one-line) description of the package.
+synopsis: solving kuboble puzzles (https://kuboble.com/)
+
+-- A longer description of the package.
+-- description:
+
+-- The license under which the package is released.
+-- license:
+author:             Uwe Schmidt
+maintainer:         uwe@fh-wedel.de
+
+-- A copyright notice.
+-- copyright:
+-- category:
+extra-source-files: CHANGELOG.md
+
+library
+    exposed-modules:  Kuboble
+                      
+    -- Modules included in this library but not exported.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:    base >= 4
+                    , containers
+                    , lens
+                    , linear
+                    , mtl
+                    , puzzle-lib
+                                        
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DeriveFunctor
+      DeriveTraversable
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      TypeSynonymInstances
+    ghc-options:
+      -Wall -Wtabs -O2 -funbox-strict-fields
+    
+executable kuboble
+    main-is:       Main.hs
+
+    other-modules: Kuboble
+                 
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:    base
+                    , containers
+                    , kuboble
+                    , mtl
+                    , puzzle-lib
+
+                    -- for testing & dev
+                    , lens
+                    , linear
+
+    hs-source-dirs:   app src
+    default-language: Haskell2010
+    default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DeriveFunctor
+      DeriveTraversable
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      OverloadedStrings
+      PolyKinds
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      TypeSynonymInstances
+    ghc-options:
+      -Wall -Wno-unused-imports -Wtabs -O2 -funbox-strict-fields

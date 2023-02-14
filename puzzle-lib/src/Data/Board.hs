@@ -100,6 +100,17 @@ clearBoardAt p = setBoardAt p mempty
 filterBoard :: (a -> Bool) -> Board a -> Board a
 filterBoard p = Board . M.filter p . _board
 
+foldlBoard :: (r -> Coord -> a -> r) -> r -> Board a -> r
+foldlBoard f r = M.foldlWithKey' f r . _board
+
+foldrBoard :: (Coord -> a -> r -> r) -> r -> Board a -> r
+foldrBoard f r = M.foldrWithKey f r . _board
+
+shiftBoard :: Eq a => Coord -> Board a -> Board a
+shiftBoard delta = foldlBoard ins (Board M.empty)
+  where
+    ins b c v = Board . M.insert (c + delta) v $ _board b
+
 bboxBoard :: Board a -> (Coord, Coord)
 bboxBoard b =
   case coords b of
