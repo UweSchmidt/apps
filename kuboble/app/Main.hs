@@ -107,7 +107,7 @@ showStats (noMoves, noStates, noOpen) =
   where
     l1 = printf "%7d" noMoves  <> " moves tried"
     l2 = printf "%7d" noStates <> " board states checked"
-    l3 = printf "%7d" noOpen   <> " moves not yet tried"
+    l3 = printf "%7d" noOpen   <> " board states not checked"
 
 showKuboble2 :: Kuboble2 -> [String]
 showKuboble2 k2@(K2 tiles' balls') =
@@ -210,22 +210,43 @@ allPuzzles =
   , ("level10", level10)
   , ("level11", level11)
   , ("level12", level12)
-
+  , ("level13", level13)
+  , ("level14", level14)
+  , ("level15", level15)
+  , ("level16", level16)
+  , ("level17", level17)
+  , ("level18", level18)
   , ("level19", level19)
   , ("level20", level20)
-
+  , ("level21", level21)
   , ("level22", level22)
   , ("level23", level23)
   , ("level24", level24)
-
+  , ("level25", level25)
+  , ("level26", level26)
+  , ("level27", level27)
+  , ("level28", level28)
   , ("level29", level29)
+  , ("level30", level30)
+  , ("level31", level31)
+  , ("level32", level32)
+  , ("level33", level33)
+  , ("level34", level34)
+  , ("level35", level35)
+  , ("level36", level36)
+  , ("level37", level37)
+  , ("level38", level38)
 
   , ("level39", level39)
   , ("level40", level40)
   , ("level41", level41)
-
+  , ("level42", level42)
+  , ("level43", level43)
+  , ("level44", level44)
   , ("level45", level45)
   , ("level46", level46)
+  , ("level47", level47)
+  , ("level48", level48)
   ]
 
 -- ----------------------------------------
@@ -290,6 +311,40 @@ level12 =
   , ". .  r ."
   ]
 
+level13 :: [String]       -- 4 x 3
+level13 =
+  [ "x . Rg G"
+  , "x x . ."
+  , ". r . ."
+  ]
+
+level14 :: [String]       -- 4 x 3
+level14 =
+  [ "x . . x"
+  , ". r g ."
+  , ". . R G"
+  ]
+
+level15 :: [String]       -- 4 x 3
+level15 =
+  [ "G Rg . ."
+  , "x . x ."
+  , ". . r ."
+  ]
+
+level16 :: [String]       -- 4 x 3
+level16 =
+  [ "x r x ."
+  , ". . g ."
+  , ". . R G"
+  ]
+
+level17 :: [String]       -- 4 x 3
+level17 =
+  [ "x . Rr G"
+  , ". g .  x"
+  , ". . .  ."
+  ]
 
 -- --------------------
 
@@ -298,6 +353,14 @@ level4x4 =
   [ ". . . ."
   , ". . . ."
   , ". . . ."
+  , ". . . ."
+  ]
+
+level18 :: [String]       -- 4 x 4
+level18 =
+  [ ". x R G"
+  , ". . . g"
+  , "r x . ."
   , ". . . ."
   ]
 
@@ -315,6 +378,14 @@ level20 =
   , ". . g ."
   , ". . . ."
   , ". r R G"
+  ]
+
+level21 :: [String]       -- 4 x 4
+level21 =
+  [ "x . Rr G"
+  , ". . . x"
+  , ". . g ."
+  , ". x . ."
   ]
 
 level22 :: [String]       -- 4 x 4
@@ -341,11 +412,115 @@ level24 =
   , ". . R G"
   ]
 
+level25 :: [String]       -- 4 x 4
+level25 =
+  [ "x . Rg G"
+  , ". x . ."
+  , ". r . ."
+  , ". . . ."
+  ]
+
+level26 :: [String]       -- 4 x 4
+level26 =
+  [ ". x x ."
+  , ". . r ."
+  , ". g . ."
+  , ". x R G"
+  ]
+
+level27 :: [String]       -- 4 x 4
+level27 =
+  [ ". x R G"
+  , ". . . ."
+  , "g x . x"
+  , ". . r ."
+  ]
+
+level28 :: [String]       -- 4 x 4
+level28 =
+  [ "x x R G"
+  , ". . g ."
+  , "r . . x"
+  , ". . . ."
+  ]
+
 level29 :: [String]       -- 4 x 4
 level29 =
   [ ". x x ."
   , ". x . g"
   , ". r . ."
+  , ". . R G"
+  ]
+
+level30 :: [String]       -- 4 x 4
+level30 =
+  [ ". x R G"
+  , ". . r ."
+  , ". . . x"
+  , ". g . ."
+  ]
+
+level31 :: [String]       -- 4 x 4
+level31 =
+  [ "G R r ."
+  , ". x . ."
+  , "g . . ."
+  , ". . . ."
+  ]
+
+level32 :: [String]       -- 4 x 4
+level32 =
+  [ "g x R G"
+  , ". . . ."
+  , ". . . ."
+  , "r x . ."
+  ]
+
+level33 :: [String]       -- 4 x 4
+level33 =
+  [ ". x x ."
+  , ". g . r"
+  , ". x . ."
+  , ". . R G"
+  ]
+
+level34 :: [String]       -- 4 x 4
+level34 =
+  [ "x r x ."
+  , ". . . ."
+  , ". . g ."
+  , "G R . x"
+  ]
+
+level35 :: [String]       -- 4 x 4
+level35 =
+  [ "x x R G"
+  , ". . . ."
+  , ". g . ."
+  , "r x . ."
+  ]
+
+level36 :: [String]       -- 4 x 4
+level36 =
+  [ "x . x ."
+  , ". g . ."
+  , ". r . ."
+  , "x . R G"
+  ]
+
+level37 :: [String]       -- 4 x 4
+level37 =
+  [ "x x R G"
+  , ". g . ."
+  , ". . r ."
+  , ". . . x"
+  ]
+
+level38 :: [String]       -- 4 x 4
+level38 =
+  [ "x . . x"
+  , ". r . ."
+  , ". x g ."
   , ". . R G"
   ]
 
@@ -372,6 +547,27 @@ level41 =
   , ". b . r"
   ]
 
+level42 :: [String]       -- 4 x 3  RGB
+level42 =
+  [ "G R B r"
+  , ". . g ."
+  , ". b . ."
+  ]
+
+level43 :: [String]       -- 4 x 3  RGB
+level43 =
+  [ "G R B ."
+  , ". b r ."
+  , "g . . ."
+  ]
+
+level44 :: [String]       -- 4 x 3  RGB
+level44 =
+  [ "G R Bg ."
+  , "b x .  ."
+  , ". r .  ."
+  ]
+
 level45 :: [String]       -- 4 x 3  RGB
 level45 =
   [ "r x .  ."
@@ -384,6 +580,20 @@ level46 =
   [ ". x  . b"
   , ". r  . ."
   , ". Bg R G"
+  ]
+
+level47 :: [String]       -- 4 x 3  RGB
+level47 =
+  [ "G R Br ."
+  , ". x .  g"
+  , ". b .  ."
+  ]
+
+level48 :: [String]       -- 4 x 3  RGB
+level48 =
+  [ ". . . ."
+  , ". . . ."
+  , ". . . ."
   ]
 
 -- ----------------------------------------
