@@ -1,11 +1,18 @@
 module Main where
 
--- import Data.Maybe
+-- libraries
+
+import Control.Lens
+import Control.Monad
+
+import Data.Maybe ()
 import Data.Char
 import Data.Map.Strict ( Map )
-import Control.Monad
+
 import System.IO
 import Text.Read       ( readMaybe )
+
+-- modules
 
 import Data.Board
 import Algorithms.AStar
@@ -14,7 +21,6 @@ import Puzzles
 
 -- for dev. & test
 -- import Data.PriorityQueue.Heap
--- import Control.Lens
 
 import qualified Data.Map.Strict as M
 import qualified Data.List       as L
@@ -26,30 +32,30 @@ main :: IO ()
 main = do
   -- hSetBuffering stdout NoBuffering
 
-  (newpuzzle, gno, board) <- puzzleInput
+  (newpuzzle, gno, b) <- puzzleInput
   if newpuzzle
-    then solvePuzzle gno board
-    else ownSolution gno board
+    then solvePuzzle gno b
+    else ownSolution gno b
 
 ownSolution :: Int -> Figure -> IO ()
-ownSolution gno board = do
+ownSolution gno b = do
   ms <- readMoves
   case ms of
-    Nothing  -> solvePuzzle gno board
+    Nothing  -> solvePuzzle gno b
     Just mvs -> do
                 putStrLn ""
-                putStrLn $ printGame board mvs
-                saveGame gno board mvs
+                putStrLn $ printGame b mvs
+                saveGame gno b mvs
 
 solvePuzzle :: Int -> Figure -> IO ()
-solvePuzzle gno board = do
+solvePuzzle gno b = do
   putStrLn "\nstart solving game"
   flush
   -- solve the puzzle
-  let sol@(mvs, _, _) = solveBoard board
+  let sol@(mvs, _, _) = solveBoard b
   resOutput sol
-  gameOutput board mvs
-  saveGame gno board mvs
+  gameOutput b mvs
+  saveGame gno b mvs
 
 -- --------------------
 
@@ -150,8 +156,8 @@ puzzleInput = do
 
     Nothing -> do
       putStr txt2
-      board <- readBoard
-      return (True, no, board)
+      b <- readBoard
+      return (True, no, b)
 
   where
     readBoard :: IO Figure
@@ -203,16 +209,18 @@ puzzleInput = do
 -- parse and pretty printing stuff
 
 parseBoard :: String -> Figure
-parseBoard = Board . M.fromList . toBoardList . parse
+parseBoard =
+  view (to parse . to boardList . from isoBoardList)
   where
     parse =
-      map (map toColor . filter isColor . map toUpper) . reverse . lines
-      where
-        isColor = (`elem` ("GRWY" :: String))
-        toColor = read . (:[]) . toUpper
+      map (map (view $ from color'char)
+           . filter (not . isSpace)
+           . map toUpper)
+      . reverse
+      . lines
 
-    toBoardList :: [[Color]] -> [(Coord, Color)]
-    toBoardList =
+    boardList :: [[Color]] -> [(Coord, Color)]
+    boardList =
       concat . zipWith ln [1..]
       where
         ln y cs =
@@ -224,15 +232,15 @@ printBoard :: Figure -> String
 printBoard = unlines . printBoard'
 
 printBoard' :: Figure -> [String]
-printBoard' (Board m) = pr 5 5
+printBoard' b = pr 5 5
   where
     pr w h =
       reverse [ln i | i <- [1..h]]
       where
         ln y =
-          unwords [toC j | j <- [1..w]]
+          unwords [toC (V2 j y) | j <- [1..w]]
           where
-            toC x = maybe "." show . M.lookup (V2 x y) $ m
+            toC x = b ^. theBoardAt x . color'char . to (:[])
 
 printNextBoards :: [(Pos, Figure)] -> String
 printNextBoards = L.intercalate "\n" . map f1

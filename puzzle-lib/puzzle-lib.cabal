@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               puzzle-lib
-version:            0.1.0.0
+version:            0.1.1.0
 synopsis:           Tools for solving puzzles and board games
 description:        Tools for solving puzzles and board games
 author:             Uwe Schmidt

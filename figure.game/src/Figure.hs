@@ -13,6 +13,7 @@ import Algorithms.AStar
 import Data.PriorityQueue.Heap
 
 import Control.Lens
+import Data.Char
 import Data.Maybe
 
 import qualified Data.Map.Strict as M
@@ -22,7 +23,7 @@ import qualified Data.Set        as S
 -- --------------------
 
 type Figure    = Board Color
-data Color     = G | R | W | Y
+data Color     = G | R | W | Y | E  -- (E = empty)
 type Pos       = Int
 type Solution  = [Pos]
 type Solutions = [Solution]
@@ -39,6 +40,34 @@ deriving instance Ord  Color
 deriving instance Enum Color
 deriving instance Show Color
 deriving instance Read Color
+
+instance Semigroup Color where
+  E <> x = x
+  x <> _ = x
+
+instance Monoid Color where
+  mempty = E
+
+-- --------------------
+--
+-- basic optics
+
+color'char :: Iso' Color Char
+color'char = iso toC frC
+  where
+    toC = toLower
+          . (\ c -> if c == 'E' then '.' else c)
+          . head
+          . show
+    frC c0 = c
+      where
+        c1 :: Char
+        c1 = toUpper c0
+        c  | c1 `elem` colors = read [c1]
+           | otherwise        = E
+          where
+            colors :: String
+            colors = "GRWY"
 
 -- --------------------
 
@@ -90,6 +119,7 @@ numClusters :: PartBoard Color -> Int
 numClusters = M.foldl' f1 0
   where
     f1 acc s = acc + S.size s
+{-# INLINE numClusters #-}
 
 nextBoards :: Figure -> [(Pos, Figure)]
 nextBoards b = S.foldr' move [] cs
@@ -105,6 +135,7 @@ nextBoards b = S.foldr' move [] cs
 move1 :: Pos -> Figure -> Figure
 move1 p f =
   fromMaybe f . listToMaybe . map snd . filter ((== p) . fst) $ nextBoards f
+{-# INLINE move1 #-}
 
 movesCommute :: Pos -> Pos -> Figure -> Bool
 movesCommute p1 p2 b =

@@ -22,25 +22,25 @@ import           Data.PriorityQueue.Heap
 
 import           Control.Lens
 import           Control.Monad.Except
-import           Data.Maybe
-import           Text.Printf
+import           Data.Maybe ()
+import           Text.Printf ()
 
-import qualified Data.Map.Strict         as M
+import qualified Data.Map.Strict         as M ()
 import qualified Data.Set                as S
 import qualified Data.List               as L
 
 -- --------------------
 
-data Kuboble2 = K2 {_tiles :: !Kuboble
-                   ,_balls :: !Kuboble
+data Kuboble2 = K2 { _tiles :: !Kuboble
+                   , _balls :: !Kuboble
                    }
 
 type Kuboble   = Board Boble
 
 data Boble     = Black           -- the tiles on a board
                | White
-               | Target {_rgb :: !RGB}
-               | Ball   {_rgb :: !RGB}
+               | Target  !RGB
+               | Ball    !RGB
 
 data RGB       = Red             -- the colors of the balls and target tiles
                | Green
@@ -94,11 +94,51 @@ instance Ord Kuboble2 where
   compare k1 k2 = compare (_balls k1) (_balls k2)
 
 -- --------------------
+--
+-- basic optics
+
+target :: Prism' Boble RGB
+target = prism'
+  Target
+  (\case
+      Target c -> Just c
+      _        -> Nothing
+  )
+
+ball :: Prism' Boble RGB
+ball =
+  prism'
+  Ball
+  ( \case
+      Ball c -> Just c
+      _      -> Nothing
+  )
+
+white :: Prism' Boble ()
+white =
+  prism'
+    (const White)
+    ( \case
+        White -> Just ()
+        _     -> Nothing
+    )
+
+black :: Prism' Boble ()
+black =
+  prism'
+    (const Black)
+    ( \case
+        Black -> Just ()
+        _ -> Nothing
+    )
+
+
+-- --------------------
 
 legalKubole2 :: Int -> Int -> Kuboble2 -> Either String Kuboble2
 legalKubole2 w h k@(K2 tiles' balls') = do
-  legalCoords w h tiles'
-  legalCoords w h balls'
+  _ <- legalCoords w h tiles'
+  _ <- legalCoords w h balls'
   bls <- onlyBalls balls'
   tls <- onlyTiles tiles'
   unless (bls /= tls) $
@@ -160,17 +200,17 @@ targets,
   balls,
   noBalls :: Kuboble -> Kuboble
 
-targets   = filterBoard (\case {Target _ -> True;  _ -> False})
-balls     = filterBoard (\case {Ball   _ -> True;  _ -> False})
-noBalls   = filterBoard (\case {Ball   _ -> False; _ -> True })
+targets   = filterBoard (has target)
+balls     = filterBoard (has ball)
+noBalls   = filterBoard (not . has ball)
 
 targetColors :: Kuboble -> [RGB]
 targetColors =
-  L.sort . map _rgb . tiles . targets
+  L.sort . concatMap (^.. target) . tiles . targets
 
 ballColors :: Kuboble -> [RGB]
 ballColors =
-  L.sort . map _rgb . tiles . balls
+  L.sort . concatMap (^.. target) . tiles . balls
 
 ballsOnBoard :: Kuboble2 -> Kuboble
 ballsOnBoard (K2 bo ba) = ba <> bo
@@ -209,11 +249,9 @@ step' (dir, delta) b c0
     c1 = step'' delta b c0
 
 step'' :: Coord -> Kuboble -> Coord -> Coord
-step'' delta b c0 =
-  case t1 of
-    White    -> step'' delta b c1
-    Target _ -> step'' delta b c1
-    _        -> c0
+step'' delta b c0
+  | (||) <$> has white <*> has target $ t1 = step'' delta b c1
+  | otherwise                              =                c0
   where
     c1 = c0 + delta
     t1 = boardAt c1 b
@@ -230,9 +268,12 @@ solved :: Kuboble2 -> Bool
 solved (K2 tiles' balls') = foldrBoard eq' True balls'
   where
     eq' c v res =
-      boardAt c tiles' == Target (_rgb v)
+      match (boardAt c tiles' ^? target) (v ^? ball)
       &&
       res
+      where
+        match (Just c1) (Just c2) = c1 == c2
+        match  _         _        = False
 
 nextMovesK2' :: Kuboble2 -> [Move1]
 nextMovesK2' k2 =
@@ -240,16 +281,17 @@ nextMovesK2' k2 =
   where
     b2 = ballsOnBoard k2
 
-    mvs res c0 v =
-      ms <> res
+    mvs res c0 v
+      | Just c <- v ^? ball = ms c <> res
+      | otherwise           =         res
       where
-        ms = map (_rgb v,) $ steps b2 c0
+        ms c' = map (c',) $ steps b2 c0
 
 nextMovesK2 :: Kuboble2 -> [(Move1, Kuboble2)]
 nextMovesK2 k2 =
   map mv $ nextMovesK2' k2
   where
-    mv m@(rgb, ((c0, c1), _dir)) =
+    mv m@(_rgb, ((c0, c1), _dir)) =
       (m, moveBall c0 c1 k2)
 
 

@@ -177,13 +177,16 @@ char2ToBoble :: String -> (Boble, Boble)
 char2ToBoble xs =
   swap b1 b2
   where
-    (b1 : b2 : _) = map charToBoble $ xs <> "XX"
+    (b1, b2) = case map charToBoble $ xs <> "XX" of
+      b1' : b2' : _ -> (b1', b2')
+      _             -> (mempty, mempty)
 
     swap   (Ball _) y@(Ball _) = (White,  y)
     swap x@(Ball _) y          = swap y x
     swap    Black   y@(Ball _) = (White,  y)
     swap x          y@(Ball _) = (x,      y)
     swap x          _          = (x,  Black)
+
 
 charToBoble :: Char -> Boble
 charToBoble c = case c of

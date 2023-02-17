@@ -12,6 +12,7 @@ import Data.Maybe
 import Data.Map.Strict (Map)
 import Data.Set        (Set)
 
+import Control.Lens
 import Linear.V2
 
 import qualified Data.Map.Strict as M
@@ -58,6 +59,35 @@ instance Semigroup a => Semigroup (Board a) where
 
 instance Semigroup a => Monoid (Board a) where
   mempty = Board M.empty
+  {-# INLINE mempty  #-}
+
+-- --------------------
+--
+-- basic optics
+
+pair :: Iso' (V2 a) (a, a)
+pair = iso (\ (V2 x y) -> (x, y)) (uncurry V2)
+{-# INLINE pair  #-}
+
+board :: Iso' (Board a) (Map Coord a)
+board = iso _board Board
+{-# INLINE board  #-}
+
+theBoardAt :: (Eq a, Monoid a) => Coord -> Lens' (Board a) a
+theBoardAt p = lens (boardAt p) (flip $ setBoardAt p)
+{-# INLINE theBoardAt  #-}
+
+isoBoardList :: (Eq a, Monoid a) => Iso' (Board a) [(Coord, a)]
+isoBoardList = iso boardToList boardFromList
+{-# INLINE isoBoardList  #-}
+
+invertedBoard :: (Ord a) => Iso' (Board a) (InvBoard a)
+invertedBoard = iso invertBoard invert1Board
+{-# INLINE invertedBoard #-}
+
+shiftedBoard :: Coord -> Iso' (Board a) (Board a)
+shiftedBoard delta = iso (shiftBoard delta) (shiftBoard (negate delta))
+{-# INLINE shiftedBoard  #-}
 
 -- --------------------
 --
@@ -65,51 +95,65 @@ instance Semigroup a => Monoid (Board a) where
 
 nullBoard :: Board a -> Bool
 nullBoard = M.null . _board
+{-# INLINE nullBoard  #-}
 
 noOfCoords :: Board a -> Int
 noOfCoords = M.size . _board
+{-# INLINE noOfCoords  #-}
 
 coords :: Board a -> [Coord]
 coords = M.keys . _board
+{-# INLINE coords  #-}
 
 toCoords :: Board a -> Coords
 toCoords = S.fromList . coords
+{-# INLINE toCoords  #-}
 
 tiles :: Board a -> [a]
 tiles = M.elems . _board
+{-# INLINE tiles  #-}
 
 boardToList :: Board a -> [(Coord, a)]
 boardToList = M.toAscList . _board
+{-# INLINE boardToList  #-}
 
 boardFromList :: (Eq a, Monoid a) => [(Coord, a)] -> Board a
 boardFromList = L.foldl' ins mempty
   where
     ins m (p, x) = setBoardAt p x m
+{-# INLINE boardFromList #-}
 
 boardAt :: Monoid a => Coord -> Board a -> a
 boardAt p b = fromMaybe mempty $ M.lookup p (_board b)
+{-# INLINE boardAt  #-}
 
 setBoardAt :: (Eq a, Monoid a) => Coord -> a -> Board a -> Board a
-setBoardAt p x
-  | x == mempty = Board . M.delete p   . _board
-  | otherwise   = Board . M.insert p x . _board
+setBoardAt p x b
+  | x == mempty = b & board %~ M.delete p
+  | otherwise   = b & board %~ M.insert p x
+{-# INLINE setBoardAt #-}
 
 clearBoardAt :: (Eq a, Monoid a) => Coord -> Board a -> Board a
 clearBoardAt p = setBoardAt p mempty
+{-# INLINE clearBoardAt  #-}
 
 filterBoard :: (a -> Bool) -> Board a -> Board a
-filterBoard p = Board . M.filter p . _board
+filterBoard p b = b & board %~ M.filter p
+{-# INLINE filterBoard  #-}
 
 foldlBoard :: (r -> Coord -> a -> r) -> r -> Board a -> r
 foldlBoard f r = M.foldlWithKey' f r . _board
+{-# INLINE foldlBoard  #-}
 
 foldrBoard :: (Coord -> a -> r -> r) -> r -> Board a -> r
 foldrBoard f r = M.foldrWithKey f r . _board
+{-# INLINE foldrBoard  #-}
 
-shiftBoard :: Eq a => Coord -> Board a -> Board a
+shiftBoard :: Coord -> Board a -> Board a
 shiftBoard delta = foldlBoard ins (Board M.empty)
   where
-    ins b c v = Board . M.insert (c + delta) v $ _board b
+    ins b c v = b & board %~ M.insert (c + delta) v
+{-# INLINE shiftBoard #-}
 
 bboxBoard :: Board a -> (Coord, Coord)
 bboxBoard b =
@@ -138,6 +182,7 @@ connected s1 s2 =
 partConnected :: Coords -> PartCoords
 partConnected =
   S.fromList . L.foldl' (flip unite) [] . map S.singleton . S.toList
+{-# INLINE partConnected #-}
 
 unite :: Coords -> [Coords] -> [Coords]
 unite s0 ps = unite' es0 s0 ps
@@ -157,15 +202,18 @@ expand1 s =
 
 shiftX :: Int -> Coord -> Coord
 shiftX d (V2 x y) = V2 (x + d) y
+{-# INLINE shiftX  #-}
 
 shiftY :: Int -> Coord -> Coord
 shiftY d (V2 x y) = V2 x (y + d)
+{-# INLINE shiftY  #-}
 
 compCoord :: Coord -> Coord -> Ordering
 compCoord (V2 x1 y1) (V2 x2 y2) =
   case y1 `compare` y2 of
     EQ -> x1 `compare` x2
     c  -> c
+{-# INLINE compCoord #-}
 
 -- compare by y-coordinate first
 minCoord :: Coords -> Coord
@@ -192,16 +240,20 @@ invert1Board = Board . M.foldlWithKey' f1  M.empty
 
 partBoard :: InvBoard a -> PartBoard a
 partBoard = fmap partConnected
+{-# INLINE partBoard  #-}
 
 part1Board :: PartBoard a -> InvBoard a
 part1Board = fmap (S.foldl' S.union S.empty)
+{-# INLINE part1Board  #-}
 
 -- get the sets of connected coordinates
 clusters :: PartBoard a -> PartCoords
 clusters = M.foldl' S.union S.empty
+{-# INLINE clusters  #-}
 
 clusterReps :: PartCoords -> Coords
 clusterReps = S.map minCoord -- S.findMin
+{-# INLINE clusterReps  #-}
 
 dropDown :: Coords -> (Coord -> Coord)
 dropDown = L.foldl' f1 id . L.sortBy compCoord . S.toList
@@ -214,6 +266,7 @@ dropDown = L.foldl' f1 id . L.sortBy compCoord . S.toList
         &&
         dy <  y   = V2 x (y - 1)
       | otherwise = c
+{-# INLINE dropDown #-}
 
 -- remove a set of tiles
 -- and let the remaining tiles drop down
