@@ -249,26 +249,28 @@ step' (dir, delta) b c0
     c1 = step'' delta b c0
 
 step'' :: Coord -> Kuboble -> Coord -> Coord
-step'' delta b c0
-  | (||) <$> has white <*> has target $ t1 = step'' delta b c1
-  | otherwise                              =                c0
+step'' delta b = go
   where
-    c1 = c0 + delta
-    t1 = boardAt c1 b
+    go c0
+      | (||) <$> has white <*> has target $ t1 = go c1
+      | otherwise                              =                c0
+      where
+        c1 = c0 + delta
+        t1 = b ^. theBoardAt c1
 
 moveBall :: Coord -> Coord -> Kuboble2 -> Kuboble2
 moveBall c0 c1 k2 =
   k2 {_balls = mv (_balls k2)}
   where
-    mv b = setBoardAt c1 v0 $ setBoardAt c0 mempty b
-      where
-        v0 = boardAt c0 b
+    mv b = b & theBoardAt c0 .~ mempty
+             & theBoardAt c1 .~ (b ^. theBoardAt c0)
+
 
 solved :: Kuboble2 -> Bool
 solved (K2 tiles' balls') = foldrBoard eq' True balls'
   where
     eq' c v res =
-      match (boardAt c tiles' ^? target) (v ^? ball)
+      match (tiles' ^? theBoardAt c . target) (v ^? ball)
       &&
       res
       where

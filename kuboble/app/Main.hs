@@ -1,28 +1,34 @@
 module Main where
 
+import Control.Lens
+
 import Data.Char
 import Data.Foldable   (traverse_)
 import Data.Maybe
+
 import System.Environment (getArgs)
+
 import Text.Printf
+
+-- import Data.Maybe
+-- import Data.Map.Strict (Map)
+-- import Control.Monad
+-- import System.IO
+
+import qualified Data.List as L
+
+-- import qualified Data.Map.Strict as M
+-- import qualified Data.Set        as S
+
+-- --------------------
+--
+-- own modules
 
 import Data.Board
 import Kuboble
 
--- for dev. & test
--- import Data.Maybe
--- import Data.Map.Strict (Map)
--- import Control.Lens
--- import Control.Monad
--- import System.IO
-
 -- import Data.PriorityQueue.Heap
 -- import Algorithms.AStar
-
-import qualified Data.List       as L
-
--- import qualified Data.Map.Strict as M
--- import qualified Data.Set        as S
 
 -- --------------------
 
@@ -70,8 +76,8 @@ showResult name puzzle (mvs, stats)
       p  -> showSolution p
 
 showBoble :: Boble -> String
-showBoble Black = "X"
-showBoble White = "."
+showBoble Black          = "X"
+showBoble White          = "."
 showBoble (Target Red)   = "r"
 showBoble (Target Green) = "g"
 showBoble (Target Blue)  = "b"
@@ -117,7 +123,8 @@ showKuboble2 k2@(K2 tiles' balls') =
 
     brd    = reverse $ map row [ymin .. ymax]
     row r  = unwords $ map (\ c -> cell (V2 c r)) [xmin .. xmax]
-    cell c = showTile (boardAt c tiles') (boardAt c balls')
+    cell c = showTile (tiles' ^. theBoardAt c)
+                      (balls' ^. theBoardAt c)
 
     showTile :: Boble -> Boble -> String
     showTile Black        _         = "x"
