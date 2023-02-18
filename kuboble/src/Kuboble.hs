@@ -28,8 +28,12 @@ import           Text.Printf ()
 import qualified Data.Map.Strict         as M ()
 import qualified Data.Set                as S
 import qualified Data.List               as L
+import qualified Text.Pretty.Simple      as PP
 
 -- --------------------
+
+pp :: (Show a) => a -> IO ()
+pp = PP.pPrint
 
 data Kuboble2 = K2 { _tiles :: !Kuboble
                    , _balls :: !Kuboble
