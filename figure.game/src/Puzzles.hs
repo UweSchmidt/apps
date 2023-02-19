@@ -8,741 +8,741 @@ puzzles :: [GameS]
 puzzles =
   [ ( 0
     , unlines
-      [ "W W W W W"
-      , "W W W W W"
-      , "W W W W W"
-      , "W W W W W"
-      , "W W W W W"
+      [ "w w w w w"
+      , "w w w w w"
+      , "w w w w w"
+      , "w w w w w"
+      , "w w w w w"
       ]
     , []
     )
   , ( 1
     , unlines
-      [ "G G G G G"
-      , "R R R R R"
-      , "W W W W W"
-      , "Y Y Y Y Y"
-      , "G G G G G"
+      [ "g g g g g"
+      , "r r r r r"
+      , "w w w w w"
+      , "y y y y y"
+      , "g g g g g"
       ]
     , []
     )
   , ( 2
     , unlines
-      [ "G G G G G"
-      , "R R R R R"
-      , "W W W W W"
-      , "Y Y Y Y Y"
-      , "G R W Y G"
+      [ "g g g g g"
+      , "r r r r r"
+      , "w w w w w"
+      , "y y y y y"
+      , "g r w y g"
       ]
     , []
     )
   , ( 75
     , unlines
-      [ "R R R W W"
-      , "G W W G R"
-      , "W Y W Y G"
-      , "R Y Y R R"
-      , "R Y G G Y"
+      [ "r r r w w"
+      , "g w w g r"
+      , "w y w y g"
+      , "r y y r r"
+      , "r y g g y"
       ]
     , []
     )
   , ( 76
     , unlines
-      [ "R G W W R"
-      , "W W W G Y"
-      , "R R R Y W"
-      , "Y R R Y R"
-      , "G R Y G W"
+      [ "r g w w r"
+      , "w w w g y"
+      , "r r r y w"
+      , "y r r y r"
+      , "g r y g w"
       ]
     , []
     )
   , ( 77
     , unlines
-      [ "G Y G G W"
-      , "Y W W G Y"
-      , "Y R W Y W"
-      , "G R Y Y W"
-      , "R Y W R Y"
+      [ "g y g g w"
+      , "y w w g y"
+      , "y r w y w"
+      , "g r y y w"
+      , "r y w r y"
       ]
     , []
     )
   , ( 78
     , unlines
-      [ "G Y W G Y"
-      , "Y W W G Y"
-      , "W G G W W"
-      , "W G Y G R"
-      , "W W G R G"
+      [ "g y w g y"
+      , "y w w g y"
+      , "w g g w w"
+      , "w g y g r"
+      , "w w g r g"
       ]
     , []
     )
   , ( 79
     , unlines
-      [ "Y W G G R"
-      , "Y R R G G"
-      , "G Y G W W"
-      , "W G G W G"
-      , "W G W R W"
+      [ "y w g g r"
+      , "y r r g g"
+      , "g y g w w"
+      , "w g g w g"
+      , "w g w r w"
       ]
     , []
     )
   , ( 80
     , unlines
-      [ "Y R Y R R"
-      , "G G Y G Y"
-      , "W Y Y G W"
-      , "G Y R Y R"
-      , "G Y G G G"
+      [ "y r y r r"
+      , "g g y g y"
+      , "w y y g w"
+      , "g y r y r"
+      , "g y g g g"
       ]
     , []
     )
   , ( 81
     , unlines
-      [ "G G R G Y"
-      , "G W R Y R"
-      , "R G Y W G"
-      , "Y R G Y R"
-      , "Y R G Y Y"
+      [ "g g r g y"
+      , "g w r y r"
+      , "r g y w g"
+      , "y r g y r"
+      , "y r g y y"
       ]
     , []
     )
   , ( 82
     , unlines
-      [ "Y R G W Y"
-      , "R G R G R"
-      , "R W W G G"
-      , "G W G G Y"
-      , "G G Y W Y"
+      [ "y r g w y"
+      , "r g r g r"
+      , "r w w g g"
+      , "g w g g y"
+      , "g g y w y"
       ]
     , []
     )
   , ( 83
     , unlines
-      [ "Y R R G R"
-      , "R W G Y R"
-      , "R R R W W"
-      , "Y Y W R W"
-      , "Y W G G R"
+      [ "y r r g r"
+      , "r w g y r"
+      , "r r r w w"
+      , "y y w r w"
+      , "y w g g r"
       ]
     , []
     )
   , ( 85
     , unlines
-      [ "Y G R Y Y"
-      , "Y R W G Y"
-      , "R R R G G"
-      , "W Y R Y W"
-      , "G Y W W G"
+      [ "y g r y y"
+      , "y r w g y"
+      , "r r r g g"
+      , "w y r y w"
+      , "g y w w g"
       ]
     , []
     )
   , ( 92
     , unlines
-      [ "W W G W Y"
-      , "Y R R G Y"
-      , "Y R G W G"
-      , "R R G G Y"
-      , "Y G G Y W"
+      [ "w w g w y"
+      , "y r r g y"
+      , "y r g w g"
+      , "r r g g y"
+      , "y g g y w"
       ]
     , []
     )
   , ( 93
     , unlines
-      [ "G W W R R"
-      , "R R Y W R"
-      , "G Y G G R"
-      , "W W G R G"
-      , "W G R G W"
+      [ "g w w r r"
+      , "r r y w r"
+      , "g y g g r"
+      , "w w g r g"
+      , "w g r g w"
       ]
     , []
     )
   , ( 94
     , unlines
-      [ "R Y W R R"
-      , "G R W W Y"
-      , "G G R G G"
-      , "R G R Y Y"
-      , "G G Y G R"
+      [ "r y w r r"
+      , "g r w w y"
+      , "g g r g g"
+      , "r g r y y"
+      , "g g y g r"
       ]
     , []
     )
   , ( 95
     , unlines
-      [ "R Y R R R"
-      , "G G Y Y W"
-      , "Y R G G Y"
-      , "G Y R G Y"
-      , "Y W W W Y"
+      [ "r y r r r"
+      , "g g y y w"
+      , "y r g g y"
+      , "g y r g y"
+      , "y w w w y"
       ]
     , []
     )
   , ( 96
     , unlines
-      [ "W R G W W"
-      , "W G W G Y"
-      , "R W Y R Y"
-      , "W R Y Y W"
-      , "G G R W R"
+      [ "w r g w w"
+      , "w g w g y"
+      , "r w y r y"
+      , "w r y y w"
+      , "g g r w r"
       ]
     , []
     )
   , ( 97
     , unlines
-      [ "Y W W Y Y"
-      , "G Y R G G"
-      , "R W G W W"
-      , "R Y G W W"
-      , "W G Y G W"
+      [ "y w w y y"
+      , "g y r g g"
+      , "r w g w w"
+      , "r y g w w"
+      , "w g y g w"
       ]
     , []
     )
   , ( 98
     , unlines
-      [ "W R R R W"
-      , "Y R W W R"
-      , "Y G Y R Y"
-      , "R Y W G R"
-      , "Y Y G W R"
+      [ "w r r r w"
+      , "y r w w r"
+      , "y g y r y"
+      , "r y w g r"
+      , "y y g w r"
       ]
     , []
     )
   , ( 100
     , unlines
-      [ "R R G G Y"
-      , "W G Y R G"
-      , "G Y G Y G"
-      , "R W Y Y Y"
-      , "G W R R R"
+      [ "r r g g y"
+      , "w g y r g"
+      , "g y g y g"
+      , "r w y y y"
+      , "g w r r r"
       ]
     , []
     )
   , ( 102
     , unlines
-      [ "W W Y G R"
-      , "Y W R W R"
-      , "G W W G G"
-      , "G W Y R W"
-      , "W Y R Y G"
+      [ "w w y g r"
+      , "y w r w r"
+      , "g w w g g"
+      , "g w y r w"
+      , "w y r y g"
       ]
     , []
     )
   , ( 105
     , unlines
-      [ "R Y G Y G"
-      , "G R Y R R"
-      , "R R G G R"
-      , "G R R Y G"
-      , "Y G R G Y"
+      [ "r y g y g"
+      , "g r y r r"
+      , "r r g g r"
+      , "g r r y g"
+      , "y g r g y"
       ]
     , []
     )
   , ( 106
     , unlines
-      [ "Y R G R W"
-      , "W R R R R"
-      , "R G G G W"
-      , "Y R W R W"
-      , "G Y W W R"
+      [ "y r g r w"
+      , "w r r r r"
+      , "r g g g w"
+      , "y r w r w"
+      , "g y w w r"
       ]
     , []
     )
   , ( 107
     , unlines
-      [ "W Y G W G"
-      , "G Y Y R W"
-      , "G W R Y W"
-      , "Y Y Y W R"
-      , "R Y W G G"
+      [ "w y g w g"
+      , "g y y r w"
+      , "g w r y w"
+      , "y y y w r"
+      , "r y w g g"
       ]
     , []
     )
   , ( 109
     , unlines
-      [ "R Y R R W"
-      , "R G R G Y"
-      , "G R G W W"
-      , "W W G Y R"
-      , "Y Y W R W"
+      [ "r y r r w"
+      , "r g r g y"
+      , "g r g w w"
+      , "w w g y r"
+      , "y y w r w"
       ]
     , []
     )
   , ( 110
     , unlines
-      [ "G G Y R W"
-      , "Y R R R R"
-      , "R Y G W G"
-      , "Y Y W Y Y"
-      , "R R W R G"
+      [ "g g y r w"
+      , "y r r r r"
+      , "r y g w g"
+      , "y y w y y"
+      , "r r w r g"
       ]
     , []
     )
   , ( 111
     , unlines
-      [ "R W W Y W"
-      , "Y Y Y W Y"
-      , "R W G W R"
-      , "R W Y W R"
-      , "W G W Y R"
+      [ "r w w y w"
+      , "y y y w y"
+      , "r w g w r"
+      , "r w y w r"
+      , "w g w y r"
       ]
     , []
     )
   , ( 116
     , unlines
-      [ "W W G W W"
-      , "Y W W R R"
-      , "W Y Y W Y"
-      , "Y R R G Y"
-      , "Y R W R W"
+      [ "w w g w w"
+      , "y w w r r"
+      , "w y y w y"
+      , "y r r g y"
+      , "y r w r w"
       ]
     , []
     )
   , ( 117
     , unlines
-      [ "Y W G Y Y"
-      , "R Y W W Y"
-      , "W G Y Y W"
-      , "R R W G W"
-      , "G Y R R W"
+      [ "y w g y y"
+      , "r y w w y"
+      , "w g y y w"
+      , "r r w g w"
+      , "g y r r w"
       ]
     , []
     )
   , ( 118
     , unlines
-      [ "G Y Y R Y"
-      , "Y Y W W W"
-      , "G W R G W"
-      , "W W G R R"
-      , "R G G Y G"
+      [ "g y y r y"
+      , "y y w w w"
+      , "g w r g w"
+      , "w w g r r"
+      , "r g g y g"
       ]
     , []
     )
   , ( 119
     , unlines
-      [ "W W R R W"
-      , "R W R W R"
-      , "R R W R G"
-      , "R Y W Y R"
-      , "W W Y G R"
+      [ "w w r r w"
+      , "r w r w r"
+      , "r r w r g"
+      , "r y w y r"
+      , "w w y g r"
       ]
     , []
     )
   , ( 120
     , unlines
-      [ "W W G R G"
-      , "G R G R Y"
-      , "Y G Y Y W"
-      , "G Y G G W"
-      , "Y G W R W"
+      [ "w w g r g"
+      , "g r g r y"
+      , "y g y y w"
+      , "g y g g w"
+      , "y g w r w"
       ]
     , []
     )
   , ( 121
     , unlines
-      [ "W R Y R R"
-      , "R R R R W"
-      , "Y R Y W G"
-      , "Y G R R G"
-      , "W G W Y R"
+      [ "w r y r r"
+      , "r r r r w"
+      , "y r y w g"
+      , "y g r r g"
+      , "w g w y r"
       ]
     , []
     )
   , ( 122
     , unlines
-      [ "R Y W R Y"
-      , "R W W W G"
-      , "Y W Y W W"
-      , "R R R G W"
-      , "W R Y G Y"
+      [ "r y w r y"
+      , "r w w w g"
+      , "y w y w w"
+      , "r r r g w"
+      , "w r y g y"
       ]
     , []
     )
   , ( 124
     , unlines
-      [ "Y W W R W"
-      , "R W W W W"
-      , "R W Y Y Y"
-      , "Y R R R G"
-      , "G W G G R"
+      [ "y w w r w"
+      , "r w w w w"
+      , "r w y y y"
+      , "y r r r g"
+      , "g w g g r"
       ]
     , []
     )
   , ( 126
     , unlines
-      [ "R W W R G"
-      , "W Y G G Y"
-      , "Y W Y W R"
-      , "W Y R W W"
-      , "R Y G W G"
+      [ "r w w r g"
+      , "w y g g y"
+      , "y w y w r"
+      , "w y r w w"
+      , "r y g w g"
       ]
     , []
     )
   , ( 127
     , unlines
-      [ "G R Y W R"
-      , "G W Y Y R"
-      , "W R Y W W"
-      , "Y Y R R R"
-      , "Y G W G R"
+      [ "g r y w r"
+      , "g w y y r"
+      , "w r y w w"
+      , "y y r r r"
+      , "y g w g r"
       ]
     , []
     )
   , ( 128
     , unlines
-      [ "W R G R G"
-      , "R Y R Y G"
-      , "W R Y W W"
-      , "W Y G G Y"
-      , "Y G W G Y"
+      [ "w r g r g"
+      , "r y r y g"
+      , "w r y w w"
+      , "w y g g y"
+      , "y g w g y"
       ]
     , []
     )
   , ( 129
     , unlines
-      [ "G Y W W G"
-      , "G Y R R G"
-      , "Y G R G W"
-      , "W R Y R W"
-      , "R R W R W"
+      [ "g y w w g"
+      , "g y r r g"
+      , "y g r g w"
+      , "w r y r w"
+      , "r r w r w"
       ]
     , []
     )
   , ( 130
     , unlines
-      [ "W Y G R Y"
-      , "Y Y G R G"
-      , "W W Y G Y"
-      , "Y R R G W"
-      , "G G Y R W"
+      [ "w y g r y"
+      , "y y g r g"
+      , "w w y g y"
+      , "y r r g w"
+      , "g g y r w"
       ]
     , []
     )
   , ( 132
     , unlines
-      [ "G W Y R R"
-      , "Y Y Y Y Y"
-      , "W R R R G"
-      , "Y W R G R"
-      , "G W R W G"
+      [ "g w y r r"
+      , "y y y y y"
+      , "w r r r g"
+      , "y w r g r"
+      , "g w r w g"
       ]
     , []
     )
   , ( 133
     , unlines
-      [ "W Y R Y W"
-      , "W G W W G"
-      , "W Y W G G"
-      , "W W Y W R"
-      , "G R W W R"
+      [ "w y r y w"
+      , "w g w w g"
+      , "w y w g g"
+      , "w w y w r"
+      , "g r w w r"
       ]
     , []
     )
   , ( 134
     , unlines
-      [ "W Y W R W"
-      , "R W W R Y"
-      , "Y R Y W Y"
-      , "Y R W R W"
-      , "W W G Y R"
+      [ "w y w r w"
+      , "r w w r y"
+      , "y r y w y"
+      , "y r w r w"
+      , "w w g y r"
       ]
     , []
     )
   , ( 135
     , unlines
-      [ "G R G G W"
-      , "R W W Y W"
-      , "G G Y W G"
-      , "G G W Y R"
-      , "W W Y W R"
+      [ "g r g g w"
+      , "r w w y w"
+      , "g g y w g"
+      , "g g w y r"
+      , "w w y w r"
       ]
     , []
     )
   , ( 136
     , unlines
-      [ "G G Y Y G"
-      , "R G G Y Y"
-      , "R Y R W R"
-      , "G W W R Y"
-      , "R Y W Y G"
+      [ "g g y y g"
+      , "r g g y y"
+      , "r y r w r"
+      , "g w w r y"
+      , "r y w y g"
       ]
     , []
     )
   , ( 137
     , unlines
-      [ "G Y W Y W"
-      , "Y G Y W G"
-      , "R R G R G"
-      , "Y G R Y W"
-      , "W Y R G Y"
+      [ "g y w y w"
+      , "y g y w g"
+      , "r r g r g"
+      , "y g r y w"
+      , "w y r g y"
       ]
     , []
     )
   , ( 138
     , unlines
-      [ "G Y W R Y"
-      , "W W R W W"
-      , "Y Y W Y W"
-      , "Y G W W W"
-      , "R W R R Y"
+      [ "g y w r y"
+      , "w w r w w"
+      , "y y w y w"
+      , "y g w w w"
+      , "r w r r y"
       ]
     , []
     )
   , ( 139
     , unlines
-      [ "W R W Y Y"
-      , "Y R R W W"
-      , "Y R Y G Y"
-      , "W W R Y Y"
-      , "W G W W G"
+      [ "w r w y y"
+      , "y r r w w"
+      , "y r y g y"
+      , "w w r y y"
+      , "w g w w g"
       ]
     , []
     )
   , ( 140
     , unlines
-      [ "R R W Y Y"
-      , "W G G W G"
-      , "R W G Y R"
-      , "W W Y G G"
-      , "Y Y Y R Y"
+      [ "r r w y y"
+      , "w g g w g"
+      , "r w g y r"
+      , "w w y g g"
+      , "y y y r y"
       ]
     , []
     )
   , ( 141
     , unlines
-      [ "R Y R W R"
-      , "Y W W Y W"
-      , "Y Y Y G G"
-      , "G Y G Y W"
-      , "W R R R Y"
+      [ "r y r w r"
+      , "y w w y w"
+      , "y y y g g"
+      , "g y g y w"
+      , "w r r r y"
       ]
     , []
     )
   , ( 142
     , unlines
-      [ "Y R G G G"
-      , "R W R W W"
-      , "R Y R G W"
-      , "G G W R R"
-      , "R W Y W W"
+      [ "y r g g g"
+      , "r w r w w"
+      , "r y r g w"
+      , "g g w r r"
+      , "r w y w w"
       ]
     , []
     )
   , ( 143
     , unlines
-      [ "Y G G Y Y"
-      , "G G R R Y"
-      , "R Y G W G"
-      , "G G Y R W"
-      , "W W Y R Y"
+      [ "y g g y y"
+      , "g g r r y"
+      , "r y g w g"
+      , "g g y r w"
+      , "w w y r y"
       ]
     , []
     )
   , ( 144
     , unlines
-      [ "G W Y Y R"
-      , "Y Y W W Y"
-      , "R Y R G G"
-      , "G Y W G G"
-      , "W Y G W R"
+      [ "g w y y r"
+      , "y y w w y"
+      , "r y r g g"
+      , "g y w g g"
+      , "w y g w r"
       ]
     , []
     )
   , ( 145
     , unlines
-      [ "G W W W R"
-      , "Y Y Y R W"
-      , "G R R W R"
-      , "W G R G G"
-      , "G R Y R G"
+      [ "g w w w r"
+      , "y y y r w"
+      , "g r r w r"
+      , "w g r g g"
+      , "g r y r g"
       ]
     , []
     )
   , ( 146
     , unlines
-      [ "W R R R G"
-      , "R W R Y Y"
-      , "W R R G Y"
-      , "W G Y W W"
-      , "G R Y G Y"
+      [ "w r r r g"
+      , "r w r y y"
+      , "w r r g y"
+      , "w g y w w"
+      , "g r y g y"
       ]
     , []
     )
   , ( 147
     , unlines
-      [ "R Y Y G R"
-      , "G G R R Y"
-      , "Y R G G W"
-      , "W W G G G"
-      , "W W R Y W"
+      [ "r y y g r"
+      , "g g r r y"
+      , "y r g g w"
+      , "w w g g g"
+      , "w w r y w"
       ]
     , []
     )
   , ( 153
     , unlines
-      [ "G G G R Y"
-      , "W G R Y G"
-      , "R Y R Y Y"
-      , "W Y Y R W"
-      , "Y W G G W"
+      [ "g g g r y"
+      , "w g r y g"
+      , "r y r y y"
+      , "w y y r w"
+      , "y w g g w"
       ]
     , []
     )
   , ( 154
     , unlines
-      [ "R R G W Y"
-      , "R G G G W"
-      , "Y G G W R"
-      , "Y W R G W"
-      , "W G Y R W"
+      [ "r r g w y"
+      , "r g g g w"
+      , "y g g w r"
+      , "y w r g w"
+      , "w g y r w"
       ]
     , []
     )
   , ( 155
     , unlines
-      [ "W R Y R G"
-      , "G R W R Y"
-      , "R W W Y G"
-      , "R G R Y W"
-      , "Y W R W R"
+      [ "w r y r g"
+      , "g r w r y"
+      , "r w w y g"
+      , "r g r y w"
+      , "y w r w r"
       ]
     , []
     )
   , ( 156
     , unlines
-      [ "Y R Y R G"
-      , "Y R R G Y"
-      , "Y G R Y W"
-      , "G G G W Y"
-      , "G W R Y G"
+      [ "y r y r g"
+      , "y r r g y"
+      , "y g r y w"
+      , "g g g w y"
+      , "g w r y g"
       ]
     , []
     )
   , ( 157
     , unlines
-      [ "Y G G G R"
-      , "W Y R Y W"
-      , "G G R W G"
-      , "Y Y R R Y"
-      , "G Y G Y W"
+      [ "y g g g r"
+      , "w y r y w"
+      , "g g r w g"
+      , "y y r r y"
+      , "g y g y w"
       ]
     , []
     )
   , ( 158
     , unlines
-      [ "R G R Y G"
-      , "W R G R R"
-      , "R R G Y Y"
-      , "G W G Y W"
-      , "G R G R W"
+      [ "r g r y g"
+      , "w r g r r"
+      , "r r g y y"
+      , "g w g y w"
+      , "g r g r w"
       ]
     , []
     )
   , ( 160
     , unlines
-      [ "G G G R R"
-      , "G R Y Y R"
-      , "G G W G R"
-      , "Y R W R G"
-      , "W Y Y W R"
+      [ "g g g r r"
+      , "g r y y r"
+      , "g g w g r"
+      , "y r w r g"
+      , "w y y w r"
       ]
     , []
     )
   , ( 161
     , unlines
-      [ "W W G R W"
-      , "Y R G G Y"
-      , "G R R R G"
-      , "R G G G R"
-      , "Y R W G G"
+      [ "w w g r w"
+      , "y r g g y"
+      , "g r r r g"
+      , "r g g g r"
+      , "y r w g g"
       ]
     , []
     )
   , ( 162
     , unlines
-      [ "W W R G G"
-      , "R W Y G W"
-      , "Y R W Y W"
-      , "G G W Y Y"
-      , "Y W R W Y"
+      [ "w w r g g"
+      , "r w y g w"
+      , "y r w y w"
+      , "g g w y y"
+      , "y w r w y"
       ]
     , []
     )
   , ( 163
     , unlines
-      [ "G Y G Y R"
-      , "G G W R R"
-      , "R G W Y Y"
-      , "W R R W Y"
-      , "G Y R G W"
+      [ "g y g y r"
+      , "g g w r r"
+      , "r g w y y"
+      , "w r r w y"
+      , "g y r g w"
       ]
     , []
     )
   , ( 164
     , unlines
-      [ "W G R G G"
-      , "W G Y Y R"
-      , "W W W G W"
-      , "G Y R R W"
-      , "Y Y W R W"
+      [ "w g r g g"
+      , "w g y y r"
+      , "w w w g w"
+      , "g y r r w"
+      , "y y w r w"
       ]
     , []
     )
   , ( 167
     , unlines
-      [ "R Y G W G"
-      , "Y R W R G"
-      , "R Y Y G G"
-      , "G G W R G"
-      , "G R R W W"
+      [ "r y g w g"
+      , "y r w r g"
+      , "r y y g g"
+      , "g g w r g"
+      , "g r r w w"
       ]
     , []
     )
   , ( 168
     , unlines
-      [ "Y W R R Y"
-      , "W G G Y R"
-      , "Y W W R R"
-      , "W Y G G Y"
-      , "W R G R G"
+      [ "y w r r y"
+      , "w g g y r"
+      , "y w w r r"
+      , "w y g g y"
+      , "w r g r g"
       ]
     , []
     )
   , ( 169
     , unlines
-      [ "G G W Y R"
-      , "W Y W R Y"
-      , "W W W W Y"
-      , "G G Y W W"
-      , "Y W W G G"
+      [ "g g w y r"
+      , "w y w r y"
+      , "w w w w y"
+      , "g g y w w"
+      , "y w w g g"
       ]
     , []
     )
   , ( 170
     , unlines
-      [ "Y G W Y Y"
-      , "W W G R R"
-      , "Y Y R G Y"
-      , "R R Y R R"
-      , "R W R W G"
+      [ "y g w y y"
+      , "w w g r r"
+      , "y y r g y"
+      , "r r y r r"
+      , "r w r w g"
       ]
     , []
     )
   , ( 171
     , unlines
-      [ "G R R R G"
-      , "G Y G G R"
-      , "W W G W R"
-      , "W Y W R R"
-      , "R Y G W G"
+      [ "g r r r g"
+      , "g y g g r"
+      , "w w g w r"
+      , "w y w r r"
+      , "r y g w g"
       ]
     , []
     )
   , ( 172
     , unlines
-      [ "G G G G R"
-      , "Y Y W G Y"
-      , "G Y W G Y"
-      , "G R G R G"
-      , "Y R W Y W"
+      [ "g g g g r"
+      , "y y w g y"
+      , "g y w g y"
+      , "g r g r g"
+      , "y r w y w"
       ]
     , [ [5,2,5,3,4,3,4,4,3,1,1]
       , [5,2,5,1,4,4,4,3,1,1,1]
@@ -750,401 +750,401 @@ puzzles =
     )
   , ( 173
     , unlines
-      [ "R Y Y W W"
-      , "G R Y W Y"
-      , "W R R R Y"
-      , "W R Y W W"
-      , "R G Y R R"
+      [ "r y y w w"
+      , "g r y w y"
+      , "w r r r y"
+      , "w r y w w"
+      , "r g y r r"
       ]
     , [[1,1,1,1,4,2,4,5,5]]
     )
   , ( 174
     , unlines
-      [ "Y W R R W"
-      , "R Y Y G W"
-      , "Y W G G W"
-      , "R R Y Y G"
-      , "W W Y W W"
+      [ "y w r r w"
+      , "r y y g w"
+      , "y w g g w"
+      , "r r y y g"
+      , "w w y w w"
       ]
     , [[1,1,1,3,4,1,3,5,3,3,2]]
     )
   , ( 175
     , unlines
-      [ "G G Y Y W"
-      , "W R G W Y"
-      , "R G R Y W"
-      , "W W R W Y"
-      , "Y G G R R"
+      [ "g g y y w"
+      , "w r g w y"
+      , "r g r y w"
+      , "w w r w y"
+      , "y g g r r"
       ]
     , [[2,2,1,3,5,4,1,4,4,1,3]]
     )
   , ( 176
     , unlines
-      [ "W G R Y Y"
-      , "Y W W W G"
-      , "G R R G R"
-      , "W R G G Y"
-      , "R R G R G"
+      [ "w g r y y"
+      , "y w w w g"
+      , "g r r g r"
+      , "w r g g y"
+      , "r r g r g"
       ]
     , [[5,5,3,1,1,4,1,1,1]]
     )
   , ( 177
     , unlines
-      [ "R Y G R R"
-      , "W R W Y G"
-      , "R R W Y W"
-      , "G W Y Y Y"
-      , "W R W W Y"
+      [ "r y g r r"
+      , "w r w y g"
+      , "r r w y w"
+      , "g w y y y"
+      , "w r w w y"
       ]
     , [[1,5,1,3,1,2,3,5,4]]
     )
   , ( 178
     , unlines
-      [ "W Y Y Y W"
-      , "W G R W R"
-      , "Y R G R Y"
-      , "G G R G R"
-      , "W W Y G R"
+      [ "w y y y w"
+      , "w g r w r"
+      , "y r g r y"
+      , "g g r g r"
+      , "w w y g r"
       ]
     , [[3,4,3,1,4,2,1,1,5,5]]
     )
   , ( 179
     , unlines
-      [ "G Y W Y Y"
-      , "Y R W Y Y"
-      , "W Y W G G"
-      , "W G Y Y W"
-      , "G G W G G"
+      [ "g y w y y"
+      , "y r w y y"
+      , "w y w g g"
+      , "w g y y w"
+      , "g g w g g"
       ]
     , [[1,4,4,1,1,5,4,4,3,1,2]]
     )
   , ( 180
     , unlines
-      [ "G W G Y Y"
-      , "Y G W W R"
-      , "G Y R R W"
-      , "Y Y G G G"
-      , "W G G G R"
+      [ "g w g y y"
+      , "y g w w r"
+      , "g y r r w"
+      , "y y g g g"
+      , "w g g g r"
       ]
     , [[1,1,1,3,3,5,1,4,1,2]]
     )
   , ( 181
     , unlines
-      [ "R G W G G"
-      , "Y R G W Y"
-      , "R R Y W W"
-      , "R G R Y W"
-      , "W Y G G G"
+      [ "r g w g g"
+      , "y r g w y"
+      , "r r y w w"
+      , "r g r y w"
+      , "w y g g g"
       ]
     , [[1,1,1,2,1,5,3,2]]
     )
   , ( 182
     , unlines
-      [ "G G R R G"
-      , "G Y R W G"
-      , "G W R G R"
-      , "G W G G G"
-      , "R W W R Y"
+      [ "g g r r g"
+      , "g y r w g"
+      , "g w r g r"
+      , "g w g g g"
+      , "r w w r y"
       ]
     , [[5,4,4,2,2,3,1,1,5]]
     )
   , ( 183
     , unlines
-      [ "R W Y G R"
-      , "G Y G W Y"
-      , "W Y W G G"
-      , "Y G G Y G"
-      , "W Y W Y G"
+      [ "r w y g r"
+      , "g y g w y"
+      , "w y w g g"
+      , "y g g y g"
+      , "w y w y g"
       ]
     , [[2,3,5,2,2,1,1,1,5,4]]
     )
   , ( 184
     , unlines
-      [ "G G W G G"
-      , "Y R Y Y R"
-      , "Y Y G W G"
-      , "R G G R Y"
-      , "R Y R G Y"
+      [ "g g w g g"
+      , "y r y y r"
+      , "y y g w g"
+      , "r g g r y"
+      , "r y r g y"
       ]
     , [[5,3,3,2,4,1,1,3,4,4,1]]
     )
   , ( 185
     , unlines
-      [ "W Y Y G R"
-      , "Y Y G R Y"
-      , "G R W G Y"
-      , "G R R W R"
-      , "W G R G W"
+      [ "w y y g r"
+      , "y y g r y"
+      , "g r w g y"
+      , "g r r w r"
+      , "w g r g w"
       ]
     , [[4,3,3,1,1,1,4,1,5,4,5]]
     )
   , ( 186
     , unlines
-      [ "W W R Y G"
-      , "G R W G G"
-      , "Y R Y G G"
-      , "Y G W R W"
-      , "Y R W G W"
+      [ "w w r y g"
+      , "g r w g g"
+      , "y r y g g"
+      , "y g w r w"
+      , "y r w g w"
       ]
     , [[1,5,3,2,4,4,1,3,2,1]]
     )
   , ( 187
     , unlines
-      [ "Y W W Y Y"
-      , "Y R R W G"
-      , "G W W G R"
-      , "R Y Y R R"
-      , "R Y W G W"
+      [ "y w w y y"
+      , "y r r w g"
+      , "g w w g r"
+      , "r y y r r"
+      , "r y w g w"
       ]
     , [[3,2,1,4,1,2,4,1]]
     )
   , ( 188
     , unlines
-      [ "Y W Y Y Y"
-      , "W W Y R W"
-      , "R Y G G R"
-      , "Y R W R G"
-      , "G R Y W W"
+      [ "y w y y y"
+      , "w w y r w"
+      , "r y g g r"
+      , "y r w r g"
+      , "g r y w w"
       ]
     , [[1,2,1,1,4,3,4,5,3,1]]
     )
   , ( 189
     , unlines
-      [ "Y W R G Y"
-      , "W G G W W"
-      , "R R Y Y G"
-      , "R W G G W"
-      , "W G G R G"
+      [ "y w r g y"
+      , "w g g w w"
+      , "r r y y g"
+      , "r w g g w"
+      , "w g g r g"
       ]
     , [[5,2,4,5,1,1,3,2,3,1,1]]
     )
   , ( 190
     , unlines
-      [ "W R R W G"
-      , "W Y W R G"
-      , "Y G W G G"
-      , "W W R G W"
-      , "W R G R G"
+      [ "w r r w g"
+      , "w y w r g"
+      , "y g w g g"
+      , "w w r g w"
+      , "w r g r g"
       ]
     , [[4,3,2,1,2,1,5,2,1]]
     )
   , ( 191
     , unlines
-      [ "G W Y R R"
-      , "R W R Y Y"
-      , "R W Y R Y"
-      , "G G R G Y"
-      , "Y R R W W"
+      [ "g w y r r"
+      , "r w r y y"
+      , "r w y r y"
+      , "g g r g y"
+      , "y r r w w"
       ]
     , [[4,1,5,4,1,1,3,1,2]]
     )
   , ( 192
     , unlines
-      [ "G R G W W"
-      , "G G W G Y"
-      , "Y W Y G G"
-      , "Y Y W G Y"
-      , "W R Y R R"
+      [ "g r g w w"
+      , "g g w g y"
+      , "y w y g g"
+      , "y y w g y"
+      , "w r y r r"
       ]
     , [[3,4,1,1,4,5,1,3,2]]
     )
   , ( 193
     , unlines
-      [ "W R R R Y"
-      , "R W G R R"
-      , "G W G G G"
-      , "W R R W Y"
-      , "Y Y R W R"
+      [ "w r r r y"
+      , "r w g r r"
+      , "g w g g g"
+      , "w r r w y"
+      , "y y r w r"
       ]
     , [[5,4,3,5,3,1,1,1,5,1,1]]
     )
   , ( 194
     , unlines
-      [ "R W R W G"
-      , "R R R Y W"
-      , "W R G G G"
-      , "Y W G W Y"
-      , "W Y W G Y"
+      [ "r w r w g"
+      , "r r r y w"
+      , "w r g g g"
+      , "y w g w y"
+      , "w y w g y"
       ]
     , [[5,4,2,1,1,3,2,4,4,1]]
     )
   , ( 195
     , unlines
-      [ "R R R W Y"
-      , "R G W Y G"
-      , "Y Y Y R G"
-      , "R G Y G R"
-      , "G Y G Y R"
+      [ "r r r w y"
+      , "r g w y g"
+      , "y y y r g"
+      , "r g y g r"
+      , "g y g y r"
       ]
     , [[4,5,2,1,1,1,1,2,3]]
     )
   , ( 196
     , unlines
-      [ "G R Y R G"
-      , "G W W W G"
-      , "R R G G Y"
-      , "Y R R G Y"
-      , "R G Y G W"
+      [ "g r y r g"
+      , "g w w w g"
+      , "r r g g y"
+      , "y r r g y"
+      , "r g y g w"
       ]
     , [[4,2,1,3,2,1,5,1,1,3,5]]
     )
   , ( 197
     , unlines
-      [ "W W G G G"
-      , "R Y W W Y"
-      , "R W G R R"
-      , "G G W W G"
-      , "Y G Y R G"
+      [ "w w g g g"
+      , "r y w w y"
+      , "r w g r r"
+      , "g g w w g"
+      , "y g y r g"
       ]
     , [[3,2,2,5,4,4,5,1,1,3,1]]
     )
   , ( 198
     , unlines
-      [ "W G W G G"
-      , "R R Y W W"
-      , "R Y G R G"
-      , "R W R Y W"
-      , "Y W G G W"
+      [ "w g w g g"
+      , "r r y w w"
+      , "r y g r g"
+      , "r w r y w"
+      , "y w g g w"
       ]
     , [[1,2,1,5,3,2,4,3,4,1]]
     )
   , ( 199
     , unlines
-      [ "R G Y G R"
-      , "R Y G Y Y"
-      , "Y R Y W Y"
-      , "R W W R Y"
-      , "R G R W Y"
+      [ "r g y g r"
+      , "r y g y y"
+      , "y r y w y"
+      , "r w w r y"
+      , "r g r w y"
       ]
     , [[4,2,5,2,1,3,2,3]]
     )
   , ( 200
     , unlines
-      [ "R R Y G W"
-      , "Y W G W R"
-      , "W R W R Y"
-      , "W W R R R"
-      , "G W G R Y"
+      [ "r r y g w"
+      , "y w g w r"
+      , "w r w r y"
+      , "w w r r r"
+      , "g w g r y"
       ]
     , [[2,3,2,5,5,2,3,1,1,3,1]]
     )
   , ( 201
     , unlines
-      [ "G W W Y W"
-      , "R R R Y Y"
-      , "W Y G R Y"
-      , "W G W R W"
-      , "Y G G W R"
+      [ "g w w y w"
+      , "r r r y y"
+      , "w y g r y"
+      , "w g w r w"
+      , "y g g w r"
       ]
     , [[2,3,3,1,1,1,4,1,5]]
     )
   , ( 202
     , unlines
-      [ "W G R Y R"
-      , "W G Y Y R"
-      , "Y G Y R W"
-      , "Y G R W G"
-      , "Y W G R R"
+      [ "w g r y r"
+      , "w g y y r"
+      , "y g y r w"
+      , "y g r w g"
+      , "y w g r r"
       ]
     , [[1,1,2,3,5,4,3,3]]
     )
   , ( 203
     , unlines
-      [ "Y G W R R"
-      , "W R R Y R"
-      , "G Y G G W"
-      , "Y R G G G"
-      , "R R Y R W"
+      [ "y g w r r"
+      , "w r r y r"
+      , "g y g g w"
+      , "y r g g g"
+      , "r r y r w"
       ]
     , [[1,4,4,1,5,2,1,3,1,1]]
     )
   , ( 204
     , unlines
-      [ "G G W Y G"
-      , "R G R G G"
-      , "W G R R Y"
-      , "G R Y W R"
-      , "W R G R Y"
+      [ "g g w y g"
+      , "r g r g g"
+      , "w g r r y"
+      , "g r y w r"
+      , "w r g r y"
       ]
     , [[3,1,4,1,2,2,3,3,1,5,4]]
     )
   , ( 205
     , unlines
-      [ "R G W W Y"
-      , "Y W W G Y"
-      , "R G Y Y W"
-      , "G R R W R"
-      , "Y R Y W W"
+      [ "r g w w y"
+      , "y w w g y"
+      , "r g y y w"
+      , "g r r w r"
+      , "y r y w w"
       ]
     , [[4,1,2,3,3,1,5,4,1,5,1]]
     )
   , ( 206
     , unlines
-      [ "G G G G R"
-      , "Y W R Y G"
-      , "R W R Y R"
-      , "W Y W R R"
-      , "Y R G G W"
+      [ "g g g g r"
+      , "y w r y g"
+      , "r w r y r"
+      , "w y w r r"
+      , "y r g g w"
       ]
     , [[2,5,1,1,5,1,1,1,4,5,4]]
     )
   , ( 207
     , unlines
-      [ "G W W R R"
-      , "W R Y Y R"
-      , "G R Y G W"
-      , "W Y R Y G"
-      , "Y Y W W G"
+      [ "g w w r r"
+      , "w r y y r"
+      , "g r y g w"
+      , "w y r y g"
+      , "y y w w g"
       ]
     , [[3,5,1,5,2,1,1,1,1]]
     )
   , ( 208
     , unlines
-      [ "Y G G W Y"
-      , "R Y W W W"
-      , "Y R Y W R"
-      , "G G Y Y R"
-      , "R G W R G"
+      [ "y g g w y"
+      , "r y w w w"
+      , "y r y w r"
+      , "g g y y r"
+      , "r g w r g"
       ]
     , [[5,2,4,5,3,3,3,1,1,2]]
     )
   , ( 209
     , unlines
-      [ "W Y G G W"
-      , "R R W Y W"
-      , "Y G G W R"
-      , "Y G W G R"
-      , "R G Y R G"
+      [ "w y g g w"
+      , "r r w y w"
+      , "y g g w r"
+      , "y g w g r"
+      , "r g y r g"
       ]
     , [[5,2,1,4,5,4,1,3,1,1]]
     )
   , ( 210
     , unlines
-      [ "R W G R W"
-      , "W W R G W"
-      , "Y W Y W G"
-      , "Y R W Y W"
-      , "G W Y Y G"
+      [ "r w g r w"
+      , "w w r g w"
+      , "y w y w g"
+      , "y r w y w"
+      , "g w y y g"
       ]
     , [[3,5,1,1,1,3,1,2,3,4,5]]
     )
   , ( 211
     , unlines
-      [ "R R G Y W"
-      , "W G R Y R"
-      , "Y Y R W W"
-      , "R Y W G W"
-      , "Y Y R R W"
+      [ "r r g y w"
+      , "w g r y r"
+      , "y y r w w"
+      , "r y w g w"
+      , "y y r r w"
       ]
     , [[5,1,3,3,1,3,2,4,5,1]]
     )
   , ( 212
     , unlines
-      [ "G R R R R"
-      , "G G R G W"
-      , "G R W R W"
-      , "W Y W Y G"
-      , "Y Y W G R"
+      [ "g r r r r"
+      , "g g r g w"
+      , "g r w r w"
+      , "w y w y g"
+      , "y y w g r"
       ]
     , [ [1,1,3,4,4,1,2,4,5,4]
       , [4,1,1,1,4,4,4,3,5,2]
@@ -1152,171 +1152,171 @@ puzzles =
     )
   , ( 215
     , unlines
-      [ "G G R G W"
-      , "G W G W G"
-      , "W Y R W G"
-      , "Y G Y G Y"
-      , "G W W G Y"
+      [ "g g r g w"
+      , "g w g w g"
+      , "w y r w g"
+      , "y g y g y"
+      , "g w w g y"
       ]
     , [[2,1,1,5,4,1,3,4,4]]
     )
   , ( 217
     , unlines
-      [ "W G R R Y"
-      , "W W R G R"
-      , "G G W G R"
-      , "G Y G G G"
-      , "Y G W R R"
+      [ "w g r r y"
+      , "w w r g r"
+      , "g g w g r"
+      , "g y g g g"
+      , "y g w r r"
       ]
     , [[2,4,4,3,1,2,3,5]]
     )
   , ( 218
     , unlines
-      [ "Y G R R W"
-      , "R G R W Y"
-      , "Y G G G Y"
-      , "G Y R R G"
-      , "W R R R W"
+      [ "y g r r w"
+      , "r g r w y"
+      , "y g g g y"
+      , "g y r r g"
+      , "w r r r w"
       ]
     , [[1,1,1,1,1,5,2,3,5,4]]
     )
   , ( 219
     , unlines
-      [ "G G G G G"
-      , "R R W R W"
-      , "Y Y R W Y"
-      , "Y R G Y W"
-      , "Y Y Y R W"
+      [ "g g g g g"
+      , "r r w r w"
+      , "y y r w y"
+      , "y r g y w"
+      , "y y y r w"
       ]
     , [[5,4,1,1,1,3,3]]
     )
   , ( 220
     , unlines
-      [ "Y W R G W"
-      , "R Y G R W"
-      , "W G W W G"
-      , "G G W Y R"
-      , "Y G R G R"
+      [ "y w r g w"
+      , "r y g r w"
+      , "w g w w g"
+      , "g g w y r"
+      , "y g r g r"
       ]
     , [[3,4,4,2,1,1,1,1,3,5]]
     )
   , ( 221
     , unlines
-      [ "W W W R G"
-      , "R W W R W"
-      , "Y R G G Y"
-      , "G W R Y W"
-      , "G G R W G"
+      [ "w w w r g"
+      , "r w w r w"
+      , "y r g g y"
+      , "g w r y w"
+      , "g g r w g"
       ]
     , [[1,5,4,4,3,1,1,5,3]]
     )
   , ( 222
     , unlines
-      [ "Y W W G G"
-      , "G Y G G G"
-      , "Y Y G R Y"
-      , "R G W R G"
-      , "G Y Y Y W"
+      [ "y w w g g"
+      , "g y g g g"
+      , "y y g r y"
+      , "r g w r g"
+      , "g y y y w"
       ]
     , [[1,1,5,5,1,3,4,1,1,2]]
     )
   , ( 223
     , unlines
-      [ "G W W Y R"
-      , "G W Y W Y"
-      , "Y G G G R"
-      , "R W Y W W"
-      , "G G W W W"
+      [ "g w w y r"
+      , "g w y w y"
+      , "y g g g r"
+      , "r w y w w"
+      , "g g w w w"
       ]
     , [[3,1,1,1,1,4,3,2,5]]
     )
   , ( 224
     , unlines
-      [ "R Y W G R"
-      , "R W Y G G"
-      , "G Y G W R"
-      , "R G G R W"
-      , "W Y W W Y"
+      [ "r y w g r"
+      , "r w y g g"
+      , "g y g w r"
+      , "r g g r w"
+      , "w y w w y"
       ]
     , [[1,3,4,5,3,1,2,2,2,5]]
     )
   , ( 225
     , unlines
-      [ "G Y R G R"
-      , "Y Y Y R Y"
-      , "Y Y R Y W"
-      , "W G Y R W"
-      , "W Y G G Y"
+      [ "g y r g r"
+      , "y y y r y"
+      , "y y r y w"
+      , "w g y r w"
+      , "w y g g y"
       ]
     , [[1,1,1,4,2,5,5,3,4]]
     )
   , ( 226
     , unlines
-      [ "Y G R W Y"
-      , "G G W W W"
-      , "G W Y R G"
-      , "W Y G Y R"
-      , "W R R G G"
+      [ "y g r w y"
+      , "g g w w w"
+      , "g w y r g"
+      , "w y g y r"
+      , "w r r g g"
       ]
     , [[2,3,1,1,1,3,4,5,5]]
     )
   , ( 228
     , unlines
-      [ "R R W G R"
-      , "R Y Y Y R"
-      , "G Y Y R R"
-      , "Y Y G G Y"
-      , "G G R G R"
+      [ "r r w g r"
+      , "r y y y r"
+      , "g y y r r"
+      , "y y g g y"
+      , "g g r g r"
       ]
     , [[1,4,1,1,1,3,4]]
     )
   , ( 229
     , unlines
-      [ "W R R G G"
-      , "W G G R W"
-      , "W W R W G"
-      , "G R R Y R"
-      , "R R Y W Y"
+      [ "w r r g g"
+      , "w g g r w"
+      , "w w r w g"
+      , "g r r y r"
+      , "r r y w y"
       ]
     , [[4,3,4,1,2,1,1,2,5,5]]
     )
   , ( 231
     , unlines
-      [ "G W G R Y"
-      , "R Y R G R"
-      , "R R W G W"
-      , "R W W G R"
-      , "R R G W R"
+      [ "g w g r y"
+      , "r y r g r"
+      , "r r w g w"
+      , "r w w g r"
+      , "r r g w r"
       ]
     , [[3,5,3,4,1,1,2,2,5]]
     )
   , ( 232
     , unlines
-      [ "Y R W G G"
-      , "R R R G G"
-      , "Y Y Y R G"
-      , "Y R W R R"
-      , "W W Y G Y"
+      [ "y r w g g"
+      , "r r r g g"
+      , "y y y r g"
+      , "y r w r r"
+      , "w w y g y"
       ]
     , [[1,3,1,1,1,3,4,5]]
     )
   , ( 233
     , unlines
-      [ "W R G Y W"
-      , "Y Y Y Y W"
-      , "W W G Y W"
-      , "Y R R Y W"
-      , "W Y G G G"
+      [ "w r g y w"
+      , "y y y y w"
+      , "w w g y w"
+      , "y r r y w"
+      , "w y g g g"
       ]
     , [[2,1,3,4,1,1,2,3,5]]
     )
   , ( 234
     , unlines
-      [ "G R Y G R"
-      , "Y W G R R"
-      , "Y Y R Y W"
-      , "W R W W Y"
-      , "W Y W R Y"
+      [ "g r y g r"
+      , "y w g r r"
+      , "y y r y w"
+      , "w r w w y"
+      , "w y w r y"
       ]
     , [ [4,5,2,2,1,1,1,2,3,3]
       , [2,4,5,3,2,1,3,1,1,2]
@@ -1324,23 +1324,33 @@ puzzles =
     )
   , ( 235
     , unlines
-      [ "W G G G R"
-      , "R R G R G"
-      , "W W R W W"
-      , "G R G W Y"
-      , "Y W R R R"
+      [ "w g g g r"
+      , "r r g r g"
+      , "w w r w w"
+      , "g r g w y"
+      , "y w r r r"
       ]
     , [[1,1,1,1,1,3,4,5,5,2,2]]
     )
   , ( 236
     , unlines
-      [ "Y R W Y R"
-      , "R Y R Y R"
-      , "G Y W R R"
-      , "W Y Y R G"
-      , "W R R G G"
+      [ "y r w y r"
+      , "r y r y r"
+      , "g y w r r"
+      , "w y y r g"
+      , "w r r g g"
       ]
     , [[1,1,4,1,1,3,2,3]]
+    )
+  , ( 237
+    , unlines
+      [ "r g g g y"
+      , "g y y r r"
+      , "w g g r g"
+      , "y g g w g"
+      , "r y g w r"
+      ]
+    , [[4,3,2,1,1,1,1,4,5]]
     )
   ]
 
