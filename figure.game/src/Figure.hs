@@ -179,6 +179,26 @@ normPath1 _f pt = pt
 -- and the last move at position 4 is delaed until
 -- move at 3 has been played
 
+-- normPath isn't perfect
+-- not only single moves maybe swapped
+-- but also subsequences of equal length, e.g. pairs of moves
+--
+-- in figure234 the first 2 moves can be swapped with the second 2,
+-- the states after the 4. move are equal and the pairs of moves
+-- are independet of each other
+-- so the solutions are in priciple the same solution
+--
+-- figure240 has 2 different solutions
+-- in 1. solution the red tiles are all removed in the 5. move,
+-- in 2. solution in two steps in the 4. and 7. move
+
+-- The definition of solutions are in principle the same:
+-- If all tiles are uniquely identified by e.g. their initial
+-- position or by unique numbers, the sets of these position
+-- removed step by step
+-- are the same in both solutions
+
+
 normPath :: Figure -> Path Pos -> Path Pos
 normPath f pt0
   | pt1 == pt0 = pt0
