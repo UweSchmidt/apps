@@ -42,10 +42,22 @@ ownSolution gno b = do
   ms <- readMoves
   case ms of
     Nothing  -> solvePuzzle gno b
-    Just mvs -> do
-                putStrLn ""
-                putStrLn $ printGame b mvs
-                saveGame gno b mvs
+    Just mvs ->
+      if sol
+      then do
+           when (nmvs /= mvs) $ do
+             putStrLn ""
+             putStrLn $ "normalized solution is " <> show nmvs
+
+           putStrLn ""
+           putStrLn $ printGame b nmvs
+           saveGame gno b nmvs
+      else do
+           putStrLn ""
+           putStrLn $ show mvs <> "isn't a solution"
+      where
+        sol  = pathIsSolution b mvs
+        nmvs = normPath b mvs
 
 solvePuzzle :: Int -> Figure -> IO ()
 solvePuzzle gno b = do

@@ -197,6 +197,12 @@ playFigure b0 p0 = scanl step (0, 0, b0) (zip [1..] p0)
       where
         b' = snd . head . filter ((== p) . fst) . nextBoards $ b
 
+pathIsSolution :: Figure -> Path Pos -> Bool
+pathIsSolution b0 p0 =
+  finalState b1
+  where
+    (_, _, b1) = last $ playFigure b0 p0
+
 -- --------------------
 
 instance AStar Figure where
