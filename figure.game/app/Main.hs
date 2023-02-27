@@ -41,22 +41,22 @@ ownSolution :: Int -> Figure -> IO ()
 ownSolution gno b = do
   ms <- readMoves
   case ms of
-    Nothing  -> solvePuzzle gno b
+    Nothing -> solvePuzzle gno b
     Just mvs ->
       if sol
-      then do
-           when (nmvs /= mvs) $ do
-             putStrLn ""
-             putStrLn $ "normalized solution is " <> show nmvs
+        then do
+          when (nmvs /= mvs) $ do
+            putStrLn ""
+            putStrLn $ "normalized solution is " <> show nmvs
 
-           putStrLn ""
-           putStrLn $ printGame b nmvs
-           saveGame gno b nmvs
-      else do
-           putStrLn ""
-           putStrLn $ show mvs <> "isn't a solution"
+          putStrLn ""
+          putStrLn $ printGame b nmvs
+          saveGame gno b nmvs
+        else do
+          putStrLn ""
+          putStrLn $ show mvs <> "isn't a solution"
       where
-        sol  = pathIsSolution b mvs
+        sol = pathIsSolution b mvs
         nmvs = normPath b mvs
 
 solvePuzzle :: Int -> Figure -> IO ()
@@ -97,13 +97,13 @@ readMoves = do
   ok <- yesNo "play own solution"
   if ok
     then do
-         putStr "list of moves : " >> flush
-         row <- getLine
-         if null row
-           then readMoves
-           else case readMaybe row of
-                  Nothing -> readMoves
-                  res     -> return res
+      putStr "list of moves : " >> flush
+      row <- getLine
+      if null row
+        then readMoves
+        else case readMaybe row of
+          Nothing -> readMoves
+          res -> return res
     else return Nothing
 
 readInt :: String -> IO Int
@@ -111,7 +111,7 @@ readInt msg = do
   putStr msg >> flush
   v <- readMaybe <$> getLine
   case v of
-    Just i  -> return i
+    Just i -> return i
     Nothing -> do
       putStrLn "please input a number"
       readInt msg
@@ -120,22 +120,24 @@ resOutput :: (Path Pos, Int, Int) -> IO ()
 resOutput (ms, steps, opn)
   | null ms = do
       putStr $
-        unlines $ ["sorry, no solution found"] <> stats
-
+        unlines $
+          ["sorry, no solution found"] <> stats
   | otherwise = do
       putStr $
         unlines $
-        [ "solution with " <> show (length ms) <> " moves found"
-        , "list of tiles to play: " <> show ms
-        ]
-        ++ stats
+          [ "solution with " <> show (length ms) <> " moves found",
+            "list of tiles to play: " <> show ms
+          ]
+            ++ stats
   where
-    stats = [ "statistics:"
-            , show steps <> " moves tried"
-            , show opn'  <> " moves not tried"
-            ]
-    opn' | null ms   = opn
-         | otherwise = opn - 1
+    stats =
+      [ "statistics:",
+        show steps <> " moves tried",
+        show opn'  <> " moves not tried"
+      ]
+    opn'
+      | null ms = opn
+      | otherwise = opn - 1
 
 saveGame :: Int -> Figure -> Solution -> IO ()
 saveGame no b s =
@@ -152,10 +154,10 @@ saveGame no b s =
       when ok $ do
         saveModulePuzzle (M.insert no' (no', b', ss'') allPuzzles)
         putStrLn "solution added to puzzle in module Puzzles.hs"
-          where
-            ss''
-              | s `elem` ss' = ss'
-              | otherwise    = s : ss'
+      where
+        ss''
+          | s `elem` ss' = ss'
+          | otherwise    = s : ss'
 
 puzzleInput :: IO (Bool, Int, Figure)
 puzzleInput = do
