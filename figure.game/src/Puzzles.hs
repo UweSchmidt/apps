@@ -2004,6 +2004,16 @@ puzzles =
       ]
     , [[1,1,3,4,1,5,1,4,1]]
     )
+  , ( 502
+    , unlines
+      [ "r y g w r"
+      , "r r y y w"
+      , "y y y r y"
+      , "w w y g w"
+      , "w y r g w"
+      ]
+    , [[1,1,4,5,5,5,1]]
+    )
   , ( 503
     , unlines
       [ "y w g r y"
