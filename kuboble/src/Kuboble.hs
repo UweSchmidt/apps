@@ -21,6 +21,7 @@ import           Data.Board
 import           Data.PriorityQueue.Heap
 
 import           Control.Lens
+import           Control.Monad
 import           Control.Monad.Except
 import           Data.Maybe ()
 import           Text.Printf ()
