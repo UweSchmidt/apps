@@ -2813,6 +2813,7 @@ puzzles =
       , "g g w r g"
       ]
     , [[1,4,4,5,3,5,1,1]]
+    )
   , ( 691
     , unlines
       [ "g g g w w"
