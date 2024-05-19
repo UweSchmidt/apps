@@ -2804,16 +2804,6 @@ puzzles =
       ]
     , [[4,4,4,5,3,1,1,2]]
     )
-  , ( 692
-    , unlines
-      [ "y y r w r"
-      , "y y r r w"
-      , "r w w g g"
-      , "g r r r y"
-      , "g g w r g"
-      ]
-    , [[1,4,4,5,3,5,1,1]]
-    )
   , ( 691
     , unlines
       [ "g g g w w"
@@ -2824,4 +2814,25 @@ puzzles =
       ]
     , [[2,1,2,1,2,4,3,3]]
     )
+  , ( 692
+    , unlines
+      [ "y y r w r"
+      , "y y r r w"
+      , "r w w g g"
+      , "g r r r y"
+      , "g g w r g"
+      ]
+    , [[1,4,4,5,3,5,1,1]]
+    )
+  , ( 693
+    , unlines
+      [ "r r r r y"
+      , "g r w y g"
+      , "g r y r w"
+      , "g w r g g"
+      , "w y w w r"
+      ]
+    , [[5,5,3,4,3,2,1,1,1]]
+    )
   ]
+
