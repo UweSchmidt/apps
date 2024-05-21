@@ -2883,6 +2883,14 @@ puzzles =
       , "y r r r g"
       ]
     , [[1,2,4,5,4,1,1,1]]
+  , ( 695
+    , unlines
+      [ "r r r w r"
+      , "y g w r g"
+      , "r y r g g"
+      , "r y g r y"
+      , "w y g g y"
+      ]
+    , [[1,2,2,5,5,1,3,3]]
     )
   ]
-
