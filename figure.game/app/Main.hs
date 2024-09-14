@@ -54,7 +54,7 @@ ownSolution gno b = do
           saveGame gno b nmvs
         else do
           putStrLn ""
-          putStrLn $ show mvs <> "isn't a solution"
+          putStrLn $ show mvs <> " isn't a solution"
       where
         sol = pathIsSolution b mvs
         nmvs = normPath b mvs
