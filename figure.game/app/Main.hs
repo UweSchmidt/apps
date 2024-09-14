@@ -99,12 +99,11 @@ readMoves = do
     then do
       putStr "list of moves : " >> flush
       row <- getLine
-      putStrLn row >> flush
       if null row
         then readMoves
         else case readMaybe row of
           Nothing -> readMoves
-          res -> putStrLn (show res) >> return res
+          res -> return res
     else return Nothing
 
 readInt :: String -> IO Int
