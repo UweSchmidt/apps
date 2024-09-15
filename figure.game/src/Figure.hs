@@ -213,9 +213,16 @@ playFigure :: Figure -> Path Pos -> [(Int, Pos, Figure)]
 playFigure b0 p0 = scanl step (0, 0, b0) (zip [1..] p0)
   where
     step :: (Int, Pos, Figure) -> (Int, Pos) -> (Int, Pos, Figure)
-    step (_, _, b) (i, p) = (i, p, b')
+    step (_, _, b) (i, p) = (i, p, nbd nms)
       where
-        b' = snd . head . filter ((== p) . fst) . nextBoards $ b
+        nbs = nextBoards b
+        nms = filter ((== p) . fst) nbs
+
+        -- p maybe an illegal position for the next move
+        -- due to empty column at p
+        -- these illegal moves are handled as noops
+        nbd []            = b
+        nbd ((_, b') : _) = b'
 
 pathIsSolution :: Figure -> Path Pos -> Bool
 pathIsSolution b0 p0 =
