@@ -1424,6 +1424,16 @@ puzzles =
       ]
     , [[2,3,1,1,1,4,3,2,4]]
     )
+  , ( 257
+    , unlines
+      [ "y g g r y"
+      , "y g y r y"
+      , "w g r y w"
+      , "r y g g g"
+      , "r w w y w"
+      ]
+    , [[1,1,3,1,3,2,5,3,4]]
+    )
   , ( 331
     , unlines
       [ "r w w w w"
