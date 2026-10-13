@@ -3774,5 +3774,25 @@ puzzles =
       ]
     , [[5,3,5,5,4,1,1]]
     )
+  , ( 1568
+    , unlines
+      [ "y y w g y"
+      , "r r r y y"
+      , "w w g g g"
+      , "w y y w g"
+      , "w r g w y"
+      ]
+    , [[5,5,4,5,3,1,1,1]]
+    )
+  , ( 1570
+    , unlines
+      [ "w r g y w"
+      , "w w r g w"
+      , "y r r r g"
+      , "r w w w g"
+      , "w r g g y"
+      ]
+    , [[1,1,2,1,1,2,3,4,5]]
+    )
   ]
 
