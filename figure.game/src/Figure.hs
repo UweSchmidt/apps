@@ -252,7 +252,7 @@ instance AStar Figure where
 
 
 initBoardAStar :: Figure -> AStarState Figure Pos
-initBoardAStar b = (initAStar b) { _weightCost = 0.75, _smax = 0 }
+initBoardAStar b = (initAStar b) { _weightCost = 0.80, _smax = 0 }
 
 -- # moves used needs higher weight than # of clusters
 -- else search isn't broad enough
@@ -263,7 +263,7 @@ initBoardAStar b = (initAStar b) { _weightCost = 0.75, _smax = 0 }
 -- worked fine for all puzzles solved until figure97
 
 -- _weightCost = 0.66 (2/3) is too small, 0.75 (3/4) worked
--- figure98 solvable in 10 move, but solution with 11 moves found
+-- figure98 solvable in 10 moves, but solution with 11 moves found
 -- 0.66:  885 moves tried, 11 moves
 -- 0.75: 4009 moves tried, 10 moves (required)
 
@@ -273,6 +273,13 @@ initBoardAStar b = (initAStar b) { _weightCost = 0.75, _smax = 0 }
 --       42712 moves not tried, 11 moves (10 required)
 -- 0.80: 46027 moves tried
 --       58077 moves not tried, 10 moves [3,3,3,4,2,5,1,1,1,1]
+
+-- _weightCost = 0.75 is still in use (???)
+-- #1595 solvable in 10 moves, but solution with 11 moves found
+-- 0.75: 10733 moves tried
+--        9320 moves not tried, 11 moves [5,4,3,1,1,1,2,5,2,4,5]
+-- 0.80: 13327 moves tried
+--       13809 moves not tried, 10 moves [5,4,3,1,1,1,2,2,4,5]
 
 
 solveBoard :: Figure -> ([Pos], Int, Int)
