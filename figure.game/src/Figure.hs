@@ -201,6 +201,7 @@ normPath1 _f pt = pt
 
 normPath :: Figure -> Path Pos -> Path Pos
 normPath f pt0
+  | True = pt0
   | pt1 == pt0 = pt0
   | otherwise  = normPath f pt1
   where
@@ -251,8 +252,8 @@ instance AStar Figure where
   estimatedCost b = toEnum $  numberOfClusters b
 
 
-initBoardAStar :: Figure -> AStarState Figure Pos
-initBoardAStar b = (initAStar b) { _weightCost = 0.80, _smax = 0 }
+initBoardAStar :: Cost -> Figure -> AStarState Figure Pos
+initBoardAStar c b = (initAStar b) { _weightCost = c, _smax = 0 }
 
 -- # moves used needs higher weight than # of clusters
 -- else search isn't broad enough
@@ -278,18 +279,29 @@ initBoardAStar b = (initAStar b) { _weightCost = 0.80, _smax = 0 }
 -- #1595 solvable in 10 moves, but solution with 11 moves found
 -- 0.75: 10733 moves tried
 --        9320 moves not tried, 11 moves [5,4,3,1,1,1,2,5,2,4,5]
+--                  moves not normalized [5,4,3,5,1,5,1,1,2,2,4]
+-- in the normalized moves solution the 8. move (5) looks stupid
+-- compared to the 10 moves solution below, but the
+-- A* works with not normalized paths, so here the heuristics
+-- differ, the stupid move is done earlier, and there it doesn't look that stupid
+--
+-- the heuristic with the number of clusters seem to be not as clever as possible
+--
 -- 0.80: 13327 moves tried
 --       13809 moves not tried, 10 moves [5,4,3,1,1,1,2,2,4,5]
+--
+-- maybe it's not the last time to increase the _weightCost,
+-- the search becomes more and more a beadth first search
+-- the increase from 0.75 to .80 leads to about 25% more moves tried
 
-
-solveBoard :: Figure -> ([Pos], Int, Int)
-solveBoard b =
+solveBoard :: Cost -> Figure -> ([Pos], Int, Int)
+solveBoard c b =
   ( mvs
   , _scnt s1
   , sizeQ (_openStates s1)
   )
   where
-    s0        = initBoardAStar b
+    s0        = initBoardAStar c b
     (res, s1) = aStar s0
     mvs       = case res of
       Nothing                -> []

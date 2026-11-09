@@ -64,7 +64,7 @@ solvePuzzle gno b = do
   putStrLn "\nstart solving game"
   flush
   -- solve the puzzle
-  let sol@(mvs, _, _) = solveBoard b
+  let sol@(mvs, _, _) = solveBoard 0.80 b
   resOutput sol
   gameOutput b mvs
   saveGame gno b mvs
@@ -364,7 +364,7 @@ saveModulePuzzle pm = do
 
 -- --------------------
 
-{- just for testing
+-- {- just for testing
 
 s1 :: String  -- figure #75
 s1 = unlines $
@@ -429,6 +429,18 @@ s7 = unlines
   , "G R W Y G"
   ]
 
+s1595 :: String
+s1595 = unlines
+  [ "r w w r r"
+  , "r g y w w"
+  , "w r y y g"
+  , "y y w r w"
+  , "y g y w y"
+  ]
+
+-- 0.75: [5,4,3,1,1,1,2,5,2,4,5]
+-- 0.80: [5,4,3,1,1,1,2,2,4,5]
+
 
 (b1, i1, p1, c1, n1, pb1, nbs1, ass1) = fff s1
 (b2, i2, p2, c2, n2, pb2, nbs2, ass2) = fff s2
@@ -440,6 +452,7 @@ s7 = unlines
 
 fff s = (b, i, p, c, n, pb, nbs, ass)
   where
+    c' = 0.80
     b = parseBoard s
     i = invertBoard b
     p = partBoard i
@@ -447,7 +460,7 @@ fff s = (b, i, p, c, n, pb, nbs, ass)
     n = nextMoves' p
     pb = printBoard b
     nbs = nextBoards b
-    ass = initBoardAStar b
+    ass = initBoardAStar c' b
 -- -}
 -- --------------------
 {-
